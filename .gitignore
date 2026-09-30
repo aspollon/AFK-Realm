@@ -1,0 +1,6 @@
+# build output
+AFK-Realm.exe
+
+# editors
+.vs/
+.vscode/
