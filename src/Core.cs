@@ -363,6 +363,73 @@ namespace CoAInstaller
             catch { return "(" + file + " could not be read)"; }
         }
 
+        // ---- Random bot reset -------------------------------------------------------------
+        // mod-playerbots deletes all random bots (accounts, characters, guilds, arena teams, mail)
+        // when the worldserver starts with these options on, then shuts the worldserver down.
+        static readonly string[] BotResetKeys = { "AiPlayerbot.DeleteRandomBotAccounts", "AiPlayerbot.DeleteRandomBotGuilds", "AiPlayerbot.DeleteRandomBotArenaTeams" };
+        string BotsConf { get { return Path.Combine(inst.ConfigDir, "modules", "playerbots.conf"); } }
+        string BotResetMarker { get { return BotsConf + ".bot-reset"; } }
+
+        /// <summary>
+        /// Puts the options back if a reset was interrupted (window closed, PC restarted), so a
+        /// normal start never deletes the bots by accident.
+        /// </summary>
+        public bool RestoreAfterBotReset()
+        {
+            if (!File.Exists(BotResetMarker)) return false;
+            foreach (var line in File.ReadAllLines(BotResetMarker))
+            {
+                int eq = line.IndexOf('=');
+                if (eq <= 0) continue;
+                string key = line.Substring(0, eq), value = line.Substring(eq + 1);
+                if (value.Length == 0) Conf.Set(BotsConf, key, "0"); else Conf.Set(BotsConf, key, value);
+            }
+            File.Delete(BotResetMarker);
+            return true;
+        }
+
+        public void ResetRandomBots(Action<string> status)
+        {
+            if (!File.Exists(BotsConf)) throw new InvalidOperationException("playerbots.conf was not found. Run \"Repair setup\" first.");
+            RestoreAfterBotReset();
+            StopAll(status, false);
+            StartDatabase(status);
+
+            // Remember the current values first; they are put back whatever happens.
+            var remembered = new StringBuilder();
+            foreach (var key in BotResetKeys)
+            {
+                var m = Regex.Match(File.ReadAllText(BotsConf), @"(?m)^[ \t]*" + Regex.Escape(key) + @"[ \t]*=[ \t]*([^\r\n]*?)[ \t]*$");
+                remembered.Append(key).Append('=').Append(m.Success ? m.Groups[1].Value : "").Append("\r\n");
+            }
+            File.WriteAllText(BotResetMarker, remembered.ToString());
+            try
+            {
+                foreach (var key in BotResetKeys) Conf.Set(BotsConf, key, "1");
+                status("Deleting all random bots, their guilds and arena teams. The worldserver window shows the progress ...");
+                var p = StartConsole(inst.WorldExe, inst.WorldConf);
+                if (p == null) throw new InvalidOperationException("The worldserver could not be started.");
+                var until = DateTime.Now.AddMinutes(60);
+                while (!p.WaitForExit(2000))
+                {
+                    if (Net.PortOpen(WorldPort))
+                    {
+                        StopConsoleProcess(p, 180);
+                        throw new InvalidOperationException("The worldserver started normally instead of deleting the bots. Nothing was deleted.");
+                    }
+                    if (DateTime.Now > until)
+                        throw new InvalidOperationException("Deleting the bots takes longer than an hour. Check the worldserver window; the reset settings have been switched off again.");
+                }
+                string log = Path.Combine(inst.ServerDir, "Playerbots.log");
+                string text = "";
+                try { using (var fs = new FileStream(log, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)) using (var r = new StreamReader(fs)) text = r.ReadToEnd(); } catch { }
+                if (text.IndexOf("Random bot accounts and data deleted", StringComparison.OrdinalIgnoreCase) < 0)
+                    throw new InvalidOperationException("The worldserver closed without confirming the deletion. The end of its log:\n\n" + LogTail(Path.Combine(inst.ServerDir, "Server.log"), 8));
+            }
+            finally { RestoreAfterBotReset(); }
+            status("All random bots were deleted.");
+        }
+
         [DllImport("kernel32.dll", SetLastError = true)] static extern bool AttachConsole(uint pid);
         [DllImport("kernel32.dll", SetLastError = true)] static extern bool FreeConsole();
         [DllImport("kernel32.dll")] static extern bool SetConsoleCtrlHandler(IntPtr handler, bool add);

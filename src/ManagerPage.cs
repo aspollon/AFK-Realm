@@ -89,7 +89,9 @@ namespace CoAInstaller
             upd.Click += (s, e) => RunEngine("Update", "Check for updates?\n\nIf there are new versions of CoA or Playerbots, the server is recompiled (a few minutes). A running server is stopped cleanly first.");
             var repair = Ui.Secondary("Repair setup");
             repair.Click += (s, e) => RunEngine("Setup", "Set up the database and configuration again (without recompiling)?\n\nCharacters and accounts are kept.");
-            var r = Ui.Row(); r.Controls.Add(upd); r.Controls.Add(repair); Body.Controls.Add(r);
+            var botReset = Ui.Secondary("Reset random bots …");
+            botReset.Click += (s, e) => ResetBots();
+            var r = Ui.Row(); r.Controls.Add(upd); r.Controls.Add(repair); r.Controls.Add(botReset); Body.Controls.Add(r);
             var r2 = Ui.Row();
             var openDir = Ui.Secondary("Open folder"); openDir.Click += (s, e) => Process.Start("explorer.exe", "\"" + inst.Root + "\"");
             var openLogs = Ui.Secondary("Open server logs"); openLogs.Click += (s, e) => Process.Start("explorer.exe", "\"" + inst.ServerDir + "\"");
@@ -164,7 +166,7 @@ namespace CoAInstaller
             if (inst.HasMapData && !inst.HasClientDbc)
             { Ui.Error(this, "The CoA DBC tables are missing, so the worldserver would stop right away.\n\nOpen \"Create map data\", choose your CoA game folder and tick \"Only refresh the CoA DBC tables\"."); return; }
             Process world = null;
-            Main.RunBusy(busy, st => { ctl.StartDatabase(st); ctl.StartAuth(st); world = ctl.StartWorld(st); },
+            Main.RunBusy(busy, st => { ctl.RestoreAfterBotReset(); ctl.StartDatabase(st); ctl.StartAuth(st); world = ctl.StartWorld(st); },
                 err =>
                 {
                     RefreshStatus(); LoadRealm();
@@ -185,6 +187,23 @@ namespace CoAInstaller
                     });
                 });
         }
+        void ResetBots()
+        {
+            if (!Ui.Confirm(this, "Delete all random bots and create new ones?\n\n" +
+                "This removes every random bot account with its characters, guilds, arena teams and mail. " +
+                "Your own accounts and characters are kept, including bots you created on your own accounts.\n\n" +
+                "The server is stopped first. Deleting takes a few minutes; the new bots are created at the next server start.")) return;
+            Main.RunBusy(busy, st => ctl.ResetRandomBots(st),
+                err =>
+                {
+                    RefreshStatus();
+                    if (err != null) { busy.Text = ""; Ui.Error(this, err.Message); return; }
+                    busy.Text = "All random bots were deleted.";
+                    if (Ui.Confirm(this, "All random bots were deleted.\n\nStart the server now? The new bots are created while it starts, which takes a bit longer than usual."))
+                        StartServer();
+                });
+        }
+
         void StopServer()
         {
             if (!Ui.Confirm(this, "Stop the server now? All players are saved and logged out.")) return;
