@@ -50,6 +50,17 @@ namespace CoAInstaller
             mapBtn.Click += (s, e) => new MapDataDialog(inst).ShowDialog(this);
             Body.Controls.Add(mapBtn);
 
+            // --- settings
+            Body.Controls.Add(Ui.Heading("Server settings"));
+            Body.Controls.Add(Ui.Hint("XP and drop rates, Playerbots, convenience options and every other setting of the worldserver and its modules, each with its description."));
+            var settingsBtn = Ui.Primary("Open server settings …");
+            settingsBtn.Click += (s, e) =>
+            {
+                if (!File.Exists(inst.WorldConf)) { Ui.Error(this, "worldserver.conf was not found. Run \"Repair setup\" first."); return; }
+                using (var d = new SettingsDialog(inst, ctl.World != null)) d.ShowDialog(this);
+            };
+            Body.Controls.Add(settingsBtn);
+
             // --- accounts
             Body.Controls.Add(Ui.Heading("Create account"));
             accLevel.Items.AddRange(new object[] { "Player", "Moderator (GM 1)", "Game Master (GM 2)", "Administrator (GM 3)" });

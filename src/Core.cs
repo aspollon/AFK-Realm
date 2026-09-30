@@ -83,7 +83,7 @@ namespace CoAInstaller
         public static string Get(string file, string key)
         {
             if (!File.Exists(file)) return null;
-            var m = Regex.Match(File.ReadAllText(file), @"(?m)^\s*" + Regex.Escape(key) + @"\s*=\s*(.*?)\s*$");
+            var m = Regex.Match(File.ReadAllText(file), @"(?m)^[ \t]*" + Regex.Escape(key) + @"[ \t]*=[ \t]*(.*?)[ \t\r]*$");
             if (!m.Success) return null;
             return m.Groups[1].Value.Trim().Trim('"');
         }
@@ -91,7 +91,7 @@ namespace CoAInstaller
         {
             string text = File.ReadAllText(file);
             string line = key + " = " + rawValue;
-            var rx = new Regex(@"(?m)^\s*" + Regex.Escape(key) + @"\s*=.*$");
+            var rx = new Regex(@"(?m)^[ \t]*" + Regex.Escape(key) + @"[ \t]*=[^\r\n]*");
             if (rx.IsMatch(text)) text = rx.Replace(text, line.Replace("$", "$$"), 1);
             else text = text.TrimEnd('\r', '\n') + "\r\n" + line + "\r\n";
             File.WriteAllText(file, text, new UTF8Encoding(false));

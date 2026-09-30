@@ -22,6 +22,7 @@ Pre-built repacks go stale quickly. Building from source keeps you on the latest
 - **Clear progress**: every step, download percentages, compiled files and imported world tables, plus an optional live log
 - **Databases ready before the first start**: imports the CoA world package, creates the auth and character databases and applies all SQL updates, and repairs databases whose setup was interrupted
 - **Server management**: start and stop (clean shutdown that saves all characters), live status, and the reason shown right away if a server closes while starting
+- **Server settings**: a list of popular options (XP, drop and reputation rates, flight paths, cross-faction play, Playerbots count and levels) plus every option of the worldserver and all module configs, searchable, with the description from each template and one-click reset to the default
 - **Accounts**: create accounts with GM levels without using the console
 - **Map data**: extracts maps, vmaps, mmaps and the CoA client DBC tables from your game client with one click
 - **Play with others**: set a VPN or LAN address (e.g. Radmin VPN); the tool configures the realm, the CoA remote-client setting and the Windows Firewall

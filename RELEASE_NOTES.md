@@ -7,6 +7,7 @@ The first public test version of AFK Realm: build, run and tweak your own Conque
 - Installs every build tool automatically and compiles the newest CoA core and Playerbots from source
 - Sets up a portable MySQL, imports the CoA world data and prepares all databases before the first start
 - Extracts maps, vmaps, mmaps and the CoA client DBC tables from your game client
+- Edits XP and drop rates, Playerbots and every other server setting, each with its description
 - Starts and stops the server cleanly, creates accounts and sets up play over VPN or LAN
 - Checks for updates and rebuilds only when something changed
 
