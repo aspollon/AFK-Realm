@@ -16,4 +16,4 @@ The first public test version of AFK Realm: build, run and tweak your own Conque
 
 - This is a preview. Please report problems with `logs\install.log` attached.
 - The exe is not code-signed, so Windows SmartScreen may warn about an unknown publisher.
-- You need your own CoA game client. The first installation takes 30 to 90 minutes and about 40 GB of disk space.
+- You need your own CoA game client. The first installation may take a long time and needs about 40 GB of disk space.

@@ -35,7 +35,7 @@ Pre-built repacks go stale quickly. Building from source keeps you on the latest
 1. Download `AFK-Realm.exe` from the [Releases](../../releases) page and run it.
    Windows SmartScreen may warn about an unknown publisher because the exe is not code-signed. The exe is built from this repository by GitHub Actions; you can also build it yourself (see below).
 2. **Install a new server** → choose a folder such as `C:\CoA-Server` → set a database password → **Install**.
-   Plan for 30 to 90 minutes and about 40 GB of disk space.
+   The installation may take a long time and needs about 40 GB of disk space.
 3. In **Server management**:
    1. *Create map data from the game client* (once; choose the game folder that contains the `Data` folder, and keep the game and its launcher closed)
    2. *Create account*

@@ -86,7 +86,7 @@ namespace CoAInstaller
             // --- maintenance
             Body.Controls.Add(Ui.Heading("Maintenance"));
             var upd = Ui.Primary("Check for updates and install");
-            upd.Click += (s, e) => RunEngine("Update", "Check for updates?\n\nIf there are new versions of CoA or Playerbots, the server is recompiled (a few minutes). A running server is stopped cleanly first.");
+            upd.Click += (s, e) => RunEngine("Update", "Check for updates?\n\nIf there are new versions of CoA or Playerbots, the server is recompiled, which can take a while. A running server is stopped cleanly first.");
             var repair = Ui.Secondary("Repair setup");
             repair.Click += (s, e) => RunEngine("Setup", "Set up the database and configuration again (without recompiling)?\n\nCharacters and accounts are kept.");
             var botReset = Ui.Secondary("Reset random bots …");
@@ -171,7 +171,7 @@ namespace CoAInstaller
                 {
                     RefreshStatus(); LoadRealm();
                     if (err != null) { busy.Text = ""; Ui.Error(this, err.Message); return; }
-                    busy.Text = "The worldserver is loading (a few minutes). You can keep using " + Product.Name + " meanwhile.";
+                    busy.Text = "The worldserver is loading. You can keep using " + Product.Name + " meanwhile.";
                     ctl.WatchWorld(world, (ready, problem) =>
                     {
                         try
@@ -192,7 +192,7 @@ namespace CoAInstaller
             if (!Ui.Confirm(this, "Delete all random bots and create new ones?\n\n" +
                 "This removes every random bot account with its characters, guilds, arena teams and mail. " +
                 "Your own accounts and characters are kept, including bots you created on your own accounts.\n\n" +
-                "The server is stopped first. Deleting takes a few minutes; the new bots are created at the next server start.")) return;
+                "The server is stopped first. Deleting can take a while; the new bots are created at the next server start.")) return;
             Main.RunBusy(busy, st => ctl.ResetRandomBots(st),
                 err =>
                 {
@@ -270,8 +270,8 @@ namespace CoAInstaller
     {
         readonly Install inst;
         readonly TextBox wow = Ui.Input(420);
-        readonly CheckBox mmaps = new CheckBox { Text = "Also create mmaps (pathfinding for bots and creatures, takes 1 to 3 hours, highly recommended)", Checked = true, AutoSize = true, MaximumSize = new Size(560, 0) };
-        readonly CheckBox dbcOnly = new CheckBox { Text = "Only refresh the CoA DBC tables (a few minutes; for a server that already has maps)", Checked = false, AutoSize = true, MaximumSize = new Size(560, 0) };
+        readonly CheckBox mmaps = new CheckBox { Text = "Also create mmaps (pathfinding for bots and creatures, highly recommended; may take a long time)", Checked = true, AutoSize = true, MaximumSize = new Size(560, 0) };
+        readonly CheckBox dbcOnly = new CheckBox { Text = "Only refresh the CoA DBC tables (for a server that already has maps)", Checked = false, AutoSize = true, MaximumSize = new Size(560, 0) };
 
         public MapDataDialog(Install i)
         {
@@ -337,7 +337,7 @@ namespace CoAInstaller
             {
                 // The stock extractor does not read CoA's custom patch archives; the fork's own
                 // tool extracts the complete table set the CoA worldserver requires.
-                b.AppendLine("echo CoA DBC tables from the client archives (a few minutes) ...");
+                b.AppendLine("echo CoA DBC tables from the client archives ...");
                 b.AppendLine("if exist coa-dbc rmdir /s /q coa-dbc");
                 b.AppendLine(Q(inst.PythonExe) + " " + Q(inst.DbcScript) + " extract " + Q(clientData) + " coa-dbc --original --mpqcli " + Q(inst.MpqCliExe));
                 b.AppendLine("if errorlevel 1 goto :dbcfail");
@@ -355,7 +355,7 @@ namespace CoAInstaller
                 b.AppendLine("rmdir /s /q Buildings");
                 if (mmaps.Checked)
                 {
-                    b.AppendLine("echo Step 3: mmaps - this takes 1 to 3 hours ...");
+                    b.AppendLine("echo Step 3: mmaps - this may take a long time ...");
                     b.AppendLine("if not exist mmaps mkdir mmaps");
                     b.AppendLine("mmaps_generator.exe");
                 }

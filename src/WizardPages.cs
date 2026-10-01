@@ -14,7 +14,7 @@ namespace CoAInstaller
             Body.Controls.Add(Ui.Title("Welcome"));
             Body.Controls.Add(Ui.Para("This program builds your own Conquest of Azeroth server with Playerbots, straight from the current source code. " +
                 "It downloads every tool it needs, compiles the server and sets up the database including the CoA world data."));
-            Body.Controls.Add(Ui.Hint("You need: Windows 10 or 11 (64-bit), about 40 GB of free disk space, an internet connection and, depending on your PC, 30 to 90 minutes. " +
+            Body.Controls.Add(Ui.Hint("You need: Windows 10 or 11 (64-bit), about 40 GB of free disk space, an internet connection and some patience. " +
                 "Bring your own CoA game client; it is not included."));
 
             var install = BigChoice("Install a new server", "Set everything up from scratch.");
@@ -159,7 +159,7 @@ namespace CoAInstaller
     class SummaryPage : Page
     {
         readonly CheckBox shortcut = new CheckBox { Text = "Create a \"" + Product.ShortName + "\" shortcut on the desktop", Checked = true, AutoSize = true, Margin = new Padding(0, 10, 0, 0) };
-        readonly CheckBox understood = new CheckBox { Text = "I understand the installation takes 30 to 90 minutes depending on my PC.", AutoSize = true, Margin = new Padding(0, 6, 0, 0) };
+        readonly CheckBox understood = new CheckBox { Text = "I understand the installation may take a long time, depending on my PC.", AutoSize = true, Margin = new Padding(0, 6, 0, 0) };
         public SummaryPage(MainForm main) : base(main)
         {
             Body.Controls.Add(Ui.Title("Ready to install"));

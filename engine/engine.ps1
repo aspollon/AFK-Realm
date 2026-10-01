@@ -460,7 +460,7 @@ function Resolve-Boost {
     if (-not (Test-BoostFolder $folder)) {
         $installer = Save-Download $Downloads.Boost.Url 'boost-installer.exe' $Downloads.Boost.Sha256 $Downloads.Boost.MinBytes
         $setupLog = Join-Path $Paths.Logs 'boost-install.log'
-        Write-Log 'Installing Boost (unpacks thousands of files; this takes a few minutes without further output) ...'
+        Write-Log 'Installing Boost (unpacks thousands of files; this can take a while without further output) ...'
         Remove-Item $folder -Recurse -Force -ErrorAction SilentlyContinue
         # One pre-quoted argument line: Start-Process does not quote array elements, so a path with spaces would break.
         $code = Start-Installer $installer ('/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP- /DIR="{0}" /LOG="{1}"' -f $folder, $setupLog)
@@ -480,7 +480,7 @@ function Get-MySqlTool([string]$Name) { return (Join-Path $Paths.MySql "bin\$Nam
 function Install-MySql {
     if ((Test-Path (Join-Path $Paths.MySql 'bin\mysqld.exe')) -and (Test-Path (Join-Path $Paths.MySql 'lib\mysqlclient.lib'))) { return }
     $zip = Save-Download $Downloads.MySql.Url ('mysql-{0}-winx64.zip' -f $Downloads.MySql.Version) $Downloads.MySql.Sha256 $Downloads.MySql.MinBytes
-    Write-Log 'Unpacking MySQL (about 1 GB; this takes a few minutes) ...'
+    Write-Log 'Unpacking MySQL (about 1 GB; this can take a while) ...'
     $temp = Join-Path $Paths.Db '_mysql'
     Expand-Download $zip $temp
     Remove-Item $Paths.MySql -Recurse -Force -ErrorAction SilentlyContinue
@@ -637,7 +637,7 @@ function Repair-IncompleteDatabases([string]$Password) {
 function Update-Databases {
     $dbimport = Join-Path $Paths.Server 'dbimport.exe'
     if (-not (Test-Path $dbimport)) { Write-Log 'dbimport.exe was not built; the worldserver applies the updates on its first start.' Yellow; return }
-    Write-Log 'Creating tables and applying database updates. This can take a few minutes.'
+    Write-Log 'Creating tables and applying database updates. This can take a while.'
     $code = Invoke-Program $dbimport @('--config', (Join-Path $Paths.Configs 'dbimport.conf')) -WorkingDirectory $Paths.Server -AllowFailure
     if ($code -ne 0) { throw 'A database update failed. The MySQL error is shown just above in the log.' }
     Write-Log 'Databases are complete and up to date.'
@@ -790,7 +790,7 @@ function Invoke-Compile([string]$CMake) {
     # count follows the free memory and a memory failure is retried one by one.
     $freeGB = [double](Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory / 1MB
     $jobs = [int][math]::Max(1, [math]::Min(4, [math]::Floor($freeGB / 4)))
-    Write-Log ('Free memory {0:N1} GB - building {1} project(s) at a time. This takes 10 to 60 minutes.' -f $freeGB, $jobs)
+    Write-Log ('Free memory {0:N1} GB - building {1} project(s) at a time. This may take a long time.' -f $freeGB, $jobs)
     $sources = @(Get-ChildItem $Paths.Source -Recurse -Filter '*.cpp' -File -ErrorAction SilentlyContinue |
                  Where-Object { $_.FullName -notmatch '\\(deps|test|tests)\\' }).Count
     Send-Event 'SOURCES' "$sources"
@@ -918,7 +918,7 @@ function Import-WorldData([string]$Password) {
         if ($tables -gt 0) { Write-Log "The world database already contains $tables tables; the package is only imported into an empty database."; return }
         $python = Resolve-Python
         [void](Invoke-Program $python @($importer, 'verify'))
-        Write-Log 'Importing about 500 MB of world data. This takes several minutes; progress is shown every 25 tables.'
+        Write-Log 'Importing about 500 MB of world data. This can take a while; progress is shown every 25 tables.'
         try {
             [void](Invoke-Program $python @($importer, 'bootstrap', '--mysql', (Get-MySqlTool 'mysql.exe'), '--defaults-file', $options, '--database', 'acore_world'))
         } catch {
