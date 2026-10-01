@@ -1,6 +1,14 @@
-# AFK Realm – first preview
+# AFK Realm 0.2.0 – preview
 
-The first public test version of AFK Realm: build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11.
+Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11.
+
+## What's new since 0.1.0
+
+- **Player accounts**: a new window lists all real player accounts (bot accounts are filtered out) with their characters and last login. Accounts can be deleted, get a new password or a different access level.
+- **Account transfer**: export an account with all its characters, items, mail and pets to an `.afkaccount` file and import it on another server. All ids are renumbered; a character name that is already taken is changed at the next login.
+- **Update notice**: the server management shows when newer CoA or Playerbots code, or a newer AFK Realm release, is available.
+- **Settings**: options that share one description in the config templates now show only their own default value; 0/1 options with two different meanings (for example how deleted characters are handled) are shown as a choice instead of on/off.
+- **Wording**: no more fixed time estimates; long steps simply say they can take a while.
 
 ## What it does
 
