@@ -6,6 +6,7 @@
 - Module installs and removals back up the server and rebuild it; a module that does not compile is taken out again and the server stays unchanged
 - Database changes of modules are recorded (schema `afk_modules`, part of every backup) and undone when the module is removed; rows changed later are kept and reported
 - Restoring a backup also brings the module folders back to the state of the backup
+- Playerbots versions listed in the catalog are shown as included, since AFK Realm always builds the CoA version
 
 ## 0.2.0-preview
 

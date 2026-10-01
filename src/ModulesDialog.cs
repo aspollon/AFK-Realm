@@ -159,7 +159,7 @@ namespace CoAInstaller
             bool tick = ticked.Contains(m);
             switch (m.State)
             {
-                case ModuleState.PartOfCoA: return "part of CoA";
+                case ModuleState.PartOfCoA: return m.IsPlayerbots ? "included" : "part of CoA";
                 case ModuleState.Managed:
                     if (!tick) return "will be removed";
                     return m.Status == "sql-failed" ? "database step failed" : m.Status == "missing" ? "folder missing" : "installed";
@@ -206,6 +206,13 @@ namespace CoAInstaller
             detailText.Text = (m.Description.Length > 0 ? m.Description : "") + (m.FullName.Length > 0 ? "\n" + m.FullName : "");
             detailLink.Visible = m.Url.StartsWith("http");
             readme.Visible = false;
+            if (m.IsPlayerbots)
+            {
+                AddCheck(0, "Playerbots is already included: " + Product.Name + " always builds the CoA version (Zyth45/mod-playerbots, branch coa) and keeps it up to date with every server update.");
+                if (m.FullName.Length > 0 && !m.FullName.Equals("Zyth45/mod-playerbots", StringComparison.OrdinalIgnoreCase))
+                    AddCheck(-1, "This entry is a different version (" + m.FullName + ") that does not fit CoA. Nothing needs to be installed here.");
+                return;
+            }
             if (m.State == ModuleState.PartOfCoA) { AddCheck(0, "This module is already part of the CoA core."); return; }
             if (m.State == ModuleState.Managed)
             {

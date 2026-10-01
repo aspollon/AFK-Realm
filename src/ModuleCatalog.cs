@@ -23,6 +23,8 @@ namespace CoAInstaller
         public string Status = "", InstalledOn = "";                      // from modules.txt
         public string[] CreatedTables = new string[0], ManualTables = new string[0];
         public bool Installed { get { return State == ModuleState.Managed || State == ModuleState.ByHand; } }
+        /// <summary>Playerbots: AFK Realm always builds its CoA branch; catalog entries of the same name are other versions.</summary>
+        public bool IsPlayerbots { get { return Name.Equals("mod-playerbots", StringComparison.OrdinalIgnoreCase); } }
     }
 
     /// <summary>What AFK Realm found out about a module before installing it.</summary>
@@ -230,6 +232,8 @@ namespace CoAInstaller
                     if (!Directory.Exists(folder)) entry.Status = "missing";
                 }
             }
+            // Playerbots is always built in, so the catalog's versions of it are shown as included, not installable.
+            foreach (var bots in result.Where(e => e.IsPlayerbots)) bots.State = ModuleState.PartOfCoA;
             return result;
         }
 
