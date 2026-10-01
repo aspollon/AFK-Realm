@@ -42,6 +42,23 @@ namespace CoAInstaller
         {
             if (mode == "Backup") return new[] { new Phase("backup", "Back up the server", 1) };
             if (mode == "Restore") return new[] { new Phase("restore", "Restore the databases", 4), new Phase("files", "Restore the server programs and versions", 1) };
+            if (mode == "Modules")
+            {
+                return new[]
+                {
+                    new Phase("tools",     "Check tools (Git, CMake)", 2),
+                    new Phase("backup",    "Back up the current server", 6),
+                    new Phase("vs",        "Visual Studio C++ Build Tools", 3),
+                    new Phase("libs",      "Libraries (OpenSSL, Boost)", 2),
+                    new Phase("mysql",     "Portable MySQL database", 1),
+                    new Phase("modules",   "Download and remove modules", 4),
+                    new Phase("configure", "Prepare the build (CMake)", 4),
+                    new Phase("compile",   "Compile the server", 60),
+                    new Phase("database",  "Database: undo removed modules", 4),
+                    new Phase("world",     "World data check", 1),
+                    new Phase("finish",    "Database: apply and record new modules, final checks", 8),
+                };
+            }
             if (mode == "Update" || mode == "Rebuild")
             {
                 var list = InstallPhases.ToList();
@@ -59,6 +76,7 @@ namespace CoAInstaller
         public event Action<double, string> SubProgress;  // 0..1 (or <0 = unknown), description
         public event Action<string> LogLine;
         public event Action<string> Change;               // update: what changed
+        public event Action<string> Note;                 // module results for the result page
         public event Action<bool, string> Finished;       // success, "ok" / "uptodate" / error text
 
         Process proc;
@@ -83,6 +101,10 @@ namespace CoAInstaller
                 // With BOM: Windows PowerShell 5.1 reads BOM-less scripts as ANSI.
                 File.WriteAllText(path, r.ReadToEnd(), new UTF8Encoding(true));
             }
+            // The SQL procedures that record and undo module database changes.
+            using (var s = Assembly.GetExecutingAssembly().GetManifestResourceStream("CoAInstaller.module-journal.sql"))
+            using (var r = new StreamReader(s, Encoding.UTF8))
+                File.WriteAllText(Path.Combine(dir, "module-journal.sql"), r.ReadToEnd(), new UTF8Encoding(false));
             return path;
         }
 
@@ -136,6 +158,7 @@ namespace CoAInstaller
                         break;
                     case "SOURCES": int.TryParse(a, out totalSources); break;
                     case "CHANGE": if (Change != null) Change(a); break;
+                    case "NOTE": if (Note != null) Note(a + (b.Length > 0 ? "|" + b : "")); break;
                     case "DONE": Finish(true, a); break;
                     case "FAIL": Finish(false, a); break;
                 }

@@ -81,6 +81,14 @@ namespace CoAInstaller
             };
             Body.Controls.Add(settingsBtn);
 
+            // --- modules
+            Body.Controls.Add(Ui.Heading("Modules"));
+            Body.Controls.Add(Ui.Hint("Add or remove AzerothCore modules from the module catalog. The server is backed up and rebuilt; " +
+                "database changes of modules installed here are recorded, so removing a module undoes them."));
+            var modulesBtn = Ui.Secondary("Manage modules …");
+            modulesBtn.Click += (s, e) => ManageModules();
+            Body.Controls.Add(modulesBtn);
+
             // --- accounts
             Body.Controls.Add(Ui.Heading("Create account"));
             accLevel.Items.AddRange(new object[] { "Player", "Moderator (GM 1)", "Game Master (GM 2)", "Administrator (GM 3)" });
@@ -263,6 +271,17 @@ namespace CoAInstaller
                     if (Ui.Confirm(this, "All random bots were deleted.\n\nStart the server now? The new bots are created while it starts, which takes a bit longer than usual."))
                         StartServer();
                 });
+        }
+
+        void ManageModules()
+        {
+            using (var d = new ModulesDialog(inst))
+            {
+                if (d.ShowDialog(this) != DialogResult.OK || (d.Add.Count == 0 && d.Remove.Count == 0)) return;
+                string args = (d.Add.Count > 0 ? "-AddModules \"" + string.Join(";", d.Add) + "\"" : "") +
+                              (d.Remove.Count > 0 ? " -RemoveModules \"" + string.Join(";", d.Remove) + "\"" : "");
+                RunEngine("Modules", null, true, args.Trim());
+            }
         }
 
         void StopServer()

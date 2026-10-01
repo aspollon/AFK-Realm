@@ -3,6 +3,6 @@
 set -e
 cd "$(dirname "$0")"
 mcs -langversion:5 -target:winexe -optimize+ -sdk:4.5 -out:AFK-Realm.exe \
-  -r:System.Windows.Forms.dll -r:System.Drawing.dll -r:System.Numerics.dll -r:System.Core.dll -r:System.IO.Compression.dll -r:System.IO.Compression.FileSystem.dll \
-  -win32icon:assets/afk-realm.ico -resource:engine/engine.ps1,CoAInstaller.engine.ps1 -resource:engine/account-transfer.sql,CoAInstaller.account-transfer.sql -resource:assets/afk-realm-header.png,CoAInstaller.logo.png src/*.cs
+  -r:System.Windows.Forms.dll -r:System.Drawing.dll -r:System.Numerics.dll -r:System.Core.dll -r:System.IO.Compression.dll -r:System.IO.Compression.FileSystem.dll -r:System.Web.Extensions.dll \
+  -win32icon:assets/afk-realm.ico -resource:engine/engine.ps1,CoAInstaller.engine.ps1 -resource:engine/account-transfer.sql,CoAInstaller.account-transfer.sql -resource:engine/module-journal.sql,CoAInstaller.module-journal.sql -resource:assets/afk-realm-header.png,CoAInstaller.logo.png src/*.cs
 echo "Built AFK-Realm.exe"

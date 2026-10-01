@@ -198,6 +198,7 @@ namespace CoAInstaller
         readonly System.Windows.Forms.Timer clock = new System.Windows.Forms.Timer { Interval = 1000 };
         readonly DateTime started = DateTime.Now;
         readonly System.Collections.Generic.List<string> changes = new System.Collections.Generic.List<string>();
+        readonly System.Collections.Generic.List<string> notes = new System.Collections.Generic.List<string>();
         int phase = -1; double subValue;
         public bool Running { get; private set; }
 
@@ -205,7 +206,7 @@ namespace CoAInstaller
         {
             this.mode = mode;
             runner = new EngineRunner(mode);
-            string title = mode == "Update" ? "Updating" : mode == "Setup" ? "Setting up" : mode == "Backup" ? "Backing up" : mode == "Restore" ? "Restoring a backup" : "Installing";
+            string title = mode == "Update" ? "Updating" : mode == "Setup" ? "Setting up" : mode == "Backup" ? "Backing up" : mode == "Restore" ? "Restoring a backup" : mode == "Modules" ? "Changing modules" : "Installing";
             Body.Controls.Add(Ui.Title(title));
             Body.Controls.Add(Ui.Hint("You can leave this window open in the background. Please do not let the PC go to sleep."));
             phaseLabels = runner.Phases.Select(p => new Label { Text = "○   " + p.Title, AutoSize = true, Font = Ui.Base, ForeColor = Ui.Muted, Margin = new Padding(4, 2, 0, 2) }).ToArray();
@@ -219,6 +220,7 @@ namespace CoAInstaller
             runner.SubProgress += (f, t) => UI(() => { subValue = f; if (t != null) action.Text = t; sub.Style = f < 0 ? ProgressBarStyle.Marquee : ProgressBarStyle.Continuous; if (f >= 0) sub.Value = (int)(f * 1000); UpdateOverall(); });
             runner.LogLine += l => UI(() => AppendLog(l));
             runner.Change += c => UI(() => changes.Add(c));
+            runner.Note += n => UI(() => notes.Add(n));
             runner.Finished += (ok, text) => UI(() => Done(ok, text));
         }
         void UI(Action a) { if (IsHandleCreated && !IsDisposed) BeginInvoke(a); }
@@ -297,14 +299,14 @@ namespace CoAInstaller
             else if (phase >= 0) { phaseLabels[phase].Text = "✖   " + runner.Phases[phase].Title; phaseLabels[phase].ForeColor = Ui.Bad; }
             sub.Style = ProgressBarStyle.Continuous;
             Main.RefreshButtons();
-            Main.Navigate(new ResultPage(Main, mode, ok, text, changes), true);
+            Main.Navigate(new ResultPage(Main, mode, ok, text, changes, notes), true);
         }
     }
 
     class ResultPage : Page
     {
         readonly bool ok; readonly string mode;
-        public ResultPage(MainForm main, string mode, bool ok, string text, System.Collections.Generic.List<string> changes) : base(main)
+        public ResultPage(MainForm main, string mode, bool ok, string text, System.Collections.Generic.List<string> changes, System.Collections.Generic.List<string> notes = null) : base(main)
         {
             this.ok = ok; this.mode = mode;
             if (ok && text == "uptodate")
@@ -314,10 +316,14 @@ namespace CoAInstaller
             }
             else if (ok)
             {
-                Body.Controls.Add(Ui.Title(mode == "Update" ? "Update complete" : mode == "Backup" ? "Backup complete" : mode == "Restore" ? "Backup restored" : "Installation complete"));
+                Body.Controls.Add(Ui.Title(mode == "Update" ? "Update complete" : mode == "Backup" ? "Backup complete" : mode == "Restore" ? "Backup restored" : mode == "Modules" ? "Modules changed" : "Installation complete"));
                 if (mode == "Update") Body.Controls.Add(Ui.Hint("The server as it was before this update was backed up first. If the new version causes problems, you can go back under \"Backups\" in the server management."));
+                if (mode == "Modules") Body.Controls.Add(Ui.Hint("The server as it was before was backed up first. If a module causes problems, remove it again under \"Manage modules\", or go back under \"Backups\"."));
                 if (mode == "Restore") Body.Controls.Add(Ui.Hint("The server, its databases and its settings are back at the state of the backup. \"Check for updates\" offers the newer version again whenever you want it."));
                 if (changes.Count > 0) { Body.Controls.Add(Ui.Heading("Updated")); foreach (var c in changes) Body.Controls.Add(Ui.Hint("•  " + c)); }
+                AddNotes(notes);
+                if (mode == "Modules" && notes != null && notes.Any(n => n.Contains(" was installed")))
+                    Body.Controls.Add(Ui.Para("Check each new module's README for anything you need to set up yourself, for example in the game."));
                 if (mode == "Backup" || mode == "Restore") { }
                 else if (!main.Target.HasMapData)
                 {
@@ -331,6 +337,7 @@ namespace CoAInstaller
             {
                 Body.Controls.Add(Ui.Title("Unfortunately, that did not work"));
                 Body.Controls.Add(new Label { Text = text, ForeColor = Ui.Bad, Font = Ui.Bold, AutoSize = true, MaximumSize = new Size(640, 0), Margin = new Padding(0, 4, 0, 10) });
+                AddNotes(notes);
                 Body.Controls.Add(Ui.Para("Completed steps are kept. Trying again continues where it got stuck. " +
                     "If the error persists, the log file helps narrow it down, for example when you share it with the community."));
                 var row = Ui.Row();
@@ -342,6 +349,12 @@ namespace CoAInstaller
                 Body.Controls.Add(row);
                 if (mode == "Install" && string.IsNullOrEmpty(main.DbPassword)) retry.Enabled = false;
             }
+        }
+        void AddNotes(System.Collections.Generic.List<string> notes)
+        {
+            if (notes == null || notes.Count == 0) return;
+            Body.Controls.Add(Ui.Heading("Modules"));
+            foreach (var n in notes) Body.Controls.Add(Ui.Hint("•  " + n));
         }
         public override string NextText { get { return Main.Target != null && Main.Target.IsInstalled ? "Go to server management" : null; } }
         public override bool CanGoBack { get { return false; } }
