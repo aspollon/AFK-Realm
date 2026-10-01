@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.0-preview
+
+- Module manager: the AzerothCore module catalog with search and filters; tick to install, untick to remove; a check of each module before installing (database changes, settings, core patches, client files, Eluna, age) and its README in the window; modules by Git address
+- Module installs and removals back up the server and rebuild it; a module that does not compile is taken out again and the server stays unchanged
+- Database changes of modules are recorded (schema `afk_modules`, part of every backup) and undone when the module is removed; rows changed later are kept and reported
+- Restoring a backup also brings the module folders back to the state of the backup
+
 ## 0.2.0-preview
 
 - Automatic server backup before every update, manual backups, one-click rollback (newest 3 kept)

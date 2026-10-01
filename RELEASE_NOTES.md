@@ -1,16 +1,14 @@
-# AFK Realm 0.2.0 – preview
+# AFK Realm 0.3.0 – preview
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11.
 
-## What's new since 0.1.0
+## What's new since 0.2.0
 
-- **Backups and rollback**: before every update AFK Realm saves the server – programs, settings, all databases and the versions they were built from. If a new version causes problems, *Backups → Restore* puts everything back. Backups can also be made by hand; the newest 3 are kept.
-- **Player accounts**: a new window lists all real player accounts (bot accounts are filtered out) with their characters and last login. Accounts can be deleted, get a new password or a different access level.
-- **Account transfer**: export an account with all its characters, items, mail and pets to an `.afkaccount` file and import it on another server. All ids are renumbered; a character name that is already taken is changed at the next login.
-- **Update notice**: the server management shows when newer CoA or Playerbots code, or a newer AFK Realm release, is available.
-- **Settings**: options that share one description in the config templates now show only their own default value; 0/1 options with two different meanings (for example how deleted characters are handled) are shown as a choice instead of on/off.
-- **Wording**: no more fixed time estimates; long steps simply say they can take a while.
-- **Fix**: the build no longer stops with "Git was NOT FOUND" when Git is installed but not on the system PATH (or when AFK Realm set up its own portable Git).
+- **Module manager** (*Server management → Manage modules*): browse the AzerothCore module catalog, search it, tick modules to install them and untick them to remove them. Modules that are not in the catalog can be added by their Git address.
+- **Checked before installing**: for each module AFK Realm looks at its files and README and shows what to expect – database changes, settings, whether it needs a core patch (not supported) or files for the game client, whether it needs Eluna, and when it was last changed. The README opens right in the window.
+- **Safe to try**: the server is backed up first. If it cannot be built with a new module, the module is taken out again and the server stays exactly as it was.
+- **Removing undoes the database changes**: AFK Realm applies a module's SQL files itself and records every change. Removing the module puts the rows and tables back – except rows that were changed again later, which are kept and listed. Changes that cannot be recorded are named, and a backup restores them.
+- Restoring a backup also brings the module folders back to the state of that backup.
 
 ## What it does
 
@@ -23,9 +21,11 @@ Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with 
 - Moves accounts with their characters from one server to another via an export file
 - Checks for updates and rebuilds only when something changed
 - Backs up the server before every update and rolls it back with one click
+- Installs and removes AzerothCore modules, including their database changes
 
 ## Please note
 
 - This is a preview. Please report problems with `logs\install.log` attached.
+- Many AzerothCore modules are written for the regular core and may not compile or work with CoA. Installing one is safe to try: a module that does not compile is taken out again.
 - The exe is not code-signed, so Windows SmartScreen may warn about an unknown publisher.
 - You need your own CoA game client. The first installation may take a long time and needs about 40 GB of disk space.
