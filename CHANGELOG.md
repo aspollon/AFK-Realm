@@ -2,6 +2,7 @@
 
 ## 0.2.0-preview
 
+- Automatic server backup before every update, manual backups, one-click rollback (newest 3 kept)
 - Player account management: list real player accounts with their characters, delete accounts, set new passwords, change access levels
 - Account transfer between servers via `.afkaccount` files (export and import with renumbered ids)
 - Update notice for newer server code and newer AFK Realm releases

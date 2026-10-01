@@ -4,6 +4,7 @@ Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with 
 
 ## What's new since 0.1.0
 
+- **Backups and rollback**: before every update AFK Realm saves the server – programs, settings, all databases and the versions they were built from. If a new version causes problems, *Backups → Restore* puts everything back. Backups can also be made by hand; the newest 3 are kept.
 - **Player accounts**: a new window lists all real player accounts (bot accounts are filtered out) with their characters and last login. Accounts can be deleted, get a new password or a different access level.
 - **Account transfer**: export an account with all its characters, items, mail and pets to an `.afkaccount` file and import it on another server. All ids are renumbered; a character name that is already taken is changed at the next login.
 - **Update notice**: the server management shows when newer CoA or Playerbots code, or a newer AFK Realm release, is available.

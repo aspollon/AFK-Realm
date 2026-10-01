@@ -23,7 +23,7 @@ namespace CoAInstaller
     /// </summary>
     class EngineRunner
     {
-        public static readonly Phase[] Phases =
+        static readonly Phase[] InstallPhases =
         {
             new Phase("tools",     "Check tools (Git, CMake)", 3),
             new Phase("vs",        "Visual Studio C++ Build Tools", 15),
@@ -36,6 +36,23 @@ namespace CoAInstaller
             new Phase("world",     "Import the CoA world data", 12),
             new Phase("finish",    "Configuration and final checks", 3),
         };
+
+        /// <summary>The steps shown for a mode. Updates back up the server right after the update check.</summary>
+        public static Phase[] For(string mode)
+        {
+            if (mode == "Backup") return new[] { new Phase("backup", "Back up the server", 1) };
+            if (mode == "Restore") return new[] { new Phase("restore", "Restore the databases", 4), new Phase("files", "Restore the server programs and versions", 1) };
+            if (mode == "Update" || mode == "Rebuild")
+            {
+                var list = InstallPhases.ToList();
+                list.Insert(1, new Phase("backup", "Back up the current server", 4));
+                return list.ToArray();
+            }
+            return InstallPhases;
+        }
+
+        public readonly Phase[] Phases;
+        public EngineRunner(string mode) { Phases = For(mode); }
 
         // Events are raised on the reader thread; the UI marshals them.
         public event Action<int> PhaseStarted;            // index into Phases
@@ -69,13 +86,13 @@ namespace CoAInstaller
             return path;
         }
 
-        public void Start(Install inst, string mode, string dbPassword, int dbPort)
+        public void Start(Install inst, string mode, string dbPassword, int dbPort, string extraArgs = null)
         {
             Directory.CreateDirectory(inst.Root);
             string engine = ExtractEngine(inst);
             var psi = new ProcessStartInfo("powershell.exe",
                 "-NoLogo -NoProfile -ExecutionPolicy Bypass -File \"" + engine + "\" -InstallRoot \"" + inst.Root + "\" -DatabasePort " + dbPort +
-                " -NonInteractive -Mode " + mode)
+                " -NonInteractive -Mode " + mode + (string.IsNullOrEmpty(extraArgs) ? "" : " " + extraArgs))
             {
                 UseShellExecute = false, CreateNoWindow = true,
                 RedirectStandardOutput = true, RedirectStandardError = true,
@@ -148,7 +165,7 @@ namespace CoAInstaller
         }
 
         /// <summary>Overall progress 0..1 from the current phase and its sub progress.</summary>
-        public static double Overall(int phase, double sub)
+        public double Overall(int phase, double sub)
         {
             if (phase < 0) return 0;
             double total = Phases.Sum(p => p.Weight), done = Phases.Take(phase).Sum(p => p.Weight);

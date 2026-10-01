@@ -16,6 +16,8 @@
                   rebuild incrementally only when something changed
         Rebuild   clean rebuild of the current sources
         Setup     database, world data and configuration only, no compiling
+        Backup    snapshot of the server: programs, configs, databases and versions
+        Restore   roll the server back to a snapshot (-Snapshot <folder name>)
 
     In -NonInteractive mode the database password is read from the environment
     variable AC_DB_PASSWORD and progress is reported as machine-readable lines:
@@ -26,7 +28,8 @@
 param(
     [string]$InstallRoot = '',
     [ValidateRange(1024, 65535)][int]$DatabasePort = 3307,
-    [ValidateSet('', 'Install', 'Update', 'Rebuild', 'Setup')][string]$Mode = '',
+    [ValidateSet('', 'Install', 'Update', 'Rebuild', 'Setup', 'Backup', 'Restore')][string]$Mode = '',
+    [string]$Snapshot = '',
     [switch]$NonInteractive
 )
 
@@ -94,6 +97,7 @@ $Paths = @{
     Log         = Join-Path $InstallRoot 'logs\install.log'
     Revisions   = Join-Path $InstallRoot 'Dependencies\revisions.txt'
     BuildMarker = Join-Path $InstallRoot 'Dependencies\last-successful-build.txt'
+    Backups     = Join-Path $InstallRoot 'Backups'
 }
 $Paths.Playerbots = Join-Path $Paths.Source ('modules\' + $Project.Playerbots.Folder)
 
@@ -981,6 +985,166 @@ function Test-Installation {
 }
 
 # =============================================================================
+#  Snapshots (backup and rollback)
+# =============================================================================
+# A snapshot holds everything an update changes: the server programs, the configs,
+# all four databases and the core/Playerbots versions they were built from. Map data
+# and build files are left out; they are not touched by updates.
+$KeepSnapshots = 3
+
+# Runs a program with its standard output written to a gzip file, or its standard
+# input read from one. Used for mysqldump/mysql, whose data must not pass through
+# PowerShell's text pipeline.
+function Invoke-Stream {
+    param([Parameter(Mandatory)][string]$Path, [string[]]$Arguments = @(), [string]$GzipOut = '', [string]$GzipIn = '')
+    $psi = New-Object Diagnostics.ProcessStartInfo
+    $psi.FileName = $Path
+    $psi.Arguments = (@($Arguments | ForEach-Object { Quote-Argument $_ }) -join ' ')
+    $psi.UseShellExecute = $false; $psi.CreateNoWindow = $true
+    $psi.RedirectStandardError = $true
+    $psi.RedirectStandardOutput = [bool]$GzipOut
+    $psi.RedirectStandardInput = [bool]$GzipIn
+    $process = [Diagnostics.Process]::Start($psi)
+    $errors = $process.StandardError.ReadToEndAsync()
+    try {
+        if ($GzipOut) {
+            $file = [IO.File]::Create($GzipOut)
+            $zip = New-Object IO.Compression.GZipStream($file, [IO.Compression.CompressionLevel]::Optimal)
+            try { $process.StandardOutput.BaseStream.CopyTo($zip) } finally { $zip.Dispose(); $file.Dispose() }
+        }
+        if ($GzipIn) {
+            $file = [IO.File]::OpenRead($GzipIn)
+            $zip = New-Object IO.Compression.GZipStream($file, [IO.Compression.CompressionMode]::Decompress)
+            try { $zip.CopyTo($process.StandardInput.BaseStream) } finally { $zip.Dispose(); $file.Dispose(); $process.StandardInput.Close() }
+        }
+    } finally { $process.WaitForExit() }
+    if ($process.ExitCode -ne 0) {
+        $message = ($errors.Result -split "`r?`n" | Where-Object { $_ -and $_ -notmatch 'Using a password' }) -join ' '
+        throw ('{0} failed: {1}' -f (Split-Path $Path -Leaf), $message)
+    }
+}
+
+function Get-ServerDatabases([string]$Options) {
+    $all = @(Invoke-Sql $Options "SELECT schema_name FROM information_schema.schemata WHERE schema_name IN ('acore_auth', 'acore_characters', 'acore_world', 'acore_playerbots') ORDER BY schema_name;")
+    return @($all | Where-Object { $_ })
+}
+
+function Read-SnapshotManifest([string]$Folder) {
+    $file = Join-Path $Folder 'manifest.txt'
+    if (-not (Test-Path $file)) { throw "$Folder is not a complete snapshot." }
+    $result = @{}
+    foreach ($line in [IO.File]::ReadAllLines($file)) {
+        $i = $line.IndexOf('=')
+        if ($i -gt 0) { $result[$line.Substring(0, $i)] = $line.Substring($i + 1) }
+    }
+    return $result
+}
+
+# Creates a snapshot and returns its folder name. The database must be running.
+function New-Snapshot([string]$Password, [string]$Reason) {
+    Add-Type -AssemblyName System.IO.Compression, System.IO.Compression.FileSystem
+    $drive = New-Object IO.DriveInfo ([IO.Path]::GetPathRoot($InstallRoot))
+    if ($drive.AvailableFreeSpace -lt 3GB) {
+        throw ('Not enough free disk space for the backup: {0:N1} GB free on {1}, at least 3 GB are needed.' -f ($drive.AvailableFreeSpace / 1GB), $drive.Name)
+    }
+    New-Item -ItemType Directory -Force -Path $Paths.Backups | Out-Null
+    foreach ($leftover in @(Get-ChildItem $Paths.Backups -Directory -Filter '*.partial')) { Remove-Item $leftover.FullName -Recurse -Force -ErrorAction SilentlyContinue }
+    $name = Get-Date -Format 'yyyy-MM-dd_HH-mm-ss'
+    $folder = Join-Path $Paths.Backups $name
+    $partial = "$folder.partial"
+    New-Item -ItemType Directory -Force -Path $partial | Out-Null
+    $root = New-ClientOptions 'root' $Password
+    try {
+        $databases = Get-ServerDatabases $root
+        foreach ($db in $databases) {
+            Write-Log "Backing up the database $db ..."
+            Invoke-Stream (Get-MySqlTool 'mysqldump.exe') @("--defaults-extra-file=$root", '--single-transaction', '--quick', '--hex-blob', '--routines',
+                '--set-gtid-purged=OFF', '--default-character-set=utf8mb4', '--max-allowed-packet=512M', $db) -GzipOut (Join-Path $partial "$db.sql.gz")
+        }
+    } finally { Remove-Item $root -Force -ErrorAction SilentlyContinue }
+
+    Write-Log 'Backing up the server programs and configuration ...'
+    $zipFile = Join-Path $partial 'server.zip'
+    $zip = [IO.Compression.ZipFile]::Open($zipFile, [IO.Compression.ZipArchiveMode]::Create)
+    try {
+        $files = @(Get-ChildItem $Paths.Server -File | Where-Object { $_.Extension -in '.exe', '.dll', '.yaml' })
+        $files += @(Get-ChildItem $Paths.Configs -File -Recurse -ErrorAction SilentlyContinue)
+        foreach ($f in $files) {
+            $relative = $f.FullName.Substring($Paths.Server.Length).TrimStart('\')
+            [void][IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $f.FullName, $relative, [IO.Compression.CompressionLevel]::Optimal)
+        }
+    } finally { $zip.Dispose() }
+
+    $stamp = if (Test-Path $Paths.BuildMarker) { [IO.File]::ReadAllText($Paths.BuildMarker).Trim() } else { '' }
+    $revisions = if (Test-Path $Paths.Revisions) { [IO.File]::ReadAllLines($Paths.Revisions) } else { @() }
+    $core = @($revisions | Where-Object { $_ -like 'core|*' } | ForEach-Object { $_.Split('|')[3] }) + @('') | Select-Object -First 1
+    $bots = @($revisions | Where-Object { $_ -like 'module|*' } | ForEach-Object { $_.Split('|')[3] }) + @('') | Select-Object -First 1
+    $size = (Get-ChildItem $partial -File | Measure-Object Length -Sum).Sum
+    [IO.File]::WriteAllLines((Join-Path $partial 'manifest.txt'), @(
+        'format=1', "created=$(Get-Date -Format 'yyyy-MM-dd HH:mm')", "reason=$Reason", "core=$core", "playerbots=$bots",
+        "buildstamp=$stamp", "databases=$($databases -join ',')", "bytes=$size"))
+    Move-Item $partial $folder
+    Write-Log ('Backup saved: {0} ({1:N0} MB)' -f $name, ($size / 1MB)) Green
+
+    # Only the newest snapshots are kept.
+    $old = @(Get-ChildItem $Paths.Backups -Directory | Where-Object { $_.Name -notlike '*.partial' -and (Test-Path (Join-Path $_.FullName 'manifest.txt')) } |
+             Sort-Object Name -Descending | Select-Object -Skip $KeepSnapshots)
+    foreach ($o in $old) { Write-Log "Removing the old backup $($o.Name)"; Remove-Item $o.FullName -Recurse -Force -ErrorAction SilentlyContinue }
+    return $name
+}
+
+function Restore-Snapshot([string]$Name, [string]$Password) {
+    Add-Type -AssemblyName System.IO.Compression, System.IO.Compression.FileSystem
+    if (-not $Name) { throw 'No backup was chosen.' }
+    $folder = Join-Path $Paths.Backups $Name
+    $manifest = Read-SnapshotManifest $folder
+    Assert-ServerStopped
+    Write-Log "Restoring the backup $Name (made $($manifest['created']), $($manifest['reason']))"
+
+    Enter-Phase 'restore' 'Restoring the databases'
+    Start-Database
+    $root = New-ClientOptions 'root' $Password
+    try {
+        if (-not (Test-SqlLogin $root)) { throw 'The database rejected the password.' }
+        foreach ($db in $manifest['databases'].Split(',') | Where-Object { $_ }) {
+            $dump = Join-Path $folder "$db.sql.gz"
+            if (-not (Test-Path $dump)) { throw "The backup is missing $db.sql.gz." }
+            Write-Log "Restoring the database $db ..."
+            [void](Invoke-Sql $root "DROP DATABASE IF EXISTS ``$db``; CREATE DATABASE ``$db`` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;")
+            Invoke-Stream (Get-MySqlTool 'mysql.exe') @("--defaults-extra-file=$root", '--max-allowed-packet=512M', "--database=$db") -GzipIn $dump
+        }
+    } finally { Remove-Item $root -Force -ErrorAction SilentlyContinue }
+
+    Enter-Phase 'files' 'Restoring the server programs and versions'
+    $zip = [IO.Compression.ZipFile]::OpenRead((Join-Path $folder 'server.zip'))
+    try {
+        foreach ($entry in $zip.Entries) {
+            if (-not $entry.Name) { continue }
+            $target = Join-Path $Paths.Server $entry.FullName.Replace('/', '\')
+            New-Item -ItemType Directory -Force -Path (Split-Path $target) | Out-Null
+            [IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $target, $true)
+        }
+    } finally { $zip.Dispose() }
+    Write-Log 'Server programs and configuration restored.'
+
+    # The sources go back to the snapshot's versions, so "Check for updates" offers the newer code again.
+    $git = Resolve-Git
+    foreach ($part in @(@{ Item = $Project.Core; Folder = $Paths.Source; Key = 'core' }, @{ Item = $Project.Playerbots; Folder = $Paths.Playerbots; Key = 'playerbots' })) {
+        $revision = $manifest[$part.Key]
+        if ($revision -notmatch '^[0-9a-f]{40}$' -or -not (Test-Path (Join-Path $part.Folder '.git'))) { continue }
+        $part.Item.Revision = $revision
+        if ((Invoke-Program $git @('-C', $part.Folder, 'checkout', '--force', $revision) -AllowFailure) -ne 0) {
+            [void](Invoke-Program $git @('-C', $part.Folder, 'fetch', '--no-tags', 'origin', $part.Item.Branch) -AllowFailure)
+            [void](Invoke-Program $git @('-C', $part.Folder, 'checkout', '--force', $revision))
+        }
+    }
+    Save-Revisions
+    if ($manifest['buildstamp']) { [IO.File]::WriteAllText($Paths.BuildMarker, $manifest['buildstamp']) }
+    Stop-Database $Password
+    Write-Log "The server is back at the state of $($manifest['created'])." Green
+}
+
+# =============================================================================
 #  Main
 # =============================================================================
 function Assert-Administrator {
@@ -1048,6 +1212,20 @@ try {
         $action = if ($finished) { 'Setup' } else { 'Resume' }
     }
     Write-Log "Mode: $action"
+    if ($action -eq 'Backup' -or $action -eq 'Restore') {
+        if (-not $password) { $password = Read-Password }
+        if ($action -eq 'Backup') {
+            Enter-Phase 'backup' 'Backing up the server'
+            $dbWasRunning = @(Get-DatabaseProcess).Count -gt 0
+            Start-Database
+            [void](New-Snapshot $password 'manual')
+            if (-not $dbWasRunning) { Stop-Database $password }
+        } else {
+            Restore-Snapshot $Snapshot $password
+        }
+        Send-Event 'DONE' 'ok'
+        exit 0
+    }
     $compile = $action -ne 'Setup'
     if (-not $NonInteractive) { $password = Read-Password }
 
@@ -1068,6 +1246,16 @@ try {
 
     if ($compile) {
         Assert-ServerStopped
+        # Before an update or rebuild changes anything, the current server is saved,
+        # so it can be rolled back if the new version does not work.
+        if (($action -eq 'Update' -or $action -eq 'Rebuild') -and (Test-Path (Join-Path $Paths.Server 'worldserver.exe'))) {
+            Enter-Phase 'backup' 'Backing up the current server'
+            if (-not $password) { $password = Read-Password }
+            Start-Database
+            try { [void](New-Snapshot $password "before $($action.ToLower())") }
+            catch { throw ('The backup before the ' + $action.ToLower() + ' failed, so nothing was changed: ' + $_.Exception.Message) }
+            Stop-Database $password
+        }
         $cmake = Resolve-CMake
         Enter-Phase 'vs' 'Visual Studio C++ Build Tools'
         $vs = Resolve-VisualStudio

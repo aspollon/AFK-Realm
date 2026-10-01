@@ -29,6 +29,7 @@ Pre-built repacks go stale quickly. Building from source keeps you on the latest
 - **Map data**: extracts maps, vmaps, mmaps and the CoA client DBC tables from your game client with one click
 - **Play with others**: set a VPN or LAN address (e.g. Radmin VPN); the tool configures the realm, the CoA remote-client setting and the Windows Firewall
 - **Updates**: shows when newer server code or a newer AFK Realm release is available; checks the core, Playerbots and your own extra modules, and rebuilds only when something changed
+- **Backups and rollback**: before every update the server is saved (programs, settings, all databases and their versions); if a new version causes problems, one click restores the previous state. Backups can also be made by hand; the newest 3 are kept
 - **Portable**: everything lives in one folder; the database runs without a Windows service
 
 ## Getting started

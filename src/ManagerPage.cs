@@ -38,7 +38,7 @@ namespace CoAInstaller
             Body.Controls.Add(Ui.Hint(inst.Root));
             Body.Controls.Add(serverUpdate);
             Body.Controls.Add(toolUpdate);
-            serverUpdate.LinkClicked += (s, e) => RunEngine("Update", "Install the server update now?\n\nThe server is rebuilt with the newest CoA core and Playerbots, which can take a while. A running server is stopped cleanly first.");
+            serverUpdate.LinkClicked += (s, e) => RunEngine("Update", "Install the server update now?\n\nThe current server is backed up first, then rebuilt with the newest CoA core and Playerbots, which can take a while. A running server is stopped cleanly first.");
             toolUpdate.LinkClicked += (s, e) => { if (toolUrl != null) Process.Start(toolUrl); };
 
             // --- status and start/stop
@@ -100,12 +100,22 @@ namespace CoAInstaller
             // --- maintenance
             Body.Controls.Add(Ui.Heading("Maintenance"));
             var upd = Ui.Primary("Check for updates and install");
-            upd.Click += (s, e) => RunEngine("Update", "Check for updates?\n\nIf there are new versions of CoA or Playerbots, the server is recompiled, which can take a while. A running server is stopped cleanly first.");
+            upd.Click += (s, e) => RunEngine("Update", "Check for updates?\n\nIf there are new versions of CoA or Playerbots, the current server is backed up first and then recompiled, which can take a while. A running server is stopped cleanly first.");
             var repair = Ui.Secondary("Repair setup");
             repair.Click += (s, e) => RunEngine("Setup", "Set up the database and configuration again (without recompiling)?\n\nCharacters and accounts are kept.");
+            var backups = Ui.Secondary("Backups …");
+            backups.Click += (s, e) =>
+            {
+                using (var d = new BackupsDialog(inst))
+                {
+                    d.ShowDialog(this);
+                    if (d.BackUpNow) RunEngine("Backup", null, false);
+                    else if (d.RestoreName != null) RunEngine("Restore", null, true, "-Snapshot \"" + d.RestoreName + "\"");
+                }
+            };
             var botReset = Ui.Secondary("Reset random bots …");
             botReset.Click += (s, e) => ResetBots();
-            var r = Ui.Row(); r.Controls.Add(upd); r.Controls.Add(repair); r.Controls.Add(botReset); Body.Controls.Add(r);
+            var r = Ui.Row(); r.Controls.Add(upd); r.Controls.Add(backups); r.Controls.Add(repair); r.Controls.Add(botReset); Body.Controls.Add(r);
             var r2 = Ui.Row();
             var openDir = Ui.Secondary("Open folder"); openDir.Click += (s, e) => Process.Start("explorer.exe", "\"" + inst.Root + "\"");
             var openLogs = Ui.Secondary("Open server logs"); openLogs.Click += (s, e) => Process.Start("explorer.exe", "\"" + inst.ServerDir + "\"");
@@ -290,18 +300,20 @@ namespace CoAInstaller
                 });
         }
 
-        void RunEngine(string mode, string question)
+        /// <summary>Runs the engine on the progress page. The server is stopped first unless the task can run beside it.</summary>
+        public void RunEngine(string mode, string question, bool stopServer = true, string engineArgs = null)
         {
-            if (!Ui.Confirm(this, question)) return;
+            if (question != null && !Ui.Confirm(this, question)) return;
             string pw;
             try { pw = DbLogin.FromConfig(inst).Password; }
             catch (Exception ex) { Ui.Error(this, ex.Message); return; }
-            Main.RunBusy(busy, st => ctl.StopAll(st, true),
+            Main.RunBusy(busy, st => { if (stopServer) ctl.StopAll(st, true); },
                 ex =>
                 {
                     if (ex != null) { Ui.Error(this, ex.Message); return; }
                     Main.DbPassword = pw;
                     Main.DbPort = ctl.DbPort;
+                    Main.EngineArgs = engineArgs;
                     Main.Navigate(new ProgressPage(Main, mode), true);
                 });
         }

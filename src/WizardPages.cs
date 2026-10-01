@@ -165,7 +165,7 @@ namespace CoAInstaller
             Body.Controls.Add(Ui.Title("Ready to install"));
             Body.Controls.Add(Ui.Para("Target: " + main.Target.Root));
             Body.Controls.Add(Ui.Heading("What happens now"));
-            foreach (var ph in EngineRunner.Phases)
+            foreach (var ph in EngineRunner.For("Install"))
                 Body.Controls.Add(new Label { Text = "•  " + ph.Title, AutoSize = true, Font = Ui.Base, Margin = new Padding(8, 1, 0, 1) });
             Body.Controls.Add(Ui.Hint("\nIf Visual Studio is missing, its installer window opens along the way. That is normal; please do not close it. " +
                 "Compiling puts a heavy load on your PC. Close games and other large programs if you can."));
@@ -187,7 +187,7 @@ namespace CoAInstaller
     class ProgressPage : Page
     {
         readonly string mode;
-        readonly EngineRunner runner = new EngineRunner();
+        readonly EngineRunner runner;
         readonly Label[] phaseLabels;
         readonly ProgressBar overall = new ProgressBar { Width = 640, Height = 18, Maximum = 1000, Margin = new Padding(0, 10, 0, 4) };
         readonly ProgressBar sub = new ProgressBar { Width = 640, Height = 8, Maximum = 1000, Margin = new Padding(0, 2, 0, 2) };
@@ -204,10 +204,11 @@ namespace CoAInstaller
         public ProgressPage(MainForm main, string mode) : base(main)
         {
             this.mode = mode;
-            string title = mode == "Update" ? "Updating" : mode == "Setup" ? "Setting up" : "Installing";
+            runner = new EngineRunner(mode);
+            string title = mode == "Update" ? "Updating" : mode == "Setup" ? "Setting up" : mode == "Backup" ? "Backing up" : mode == "Restore" ? "Restoring a backup" : "Installing";
             Body.Controls.Add(Ui.Title(title));
             Body.Controls.Add(Ui.Hint("You can leave this window open in the background. Please do not let the PC go to sleep."));
-            phaseLabels = EngineRunner.Phases.Select(p => new Label { Text = "○   " + p.Title, AutoSize = true, Font = Ui.Base, ForeColor = Ui.Muted, Margin = new Padding(4, 2, 0, 2) }).ToArray();
+            phaseLabels = runner.Phases.Select(p => new Label { Text = "○   " + p.Title, AutoSize = true, Font = Ui.Base, ForeColor = Ui.Muted, Margin = new Padding(4, 2, 0, 2) }).ToArray();
             foreach (var l in phaseLabels) Body.Controls.Add(l);
             Body.Controls.Add(overall); Body.Controls.Add(action); Body.Controls.Add(sub); Body.Controls.Add(elapsed);
             Body.Controls.Add(toggleLog); Body.Controls.Add(log);
@@ -232,7 +233,7 @@ namespace CoAInstaller
             try
             {
                 if (mode == "Install") CopySelfAndShortcut();
-                runner.Start(Main.Target, mode, Main.DbPassword, Main.DbPort);
+                runner.Start(Main.Target, mode, Main.DbPassword, Main.DbPort, Main.EngineArgs);
             }
             catch (Exception ex) { Done(false, "The installation could not be started: " + ex.Message); }
         }
@@ -267,17 +268,17 @@ namespace CoAInstaller
             phase = i; subValue = 0;
             for (int k = 0; k < phaseLabels.Length; k++)
             {
-                if (k < i) { phaseLabels[k].Text = "✔   " + EngineRunner.Phases[k].Title; phaseLabels[k].ForeColor = Ui.Ok; phaseLabels[k].Font = Ui.Base; }
-                else if (k == i) { phaseLabels[k].Text = "►   " + EngineRunner.Phases[k].Title; phaseLabels[k].ForeColor = Ui.Accent; phaseLabels[k].Font = Ui.Bold; }
+                if (k < i) { phaseLabels[k].Text = "✔   " + runner.Phases[k].Title; phaseLabels[k].ForeColor = Ui.Ok; phaseLabels[k].Font = Ui.Base; }
+                else if (k == i) { phaseLabels[k].Text = "►   " + runner.Phases[k].Title; phaseLabels[k].ForeColor = Ui.Accent; phaseLabels[k].Font = Ui.Bold; }
             }
             UpdateOverall();
         }
-        void UpdateOverall() { overall.Value = (int)(EngineRunner.Overall(phase, Math.Max(0, subValue)) * 1000); }
+        void UpdateOverall() { overall.Value = (int)(runner.Overall(phase, Math.Max(0, subValue)) * 1000); }
         void AppendLog(string l)
         {
             if (log.TextLength > 400000) log.Text = log.Text.Substring(200000);
             log.AppendText(l + Environment.NewLine);
-            if (phase < 0 || EngineRunner.Phases[phase].Id != "compile") action.Text = l.Length > 110 ? l.Substring(0, 110) + " …" : l;
+            if (phase < 0 || runner.Phases[phase].Id != "compile") action.Text = l.Length > 110 ? l.Substring(0, 110) + " …" : l;
         }
 
         public bool ConfirmCancel()
@@ -292,8 +293,8 @@ namespace CoAInstaller
         {
             if (!Running) return;
             Running = false; clock.Stop();
-            if (ok) { for (int k = 0; k < phaseLabels.Length; k++) { phaseLabels[k].Text = "✔   " + EngineRunner.Phases[k].Title; phaseLabels[k].ForeColor = Ui.Ok; phaseLabels[k].Font = Ui.Base; } overall.Value = 1000; }
-            else if (phase >= 0) { phaseLabels[phase].Text = "✖   " + EngineRunner.Phases[phase].Title; phaseLabels[phase].ForeColor = Ui.Bad; }
+            if (ok) { for (int k = 0; k < phaseLabels.Length; k++) { phaseLabels[k].Text = "✔   " + runner.Phases[k].Title; phaseLabels[k].ForeColor = Ui.Ok; phaseLabels[k].Font = Ui.Base; } overall.Value = 1000; }
+            else if (phase >= 0) { phaseLabels[phase].Text = "✖   " + runner.Phases[phase].Title; phaseLabels[phase].ForeColor = Ui.Bad; }
             sub.Style = ProgressBarStyle.Continuous;
             Main.RefreshButtons();
             Main.Navigate(new ResultPage(Main, mode, ok, text, changes), true);
@@ -313,9 +314,12 @@ namespace CoAInstaller
             }
             else if (ok)
             {
-                Body.Controls.Add(Ui.Title(mode == "Update" ? "Update complete" : "Installation complete"));
+                Body.Controls.Add(Ui.Title(mode == "Update" ? "Update complete" : mode == "Backup" ? "Backup complete" : mode == "Restore" ? "Backup restored" : "Installation complete"));
+                if (mode == "Update") Body.Controls.Add(Ui.Hint("The server as it was before this update was backed up first. If the new version causes problems, you can go back under \"Backups\" in the server management."));
+                if (mode == "Restore") Body.Controls.Add(Ui.Hint("The server, its databases and its settings are back at the state of the backup. \"Check for updates\" offers the newer version again whenever you want it."));
                 if (changes.Count > 0) { Body.Controls.Add(Ui.Heading("Updated")); foreach (var c in changes) Body.Controls.Add(Ui.Hint("•  " + c)); }
-                if (!main.Target.HasMapData)
+                if (mode == "Backup" || mode == "Restore") { }
+                else if (!main.Target.HasMapData)
                 {
                     Body.Controls.Add(Ui.Heading("One more step: map data"));
                     Body.Controls.Add(Ui.Para("The server needs map data from your CoA game client. Create it with one click in the server management " +
