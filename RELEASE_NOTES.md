@@ -10,6 +10,7 @@ The first public test version of AFK Realm: build, run and tweak your own Conque
 - Edits XP and drop rates, Playerbots and every other server setting, each with its description
 - Resets all random bots with one click so fresh ones are generated
 - Starts and stops the server cleanly, creates and manages player accounts and sets up play over VPN or LAN
+- Moves accounts with their characters from one server to another via an export file
 - Checks for updates and rebuilds only when something changed
 
 ## Please note

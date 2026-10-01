@@ -167,6 +167,48 @@ namespace CoAInstaller
             }
             finally { try { File.Delete(opt); } catch { } }
         }
+        /// <summary>Runs an SQL file against one database (mysql.exe reads the file itself, so it may be large).</summary>
+        public static void RunFile(Install inst, DbLogin login, string database, string file)
+        {
+            string opt = WriteOptions(login);
+            try
+            {
+                var psi = new ProcessStartInfo(Path.Combine(inst.MySqlBin, "mysql.exe"),
+                    "--defaults-extra-file=\"" + opt + "\" --database=" + database)
+                { UseShellExecute = false, CreateNoWindow = true, RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true };
+                using (var p = Process.Start(psi))
+                {
+                    var errTask = p.StandardError.ReadToEndAsync();
+                    var outTask = p.StandardOutput.ReadToEndAsync();
+                    using (var src = File.OpenRead(file)) src.CopyTo(p.StandardInput.BaseStream);
+                    p.StandardInput.Close();
+                    p.WaitForExit();
+                    if (p.ExitCode != 0) throw new InvalidOperationException(errTask.Result.Trim());
+                }
+            }
+            finally { try { File.Delete(opt); } catch { } }
+        }
+
+        /// <summary>Writes a complete dump (structure and data) of one database to a file.</summary>
+        public static void Dump(Install inst, DbLogin login, string database, string file)
+        {
+            string opt = WriteOptions(login);
+            try
+            {
+                var psi = new ProcessStartInfo(Path.Combine(inst.MySqlBin, "mysqldump.exe"),
+                    "--defaults-extra-file=\"" + opt + "\" --single-transaction --skip-comments --hex-blob --no-tablespaces --skip-add-locks --skip-triggers --set-gtid-purged=OFF --default-character-set=utf8mb4 " + database)
+                { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true };
+                using (var p = Process.Start(psi))
+                {
+                    var errTask = p.StandardError.ReadToEndAsync();
+                    using (var dst = File.Create(file)) p.StandardOutput.BaseStream.CopyTo(dst);
+                    p.WaitForExit();
+                    if (p.ExitCode != 0) throw new InvalidOperationException(errTask.Result.Trim());
+                }
+            }
+            finally { try { File.Delete(opt); } catch { } }
+        }
+
         public static string Quote(string s) { return "'" + s.Replace("\\", "\\\\").Replace("'", "''") + "'"; }
     }
 

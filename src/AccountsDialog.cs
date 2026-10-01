@@ -20,6 +20,7 @@ namespace CoAInstaller
         readonly Button password = Ui.Secondary("New password …");
         readonly ComboBox level = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 200, Font = Ui.Base, Margin = new Padding(16, 4, 4, 0) };
         readonly Button applyLevel = Ui.Secondary("Set access level");
+        readonly Button export = Ui.Secondary("Export …");
         readonly List<Control> actions = new List<Control>();
 
         public AccountsDialog(Install i, ServerControl c)
@@ -31,7 +32,7 @@ namespace CoAInstaller
             var top = new Panel { Dock = DockStyle.Top, Height = 64, Padding = new Padding(16, 12, 16, 0) };
             top.Controls.Add(new Label { Dock = DockStyle.Fill, Font = Ui.Base, ForeColor = Ui.Muted,
                 Text = "Accounts of real players. The Playerbots accounts are not listed and are managed with \"Reset random bots\".\r\n" +
-                       "Select an account to delete it, give it a new password or change its access level." });
+                       "Select an account to delete it, give it a new password, change its access level or export it for another server." });
 
             list.Columns.Add("Account", 150);
             list.Columns.Add("Access level", 170);
@@ -47,12 +48,15 @@ namespace CoAInstaller
             actionRow.Controls.Add(password);
             actionRow.Controls.Add(level);
             actionRow.Controls.Add(applyLevel);
-            actions.AddRange(new Control[] { delete, password, level, applyLevel });
+            export.Margin = new Padding(16, 3, 3, 3);
+            actionRow.Controls.Add(export);
+            actions.AddRange(new Control[] { delete, password, level, applyLevel, export });
 
             var bottom = new FlowLayoutPanel { Dock = DockStyle.Bottom, Height = 58, Padding = new Padding(14, 10, 14, 10), FlowDirection = FlowDirection.RightToLeft, BackColor = Ui.Panel, WrapContents = false };
             var close = Ui.Secondary("Close"); close.Click += (s, e) => Close();
             var refresh = Ui.Secondary("Refresh"); refresh.Click += (s, e) => Reload(null);
-            bottom.Controls.Add(close); bottom.Controls.Add(refresh); bottom.Controls.Add(status);
+            var import = Ui.Secondary("Import account file …"); import.Click += (s, e) => ImportFile();
+            bottom.Controls.Add(close); bottom.Controls.Add(refresh); bottom.Controls.Add(import); bottom.Controls.Add(status);
 
             Controls.Add(listPanel);
             Controls.Add(actionRow);
@@ -63,6 +67,7 @@ namespace CoAInstaller
             delete.Click += (s, e) => DeleteSelected();
             password.Click += (s, e) => NewPassword();
             applyLevel.Click += (s, e) => SetLevel();
+            export.Click += (s, e) => ExportSelected();
             Shown += (s, e) => Reload(null);
             UpdateActions();
         }
@@ -149,6 +154,54 @@ namespace CoAInstaller
             {
                 if (err != null) { status.Text = ""; Ui.Error(this, "The access level could not be changed:\n" + err.Message); return; }
                 Reload(a.Name + " is now: " + Levels[lvl] + (a.Online ? " (applies at the next login)" : "") + ".");
+            });
+        }
+
+        void ExportSelected()
+        {
+            var a = Selected; if (a == null) return;
+            if (ctl.World != null && !Ui.Confirm(this, "The server is running. Characters that are online right now are exported as they were last saved.\n\nExport anyway?")) return;
+            string file;
+            using (var d = new SaveFileDialog { Title = "Export " + a.Name, FileName = a.Name + AccountTransfer.Extension,
+                Filter = Product.Name + " account (*" + AccountTransfer.Extension + ")|*" + AccountTransfer.Extension,
+                InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) })
+            { if (d.ShowDialog(this) != DialogResult.OK) return; file = d.FileName; }
+            AccountTransfer.Summary sum = null;
+            Run("Exporting " + a.Name + " …", () => sum = AccountTransfer.Export(inst, a.Name, file, t => BeginInvoke((Action)(() => status.Text = t))), err =>
+            {
+                if (err != null) { status.Text = ""; Ui.Error(this, "The account could not be exported:\n" + err.Message); return; }
+                status.ForeColor = Ui.Ok; status.Text = a.Name + " was exported.";
+                MessageBox.Show(this, a.Name + " was exported to\n" + file + "\n\n" +
+                    (sum.Characters.Count == 0 ? "The account has no characters." : "Characters: " + string.Join(", ", sum.Characters) + "\nItems: " + sum.Items) +
+                    "\n\nOn the new server, open \"Manage player accounts\" and choose \"Import account file\".",
+                    Product.Name, MessageBoxButtons.OK, MessageBoxIcon.Information);
+            });
+        }
+
+        void ImportFile()
+        {
+            if (ctl.World != null) { Ui.Error(this, "Stop the server first. Characters can only be imported while the worldserver is not running."); return; }
+            string file;
+            using (var d = new OpenFileDialog { Title = "Import an account", Filter = Product.Name + " account (*" + AccountTransfer.Extension + ")|*" + AccountTransfer.Extension,
+                InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) })
+            { if (d.ShowDialog(this) != DialogResult.OK) return; file = d.FileName; }
+            Dictionary<string, string> m;
+            try { m = AccountTransfer.ReadManifest(file); }
+            catch (Exception ex) { Ui.Error(this, ex.Message); return; }
+            string chars; m.TryGetValue("characters", out chars);
+            string created; m.TryGetValue("created", out created);
+            if (!Ui.Confirm(this, "Import the account " + m["accounts"] + "?\n\n" +
+                "Characters: " + (string.IsNullOrEmpty(chars) ? "none" : chars) + "\nExported: " + created + "\n\n" +
+                "If an account with this name exists here, the characters are added to it and its password becomes the one from the file. " +
+                "Guild, group and arena team memberships are not carried over.")) return;
+            AccountTransfer.Summary sum = null;
+            Run("Importing …", () => sum = AccountTransfer.Import(inst, file, t => BeginInvoke((Action)(() => status.Text = t))), err =>
+            {
+                if (err != null) { status.Text = ""; Ui.Error(this, "The account could not be imported:\n" + err.Message); return; }
+                Reload("Imported " + m["accounts"] + ".");
+                MessageBox.Show(this, "Import finished.\n\nAccount: " + string.Join(", ", sum.Accounts) +
+                    "\nCharacters:\n  " + (sum.Characters.Count == 0 ? "none" : string.Join("\n  ", sum.Characters)) +
+                    "\nItems: " + sum.Items, Product.Name, MessageBoxButtons.OK, MessageBoxIcon.Information);
             });
         }
 
