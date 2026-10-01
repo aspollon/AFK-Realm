@@ -53,7 +53,7 @@ The window is a small WinForms app (C# 5, .NET Framework 4.x, which is already p
 ```powershell
 # interactive
 powershell -ExecutionPolicy Bypass -File engine\engine.ps1 -InstallRoot C:\CoA-Server
-# unattended (modes: Install, Update, Rebuild, Setup)
+# unattended (modes: Install, Update, Rebuild, Setup, Backup, Restore)
 $env:AC_DB_PASSWORD = '...'
 powershell -ExecutionPolicy Bypass -File engine\engine.ps1 -InstallRoot C:\CoA-Server -NonInteractive -Mode Update
 ```
@@ -76,6 +76,7 @@ C:\CoA-Server\
   DB\             portable MySQL and its data
   Dependencies\   tools, source code, build files
   logs\           install.log, mysql-error.log
+  Backups\        server backups made before updates (newest 3)
   Builder\        copy of the builder (the desktop shortcut points here)
 ```
 

@@ -21,6 +21,7 @@ Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with 
 - Starts and stops the server cleanly, creates and manages player accounts and sets up play over VPN or LAN
 - Moves accounts with their characters from one server to another via an export file
 - Checks for updates and rebuilds only when something changed
+- Backs up the server before every update and rolls it back with one click
 
 ## Please note
 
