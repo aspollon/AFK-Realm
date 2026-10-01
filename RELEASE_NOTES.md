@@ -10,6 +10,7 @@ Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with 
 - **Update notice**: the server management shows when newer CoA or Playerbots code, or a newer AFK Realm release, is available.
 - **Settings**: options that share one description in the config templates now show only their own default value; 0/1 options with two different meanings (for example how deleted characters are handled) are shown as a choice instead of on/off.
 - **Wording**: no more fixed time estimates; long steps simply say they can take a while.
+- **Fix**: the build no longer stops with "Git was NOT FOUND" when Git is installed but not on the system PATH (or when AFK Realm set up its own portable Git).
 
 ## What it does
 

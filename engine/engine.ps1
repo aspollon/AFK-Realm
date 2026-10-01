@@ -279,9 +279,20 @@ function Get-LatestReleaseAsset([string]$Repository, [string]$Pattern) {
     return $asset
 }
 
+# Git may be found in a known folder without being on PATH (or be the portable copy).
+# CMake looks for git on PATH only, so the folder is added for this process and all
+# programs it starts, and Invoke-Configure also passes the path explicitly.
+function Use-Git([string]$Git) {
+    $folder = Split-Path $Git -Parent
+    if (-not (@($env:PATH -split ';') -contains $folder)) { $env:PATH = "$folder;$env:PATH" }
+    $script:GitExe = $Git
+    Write-Log "Git: $Git"
+    return $Git
+}
+
 function Resolve-Git {
-    $git = Find-Program 'git.exe' @("$env:ProgramFiles\Git\cmd\git.exe")
-    if ($git) { Write-Log "Git: $git"; return $git }
+    $git = Find-Program 'git.exe' @("$env:ProgramFiles\Git\cmd\git.exe", "${env:ProgramFiles(x86)}\Git\cmd\git.exe", "$env:LOCALAPPDATA\Programs\Git\cmd\git.exe")
+    if ($git) { return Use-Git $git }
     $portable = Join-Path $Paths.Deps 'Git\cmd\git.exe'
     if (-not (Test-Path $portable)) {
         Write-Log 'Git is not installed; setting up a portable copy (MinGit).'
@@ -290,8 +301,7 @@ function Resolve-Git {
         Expand-Download $zip (Join-Path $Paths.Deps 'Git')
         if (-not (Test-Path $portable)) { throw 'git.exe is missing after extracting MinGit.' }
     }
-    Write-Log "Git: $portable"
-    return $portable
+    return Use-Git $portable
 }
 
 function Resolve-CMake {
@@ -785,7 +795,8 @@ function Invoke-Configure([string]$CMake, $VisualStudio, [string]$OpenSsl, [stri
         "-DOPENSSL_ROOT_DIR=$(& $forward $OpenSsl)", '-DOPENSSL_USE_STATIC_LIBS=FALSE',
         "-DMYSQL_INCLUDE_DIR=$(& $forward (Join-Path $Paths.MySql 'include'))",
         "-DMYSQL_LIBRARY=$(& $forward (Join-Path $Paths.MySql 'lib\mysqlclient.lib'))",
-        "-DMYSQL_EXECUTABLE=$(& $forward (Get-MySqlTool 'mysql.exe'))"))
+        "-DMYSQL_EXECUTABLE=$(& $forward (Get-MySqlTool 'mysql.exe'))",
+        "-DGIT_EXECUTABLE=$(& $forward $script:GitExe)"))
 }
 
 function Invoke-Compile([string]$CMake) {

@@ -8,6 +8,7 @@
 - Update notice for newer server code and newer AFK Realm releases
 - Settings: shared descriptions show only the option's own default; 0/1 variants are shown as a choice
 - Neutral wording instead of fixed time estimates
+- Fix: the build stopped with "Git was NOT FOUND" when Git was installed but not on PATH
 
 ## 0.1.0-preview
 
