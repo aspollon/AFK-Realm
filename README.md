@@ -27,7 +27,7 @@ Pre-built repacks go stale quickly. Building from source keeps you on the latest
 - **Bot reset**: one click deletes all random bots with their characters, guilds and arena teams (your own characters are kept); new bots are created at the next start
 - **Map data**: extracts maps, vmaps, mmaps and the CoA client DBC tables from your game client with one click
 - **Play with others**: set a VPN or LAN address (e.g. Radmin VPN); the tool configures the realm, the CoA remote-client setting and the Windows Firewall
-- **Updates**: checks the core, Playerbots and your own extra modules, and rebuilds only when something changed
+- **Updates**: shows when newer server code or a newer AFK Realm release is available; checks the core, Playerbots and your own extra modules, and rebuilds only when something changed
 - **Portable**: everything lives in one folder; the database runs without a Windows service
 
 ## Getting started

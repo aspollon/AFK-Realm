@@ -20,6 +20,13 @@ namespace CoAInstaller
         readonly TextBox accName = Ui.Input(200), accPw1 = Ui.Input(200, true), accPw2 = Ui.Input(200, true);
         readonly ComboBox accLevel = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 200, Font = Ui.Base };
         readonly TextBox realm = Ui.Input(200);
+        readonly LinkLabel serverUpdate = UpdateLink(), toolUpdate = UpdateLink();
+        string toolUrl;
+        static LinkLabel UpdateLink()
+        {
+            return new LinkLabel { AutoSize = true, Visible = false, Font = Ui.Bold, LinkColor = Ui.Accent, ActiveLinkColor = Ui.AccentDark,
+                BackColor = Color.FromArgb(240, 236, 252), Padding = new Padding(10, 6, 10, 6), Margin = new Padding(0, 8, 0, 0) };
+        }
         readonly System.Windows.Forms.Timer poll = new System.Windows.Forms.Timer { Interval = 2000 };
 
         static Label State() { return new Label { AutoSize = true, Font = Ui.Bold, Margin = new Padding(0, 6, 0, 2) }; }
@@ -29,6 +36,10 @@ namespace CoAInstaller
             inst = main.Target; ctl = new ServerControl(inst);
             Body.Controls.Add(Ui.Title("Server management"));
             Body.Controls.Add(Ui.Hint(inst.Root));
+            Body.Controls.Add(serverUpdate);
+            Body.Controls.Add(toolUpdate);
+            serverUpdate.LinkClicked += (s, e) => RunEngine("Update", "Install the server update now?\n\nThe server is rebuilt with the newest CoA core and Playerbots, which can take a while. A running server is stopped cleanly first.");
+            toolUpdate.LinkClicked += (s, e) => { if (toolUrl != null) Process.Start(toolUrl); };
 
             // --- status and start/stop
             Body.Controls.Add(Ui.Heading("Server"));
@@ -121,8 +132,36 @@ namespace CoAInstaller
             Settings.LastInstall = inst.Root;
             RefreshStatus(); poll.Start();
             LoadRealm();
+            CheckForUpdates();
         }
         protected override void Dispose(bool disposing) { poll.Stop(); base.Dispose(disposing); }
+
+        /// <summary>Asks GitHub in the background whether newer server code or a newer AFK Realm exists.</summary>
+        void CheckForUpdates()
+        {
+            System.Threading.ThreadPool.QueueUserWorkItem(_ =>
+            {
+                var r = UpdateCheck.Run(inst);
+                try
+                {
+                    BeginInvoke((Action)(() =>
+                    {
+                        if (r.Server.Count > 0)
+                        {
+                            serverUpdate.Text = "⬆  Server update available (" + string.Join(", ", r.Server) + ")  –  click to install";
+                            serverUpdate.Visible = true;
+                        }
+                        if (r.ToolVersion != null)
+                        {
+                            toolUrl = r.ToolUrl;
+                            toolUpdate.Text = "⬆  " + Product.Name + " " + r.ToolVersion + " is available  –  click to download";
+                            toolUpdate.Visible = true;
+                        }
+                    }));
+                }
+                catch { }
+            });
+        }
 
         bool polling;
         /// <summary>Process and file checks run in the background so the window never waits for them.</summary>

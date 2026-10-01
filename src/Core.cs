@@ -14,7 +14,6 @@ using System.Threading;
 
 namespace CoAInstaller
 {
-    /// <summary>Fixed product data. The engine script carries the repositories and branches.</summary>
     /// <summary>
     /// Product identity. Renaming the tool only needs changes here (plus the output
     /// file name in build.bat / build.sh).
@@ -30,6 +29,7 @@ namespace CoAInstaller
         public const string WindowTitle = Name + " (preview)";
         public const string EngineResource = "CoAInstaller.engine.ps1";
         public const string EngineFileName = FileStem + "-Engine.ps1";
+        public const string GitHubRepo = "aspollon/AFK-Realm";        // releases are checked for newer versions
     }
 
     /// <summary>All paths of one installation, derived from its root folder.</summary>
