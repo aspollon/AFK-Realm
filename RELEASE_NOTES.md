@@ -9,7 +9,7 @@ The first public test version of AFK Realm: build, run and tweak your own Conque
 - Extracts maps, vmaps, mmaps and the CoA client DBC tables from your game client
 - Edits XP and drop rates, Playerbots and every other server setting, each with its description
 - Resets all random bots with one click so fresh ones are generated
-- Starts and stops the server cleanly, creates accounts and sets up play over VPN or LAN
+- Starts and stops the server cleanly, creates and manages player accounts and sets up play over VPN or LAN
 - Checks for updates and rebuilds only when something changed
 
 ## Please note

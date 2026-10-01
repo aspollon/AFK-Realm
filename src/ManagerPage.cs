@@ -71,7 +71,10 @@ namespace CoAInstaller
             Body.Controls.Add(Field("Access level", accLevel));
             var create = Ui.Primary("Create account");
             create.Click += (s, e) => CreateAccount();
-            Body.Controls.Add(create);
+            var manage = Ui.Secondary("Manage player accounts …");
+            manage.Click += (s, e) => { using (var d = new AccountsDialog(inst, ctl)) d.ShowDialog(this); };
+            var accRow = Ui.Row(); accRow.Controls.Add(create); accRow.Controls.Add(manage);
+            Body.Controls.Add(accRow);
 
             // --- playing with others
             Body.Controls.Add(Ui.Heading("Play with others"));

@@ -506,6 +506,77 @@ namespace CoAInstaller
                 sql += "INSERT INTO acore_auth.account_access (id, gmlevel, RealmID, comment) VALUES (LAST_INSERT_ID(), " + gmLevel + ", -1, '" + Product.Name + "');\n";
             MySql.Query(inst, login, sql);
         }
+        public class Info
+        {
+            public int Id, Level, CharacterCount; public string Name, LastLogin, Characters; public bool Online;
+        }
+
+        /// <summary>Accounts of real players: everything except the Playerbots accounts (AiPlayerbot.RandomBotAccountPrefix).</summary>
+        public static List<Info> ListPlayers(Install inst)
+        {
+            string prefix = Conf.Get(Path.Combine(inst.ConfigDir, "modules", "playerbots.conf"), "AiPlayerbot.RandomBotAccountPrefix");
+            if (string.IsNullOrEmpty(prefix)) prefix = "rndbot";
+            string like = prefix.ToUpperInvariant().Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_") + "%";
+            string sql =
+                "SELECT a.id, a.username, " +
+                "IFNULL((SELECT MAX(x.gmlevel) FROM acore_auth.account_access x WHERE x.id = a.id), 0), " +
+                "IFNULL(DATE_FORMAT(a.last_login, '%Y-%m-%d %H:%i'), ''), a.online, " +
+                "(SELECT COUNT(*) FROM acore_characters.characters c WHERE c.account = a.id), " +
+                "IFNULL((SELECT GROUP_CONCAT(c.name ORDER BY c.level DESC, c.name SEPARATOR ', ') FROM acore_characters.characters c WHERE c.account = a.id), '') " +
+                "FROM acore_auth.account a WHERE UPPER(a.username) NOT LIKE " + MySql.Quote(like) + " ORDER BY a.username;";
+            var list = new List<Info>();
+            foreach (var row in MySql.Query(inst, DbLogin.FromConfig(inst), sql))
+            {
+                var f = row.Split('\t');
+                if (f.Length < 7) continue;
+                list.Add(new Info { Id = int.Parse(f[0]), Name = f[1], Level = int.Parse(f[2]), LastLogin = f[3] == "NULL" ? "" : f[3],
+                    Online = f[4] != "0", CharacterCount = int.Parse(f[5]), Characters = f[6] == "NULL" ? "" : f[6] });
+            }
+            return list;
+        }
+
+        /// <summary>
+        /// Deletes an account like the core's own "account delete" does. Its characters are marked as
+        /// deleted (as the game does when a player deletes one); the worldserver then removes them with all
+        /// their data - including the tables of CoA and its modules - at its next start.
+        /// </summary>
+        public static void Delete(Install inst, int id)
+        {
+            string a = id.ToString(CultureInfo.InvariantCulture);
+            MySql.Query(inst, DbLogin.FromConfig(inst),
+                "START TRANSACTION;\n" +
+                "DELETE FROM acore_characters.character_banned WHERE guid IN (SELECT guid FROM acore_characters.characters WHERE account = " + a + ");\n" +
+                "UPDATE acore_characters.characters SET deleteInfos_Name = name, deleteInfos_Account = account, deleteDate = 1, name = '', account = 0 WHERE account = " + a + ";\n" +
+                "DELETE FROM acore_characters.account_data WHERE accountId = " + a + ";\n" +
+                "DELETE FROM acore_characters.account_tutorial WHERE accountId = " + a + ";\n" +
+                "DELETE FROM acore_auth.account_access WHERE id = " + a + ";\n" +
+                "DELETE FROM acore_auth.realmcharacters WHERE acctid = " + a + ";\n" +
+                "DELETE FROM acore_auth.account_banned WHERE id = " + a + ";\n" +
+                "DELETE FROM acore_auth.account_muted WHERE guid = " + a + ";\n" +
+                "DELETE FROM acore_auth.account WHERE id = " + a + ";\n" +
+                "COMMIT;");
+        }
+
+        public static void SetPassword(Install inst, int id, string user, string pass)
+        {
+            string name = user.ToUpperInvariant();
+            byte[] salt = Srp6.NewSalt();
+            byte[] verifier = Srp6.Verifier(name, pass, salt);
+            MySql.Query(inst, DbLogin.FromConfig(inst), "UPDATE acore_auth.account SET salt = X'" + Srp6.Hex(salt) + "', verifier = X'" + Srp6.Hex(verifier) +
+                "' WHERE id = " + id.ToString(CultureInfo.InvariantCulture) + ";");
+        }
+
+        public static void SetLevel(Install inst, int id, int gmLevel)
+        {
+            string a = id.ToString(CultureInfo.InvariantCulture);
+            string sql = "DELETE FROM acore_auth.account_access WHERE id = " + a + ";\n";
+            if (gmLevel > 0) sql += "INSERT INTO acore_auth.account_access (id, gmlevel, RealmID, comment) VALUES (" + a + ", " + gmLevel + ", -1, '" + Product.Name + "');\n";
+            MySql.Query(inst, DbLogin.FromConfig(inst), sql);
+        }
+
+        /// <summary>With CharDelete.KeepDays = 0 the worldserver never purges deleted characters.</summary>
+        public static bool PurgesDeletedCharacters(Install inst) { return Conf.GetInt(inst.WorldConf, "CharDelete.KeepDays", 30) != 0; }
+
         public static string GetRealmAddress(Install inst)
         {
             var r = MySql.Query(inst, DbLogin.FromConfig(inst), "SELECT address FROM acore_auth.realmlist ORDER BY id LIMIT 1;");
