@@ -18,18 +18,24 @@
         Setup     database, world data and configuration only, no compiling
         Backup    snapshot of the server: programs, configs, databases and versions
         Restore   roll the server back to a snapshot (-Snapshot <folder name>)
+        Modules   add modules (-AddModules "<git url>;...") and/or remove them
+                  (-RemoveModules "<folder name>;..."), rebuild, record or undo
+                  their database changes
 
     In -NonInteractive mode the database password is read from the environment
     variable AC_DB_PASSWORD and progress is reported as machine-readable lines:
         ##AC|PHASE|<id>|<text>    ##AC|CHANGE|<text>    ##AC|SOURCES|<count>
+        ##AC|NOTE|<text>          (module results worth showing at the end)
         ##AC|DONE|ok|uptodate     ##AC|FAIL|<message>
 #>
 [CmdletBinding()]
 param(
     [string]$InstallRoot = '',
     [ValidateRange(1024, 65535)][int]$DatabasePort = 3307,
-    [ValidateSet('', 'Install', 'Update', 'Rebuild', 'Setup', 'Backup', 'Restore')][string]$Mode = '',
+    [ValidateSet('', 'Install', 'Update', 'Rebuild', 'Setup', 'Backup', 'Restore', 'Modules')][string]$Mode = '',
     [string]$Snapshot = '',
+    [string]$AddModules = '',
+    [string]$RemoveModules = '',
     [switch]$NonInteractive
 )
 
@@ -38,6 +44,8 @@ $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 if ($NonInteractive) { try { [Console]::OutputEncoding = New-Object Text.UTF8Encoding($false) } catch { } }
+# Text piped into mysql.exe (Invoke-Sql) is sent as UTF-8; Windows PowerShell 5.1 would send ASCII.
+$OutputEncoding = New-Object Text.UTF8Encoding($false)
 
 # =============================================================================
 #  Server profile - everything specific to the Conquest of Azeroth project
@@ -98,8 +106,13 @@ $Paths = @{
     Revisions   = Join-Path $InstallRoot 'Dependencies\revisions.txt'
     BuildMarker = Join-Path $InstallRoot 'Dependencies\last-successful-build.txt'
     Backups     = Join-Path $InstallRoot 'Backups'
+    ModuleList  = Join-Path $InstallRoot 'Dependencies\modules.txt'
+    ModuleTrash = Join-Path $InstallRoot 'Dependencies\ModulesRemoved'
 }
-$Paths.Playerbots = Join-Path $Paths.Source ('modules\' + $Project.Playerbots.Folder)
+$Paths.Modules = Join-Path $Paths.Source 'modules'
+$Paths.Playerbots = Join-Path $Paths.Modules $Project.Playerbots.Folder
+# SQL procedures that record and undo the database changes of modules (extracted next to this script).
+$JournalSql = Join-Path $PSScriptRoot 'module-journal.sql'
 
 # =============================================================================
 #  Output and logging
@@ -647,13 +660,42 @@ function Repair-IncompleteDatabases([string]$Password) {
 
 # Creates missing tables and applies all pending SQL updates with the core's own
 # dbimport tool, so the first worldserver start has nothing left to set up and
-# errors show up here instead of in a server window that closes.
-function Update-Databases {
+# errors show up here instead of in a server window that closes. The SQL files of
+# modules installed through AFK Realm are held back from dbimport and applied
+# afterwards with a record of their changes (see Invoke-ModuleSql).
+function Update-Databases([string]$Password) {
     $dbimport = Join-Path $Paths.Server 'dbimport.exe'
     if (-not (Test-Path $dbimport)) { Write-Log 'dbimport.exe was not built; the worldserver applies the updates on its first start.' Yellow; return }
-    Write-Log 'Creating tables and applying database updates. This can take a while.'
-    $code = Invoke-Program $dbimport @('--config', (Join-Path $Paths.Configs 'dbimport.conf')) -WorkingDirectory $Paths.Server -AllowFailure
-    if ($code -ne 0) { throw 'A database update failed. The MySQL error is shown just above in the log.' }
+    $root = New-ClientOptions 'root' $Password
+    try {
+        Install-ModuleJournal $root
+        $managed = @(Get-ManagedModules $root | Where-Object { Test-Path $_.Folder })
+        foreach ($m in $managed) {
+            # Left over from an interrupted run.
+            $leftover = [IO.Path]::Combine($m.Folder, 'data', 'sql.afk-held')
+            if ((Test-Path $leftover) -and -not (Test-Path ([IO.Path]::Combine($m.Folder, 'data', 'sql')))) { Rename-Item $leftover 'sql' }
+        }
+        $held = @()
+        Write-Log 'Creating tables and applying database updates. This can take a while.'
+        try {
+            foreach ($m in $managed) {
+                $sql = [IO.Path]::Combine($m.Folder, 'data', 'sql')
+                if (Test-Path $sql) { Rename-Item $sql 'sql.afk-held'; $held += $m.Folder }
+            }
+            $code = Invoke-Program $dbimport @('--config', (Join-Path $Paths.Configs 'dbimport.conf')) -WorkingDirectory $Paths.Server -AllowFailure
+        } finally {
+            foreach ($folder in $held) { Rename-Item ([IO.Path]::Combine($folder, 'data', 'sql.afk-held')) 'sql' }
+        }
+        if ($code -ne 0) { throw 'A database update failed. The MySQL error is shown just above in the log.' }
+        try {
+            Repair-ModuleJournal $root
+            foreach ($m in $managed) {
+                Invoke-ModuleSql $root $m
+                $revision = Get-ProgramOutput $script:GitExe @('-C', $m.Folder, 'rev-parse', 'HEAD')
+                if ($revision) { [void](Invoke-Sql $root ('UPDATE afk_modules.modules SET revision = {0} WHERE name = {1};' -f (ConvertTo-SqlString $revision), (ConvertTo-SqlString $m.Name))) }
+            }
+        } finally { Save-ModuleList $root }
+    } finally { Remove-Item $root -Force -ErrorAction SilentlyContinue }
     Write-Log 'Databases are complete and up to date.'
 }
 
@@ -996,6 +1038,342 @@ function Test-Installation {
 }
 
 # =============================================================================
+#  Modules (added through AFK Realm, with a record of their database changes)
+# =============================================================================
+# A module's SQL files are not left to dbimport. AFK Realm applies them itself, copies
+# the tables they name beforehand and keeps the differences in the schema afk_modules
+# (see module-journal.sql), so removing the module can undo them. The files are entered
+# into the core's `updates` tables with the core's own hash, so neither dbimport nor the
+# worldserver applies them a second time.
+
+function Install-ModuleJournal([string]$Root) {
+    if (-not (Test-Path $JournalSql)) { throw "module-journal.sql is missing next to the engine script." }
+    Invoke-Stream (Get-MySqlTool 'mysql.exe') @("--defaults-extra-file=$Root", '--default-character-set=utf8mb4') -InFile $JournalSql
+}
+
+function Test-ModuleJournal([string]$Root) {
+    return ([int](Get-SqlValue $Root "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'afk_modules' AND table_name = 'modules';")) -gt 0
+}
+
+# Modules installed through AFK Realm: name, repo, branch, revision, status.
+function Get-ManagedModules([string]$Root) {
+    if (-not (Test-ModuleJournal $Root)) { return @() }
+    $rows = @(Invoke-Sql $Root 'SELECT name, repo, branch, revision, status FROM afk_modules.modules ORDER BY name;')
+    return @($rows | Where-Object { $_ } | ForEach-Object {
+        $f = "$_".Split("`t")
+        [pscustomobject]@{ Name = $f[0]; Repo = $f[1]; Branch = $f[2]; Revision = $f[3]; Status = $f[4]; Folder = (Join-Path $Paths.Modules $f[0]) }
+    })
+}
+
+function ConvertTo-SqlString([string]$Text) { return "'" + $Text.Replace('\', '\\').Replace("'", "''") + "'" }
+
+# The database a module SQL folder belongs to, matched by folder name like the core does.
+function Get-ModuleSqlDatabase([string]$FolderName) {
+    $n = $FolderName.ToLowerInvariant()
+    if ($n.Contains('playerbot')) { return $null }
+    if ($n.Contains('world')) { return 'acore_world' }
+    if ($n.Contains('characters')) { return 'acore_characters' }
+    if ($n.Contains('auth')) { return 'acore_auth' }
+    return $null
+}
+
+# All SQL files of a module per database, in the order the core applies them (by file name).
+function Get-ModuleSqlFiles([string]$Folder) {
+    $result = @()
+    $sql = [IO.Path]::Combine($Folder, 'data', 'sql')
+    if (-not (Test-Path $sql)) { return $result }
+    foreach ($dir in @(Get-ChildItem $sql -Directory)) {
+        $db = Get-ModuleSqlDatabase $dir.Name
+        if (-not $db) { continue }
+        foreach ($file in @(Get-ChildItem $dir.FullName -Recurse -File -Filter '*.sql')) {
+            $result += [pscustomobject]@{ Db = $db; Name = $file.Name; Path = $file.FullName }
+        }
+    }
+    # The core sorts by file name, byte by byte.
+    if ($result.Count -lt 2) { return @($result) }
+    $byKey = @{}
+    foreach ($r in $result) { $byKey[$r.Db + [char]1 + $r.Path] = $r }
+    [string[]]$keys = @($result | ForEach-Object { $_.Db + [char]1 + $_.Name + [char]1 + $_.Path })
+    [Array]::Sort($keys, [StringComparer]::Ordinal)
+    return @($keys | ForEach-Object { $f = $_.Split([char]1); $byKey[$f[0] + [char]1 + $f[2]] })
+}
+
+# SHA1 like the core computes it: the file is read in text mode, so on Windows CRLF
+# becomes LF and a Ctrl+Z ends the text.
+function Get-UpdateHash([string]$File) {
+    # Latin-1 maps every byte to one character and back, so the bytes stay exactly as they are.
+    $latin1 = [Text.Encoding]::GetEncoding(28591)
+    $text = $latin1.GetString([IO.File]::ReadAllBytes($File))
+    $end = $text.IndexOf([char]0x1A)
+    if ($end -ge 0) { $text = $text.Substring(0, $end) }
+    $sha = [Security.Cryptography.SHA1]::Create()
+    try { return [BitConverter]::ToString($sha.ComputeHash($latin1.GetBytes($text.Replace("`r`n", "`n")))).Replace('-', '') } finally { $sha.Dispose() }
+}
+
+# Table names an SQL text writes to (INSERT, REPLACE, UPDATE, DELETE, CREATE/ALTER/DROP/
+# TRUNCATE/RENAME TABLE). Tables it changes some other way are found afterwards by their
+# update time and reported as not undoable.
+function Get-SqlTables([string]$Text, [string]$DefaultDb) {
+    # Strings, comments and quoted names in one pass, so a '#' or '--' inside a string does not count as a comment.
+    $token = '''(?:[^''\\]|\\.|'''')*''|"(?:[^"\\]|\\.|"")*"|`[^`]*`|/\*(?!!)[\s\S]*?\*/|(?:--[ \t]|#)[^\n]*'
+    $t = [regex]::Replace($Text, $token, [Text.RegularExpressions.MatchEvaluator]{ param($m)
+        $v = $m.Value
+        if ($v.StartsWith('`')) { return $v }
+        if ($v.StartsWith("'") -or $v.StartsWith('"')) { return "''" }
+        return ' ' })
+    $name = '(?:`?(\w+)`?\s*\.\s*)?`?([\w$]+)`?'
+    $patterns = @(
+        "\b(?:INSERT|REPLACE)\s+(?:(?:LOW_PRIORITY|DELAYED|HIGH_PRIORITY|IGNORE)\s+)*(?:INTO\s+)?$name",
+        "\bUPDATE\s+(?:(?:LOW_PRIORITY|IGNORE)\s+)*$name",
+        "\bDELETE\s+(?:(?:LOW_PRIORITY|QUICK|IGNORE)\s+)*(?:\w+\s+)?FROM\s+$name",
+        "\b(?:CREATE|ALTER|DROP|TRUNCATE)\s+TABLE\s+(?:IF\s+(?:NOT\s+)?EXISTS\s+)?$name",
+        "\bTRUNCATE\s+(?!TABLE\b)$name",
+        "\bRENAME\s+TABLE\s+$name",
+        "\bTO\s+$name",
+        "\bJOIN\s+$name"
+    )
+    $found = @{}
+    foreach ($p in $patterns) {
+        foreach ($m in [regex]::Matches($t, $p, 'IgnoreCase')) {
+            $db = if ($m.Groups[1].Success) { $m.Groups[1].Value } else { $DefaultDb }
+            $tbl = $m.Groups[2].Value
+            if ($db -notin 'acore_auth', 'acore_characters', 'acore_world', 'acore_playerbots') { continue }
+            if ($tbl -match '^(SELECT|SET|VALUES|WHERE|LIKE)$') { continue }
+            $found["$db.$tbl".ToLowerInvariant()] = [pscustomobject]@{ Db = $db; Table = $tbl }
+        }
+    }
+    return @($found.Values)
+}
+
+# Applies the module's SQL files that are new or changed since they were last applied,
+# with a record of every change. Returns nothing; throws when a file fails (the changes up
+# to that point are recorded, so removing the module still undoes them).
+function Invoke-ModuleSql([string]$Root, $Module) {
+    $files = @(Get-ModuleSqlFiles $Module.Folder)
+    foreach ($group in @($files | Group-Object Db)) {
+        $db = $group.Name
+        $applied = @{}
+        foreach ($row in @(Invoke-Sql $Root "SELECT name, hash FROM ``$db``.updates;")) {
+            if (-not $row) { continue }
+            $f = "$row".Split("`t"); $applied[$f[0]] = if ($f.Count -gt 1) { $f[1] } else { '' }
+        }
+        $pending = @($group.Group | ForEach-Object {
+            $hash = Get-UpdateHash $_.Path
+            if (-not $applied.ContainsKey($_.Name) -or ($applied[$_.Name] -and $applied[$_.Name] -ne $hash)) {
+                [pscustomobject]@{ Name = $_.Name; Path = $_.Path; Hash = $hash }
+            }
+        })
+        if ($pending.Count -eq 0) { continue }
+
+        Write-Log ('{0}: applying {1} database file(s) to {2} and recording the changes ...' -f $Module.Name, $pending.Count, $db)
+        $tables = @{}
+        foreach ($p in $pending) {
+            foreach ($t in @(Get-SqlTables ([IO.File]::ReadAllText($p.Path)) $db)) { $tables["$($t.Db).$($t.Table)".ToLowerInvariant()] = $t }
+        }
+        $sql = New-Object Text.StringBuilder
+        [void]$sql.AppendLine('DELETE FROM afk_modules.watch;')
+        [void]$sql.AppendLine(('INSERT INTO afk_modules.batches (module, db, created, files) VALUES ({0}, {1}, NOW(), {2});' -f
+            (ConvertTo-SqlString $Module.Name), (ConvertTo-SqlString $db), (ConvertTo-SqlString ((@($pending | ForEach-Object { $_.Name.Replace(',', '') })) -join ','))))
+        [void]$sql.AppendLine('SET @afk_batch = LAST_INSERT_ID();')
+        foreach ($t in $tables.Values) {
+            [void]$sql.AppendLine(('INSERT IGNORE INTO afk_modules.watch (db, tbl) VALUES ({0}, {1});' -f (ConvertTo-SqlString $t.Db), (ConvertTo-SqlString $t.Table)))
+        }
+        [void]$sql.AppendLine('CALL afk_modules.afk_begin(@afk_batch);')
+        [void]$sql.AppendLine('SELECT @afk_batch;')
+        $batch = [int](@(Invoke-Sql $Root $sql.ToString()) | Where-Object { $_ } | Select-Object -Last 1)
+
+        $failure = $null
+        foreach ($p in $pending) {
+            Write-Log "  $($p.Name)"
+            $watch = [Diagnostics.Stopwatch]::StartNew()
+            try {
+                Invoke-Stream (Get-MySqlTool 'mysql.exe') @("--defaults-extra-file=$Root", '--default-character-set=utf8', '--max-allowed-packet=1GB', $db) -InFile $p.Path
+            } catch { $failure = "$($p.Name): $($_.Exception.Message)"; break }
+            [void](Invoke-Sql $Root ('REPLACE INTO `{0}`.updates (name, hash, state, speed) VALUES ({1}, {2}, ''MODULE'', {3});' -f $db, (ConvertTo-SqlString $p.Name), (ConvertTo-SqlString $p.Hash), [int]$watch.ElapsedMilliseconds))
+        }
+        [void](Invoke-Sql $Root "CALL afk_modules.afk_finish($batch);")
+        $summary = @(Invoke-Sql $Root "SELECT kind, COUNT(*), SUM(old_rows), SUM(new_rows) FROM afk_modules.entries WHERE batch = $batch GROUP BY kind;")
+        foreach ($line in $summary | Where-Object { $_ }) {
+            $f = "$line".Split("`t")
+            switch ($f[0]) {
+                'rows'      { Write-Log ('  recorded: {0} table(s), {1} row(s) added or changed, {2} row(s) replaced or removed' -f $f[1], $f[3], $f[2]) }
+                'created'   { Write-Log "  recorded: $($f[1]) new table(s)" }
+                'dropped'   { Write-Log "  recorded: $($f[1]) deleted table(s) (kept as a copy)" }
+                'altered'   { Send-Event 'NOTE' "$($Module.Name) changed the structure of $($f[1]) existing table(s). Removing the module cannot undo that; use a backup if needed."; Write-Log "  $($f[1]) table structure change(s) - not undoable" Yellow }
+                'untracked' { Send-Event 'NOTE' "$($Module.Name) changed $($f[1]) table(s) in a way that could not be recorded. Removing the module cannot undo that; use a backup if needed."; Write-Log "  $($f[1]) unrecorded table change(s) - not undoable" Yellow }
+            }
+        }
+        if ($failure) {
+            [void](Invoke-Sql $Root ('UPDATE afk_modules.modules SET status = ''sql-failed'', note = {0} WHERE name = {1};' -f (ConvertTo-SqlString $failure), (ConvertTo-SqlString $Module.Name)))
+            throw "A database file of the module $($Module.Name) failed ($failure). The changes made so far were recorded, so removing the module undoes them."
+        }
+    }
+    [void](Invoke-Sql $Root ('UPDATE afk_modules.modules SET status = ''ok'', note = NULL WHERE name = {0} AND status = ''sql-failed'';' -f (ConvertTo-SqlString $Module.Name)))
+}
+
+# A record that was interrupted (cancelled, PC switched off) is completed from the copies
+# that are still there, so the changes made until then can be undone later.
+function Repair-ModuleJournal([string]$Root) {
+    foreach ($row in @(Invoke-Sql $Root 'SELECT id, module FROM afk_modules.batches WHERE done = 0 ORDER BY id;')) {
+        if (-not $row) { continue }
+        $f = "$row".Split("`t")
+        $watched = [int](Get-SqlValue $Root 'SELECT COUNT(*) FROM afk_modules.watch;')
+        if ($watched -gt 0) {
+            Write-Log "$($f[1]): completing the record of a database step that was interrupted ..." Yellow
+            [void](Invoke-Sql $Root "CALL afk_modules.afk_finish($([int]$f[0]));")
+        } else {
+            [void](Invoke-Sql $Root "UPDATE afk_modules.batches SET done = 1 WHERE id = $([int]$f[0]);")
+        }
+        [void](Invoke-Sql $Root ('UPDATE afk_modules.modules SET status = ''sql-failed'', note = ''A database step was interrupted.'' WHERE name = {0};' -f (ConvertTo-SqlString $f[1])))
+    }
+    # Copies left behind by an interrupted record.
+    foreach ($copy in @(Invoke-Sql $Root "SELECT table_name FROM information_schema.tables WHERE table_schema = 'afk_modules' AND table_name REGEXP '^c[0-9]+_[0-9]+$';")) {
+        if ($copy) { [void](Invoke-Sql $Root "DROP TABLE IF EXISTS afk_modules.``$copy``;") }
+    }
+}
+
+# Undoes the recorded database changes of a module and removes it from the registry.
+function Undo-ModuleSql([string]$Root, [string]$Name) {
+    Write-Log "$($Name): undoing its database changes ..."
+    $kept = 0; $manual = New-Object Collections.Generic.List[string]
+    foreach ($line in @(Invoke-Sql $Root ("CALL afk_modules.afk_undo({0});" -f (ConvertTo-SqlString $Name)))) {
+        $f = "$line".Split("`t")
+        if ($f.Count -lt 4 -or $f[0] -ne 'REPORT') { continue }
+        Write-Log ('  {0}: {1}' -f $f[2], $f[3])
+        if ($f[1] -eq 'kept') { $kept++ }
+        if ($f[1] -eq 'manual' -or $f[1] -eq 'skipped') { $manual.Add($f[2]) }
+    }
+    if ($kept -gt 0) { Send-Event 'NOTE' "$($Name): some rows were changed again after the module was installed (for example by a server update) and were left as they are. Details are in the log." }
+    if ($manual.Count -gt 0) { Send-Event 'NOTE' ("$($Name): these tables could not be put back automatically: " + (($manual | Select-Object -Unique) -join ', ') + '. A backup from before the module was installed restores them.') }
+    Send-Event 'NOTE' "$($Name) was removed and its database changes were undone."
+}
+
+# The list the GUI reads: name|repo|branch|revision|status|installed|created tables|not undoable tables
+function Save-ModuleList([string]$Root) {
+    $lines = @()
+    if (Test-ModuleJournal $Root) {
+        $sql = "SELECT m.name, m.repo, m.branch, m.revision, m.status, IFNULL(DATE_FORMAT(m.installed, '%Y-%m-%d'), ''), " +
+               "IFNULL((SELECT GROUP_CONCAT(DISTINCT CONCAT(e.db, '.', e.tbl) SEPARATOR ',') FROM afk_modules.entries e JOIN afk_modules.batches b ON b.id = e.batch WHERE b.module = m.name AND e.kind = 'created'), ''), " +
+               "IFNULL((SELECT GROUP_CONCAT(DISTINCT CONCAT(e.db, '.', e.tbl) SEPARATOR ',') FROM afk_modules.entries e JOIN afk_modules.batches b ON b.id = e.batch WHERE b.module = m.name AND e.kind IN ('altered', 'untracked')), '') " +
+               "FROM afk_modules.modules m ORDER BY m.name;"
+        $lines = @(Invoke-Sql $Root ('SET SESSION group_concat_max_len = 1000000; ' + $sql) | Where-Object { $_ } | ForEach-Object { "$_".Replace("`t", '|') })
+    }
+    [IO.File]::WriteAllLines($Paths.ModuleList, [string[]]$lines, (New-Object Text.UTF8Encoding($false)))
+}
+
+function Get-ModuleName([string]$Url) {
+    $name = ($Url.Trim().TrimEnd('/') -split '[/:]')[-1]
+    if ($name.EndsWith('.git')) { $name = $name.Substring(0, $name.Length - 4) }
+    if ($name -notmatch '^[\w.\-]+$' -or $name -in '.', '..') { throw "This is not a valid module address: $Url" }
+    return $name
+}
+
+# Downloads new modules and sets removed ones aside. Returns what to undo if the build fails.
+function Edit-ModuleFolders([string]$Git, [string[]]$Add, [string[]]$Remove) {
+    $state = @{ Added = New-Object Collections.Generic.List[string]; Removed = New-Object Collections.Generic.List[object]; Urls = @{} }
+    New-Item -ItemType Directory -Force -Path $Paths.Modules | Out-Null
+    try {
+    foreach ($name in $Remove) {
+        if ($name -notmatch '^[\w.\-]+$' -or $name -eq $Project.Playerbots.Folder) { throw "The module $name cannot be removed." }
+        $folder = Join-Path $Paths.Modules $name
+        if (-not (Test-Path $folder)) { Write-Log "$($name): the folder is already gone."; $state.Removed.Add(@{ Name = $name; Folder = $folder; Aside = $null }); continue }
+        if (Get-ProgramOutput $Git @('-C', $Paths.Source, 'ls-files', "modules/$name")) { throw "$name is part of the CoA core and cannot be removed." }
+        New-Item -ItemType Directory -Force -Path $Paths.ModuleTrash | Out-Null
+        $aside = Join-Path $Paths.ModuleTrash ("{0}-{1:yyyyMMddHHmmss}" -f $name, (Get-Date))
+        Move-Item $folder $aside
+        $state.Removed.Add(@{ Name = $name; Folder = $folder; Aside = $aside })
+        Write-Log "Removed the module folder $name (kept aside until the build has finished)."
+    }
+    foreach ($url in $Add) {
+        $name = Get-ModuleName $url
+        $folder = Join-Path $Paths.Modules $name
+        if (Test-Path $folder) {
+            # Left from an earlier attempt that stopped after downloading ("Try again").
+            $origin = Get-ProgramOutput $Git @('-C', $folder, 'remote', 'get-url', 'origin')
+            if (-not $origin -or ($origin.TrimEnd('/') -replace '\.git$', '') -ne ($url.Trim().TrimEnd('/') -replace '\.git$', '')) { throw "A module named $name is already installed." }
+            Write-Log "$($name): already downloaded, using it."
+            $state.Added.Add($folder)
+        } else {
+            $state.Added.Add($folder)
+            [void](Invoke-Program $Git @('clone', '--recurse-submodules', $url.Trim(), $folder))
+        }
+        $hasCode = @(Get-ChildItem $folder -Recurse -File -Include '*.cpp', '*.h' -ErrorAction SilentlyContinue | Where-Object { $_.FullName -notmatch '\\\.git\\' }).Count -gt 0
+        $hasSql = Test-Path ([IO.Path]::Combine($folder, 'data', 'sql'))
+        if (-not $hasCode -and -not $hasSql) { throw "$name does not look like an AzerothCore module (no source code and no SQL files)." }
+        $state.Urls[$folder] = $url.Trim()
+    }
+    } catch { Undo-ModuleFolders $state; throw }
+    return $state
+}
+
+# After a successful build: undoes the database changes of removed modules and registers
+# the new ones (their SQL files are applied by Update-Databases right after).
+function Complete-ModuleChange([string]$Password, $State) {
+    $root = New-ClientOptions 'root' $Password
+    try {
+        Install-ModuleJournal $root
+        $managed = @(Get-ManagedModules $root | ForEach-Object { $_.Name })
+        foreach ($r in $State.Removed) {
+            if ($managed -contains $r.Name) { Undo-ModuleSql $root $r.Name }
+            else { Send-Event 'NOTE' "$($r.Name) was removed. It was not installed through AFK Realm, so its database changes (if any) stay in place." }
+            if ($r.Aside) { Remove-ModuleConfigs $r.Aside }
+        }
+        foreach ($folder in $State.Added) {
+            $name = Split-Path $folder -Leaf
+            $branch = Get-ProgramOutput $script:GitExe @('-C', $folder, 'rev-parse', '--abbrev-ref', 'HEAD')
+            $revision = Get-ProgramOutput $script:GitExe @('-C', $folder, 'rev-parse', 'HEAD')
+            [void](Invoke-Sql $root ('REPLACE INTO afk_modules.modules (name, repo, branch, revision, installed, status) VALUES ({0}, {1}, {2}, {3}, NOW(), ''ok'');' -f
+                (ConvertTo-SqlString $name), (ConvertTo-SqlString $State.Urls[$folder]), (ConvertTo-SqlString "$branch"), (ConvertTo-SqlString "$revision")))
+            $hasConf = @(Get-ChildItem (Join-Path $folder 'conf') -Filter '*.conf.dist' -ErrorAction SilentlyContinue).Count -gt 0
+            Send-Event 'NOTE' ("$name was installed." + $(if ($hasConf) { ' Its options are in the server settings.' } else { '' }))
+        }
+        Save-ModuleList $root
+    } finally { Remove-Item $root -Force -ErrorAction SilentlyContinue }
+}
+
+function Undo-ModuleFolders($State) {
+    foreach ($folder in $State.Added) { Remove-Item $folder -Recurse -Force -ErrorAction SilentlyContinue }
+    foreach ($r in $State.Removed) { if ($r.Aside -and -not (Test-Path $r.Folder) -and (Test-Path $r.Aside)) { Move-Item $r.Aside $r.Folder } }
+}
+
+# Config files of a removed module, so the settings window no longer shows them.
+function Remove-ModuleConfigs([string]$ModuleFolder) {
+    foreach ($dist in @(Get-ChildItem (Join-Path $ModuleFolder 'conf') -Filter '*.conf.dist' -ErrorAction SilentlyContinue)) {
+        foreach ($file in @(Get-ChildItem $Paths.Configs -Recurse -File -ErrorAction SilentlyContinue | Where-Object { $_.Name -eq $dist.Name -or $_.Name -eq ($dist.Name -replace '\.dist$', '') })) {
+            Remove-Item $file.FullName -Force -ErrorAction SilentlyContinue
+        }
+    }
+}
+
+# After a restore, the module folders follow the restored registry: modules installed after
+# the backup are taken out, modules that existed then come back at their old version.
+function Sync-ModuleFolders([string]$Git, [string]$Root, [string[]]$Before) {
+    $now = @(Get-ManagedModules $Root)
+    foreach ($name in $Before) {
+        if ($now | Where-Object { $_.Name -eq $name }) { continue }
+        $folder = Join-Path $Paths.Modules $name
+        if (Test-Path $folder) {
+            Remove-ModuleConfigs $folder
+            Remove-Item $folder -Recurse -Force -ErrorAction SilentlyContinue
+            Write-Log "Removed the module $name (installed after this backup)."
+        }
+    }
+    foreach ($m in $now) {
+        if (-not (Test-Path (Join-Path $m.Folder '.git'))) {
+            Remove-Item $m.Folder -Recurse -Force -ErrorAction SilentlyContinue
+            if ((Invoke-Program $Git @('clone', '--recurse-submodules', $m.Repo, $m.Folder) -AllowFailure) -ne 0) { Write-Log "Could not download the module $($m.Name) again." Yellow; continue }
+        }
+        if ($m.Revision -match '^[0-9a-f]{40}$') {
+            if ((Invoke-Program $Git @('-C', $m.Folder, 'checkout', '--force', $m.Revision) -AllowFailure) -ne 0) {
+                [void](Invoke-Program $Git @('-C', $m.Folder, 'fetch', '--no-tags', 'origin') -AllowFailure)
+                [void](Invoke-Program $Git @('-C', $m.Folder, 'checkout', '--force', $m.Revision) -AllowFailure)
+            }
+            if ($m.Branch -and $m.Branch -ne 'HEAD') { [void](Invoke-Program $Git @('-C', $m.Folder, 'checkout', '-B', $m.Branch, $m.Revision) -AllowFailure); [void](Invoke-Program $Git @('-C', $m.Folder, 'branch', '--set-upstream-to', "origin/$($m.Branch)") -AllowFailure) }
+        }
+    }
+}
+
+# =============================================================================
 #  Snapshots (backup and rollback)
 # =============================================================================
 # A snapshot holds everything an update changes: the server programs, the configs,
@@ -1004,31 +1382,39 @@ function Test-Installation {
 $KeepSnapshots = 3
 
 # Runs a program with its standard output written to a gzip file, or its standard
-# input read from one. Used for mysqldump/mysql, whose data must not pass through
-# PowerShell's text pipeline.
+# input read from a gzip file or a plain file. Used for mysqldump/mysql, whose data
+# must not pass through PowerShell's text pipeline. Other output goes to the log.
 function Invoke-Stream {
-    param([Parameter(Mandatory)][string]$Path, [string[]]$Arguments = @(), [string]$GzipOut = '', [string]$GzipIn = '')
+    param([Parameter(Mandatory)][string]$Path, [string[]]$Arguments = @(), [string]$GzipOut = '', [string]$GzipIn = '', [string]$InFile = '')
     $psi = New-Object Diagnostics.ProcessStartInfo
     $psi.FileName = $Path
     $psi.Arguments = (@($Arguments | ForEach-Object { Quote-Argument $_ }) -join ' ')
     $psi.UseShellExecute = $false; $psi.CreateNoWindow = $true
     $psi.RedirectStandardError = $true
-    $psi.RedirectStandardOutput = [bool]$GzipOut
-    $psi.RedirectStandardInput = [bool]$GzipIn
+    $psi.RedirectStandardOutput = $true
+    $psi.RedirectStandardInput = [bool]($GzipIn -or $InFile)
     $process = [Diagnostics.Process]::Start($psi)
     $errors = $process.StandardError.ReadToEndAsync()
+    $output = $null
     try {
         if ($GzipOut) {
             $file = [IO.File]::Create($GzipOut)
             $zip = New-Object IO.Compression.GZipStream($file, [IO.Compression.CompressionLevel]::Optimal)
             try { $process.StandardOutput.BaseStream.CopyTo($zip) } finally { $zip.Dispose(); $file.Dispose() }
+        } else {
+            $output = $process.StandardOutput.ReadToEndAsync()
         }
         if ($GzipIn) {
             $file = [IO.File]::OpenRead($GzipIn)
             $zip = New-Object IO.Compression.GZipStream($file, [IO.Compression.CompressionMode]::Decompress)
             try { $zip.CopyTo($process.StandardInput.BaseStream) } finally { $zip.Dispose(); $file.Dispose(); $process.StandardInput.Close() }
         }
+        if ($InFile) {
+            $file = [IO.File]::OpenRead($InFile)
+            try { $file.CopyTo($process.StandardInput.BaseStream) } catch { } finally { $file.Dispose(); try { $process.StandardInput.Close() } catch { } }
+        }
     } finally { $process.WaitForExit() }
+    if ($output) { foreach ($line in ($output.Result -split "`r?`n" | Where-Object { $_ })) { Write-Log $line DarkGray } }
     if ($process.ExitCode -ne 0) {
         $message = ($errors.Result -split "`r?`n" | Where-Object { $_ -and $_ -notmatch 'Using a password' }) -join ' '
         throw ('{0} failed: {1}' -f (Split-Path $Path -Leaf), $message)
@@ -1036,7 +1422,8 @@ function Invoke-Stream {
 }
 
 function Get-ServerDatabases([string]$Options) {
-    $all = @(Invoke-Sql $Options "SELECT schema_name FROM information_schema.schemata WHERE schema_name IN ('acore_auth', 'acore_characters', 'acore_world', 'acore_playerbots') ORDER BY schema_name;")
+    # afk_modules holds the module registry and the record of their database changes.
+    $all = @(Invoke-Sql $Options "SELECT schema_name FROM information_schema.schemata WHERE schema_name IN ('acore_auth', 'acore_characters', 'acore_world', 'acore_playerbots', 'afk_modules') ORDER BY schema_name;")
     return @($all | Where-Object { $_ })
 }
 
@@ -1117,6 +1504,9 @@ function Restore-Snapshot([string]$Name, [string]$Password) {
     $root = New-ClientOptions 'root' $Password
     try {
         if (-not (Test-SqlLogin $root)) { throw 'The database rejected the password.' }
+        $modulesBefore = @(Get-ManagedModules $root | ForEach-Object { $_.Name })
+        # Backups made before modules could be installed have no module registry.
+        if (-not ($manifest['databases'].Split(',') -contains 'afk_modules')) { [void](Invoke-Sql $root 'DROP DATABASE IF EXISTS afk_modules;') }
         foreach ($db in $manifest['databases'].Split(',') | Where-Object { $_ }) {
             $dump = Join-Path $folder "$db.sql.gz"
             if (-not (Test-Path $dump)) { throw "The backup is missing $db.sql.gz." }
@@ -1151,6 +1541,11 @@ function Restore-Snapshot([string]$Name, [string]$Password) {
     }
     Save-Revisions
     if ($manifest['buildstamp']) { [IO.File]::WriteAllText($Paths.BuildMarker, $manifest['buildstamp']) }
+    $root = New-ClientOptions 'root' $Password
+    try {
+        Sync-ModuleFolders $git $root $modulesBefore
+        Save-ModuleList $root
+    } finally { Remove-Item $root -Force -ErrorAction SilentlyContinue }
     Stop-Database $Password
     Write-Log "The server is back at the state of $($manifest['created'])." Green
 }
@@ -1251,20 +1646,24 @@ try {
         }
         if ($changes.Count -eq 0) { $changes.Add('The previous build did not finish; building again.') }
         foreach ($change in $changes) { Write-Log "  $change" Cyan; Send-Event 'CHANGE' $change }
-    } elseif ($compile) {
+    } elseif ($compile -and $action -ne 'Modules') {
         Resolve-LatestRevisions $git
     }
+    $moduleAdd = @($AddModules.Split(';') | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+    $moduleRemove = @($RemoveModules.Split(';') | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+    if ($action -eq 'Modules' -and $moduleAdd.Count -eq 0 -and $moduleRemove.Count -eq 0) { throw 'No module was chosen.' }
 
     if ($compile) {
         Assert-ServerStopped
         # Before an update or rebuild changes anything, the current server is saved,
         # so it can be rolled back if the new version does not work.
-        if (($action -eq 'Update' -or $action -eq 'Rebuild') -and (Test-Path (Join-Path $Paths.Server 'worldserver.exe'))) {
+        if (($action -eq 'Update' -or $action -eq 'Rebuild' -or $action -eq 'Modules') -and (Test-Path (Join-Path $Paths.Server 'worldserver.exe'))) {
             Enter-Phase 'backup' 'Backing up the current server'
             if (-not $password) { $password = Read-Password }
             Start-Database
-            try { [void](New-Snapshot $password "before $($action.ToLower())") }
-            catch { throw ('The backup before the ' + $action.ToLower() + ' failed, so nothing was changed: ' + $_.Exception.Message) }
+            $what = if ($action -eq 'Modules') { 'module change' } else { $action.ToLower() }
+            try { [void](New-Snapshot $password "before $what") }
+            catch { throw ('The backup before the ' + $what + ' failed, so nothing was changed: ' + $_.Exception.Message) }
             Stop-Database $password
         }
         $cmake = Resolve-CMake
@@ -1277,7 +1676,11 @@ try {
     Enter-Phase 'mysql' 'Portable MySQL database'
     Install-MySql
 
-    if ($compile) {
+    $moduleState = $null
+    if ($action -eq 'Modules') {
+        Enter-Phase 'modules' 'Downloading and removing modules'
+        $moduleState = Edit-ModuleFolders $git $moduleAdd $moduleRemove
+    } elseif ($compile) {
         Enter-Phase 'source' 'Downloading the server source code'
         Sync-Sources $git
         if (-not $NonInteractive -and $action -ne 'Update') {
@@ -1285,10 +1688,24 @@ try {
             Write-Host "Optional: put additional AzerothCore modules into $(Join-Path $Paths.Source 'modules') now (one folder each, e.g. with git clone)." -ForegroundColor Yellow
             [void](Read-Host 'Press ENTER to start compiling')
         }
-        Enter-Phase 'configure' 'Preparing the build (CMake)'
-        Invoke-Configure $cmake $vs $openssl $boost -Clean:($action -eq 'Rebuild')
-        Enter-Phase 'compile' 'Compiling the server'
-        Invoke-Compile $cmake
+    }
+    if ($compile) {
+        try {
+            Enter-Phase 'configure' 'Preparing the build (CMake)'
+            Invoke-Configure $cmake $vs $openssl $boost -Clean:($action -eq 'Rebuild')
+            Enter-Phase 'compile' 'Compiling the server'
+            Invoke-Compile $cmake
+        } catch {
+            if (-not $moduleState) { throw }
+            # The new programs are only installed after a successful build, so the server is unchanged.
+            Undo-ModuleFolders $moduleState
+            $names = @($moduleState.Added | ForEach-Object { Split-Path $_ -Leaf })
+            if ($names.Count -gt 0) {
+                throw ('The server could not be built with ' + ($names -join ', ') + '. The module was taken out again and your server is unchanged. ' +
+                       'The module is probably not compatible with this CoA version; the first compiler error is in logs\install.log. (' + $_.Exception.Message + ')')
+            }
+            throw ('The server could not be built without the removed module, so it was put back and your server is unchanged. (' + $_.Exception.Message + ')')
+        }
         Copy-Runtime $openssl
         [IO.File]::WriteAllText($Paths.BuildMarker, (Get-BuildStamp))
     }
@@ -1297,16 +1714,18 @@ try {
     if (-not $password) { $password = Read-Password }
     Start-Database
     Initialize-Database $password
+    if ($moduleState) { Complete-ModuleChange $password $moduleState }
     Enter-Phase 'world' 'Importing the CoA world data'
     Import-WorldData $password
     Enter-Phase 'finish' 'Configuration and final checks'
     Set-ServerConfig $password
     Repair-IncompleteDatabases $password
-    Update-Databases
+    Update-Databases $password
     Resolve-DbcTools
     Write-Launchers $password
     Test-Installation
     Stop-Database $password
+    if ($moduleState) { foreach ($r in $moduleState.Removed) { if ($r.Aside) { Remove-Item $r.Aside -Recurse -Force -ErrorAction SilentlyContinue } } }
 
     Write-Log ''
     Write-Log 'FINISHED. The server is ready.' Green
