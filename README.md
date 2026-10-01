@@ -8,7 +8,7 @@
 
 Build, run and tweak your own **Conquest of Azeroth** server (an AzerothCore fork with Playerbots) on Windows 10/11, compiled straight from source, all through a point-and-click interface.
 
-![Server management](docs/screenshots/7-server-management.png)
+![Server management](docs/screenshots/8-server-management.png)
 
 ## Why
 
@@ -31,6 +31,16 @@ Pre-built repacks go stale quickly. Building from source keeps you on the latest
 - **Updates**: shows when newer server code or a newer AFK Realm release is available; checks the core, Playerbots and your own extra modules, and rebuilds only when something changed
 - **Backups and rollback**: before every update the server is saved (programs, settings, all databases and their versions); if a new version causes problems, one click restores the previous state. Backups can also be made by hand; the newest 3 are kept
 - **Portable**: everything lives in one folder; the database runs without a Windows service
+
+## Screenshots
+
+| Server settings | Player accounts |
+|---|---|
+| ![Server settings](docs/screenshots/9-server-settings.png) | ![Player accounts](docs/screenshots/10-player-accounts.png) |
+| **Backups** | **Update with automatic backup** |
+| ![Backups](docs/screenshots/11-backups.png) | ![Update](docs/screenshots/6-update-with-backup.png) |
+| **Installation** | **Progress** |
+| ![Welcome](docs/screenshots/1-welcome.png) | ![Progress](docs/screenshots/5-progress.png) |
 
 ## Getting started
 

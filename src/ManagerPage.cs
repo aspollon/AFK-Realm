@@ -21,11 +21,19 @@ namespace CoAInstaller
         readonly ComboBox accLevel = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 200, Font = Ui.Base };
         readonly TextBox realm = Ui.Input(200);
         readonly LinkLabel serverUpdate = UpdateLink(), toolUpdate = UpdateLink();
+        Panel serverBanner, toolBanner;
         string toolUrl;
         static LinkLabel UpdateLink()
         {
-            return new LinkLabel { AutoSize = true, Visible = false, Font = Ui.Bold, LinkColor = Ui.Accent, ActiveLinkColor = Ui.AccentDark,
-                BackColor = Color.FromArgb(240, 236, 252), Padding = new Padding(10, 6, 10, 6), Margin = new Padding(0, 8, 0, 0) };
+            return new LinkLabel { AutoSize = true, Font = Ui.Bold, LinkColor = Ui.Accent, ActiveLinkColor = Ui.AccentDark, Margin = new Padding(0) };
+        }
+        /// <summary>A tinted strip around an update link; it is shown together with the link.</summary>
+        static Panel Banner(LinkLabel link)
+        {
+            var p = new FlowLayoutPanel { AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, Visible = false, WrapContents = false,
+                BackColor = Color.FromArgb(240, 236, 252), Padding = new Padding(10, 7, 10, 7), Margin = new Padding(0, 8, 0, 0) };
+            p.Controls.Add(link);
+            return p;
         }
         readonly System.Windows.Forms.Timer poll = new System.Windows.Forms.Timer { Interval = 2000 };
 
@@ -36,8 +44,9 @@ namespace CoAInstaller
             inst = main.Target; ctl = new ServerControl(inst);
             Body.Controls.Add(Ui.Title("Server management"));
             Body.Controls.Add(Ui.Hint(inst.Root));
-            Body.Controls.Add(serverUpdate);
-            Body.Controls.Add(toolUpdate);
+            serverBanner = Banner(serverUpdate); toolBanner = Banner(toolUpdate);
+            Body.Controls.Add(serverBanner);
+            Body.Controls.Add(toolBanner);
             serverUpdate.LinkClicked += (s, e) => RunEngine("Update", "Install the server update now?\n\nThe current server is backed up first, then rebuilt with the newest CoA core and Playerbots, which can take a while. A running server is stopped cleanly first.");
             toolUpdate.LinkClicked += (s, e) => { if (toolUrl != null) Process.Start(toolUrl); };
 
@@ -158,14 +167,14 @@ namespace CoAInstaller
                     {
                         if (r.Server.Count > 0)
                         {
-                            serverUpdate.Text = "⬆  Server update available (" + string.Join(", ", r.Server) + ")  –  click to install";
-                            serverUpdate.Visible = true;
+                            serverUpdate.Text = "Server update available (" + string.Join(", ", r.Server) + ")  –  click to install";
+                            serverBanner.Visible = true;
                         }
                         if (r.ToolVersion != null)
                         {
                             toolUrl = r.ToolUrl;
-                            toolUpdate.Text = "⬆  " + Product.Name + " " + r.ToolVersion + " is available  –  click to download";
-                            toolUpdate.Visible = true;
+                            toolUpdate.Text = "New: " + Product.Name + " " + r.ToolVersion + " is available  –  click to download";
+                            toolBanner.Visible = true;
                         }
                     }));
                 }
