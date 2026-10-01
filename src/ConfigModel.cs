@@ -19,6 +19,8 @@ namespace CoAInstaller
         public bool Quoted;
         public bool Locked;               // managed by AFK Realm, shown read-only
         public string Label;              // friendly name in the popular list
+        public string DescriptionSource = "";   // how the description was found (for checks)
+        public readonly List<string> BlockKeys = new List<string>();
         public readonly List<KeyValuePair<string, string>> Choices = new List<KeyValuePair<string, string>>();
 
         public string CurrentRaw { get { string v; return File.Values.TryGetValue(Key, out v) ? v : DefaultRaw; } }
@@ -158,7 +160,9 @@ namespace CoAInstaller
                         var o = new ConfigOption { Key = m.Groups[1].Value, DefaultRaw = m.Groups[2].Value, Quoted = m.Groups[2].Value.StartsWith("\"") };
                         o.Section = top.Length > 0 && sub.Length > 0 ? top + " › " + sub : (sub.Length > 0 ? sub : (top.Length > 0 ? top : "General"));
                         List<string> named;
-                        Describe(o, byName.TryGetValue(o.Key, out named) ? named : block);
+                        bool byKey = byName.TryGetValue(o.Key, out named);
+                        o.DescriptionSource = byKey ? "named" : (block.Count > 0 ? "above" : "none");
+                        Describe(o, byKey ? named : block);
                         Add(o);
                     }
                     blockUsed = true;
@@ -183,6 +187,7 @@ namespace CoAInstaller
             // AzerothCore style: the block starts with the key name(s) on their own lines.
             var keyLines = text.TakeWhile(l => l.Trim().Length == 0 || Regex.IsMatch(l.Trim(), @"^[A-Za-z][\w.\-]*$")).ToList();
             int sharedKeys = keyLines.Count(l => l.Trim().Length > 0);
+            o.BlockKeys.AddRange(keyLines.Select(l => l.Trim()).Where(l => l.Length > 0));
             var body = text.Skip(keyLines.Count).Select(l => l.TrimEnd()).ToList();
             while (body.Count > 0 && body[body.Count - 1].Trim().Length == 0) body.RemoveAt(body.Count - 1);
             int bodyIndent = body.Where(l => l.Trim().Length > 0).Select(l => l.Length - l.TrimStart().Length).DefaultIfEmpty(0).Min();
@@ -232,7 +237,7 @@ namespace CoAInstaller
             if (numeric && values.Count == 2 && values.Contains("0") && values.Contains("1") && !rangeHint) o.Kind = OptionKind.Bool;
             else if (numeric && values.Count >= 2 && values.Contains(def) && !rangeHint && o.Choices.All(c => !Regex.IsMatch(c.Value, @"^[A-Za-z][\w.]*\.[\w.]+$"))) o.Kind = OptionKind.Choice;
             else if (numeric && (def == "0" || def == "1") && values.Count == 0 &&
-                     !Regex.IsMatch(o.Key, @"(Level|Weight|Count|Chance|Distance|Delay|Time|Interval|Min|Max|Rate|Radius|Limit|Size|Percent|Seconds|Cost|Multiplier|Factor|Amount|Number|Id)", RegexOptions.None) &&
+                     !Regex.IsMatch(o.Key, @"(Level|Weight|(?<!Ac)Count|Chance|Distance|Delay|Time|Interval|Min|Max|Rate|Radius|Limit|Size|Percent|Seconds|Cost|Multiplier|Factor|Amount|Number|Id)", RegexOptions.None) &&
                      (Regex.IsMatch(o.Description, @"\b(enable[sd]?|disable[sd]?|allow|toggle|turn (on|off))\b", RegexOptions.IgnoreCase) || Regex.IsMatch(o.Key, @"(Enable|Enabled|Allow|Disable|Disabled)", RegexOptions.None))
                      && !Regex.IsMatch(o.Description, @"\b[2-9]\d*\s*(-|=|:)", RegexOptions.None)) o.Kind = OptionKind.Bool;
             else if (numeric) o.Kind = OptionKind.Number;
