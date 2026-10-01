@@ -234,11 +234,14 @@ namespace CoAInstaller
             bool numeric = !o.Quoted && double.TryParse(def, NumberStyles.Float, CultureInfo.InvariantCulture, out num);
             var values = new HashSet<string>(o.Choices.Select(c => c.Key));
             bool rangeHint = Regex.IsMatch(o.Description, @"\d+\+\s+-|\bRange\b", RegexOptions.IgnoreCase);
-            if (numeric && values.Count == 2 && values.Contains("0") && values.Contains("1") && !rangeHint) o.Kind = OptionKind.Bool;
+            // 0/1 is only a switch when the two values mean off and on; otherwise they are two variants.
+            var onOff = new Regex(@"^\(?\s*(disabled?|enabled?|off|on|no|yes|false|true)\b", RegexOptions.IgnoreCase);
+            bool switchLabels = o.Choices.All(c => onOff.IsMatch(c.Value));
+            if (numeric && values.Count == 2 && values.Contains("0") && values.Contains("1") && !rangeHint && switchLabels) o.Kind = OptionKind.Bool;
             else if (numeric && values.Count >= 2 && values.Contains(def) && !rangeHint && o.Choices.All(c => !Regex.IsMatch(c.Value, @"^[A-Za-z][\w.]*\.[\w.]+$"))) o.Kind = OptionKind.Choice;
             else if (numeric && (def == "0" || def == "1") && values.Count == 0 &&
                      !Regex.IsMatch(o.Key, @"(Level|Weight|(?<!Ac)Count|Chance|Distance|Delay|Time|Interval|Min|Max|Rate|Radius|Limit|Size|Percent|Seconds|Cost|Multiplier|Factor|Amount|Number|Id)", RegexOptions.None) &&
-                     (Regex.IsMatch(o.Description, @"\b(enable[sd]?|disable[sd]?|allow|toggle|turn (on|off))\b", RegexOptions.IgnoreCase) || Regex.IsMatch(o.Key, @"(Enable|Enabled|Allow|Disable|Disabled)", RegexOptions.None))
+                     (Regex.IsMatch(o.Description, @"\b(enable[sd]?|disable[sd]?|allow|toggle|turn (on|off))\b", RegexOptions.IgnoreCase) || Regex.IsMatch(o.Key, @"(Enable|Enabled|Allow|Disable|Disabled|^[^.]*\.?Delete|\.Delete)", RegexOptions.None))
                      && !Regex.IsMatch(o.Description, @"\b[2-9]\d*\s*(-|=|:)", RegexOptions.None)) o.Kind = OptionKind.Bool;
             else if (numeric) o.Kind = OptionKind.Number;
             if (o.Kind != OptionKind.Choice) o.Choices.Clear();
