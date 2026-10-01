@@ -98,7 +98,7 @@ namespace CoAInstaller
                     file.Values[m.Groups[1].Value] = m.Groups[2].Value;
                     if (!file.ByKey.ContainsKey(m.Groups[1].Value))
                         file.Add(new ConfigOption { Key = m.Groups[1].Value, Section = "Other (not in the template)", DefaultRaw = null,
-                            Quoted = m.Groups[2].Value.StartsWith("\""), Description = "This option is not part of the current template. It may be outdated." });
+                            Quoted = m.Groups[2].Value.StartsWith("\""), Description = LockedKeys.IsMatch(m.Groups[1].Value) ? "Written by " + Product.Name + " so the server can work." : "This option is not part of the current template. It may be outdated." });
                 }
             }
             return file;
@@ -145,6 +145,9 @@ namespace CoAInstaller
                         if (k.Success && block.Take(block.Count - 1).All(b => SpacerLine.IsMatch(b) || Regex.IsMatch(b, @"^#[ \t]{2,}[A-Za-z][\w.\-]*[ \t]*$")))
                         { pendingNames.Add(k.Groups[1].Value); byName[k.Groups[1].Value] = block; }
                         else if (pendingNames.Count > 0 && !k.Success) pendingNames.Clear();
+                        // Options only named in a block's default list ("1 - (Rate.XP.Quest.DF)") belong to that block too.
+                        foreach (Match d in Regex.Matches(line, @"-\s+\(([A-Za-z][\w\-]*\.[\w.\-]+)\)"))
+                            if (!byName.ContainsKey(d.Groups[1].Value)) byName[d.Groups[1].Value] = block;
                     }
                 }
                 else if (line.Length > 0 && !line.StartsWith("["))
@@ -184,11 +187,31 @@ namespace CoAInstaller
             while (body.Count > 0 && body[body.Count - 1].Trim().Length == 0) body.RemoveAt(body.Count - 1);
             int bodyIndent = body.Where(l => l.Trim().Length > 0).Select(l => l.Length - l.TrimStart().Length).DefaultIfEmpty(0).Min();
             var sb = new StringBuilder();
+            // One block can describe several options ("1 - (Rate.Drop.Item.Poor)", "1 - (Rate.Drop.Money)", ...).
+            // Only the default of the option being shown is kept, so the list does not look like value choices.
+            var perKey = new Regex(@"^(Default:\s*)?(\S+)\s+-\s+\(([A-Za-z][\w.\-]*)\)(.*)$");
+            bool defaultWritten = false;
             foreach (var l in body)
             {
                 string t = l.Length >= bodyIndent ? l.Substring(bodyIndent) : l.TrimStart();
                 t = Regex.Replace(t, @"^Description:\s*", "");
+                if (sharedKeys > 1)
+                {
+                    var pk = perKey.Match(t.Trim());
+                    if (pk.Success && pk.Groups[3].Value.Contains("."))
+                    {
+                        if (!pk.Groups[3].Value.Equals(o.Key, StringComparison.OrdinalIgnoreCase) || defaultWritten) continue;
+                        string note = pk.Groups[4].Value.Trim().TrimStart('-').Trim();
+                        t = "Default:     " + pk.Groups[2].Value + (note.Length > 0 ? " (" + note + ")" : "");
+                        defaultWritten = true;
+                    }
+                }
                 sb.AppendLine(t);
+            }
+            if (sharedKeys > 1)
+            {
+                var others = keyLines.Select(k => k.Trim()).Where(k => k.Length > 0 && !k.Equals(o.Key, StringComparison.OrdinalIgnoreCase)).ToList();
+                if (others.Count > 0) sb.AppendLine().Append("This description is shared with: ").AppendLine(string.Join(", ", others));
             }
             o.Description = Regex.Replace(sb.ToString().Trim(), @"\n\s{10,}", "\n    ");
 
