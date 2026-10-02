@@ -4,7 +4,7 @@
 
 - Game master tools: connection to the running server (SOAP, this PC only, own administrator account)
 - Quest helper: find quests by NPC name, quest title or id, or list the open quests around a character; give, complete, reward, remove and check them with one click, for offline characters too
-- Player actions: unstuck, revive, kick, set level, send gold and mail, customize appearance or change race at the next login, server-wide announcement
+- Player actions: unstuck, revive, kick, set level, send gold and mail, customize appearance, change race or change faction at the next login, server-wide announcement
 - Server console in the window for every other GM command, with the server's answer
 - Authserver and worldserver run without console windows; "Open server consoles" shows both in one window, with a command line for the worldserver (the classic windows can be switched back on)
 - User guide (docs/MANUAL.md) that explains every window

@@ -180,6 +180,7 @@ The server's answer appears in the console at the bottom.
 | **Send mail …** | Sends an in-game mail with a subject and a text. |
 | **Customize appearance** | At the next login the player can redo the character's looks, gender and name on the login screen. |
 | **Change race** | At the next login the player can pick another race of the same faction (and redo the looks and the name). |
+| **Change faction** | At the next login the player can move the character to the other faction and pick one of its races. |
 | **Announce** | Shows a message to everyone who is online, for example before a restart. |
 
 ### Server console
