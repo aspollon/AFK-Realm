@@ -178,6 +178,8 @@ The server's answer appears in the console at the bottom.
 | **Set level …** | Sets the character's level. |
 | **Send gold …** | Sends gold by in-game mail. |
 | **Send mail …** | Sends an in-game mail with a subject and a text. |
+| **Customize appearance** | At the next login the player can redo the character's looks, gender and name on the login screen. |
+| **Change race** | At the next login the player can pick another race of the same faction (and redo the looks and the name). |
 | **Announce** | Shows a message to everyone who is online, for example before a restart. |
 
 ### Server console

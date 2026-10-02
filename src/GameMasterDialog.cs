@@ -118,6 +118,12 @@ namespace CoAInstaller
                 Player("send mail {0} \"" + Clean(v[0]) + "\" \"" + Clean(v[1]) + "\"", null);
             }));
             player.Controls.Add(p2);
+            player.Controls.Add(Ui.Heading("At the next login"));
+            var p4 = Ui.Row();
+            p4.Controls.Add(Action("Customize appearance", () => Player("character customize {0}", null)));
+            p4.Controls.Add(Action("Change race", () => Player("character changerace {0}", null)));
+            player.Controls.Add(p4);
+            player.Controls.Add(Ui.Hint("The character is marked on the login screen the next time its player logs in: \"Customize appearance\" lets them redo looks, gender and name, \"Change race\" also lets them pick another race of the same faction. A character that is online has to log out to the character list first.", 700));
             player.Controls.Add(Ui.Heading("Message to everyone"));
             var p3 = Ui.Row(); p3.Controls.Add(announce);
             p3.Controls.Add(Action("Announce", () => { string t = Clean(announce.Text); if (t.Length > 0) { Send("announce " + t, null); announce.Text = ""; } }));
