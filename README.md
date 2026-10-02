@@ -10,6 +10,12 @@ Build, run and tweak your own **Conquest of Azeroth** server (an AzerothCore for
 
 ![Server management](docs/screenshots/8-server-management.png)
 
+## About this project
+
+AFK Realm was never planned as a product. I built it for myself: it started as a simple Bash script that compiled my own server, turned into a PowerShell script when the steps piled up, and then got a window on top because I was tired of typing. Since then it keeps growing with whatever I need next for my own server – settings, backups, modules, game master tools.
+
+I'm happy if it is useful to other people too. If something does not work, if something is missing or if you have an idea for what could be better, please tell me: open an [issue](../../issues) or write to me on Discord. Suggestions are very welcome, and a `logs\install.log` makes bug reports much easier to fix.
+
 ## Why
 
 Pre-built repacks go stale quickly. Building from source keeps you on the latest fixes, but it needs Git, CMake, Visual Studio, OpenSSL, Boost, MySQL and a lot of patience. This tool does all of that for you and then helps you run the server day to day.
