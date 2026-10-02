@@ -37,13 +37,13 @@ namespace CoAInstaller
         {
             inst = i; ctl = c;
             Text = Product.Name + " – Game master"; Font = Ui.Base; BackColor = Color.White; ShowIcon = false;
-            StartPosition = FormStartPosition.CenterParent; ClientSize = new Size(1160, 720); MinimumSize = new Size(980, 600);
+            StartPosition = FormStartPosition.CenterParent; ClientSize = new Size(1220, 720); MinimumSize = new Size(980, 600);
 
             var top = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, Padding = new Padding(16, 12, 16, 6), WrapContents = false };
             top.Controls.Add(link);
 
             // ---- characters
-            people.Columns.Add("Character", 130);
+            people.Columns.Add("Character", 190);
             people.Columns.Add("Lvl", 38, HorizontalAlignment.Right);
             people.Columns.Add("Zone", 130);
             var peopleTop = Ui.Row(); peopleTop.Dock = DockStyle.Top; peopleTop.Margin = new Padding(0);
@@ -51,7 +51,7 @@ namespace CoAInstaller
             var peopleFilter = Ui.Row(); peopleFilter.Dock = DockStyle.Top; peopleFilter.Margin = new Padding(0);
             var refresh = Ui.Secondary("Refresh"); refresh.Font = Ui.Small; refresh.Padding = new Padding(6, 1, 6, 1);
             peopleFilter.Controls.Add(offline); peopleFilter.Controls.Add(bots); peopleFilter.Controls.Add(refresh);
-            var left = new Panel { Dock = DockStyle.Left, Width = 340, Padding = new Padding(16, 0, 8, 10) };
+            var left = new Panel { Dock = DockStyle.Left, Width = 400, Padding = new Padding(16, 0, 8, 10) };
             left.Controls.Add(people); left.Controls.Add(peopleFilter); left.Controls.Add(peopleTop);
 
             // ---- quest helper
@@ -177,6 +177,8 @@ namespace CoAInstaller
         /// <summary>Quotes end a text argument and line breaks end the command, so both are taken out.</summary>
         static string Clean(string text) { return (text ?? "").Replace("\"", "'").Replace("\r", " ").Replace("\n", " ").Trim(); }
 
+        /// <summary>A character name as a command argument: CoA allows "First Last", which has to be quoted.</summary>
+        static string Arg(string name) { return name.IndexOf(' ') >= 0 ? "\"" + name + "\"" : name; }
         CharacterInfo Who { get { return people.SelectedItems.Count == 1 ? people.SelectedItems[0].Tag as CharacterInfo : null; } }
         QuestInfo Which { get { return quests.SelectedItems.Count == 1 ? quests.SelectedItems[0].Tag as QuestInfo : null; } }
 
@@ -273,7 +275,7 @@ namespace CoAInstaller
         {
             var who = Who;
             if (who == null) { Ui.Error(this, "Choose a character on the left first."); return; }
-            Send(string.Format(format, who.Name), done);
+            Send(string.Format(format, Arg(who.Name)), done);
         }
 
         // ---------------------------------------------------------------- quests
@@ -337,7 +339,7 @@ namespace CoAInstaller
             if (who == null) { Ui.Error(this, "Choose a character on the left first."); return; }
             if (quest == null) { Ui.Error(this, "Choose a quest in the list first."); return; }
             if (verb == "reward" && quest.Status != 1) Print("Note: Reward only works for a completed quest. If the server refuses, use Complete first.");
-            Send("quest " + verb + " " + quest.Id.ToString(CultureInfo.InvariantCulture) + " " + who.Name, () =>
+            Send("quest " + verb + " " + quest.Id.ToString(CultureInfo.InvariantCulture) + " " + Arg(who.Name), () =>
             {
                 if (verb == "add") quest.Status = 3;
                 else if (verb == "complete") quest.Status = 1;
