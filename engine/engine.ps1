@@ -352,7 +352,10 @@ function Get-VisualStudioInstances {
     if (-not (Test-Path $VsWhere)) { return @() }
     $json = Get-ProgramOutput $VsWhere @('-all', '-prerelease', '-products', '*', '-version', '[17.0,18.0)', '-format', 'json', '-utf8')
     if (-not $json) { return @() }
-    return @($json | ConvertFrom-Json)
+    # Windows PowerShell 5.1 hands a JSON list on as one object; going through a variable
+    # splits it into its instances (with two installations the fields were mixed up otherwise).
+    $parsed = $json | ConvertFrom-Json
+    return @($parsed | ForEach-Object { $_ })
 }
 
 # The newest VS 2022 instance that has the x64 C++ compiler, or $null.
@@ -361,10 +364,13 @@ function Find-VisualStudio {
     $path = Get-ProgramOutput $VsWhere @('-latest', '-products', '*', '-version', '[17.0,18.0)', '-requires', $VsToolset, '-property', 'installationPath')
     if (-not $path) { return $null }
     $path = ($path -split "`n")[0].Trim()
-    $instance = Get-VisualStudioInstances | Where-Object { $_.installationPath -eq $path } | Select-Object -First 1
+    $instance = @(Get-VisualStudioInstances) | Where-Object { $_.installationPath -eq $path } | Select-Object -First 1
+    # CMake only accepts a version of exactly four numbers; anything else is left out.
+    $version = if ($instance) { [string]$instance.installationVersion } else { '' }
+    if ($version -notmatch '^\d+\.\d+\.\d+\.\d+$') { $version = '' }
     return [pscustomobject]@{
         Path           = $path
-        Version        = if ($instance) { [string]$instance.installationVersion } else { '' }
+        Version        = $version
         RebootRequired = [bool]($instance -and $instance.PSObject.Properties['isRebootRequired'] -and $instance.isRebootRequired)
     }
 }
