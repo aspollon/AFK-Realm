@@ -62,9 +62,13 @@ The top of the **Server management** shows the three parts of the server:
 | Worldserver | the game world |
 
 - **Start server** starts all three in the right order. The worldserver needs a few minutes to load; you can keep using AFK Realm meanwhile. When it says *The server is running. You can log in now.*, it is ready.
-- **Stop server** saves all characters and shuts everything down cleanly. Always stop the server this way and not by closing the worldserver window.
+- **Stop server** saves all characters and shuts everything down cleanly. Always stop the server this way.
 
-The worldserver has its own window. You can type GM commands there, but the [game master tools](#6-game-master-tools) are more comfortable.
+The servers run in the background without windows of their own. The dark box below the buttons shows what they print: choose **Worldserver log** or **Authserver log**. While the worldserver loads, you can follow its progress there. GM commands are typed in the console of the [game master tools](#6-game-master-tools).
+
+You can close AFK Realm while the server runs; the server keeps running, and the log is shown again when you open AFK Realm.
+
+If you prefer the classic console windows, tick **Also open the server windows**; it applies from the next server start.
 
 If the worldserver closes while starting, AFK Realm shows the last lines of its log, which usually name the reason.
 
@@ -171,7 +175,7 @@ The server's answer appears in the console at the bottom.
 
 ### Server console
 
-The dark box at the bottom shows every command AFK Realm sent and the server's answer. In the line below it you can type any GM command the server window accepts, with or without the leading dot, for example:
+The dark box at the bottom shows every command AFK Realm sent and the server's answer. In the line below it you can type any GM command the worldserver's console accepts, with or without the leading dot, for example:
 
 ```
 server info

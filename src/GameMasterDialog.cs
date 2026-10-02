@@ -122,7 +122,7 @@ namespace CoAInstaller
             var p3 = Ui.Row(); p3.Controls.Add(announce);
             p3.Controls.Add(Action("Announce", () => { string t = Clean(announce.Text); if (t.Length > 0) { Send("announce " + t, null); announce.Text = ""; } }));
             player.Controls.Add(p3);
-            player.Controls.Add(Ui.Hint("Everything else works in the console below: type any GM command the server window accepts, for example \"server info\" or \"lookup item sword\".", 700));
+            player.Controls.Add(Ui.Hint("Everything else works in the console below: type any GM command the server console accepts, for example \"server info\" or \"lookup item sword\".", 700));
             var playerTab = new TabPage("Player") { BackColor = Color.White, Padding = new Padding(10), AutoScroll = true };
             playerTab.Controls.Add(player);
 

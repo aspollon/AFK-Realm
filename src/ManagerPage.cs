@@ -36,6 +36,11 @@ namespace CoAInstaller
             return p;
         }
         readonly System.Windows.Forms.Timer poll = new System.Windows.Forms.Timer { Interval = 2000 };
+        readonly LogView serverLog = new LogView { Width = 640, Height = 190, Margin = new Padding(0, 2, 0, 6) };
+        readonly RadioButton logWorld = new RadioButton { Text = "Worldserver log", AutoSize = true, Checked = true, Font = Ui.Small, Margin = new Padding(0, 2, 12, 0) };
+        readonly RadioButton logAuth = new RadioButton { Text = "Authserver log", AutoSize = true, Font = Ui.Small, Margin = new Padding(0, 2, 24, 0) };
+        readonly CheckBox showWindows = new CheckBox { Text = "Also open the server windows (from the next start)", AutoSize = true, Font = Ui.Small, ForeColor = Ui.Muted, Margin = new Padding(0, 2, 0, 0) };
+        void WatchLog() { serverLog.Watch(Path.Combine(inst.ServerDir, logWorld.Checked ? "Server.log" : "Auth.log")); }
 
         static Label State() { return new Label { AutoSize = true, Font = Ui.Bold, Margin = new Padding(0, 6, 0, 2) }; }
 
@@ -58,8 +63,15 @@ namespace CoAInstaller
             var buttons = Ui.Row(); buttons.Controls.Add(start); buttons.Controls.Add(stop);
             Body.Controls.Add(buttons);
             Body.Controls.Add(busy);
-            Body.Controls.Add(Ui.Hint("The worldserver opens its own window, where you can type GM commands. " +
-                "\"Stop server\" saves all characters and shuts down cleanly."));
+            Body.Controls.Add(Ui.Hint("\"Stop server\" saves all characters and shuts down cleanly. The servers run in the background; " +
+                "their output is shown below, and GM commands are typed in the game master tools."));
+            var logRow = Ui.Row();
+            logRow.Controls.Add(logWorld); logRow.Controls.Add(logAuth); logRow.Controls.Add(showWindows);
+            Body.Controls.Add(logRow);
+            Body.Controls.Add(serverLog);
+            logWorld.CheckedChanged += (s, e) => WatchLog();
+            showWindows.Checked = Settings.ShowServerWindows;
+            showWindows.CheckedChanged += (s, e) => Settings.ShowServerWindows = showWindows.Checked;
             start.Click += (s, e) => StartServer();
             stop.Click += (s, e) => StopServer();
 
@@ -170,6 +182,7 @@ namespace CoAInstaller
         {
             Settings.LastInstall = inst.Root;
             RefreshStatus(); poll.Start();
+            WatchLog();
             LoadRealm();
             CheckForUpdates();
         }

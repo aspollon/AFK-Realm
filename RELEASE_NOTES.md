@@ -8,6 +8,8 @@ Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with 
 - **Quest helper**: type an NPC name, a quest title or a quest id and see the matching quests with who gives them and who takes them – read from your server's own database, so it fits CoA's changed world. Or let AFK Realm list the open quests around a character. Then *Give quest*, *Complete*, *Reward*, *Remove* or *Check* with one click, also for characters that are offline. Handy when a quest giver cannot be clicked or a quest item does not drop.
 - **Player actions**: unstuck (to the inn), revive, kick, set level, send gold or a mail, and an announcement to everyone.
 - **Server console**: every other GM command can be typed right in the window; the server's answer is shown below.
+- **No more console windows**: authserver and worldserver now run in the background. What they print is shown in the server management (*Worldserver log* / *Authserver log*), and commands are typed in the game master console. The classic windows can be switched back on with one tick.
+- **User guide**: [docs/MANUAL.md](docs/MANUAL.md) explains every window – what it is for and how to use it.
 - **Fix**: the installation no longer stops at *Prepare the build (CMake)* with "the version field is not 4 integer components" on PCs that have more than one Visual Studio 2022 installation (for example one left over from an earlier attempt in another folder).
 
 ## What it does

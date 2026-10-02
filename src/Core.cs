@@ -367,10 +367,13 @@ namespace CoAInstaller
 
         Process StartConsole(string exe, string conf)
         {
-            // Own console window, so the log is visible and GM commands can be typed.
-            // Started directly (no cmd.exe), so Ctrl+C reaches the server itself.
+            // Each server gets a console of its own, which stays hidden unless the user asks for the
+            // windows: the log is shown in AFK Realm (LogView) and commands go through AdminLink.
+            // The console itself is still needed - the worldserver stops when it has none to read
+            // from, and Ctrl+C for a clean shutdown is sent to it. Started directly (no cmd.exe),
+            // so Ctrl+C reaches the server itself.
             var psi = new ProcessStartInfo(exe, "--config \"" + conf + "\"")
-            { UseShellExecute = true, WorkingDirectory = inst.ServerDir };
+            { UseShellExecute = true, WorkingDirectory = inst.ServerDir, WindowStyle = Settings.ShowServerWindows ? ProcessWindowStyle.Normal : ProcessWindowStyle.Hidden };
             return Process.Start(psi);
         }
 
@@ -383,7 +386,7 @@ namespace CoAInstaller
                 if (p != null && p.WaitForExit(500))
                     throw new InvalidOperationException("The " + name + " stopped while starting. The end of its log:\n\n" + LogTail(log, 8));
             }
-            if (p == null || !p.HasExited) return; // still loading; its window shows the progress
+            if (p == null || !p.HasExited) return; // still loading; the log shows the progress
             throw new InvalidOperationException("The " + name + " did not start. See " + log);
         }
         void WaitPort(int port, int seconds, string error)
@@ -448,7 +451,7 @@ namespace CoAInstaller
             try
             {
                 foreach (var key in BotResetKeys) Conf.Set(BotsConf, key, "1");
-                status("Deleting all random bots, their guilds and arena teams. The worldserver window shows the progress ...");
+                status("Deleting all random bots, their guilds and arena teams. The server log shows the progress ...");
                 var p = StartConsole(inst.WorldExe, inst.WorldConf);
                 if (p == null) throw new InvalidOperationException("The worldserver could not be started.");
                 var until = DateTime.Now.AddMinutes(60);
@@ -460,7 +463,7 @@ namespace CoAInstaller
                         throw new InvalidOperationException("The worldserver started normally instead of deleting the bots. Nothing was deleted.");
                     }
                     if (DateTime.Now > until)
-                        throw new InvalidOperationException("Deleting the bots takes longer than an hour. Check the worldserver window; the reset settings have been switched off again.");
+                        throw new InvalidOperationException("Deleting the bots takes longer than an hour. Check the server log; the reset settings have been switched off again.");
                 }
                 string log = Path.Combine(inst.ServerDir, "Playerbots.log");
                 string text = "";
@@ -505,7 +508,13 @@ namespace CoAInstaller
             {
                 status("Worldserver is saving and shutting down ...");
                 if (!StopConsoleProcess(w, 180))
-                    throw new InvalidOperationException("The worldserver did not respond. Type \"server shutdown 1\" in its window, then try again.");
+                {
+                    // Second way: ask it through the game master connection.
+                    bool asked = false;
+                    try { AdminLink.Run(inst, "server shutdown 1"); asked = true; } catch { }
+                    if (!asked || !w.WaitForExit(180000))
+                        throw new InvalidOperationException("The worldserver did not respond. Type \"server shutdown 1\" in the console of the game master tools, then try again.");
+                }
             }
             var a = Auth;
             if (a != null)
@@ -659,6 +668,13 @@ namespace CoAInstaller
         {
             get { try { return File.Exists(File_) ? File.ReadAllText(File_).Trim() : null; } catch { return null; } }
             set { try { Directory.CreateDirectory(Path.GetDirectoryName(File_)); File.WriteAllText(File_, value ?? ""); } catch { } }
+        }
+        static string WindowsFile { get { return Path.Combine(Path.GetDirectoryName(File_), "show-server-windows.txt"); } }
+        /// <summary>Whether authserver and worldserver open their own console windows (off: their logs are shown in AFK Realm only).</summary>
+        public static bool ShowServerWindows
+        {
+            get { try { return File.Exists(WindowsFile); } catch { return false; } }
+            set { try { Directory.CreateDirectory(Path.GetDirectoryName(WindowsFile)); if (value) File.WriteAllText(WindowsFile, "1"); else File.Delete(WindowsFile); } catch { } }
         }
     }
 }
