@@ -23,7 +23,7 @@ namespace CoAInstaller
         public const string Name = "AFK Realm";                   // window titles, dialogs
         public const string ShortName = "AFK Realm";              // desktop shortcut, firewall rules
         public const string FileStem = "AFK-Realm";                // exe name, settings folder
-        public const string Version = "0.3.0-preview";            // pre-release until testers confirm it works
+        public const string Version = "0.4.0-preview";            // pre-release until testers confirm it works
         public const string Tagline = "build, run and tweak your own server the lazy way";
         public const string BuildsFor = "Conquest of AzerothCore";
         public const string WindowTitle = Name + " (preview)";
@@ -565,7 +565,8 @@ namespace CoAInstaller
                 "IFNULL(DATE_FORMAT(a.last_login, '%Y-%m-%d %H:%i'), ''), a.online, " +
                 "(SELECT COUNT(*) FROM acore_characters.characters c WHERE c.account = a.id), " +
                 "IFNULL((SELECT GROUP_CONCAT(c.name ORDER BY c.level DESC, c.name SEPARATOR ', ') FROM acore_characters.characters c WHERE c.account = a.id), '') " +
-                "FROM acore_auth.account a WHERE UPPER(a.username) NOT LIKE " + MySql.Quote(like) + " ORDER BY a.username;";
+                "FROM acore_auth.account a WHERE UPPER(a.username) NOT LIKE " + MySql.Quote(like) +
+                " AND a.username <> " + MySql.Quote(AdminLink.AccountName) + " ORDER BY a.username;";
             var list = new List<Info>();
             foreach (var row in MySql.Query(inst, DbLogin.FromConfig(inst), sql))
             {

@@ -25,6 +25,7 @@ Pre-built repacks go stale quickly. Building from source keeps you on the latest
 - **Server settings**: a list of popular options (XP, drop and reputation rates, flight paths, cross-faction play, Playerbots count and levels) plus every option of the worldserver and all module configs, searchable, with the description from each template and one-click reset to the default
 - **Accounts**: create accounts with GM levels, list all player accounts (bot accounts are filtered out) with their characters, delete accounts, set new passwords and change access levels
 - **Account transfer**: export an account with all its characters, items, mail and pets to an `.afkaccount` file and import it on another server – ids are renumbered, taken names are renamed at the next login
+- **Game master tools**: a line to the running server (its SOAP service, switched on for this PC only) with a quest helper – find quests by NPC name, quest title or id, or list the open quests around a character, then give, complete, reward or remove them with one click – plus unstuck, revive, level, gold and mail for a character, announcements, and a console for every other GM command
 - **Modules**: browse the AzerothCore module catalog, tick modules to install them and untick them to remove them. Before installing, each module is checked (database changes, settings, core patches, client files, age) and its README is one click away. The server is backed up and rebuilt; if a module does not compile, it is taken out again and the server stays as it was. The database changes of every module installed this way are recorded, so removing it undoes them
 - **Bot reset**: one click deletes all random bots with their characters, guilds and arena teams (your own characters are kept); new bots are created at the next start
 - **Map data**: extracts maps, vmaps, mmaps and the CoA client DBC tables from your game client with one click
@@ -40,8 +41,10 @@ Pre-built repacks go stale quickly. Building from source keeps you on the latest
 | ![Server settings](docs/screenshots/9-server-settings.png) | ![Player accounts](docs/screenshots/10-player-accounts.png) |
 | **Backups** | **Update with automatic backup** |
 | ![Backups](docs/screenshots/11-backups.png) | ![Update](docs/screenshots/6-update-with-backup.png) |
-| **Modules** | **Installing and removing modules** |
-| ![Modules](docs/screenshots/12-modules.png) | ![Module changes](docs/screenshots/13-module-changes.png) |
+| **Game master tools** | **Modules** |
+| ![Game master](docs/screenshots/14-game-master.png) | ![Modules](docs/screenshots/12-modules.png) |
+| **Installing and removing modules** | |
+| ![Module changes](docs/screenshots/13-module-changes.png) | |
 | **Installation** | **Progress** |
 | ![Welcome](docs/screenshots/1-welcome.png) | ![Progress](docs/screenshots/5-progress.png) |
 
@@ -81,6 +84,10 @@ Sources used:
 
 Every installation and rebuild uses the newest commits of the CoA core and Playerbots; *Update* checks for newer ones later. The exact revisions built are recorded in `Dependencies\revisions.txt` and in the install log.
 
+### Game master tools
+
+When the server is started through AFK Realm, the worldserver's SOAP service is switched on (`SOAP.Enabled = 1`, bound to `127.0.0.1`) and an administrator account `AFKREALMADMIN` with a random password is created for it (the password is kept in `Dependencies\admin-link.txt`). The game master window sends GM commands over that line exactly as the server window would, and reads characters, quests and quest givers from the server's own databases – so everything matches CoA's changed world, unlike online databases.
+
 ### Modules and their database changes
 
 Modules installed through *Manage modules* are cloned into `Dependencies\Source\modules`. Their SQL files (`data/sql/db-world`, `db-characters`, `db-auth`) are not left to the core's updater: AFK Realm applies them itself, copies the tables they name beforehand and stores the differences (added, changed and removed rows, new and deleted tables) in the database `afk_modules`, which is part of every backup. The files are then entered into the core's `updates` tables with the core's own hash, so they are never applied twice. Removing the module puts every recorded row and table back, but only rows that still look exactly as the module left them; rows changed later (for example by a server update) are kept and listed in the log. Changes that cannot be recorded (a module that alters the structure of an existing table, or changes tables in other ways) are reported; a backup from before the module restores them. Data players created through a module (items in bags, learned spells) is not tracked.
@@ -105,6 +112,7 @@ C:\CoA-Server\
 - **Worldserver closes with "DataDir does not hold the CoA client DBC set"**: open *Create map data*, choose your CoA game folder and tick *Only refresh the CoA DBC tables*. The stock map extractor cannot read CoA's own patch archives, so the tool extracts these tables with the fork's `apps/coa-dbc/client_dbc.py`.
 - **Black screen at the realm selection**: the core is too old for the client's realm cards; run *Check for updates and install*.
 - **A module does not compile**: it was taken out again automatically and the server is unchanged; the first compiler error in `logs\install.log` names the problem. Many modules are written for the regular AzerothCore and do not fit CoA.
+- **Game master tools say "Stop and start the server once"**: the line to the server is set up when the server is started through AFK Realm; a server that was started earlier or with `START-SERVER.cmd` before the first such start does not have it yet.
 - **Friends cannot connect**: set the realm address under *Play with others*, restart the server, and make sure the VPN is connected on both PCs.
 
 ## Building the exe yourself

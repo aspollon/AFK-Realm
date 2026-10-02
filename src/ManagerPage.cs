@@ -81,6 +81,18 @@ namespace CoAInstaller
             };
             Body.Controls.Add(settingsBtn);
 
+            // --- game master
+            Body.Controls.Add(Ui.Heading("Game master"));
+            Body.Controls.Add(Ui.Hint("Help players on the running server: give, complete and reward quests (found by NPC name or around a character), " +
+                "unstuck, revive, level, gold and mail, announcements, and a console for every other GM command."));
+            var gmBtn = Ui.Secondary("Game master tools …");
+            gmBtn.Click += (s, e) =>
+            {
+                if (ctl.Db == null) { Ui.Error(this, "The database is not running. Start the server first."); return; }
+                using (var d = new GameMasterDialog(inst, ctl)) d.ShowDialog(this);
+            };
+            Body.Controls.Add(gmBtn);
+
             // --- modules
             Body.Controls.Add(Ui.Heading("Modules"));
             Body.Controls.Add(Ui.Hint("Add or remove AzerothCore modules from the module catalog. The server is backed up and rebuilt; " +
@@ -235,7 +247,13 @@ namespace CoAInstaller
             if (inst.HasMapData && !inst.HasClientDbc)
             { Ui.Error(this, "The CoA DBC tables are missing, so the worldserver would stop right away.\n\nOpen \"Create map data\", choose your CoA game folder and tick \"Only refresh the CoA DBC tables\"."); return; }
             Process world = null;
-            Main.RunBusy(busy, st => { ctl.RestoreAfterBotReset(); ctl.StartDatabase(st); ctl.StartAuth(st); world = ctl.StartWorld(st); },
+            Main.RunBusy(busy, st =>
+                {
+                    ctl.RestoreAfterBotReset(); ctl.StartDatabase(st); ctl.StartAuth(st);
+                    // The line for the game master tools; a problem here must not keep the server from starting.
+                    if (ctl.World == null) { try { AdminLink.Prepare(inst); } catch { } }
+                    world = ctl.StartWorld(st);
+                },
                 err =>
                 {
                     RefreshStatus(); LoadRealm();

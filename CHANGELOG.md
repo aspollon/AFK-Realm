@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.0-preview
+
+- Game master tools: connection to the running server (SOAP, this PC only, own administrator account)
+- Quest helper: find quests by NPC name, quest title or id, or list the open quests around a character; give, complete, reward, remove and check them with one click, for offline characters too
+- Player actions: unstuck, revive, kick, set level, send gold and mail, server-wide announcement
+- Server console in the window for every other GM command, with the server's answer
+- Fix: the build stopped at "Prepare the build (CMake)" with "the version field is not 4 integer components" on PCs with more than one Visual Studio 2022 installation
+
 ## 0.3.0-preview
 
 - Module manager: the AzerothCore module catalog with search and filters; tick to install, untick to remove; a check of each module before installing (database changes, settings, core patches, client files, Eluna, age) and its README in the window; modules by Git address

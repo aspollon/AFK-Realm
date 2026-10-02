@@ -1,14 +1,14 @@
-# AFK Realm 0.3.0 – preview
+# AFK Realm 0.4.0 – preview
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11.
 
-## What's new since 0.2.0
+## What's new since 0.3.0
 
-- **Module manager** (*Server management → Manage modules*): browse the AzerothCore module catalog, search it, tick modules to install them and untick them to remove them. Modules that are not in the catalog can be added by their Git address.
-- **Checked before installing**: for each module AFK Realm looks at its files and README and shows what to expect – database changes, settings, whether it needs a core patch (not supported) or files for the game client, whether it needs Eluna, and when it was last changed. The README opens right in the window.
-- **Safe to try**: the server is backed up first. If it cannot be built with a new module, the module is taken out again and the server stays exactly as it was.
-- **Removing undoes the database changes**: AFK Realm applies a module's SQL files itself and records every change. Removing the module puts the rows and tables back – except rows that were changed again later, which are kept and listed. Changes that cannot be recorded are named, and a backup restores them.
-- Restoring a backup also brings the module folders back to the state of that backup.
+- **Game master tools** (*Server management → Game master tools*): AFK Realm now talks to the running server. Starting the server through AFK Realm sets up the connection automatically (only reachable from your own PC).
+- **Quest helper**: type an NPC name, a quest title or a quest id and see the matching quests with who gives them and who takes them – read from your server's own database, so it fits CoA's changed world. Or let AFK Realm list the open quests around a character. Then *Give quest*, *Complete*, *Reward*, *Remove* or *Check* with one click, also for characters that are offline. Handy when a quest giver cannot be clicked or a quest item does not drop.
+- **Player actions**: unstuck (to the inn), revive, kick, set level, send gold or a mail, and an announcement to everyone.
+- **Server console**: every other GM command can be typed right in the window; the server's answer is shown below.
+- **Fix**: the installation no longer stops at *Prepare the build (CMake)* with "the version field is not 4 integer components" on PCs that have more than one Visual Studio 2022 installation (for example one left over from an earlier attempt in another folder).
 
 ## What it does
 
@@ -22,6 +22,7 @@ Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with 
 - Checks for updates and rebuilds only when something changed
 - Backs up the server before every update and rolls it back with one click
 - Installs and removes AzerothCore modules, including their database changes
+- Game master tools for the running server: quest helper, player actions and a console
 
 ## Please note
 
