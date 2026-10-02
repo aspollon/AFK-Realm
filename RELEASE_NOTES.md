@@ -26,7 +26,7 @@ Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with 
 
 ## Please note
 
-- **Highly experimental**: every release and every new function has to be seen as experimental. It is very likely that one thing or another does not work properly yet. Please report problems with `logs\install.log` attached.
+- **Work in progress and highly experimental**: AFK Realm is unfinished and changes all the time; every release and every new function has to be seen as experimental. It is very likely that one thing or another does not work properly yet. Please report problems with `logs\install.log` attached.
 - Many AzerothCore modules are written for the regular core and may not compile or work with CoA. Installing one is safe to try: a module that does not compile is taken out again.
 - The exe is not code-signed, so Windows SmartScreen may warn about an unknown publisher.
 - You need your own CoA game client. The first installation may take a long time and needs about 40 GB of disk space.
