@@ -20,6 +20,7 @@ namespace CoAInstaller
         string file;
         long position;
         string pending = "";
+        bool placeholder;                   // the box shows the "no log yet" hint, not log lines
 
         /// <param name="font">A font of its own when the control lives in a window on another thread.</param>
         public LogView(Font font = null)
@@ -34,7 +35,7 @@ namespace CoAInstaller
         /// <summary>Switches to a log file and shows its end.</summary>
         public void Watch(string path)
         {
-            file = path; position = -1; pending = "";
+            file = path; position = -1; pending = ""; placeholder = false;
             box.Clear();
             Read();
             timer.Start();
@@ -49,7 +50,7 @@ namespace CoAInstaller
             if (file == null || !Visible) return;
             try
             {
-                if (!File.Exists(file)) { if (position != 0) { box.Text = "(no log yet – it appears when the server starts)"; position = 0; } return; }
+                if (!File.Exists(file)) { if (position != 0) { box.Text = "(no log yet – it appears when the server starts)"; position = 0; placeholder = true; } return; }
                 using (var fs = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
                 {
                     // The servers start a new file at every start.
@@ -75,6 +76,7 @@ namespace CoAInstaller
 
         void Append(string text)
         {
+            if (placeholder) { box.Clear(); placeholder = false; }
             if (box.TextLength > 300000) box.Text = box.Text.Substring(box.TextLength - 150000);
             box.AppendText(text.Replace("\r\n", "\n").Replace("\n", Environment.NewLine));
             box.SelectionStart = box.TextLength; box.ScrollToCaret();
