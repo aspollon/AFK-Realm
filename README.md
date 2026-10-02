@@ -4,7 +4,8 @@
 
 *Go AFK, come back to your own server.*
 
-> **Preview:** AFK Realm is being tested right now. If you want to help, try it and report what worked and what did not (please attach `logs\install.log`).
+> [!WARNING]
+> **Highly experimental.** Every release and every new function has to be seen as experimental. New features are often tested on only one PC before they are published, so it is very likely that one thing or another does not work properly yet. Keep backups of anything you care about (AFK Realm makes one before every update and module change), and if something breaks, please report it with `logs\install.log` attached.
 
 Build, run and tweak your own **Conquest of Azeroth** server (an AzerothCore fork with Playerbots) on Windows 10/11, compiled straight from source, all through a point-and-click interface.
 
