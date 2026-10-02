@@ -1,11 +1,15 @@
 # Changelog
 
+## 0.4.1-preview
+
+- Fix: game master actions failed with "character does not exist" for characters with a first and last name (CoA allows a space in names)
+- The character list in the game master window is wider, so long names are shown in full
+
 ## 0.4.0-preview
 
 - Game master tools: connection to the running server (SOAP, this PC only, own administrator account)
 - Quest helper: find quests by NPC name, quest title or id, or list the open quests around a character; give, complete, reward, remove and check them with one click, for offline characters too
 - Player actions: unstuck, revive, kick, set level, send gold and mail, customize appearance, change race or change faction at the next login, server-wide announcement
-- Characters with a first and last name (CoA allows a space) work in every game master action
 - Server console in the window for every other GM command, with the server's answer
 - Authserver and worldserver run without console windows; "Open server consoles" shows both in one window, with a command line for the worldserver (the classic windows can be switched back on)
 - User guide (docs/MANUAL.md) that explains every window

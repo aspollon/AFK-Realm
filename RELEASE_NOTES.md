@@ -1,6 +1,10 @@
-# AFK Realm 0.4.0 – preview
+# AFK Realm 0.4.1 – preview
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11.
+
+## Fixed in 0.4.1
+
+- Game master actions (quests, customize, change race, …) failed with "character does not exist" for characters with a first and last name. They work now, and long names are shown in full in the character list.
 
 ## What's new since 0.3.0
 
