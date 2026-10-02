@@ -38,6 +38,8 @@ namespace CoAInstaller
             timer.Start();
         }
         public void Pause() { timer.Stop(); }
+        /// <summary>Adds lines of our own between the log lines, for example a command and its answer.</summary>
+        public void Print(string text) { Read(); Append(text.TrimEnd('\r', '\n') + "\n"); }
         protected override void Dispose(bool disposing) { if (disposing) timer.Dispose(); base.Dispose(disposing); }
 
         void Read()

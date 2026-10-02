@@ -64,11 +64,18 @@ The top of the **Server management** shows the three parts of the server:
 - **Start server** starts all three in the right order. The worldserver needs a few minutes to load; you can keep using AFK Realm meanwhile. When it says *The server is running. You can log in now.*, it is ready.
 - **Stop server** saves all characters and shuts everything down cleanly. Always stop the server this way.
 
-The servers run in the background without windows of their own. The dark box below the buttons shows what they print: choose **Worldserver log** or **Authserver log**. While the worldserver loads, you can follow its progress there. GM commands are typed in the console of the [game master tools](#6-game-master-tools).
+The servers run in the background without windows of their own. **Open server consoles …** shows both in one window:
 
-You can close AFK Realm while the server runs; the server keeps running, and the log is shown again when you open AFK Realm.
+![Server consoles](screenshots/17-server-consoles.png)
 
-If you prefer the classic console windows, tick **Also open the server windows**; it applies from the next server start.
+- The upper part is the **worldserver**: everything it prints, for example its progress while loading. In the line below it you type GM commands, with or without the leading dot; the answer appears in the console. The arrow keys bring back earlier commands.
+- The lower part is the **authserver**. It only reports logins and takes no commands.
+
+The window can stay open next to the server management. Closing it, or closing AFK Realm, does not stop the servers; they keep running, and the consoles show their output again when you open them.
+
+Commands are sent through the same connection as the [game master tools](#6-game-master-tools) use, so they work once the server was started through AFK Realm and has finished loading.
+
+If you prefer the classic console windows, tick **Also open the classic server windows** at the bottom of the window; it applies from the next server start.
 
 If the worldserver closes while starting, AFK Realm shows the last lines of its log, which usually name the reason.
 

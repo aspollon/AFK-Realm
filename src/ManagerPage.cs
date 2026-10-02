@@ -36,11 +36,8 @@ namespace CoAInstaller
             return p;
         }
         readonly System.Windows.Forms.Timer poll = new System.Windows.Forms.Timer { Interval = 2000 };
-        readonly LogView serverLog = new LogView { Width = 640, Height = 190, Margin = new Padding(0, 2, 0, 6) };
-        readonly RadioButton logWorld = new RadioButton { Text = "Worldserver log", AutoSize = true, Checked = true, Font = Ui.Small, Margin = new Padding(0, 2, 12, 0) };
-        readonly RadioButton logAuth = new RadioButton { Text = "Authserver log", AutoSize = true, Font = Ui.Small, Margin = new Padding(0, 2, 24, 0) };
-        readonly CheckBox showWindows = new CheckBox { Text = "Also open the server windows (from the next start)", AutoSize = true, Font = Ui.Small, ForeColor = Ui.Muted, Margin = new Padding(0, 2, 0, 0) };
-        void WatchLog() { serverLog.Watch(Path.Combine(inst.ServerDir, logWorld.Checked ? "Server.log" : "Auth.log")); }
+        readonly Button consoles = Ui.Secondary("Open server consoles …");
+        ConsolesDialog consolesWindow;
 
         static Label State() { return new Label { AutoSize = true, Font = Ui.Bold, Margin = new Padding(0, 6, 0, 2) }; }
 
@@ -60,18 +57,18 @@ namespace CoAInstaller
             Body.Controls.Add(StatusRow("Database", dbState));
             Body.Controls.Add(StatusRow("Authserver (login)", authState));
             Body.Controls.Add(StatusRow("Worldserver (game world)", worldState));
-            var buttons = Ui.Row(); buttons.Controls.Add(start); buttons.Controls.Add(stop);
+            var buttons = Ui.Row(); buttons.Controls.Add(start); buttons.Controls.Add(stop); buttons.Controls.Add(consoles);
+            consoles.Padding = new Padding(12, 6, 12, 6); consoles.Margin = new Padding(16, 3, 3, 3);
+            // Not modal: it can stay open next to the server management, for example while the server starts.
+            consoles.Click += (s, e) =>
+            {
+                if (consolesWindow == null || consolesWindow.IsDisposed) { consolesWindow = new ConsolesDialog(inst, ctl); consolesWindow.Show(FindForm()); }
+                else { consolesWindow.WindowState = FormWindowState.Normal; consolesWindow.Activate(); }
+            };
             Body.Controls.Add(buttons);
             Body.Controls.Add(busy);
             Body.Controls.Add(Ui.Hint("\"Stop server\" saves all characters and shuts down cleanly. The servers run in the background; " +
-                "their output is shown below, and GM commands are typed in the game master tools."));
-            var logRow = Ui.Row();
-            logRow.Controls.Add(logWorld); logRow.Controls.Add(logAuth); logRow.Controls.Add(showWindows);
-            Body.Controls.Add(logRow);
-            Body.Controls.Add(serverLog);
-            logWorld.CheckedChanged += (s, e) => WatchLog();
-            showWindows.Checked = Settings.ShowServerWindows;
-            showWindows.CheckedChanged += (s, e) => Settings.ShowServerWindows = showWindows.Checked;
+                "\"Open server consoles\" shows what they print and takes GM commands."));
             start.Click += (s, e) => StartServer();
             stop.Click += (s, e) => StopServer();
 
@@ -182,11 +179,15 @@ namespace CoAInstaller
         {
             Settings.LastInstall = inst.Root;
             RefreshStatus(); poll.Start();
-            WatchLog();
             LoadRealm();
             CheckForUpdates();
         }
-        protected override void Dispose(bool disposing) { poll.Stop(); base.Dispose(disposing); }
+        protected override void Dispose(bool disposing)
+        {
+            poll.Stop();
+            if (disposing && consolesWindow != null && !consolesWindow.IsDisposed) consolesWindow.Close();
+            base.Dispose(disposing);
+        }
 
         /// <summary>Asks GitHub in the background whether newer server code or a newer AFK Realm exists.</summary>
         void CheckForUpdates()

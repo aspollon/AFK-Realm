@@ -6,7 +6,7 @@
 - Quest helper: find quests by NPC name, quest title or id, or list the open quests around a character; give, complete, reward, remove and check them with one click, for offline characters too
 - Player actions: unstuck, revive, kick, set level, send gold and mail, server-wide announcement
 - Server console in the window for every other GM command, with the server's answer
-- Authserver and worldserver run without console windows; their output is shown in the server management (the windows can be switched back on)
+- Authserver and worldserver run without console windows; "Open server consoles" shows both in one window, with a command line for the worldserver (the classic windows can be switched back on)
 - User guide (docs/MANUAL.md) that explains every window
 - Fix: the build stopped at "Prepare the build (CMake)" with "the version field is not 4 integer components" on PCs with more than one Visual Studio 2022 installation
 
