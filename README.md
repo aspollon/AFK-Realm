@@ -11,6 +11,8 @@ Build, run and tweak your own **Conquest of Azeroth** server (an AzerothCore for
 
 ![Server management](docs/screenshots/8-server-management.png)
 
+📖 **[User guide](docs/MANUAL.md)** – every window explained: what it is for, when you need it and how to use it.
+
 ## About this project
 
 AFK Realm was never planned as a product. I built it for myself: it started as a simple Bash script that compiled my own server, turned into a PowerShell script when the steps piled up, and then got a window on top because I was tired of typing. Since then it keeps growing with whatever I need next for my own server – settings, backups, modules, game master tools.
@@ -56,6 +58,8 @@ Pre-built repacks go stale quickly. Building from source keeps you on the latest
 | ![Welcome](docs/screenshots/1-welcome.png) | ![Progress](docs/screenshots/5-progress.png) |
 
 ## Getting started
+
+The short version is below; the [user guide](docs/MANUAL.md) explains every step and every window in detail.
 
 1. Download `AFK-Realm.exe` from the [Releases](../../releases) page and run it.
    Windows SmartScreen may warn about an unknown publisher because the exe is not code-signed. The exe is built from this repository by GitHub Actions; you can also build it yourself (see below).
