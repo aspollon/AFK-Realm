@@ -21,8 +21,10 @@ namespace CoAInstaller
         long position;
         string pending = "";
 
-        public LogView()
+        /// <param name="font">A font of its own when the control lives in a window on another thread.</param>
+        public LogView(Font font = null)
         {
+            if (font != null) box.Font = font;
             Controls.Add(box);
             timer.Tick += (s, e) => Read();
         }

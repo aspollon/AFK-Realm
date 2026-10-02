@@ -15,8 +15,10 @@ namespace CoAInstaller
     {
         readonly Install inst;
         readonly ServerControl ctl;
-        readonly LogView world = new LogView { Dock = DockStyle.Fill }, auth = new LogView { Dock = DockStyle.Fill };
-        readonly TextBox input = new TextBox { Font = Ui.Mono, Dock = DockStyle.Fill };
+        // This window runs on a thread of its own, so it does not share font objects with the main window.
+        readonly Font baseFont = new Font("Segoe UI", 10f), small = new Font("Segoe UI", 9f), bold = new Font("Segoe UI Semibold", 10f), mono = new Font("Consolas", 9f);
+        readonly LogView world, auth;
+        readonly TextBox input = new TextBox { Dock = DockStyle.Fill };
         readonly List<string> history = new List<string>();
         int historyAt;
         bool busy;
@@ -24,27 +26,30 @@ namespace CoAInstaller
         public ConsolesDialog(Install i, ServerControl c)
         {
             inst = i; ctl = c;
-            Text = Product.Name + " – Server consoles"; Font = Ui.Base; BackColor = Color.White; ShowIcon = false;
+            world = new LogView(mono) { Dock = DockStyle.Fill }; auth = new LogView(mono) { Dock = DockStyle.Fill };
+            input.Font = mono;
+            Text = Product.Name + " – Server consoles"; Font = baseFont; BackColor = Color.White; ShowInTaskbar = true;
+            try { Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch { ShowIcon = false; }
             StartPosition = FormStartPosition.CenterScreen; ClientSize = new Size(980, 740); MinimumSize = new Size(640, 480);
 
-            var send = Ui.Secondary("Send"); send.Dock = DockStyle.Right; send.Width = 80; send.AutoSize = false; send.Padding = new Padding(0); send.Font = Ui.Small;
-            var prompt = new Label { Text = "AC>", Dock = DockStyle.Left, Width = 36, Font = Ui.Mono, TextAlign = ContentAlignment.MiddleLeft };
+            var send = Ui.Secondary("Send"); send.Dock = DockStyle.Right; send.Width = 80; send.AutoSize = false; send.Padding = new Padding(0); send.Font = small;
+            var prompt = new Label { Text = "AC>", Dock = DockStyle.Left, Width = 36, Font = mono, TextAlign = ContentAlignment.MiddleLeft };
             var inputRow = new Panel { Dock = DockStyle.Bottom, Height = 32, Padding = new Padding(0, 6, 0, 0) };
             inputRow.Controls.Add(input); inputRow.Controls.Add(prompt); inputRow.Controls.Add(send);
 
             var split = new SplitContainer { Dock = DockStyle.Fill, Orientation = Orientation.Horizontal, SplitterWidth = 8, BackColor = Color.White };
             split.Panel1.Padding = new Padding(16, 10, 16, 4); split.Panel2.Padding = new Padding(16, 4, 16, 8);
             split.Panel1.Controls.Add(world); split.Panel1.Controls.Add(inputRow);
-            split.Panel1.Controls.Add(new Label { Text = "Worldserver (game world)", Dock = DockStyle.Top, Height = 24, Font = Ui.Bold });
+            split.Panel1.Controls.Add(new Label { Text = "Worldserver (game world)", Dock = DockStyle.Top, Height = 24, Font = bold });
             split.Panel2.Controls.Add(auth);
-            split.Panel2.Controls.Add(new Label { Text = "The authserver takes no commands.", Dock = DockStyle.Bottom, Height = 22, Font = Ui.Small, ForeColor = Ui.Muted, TextAlign = ContentAlignment.MiddleLeft });
-            split.Panel2.Controls.Add(new Label { Text = "Authserver (login)", Dock = DockStyle.Top, Height = 24, Font = Ui.Bold });
+            split.Panel2.Controls.Add(new Label { Text = "The authserver takes no commands.", Dock = DockStyle.Bottom, Height = 22, Font = small, ForeColor = Ui.Muted, TextAlign = ContentAlignment.MiddleLeft });
+            split.Panel2.Controls.Add(new Label { Text = "Authserver (login)", Dock = DockStyle.Top, Height = 24, Font = bold });
 
-            var windows = new CheckBox { Text = "Also open the classic server windows at the next server start", AutoSize = true, Font = Ui.Small, ForeColor = Ui.Muted,
+            var windows = new CheckBox { Text = "Also open the classic server windows at the next server start", AutoSize = true, Font = small, ForeColor = Ui.Muted,
                 Checked = Settings.ShowServerWindows, Margin = new Padding(0, 10, 20, 0) };
             windows.CheckedChanged += (s, e) => Settings.ShowServerWindows = windows.Checked;
             var bottom = new FlowLayoutPanel { Dock = DockStyle.Bottom, Height = 58, Padding = new Padding(14, 10, 14, 10), FlowDirection = FlowDirection.RightToLeft, BackColor = Ui.Panel, WrapContents = false };
-            var close = Ui.Secondary("Close"); close.Click += (s, e) => Close();
+            var close = Ui.Secondary("Close"); close.Font = baseFont; close.Click += (s, e) => Close();
             bottom.Controls.Add(close); bottom.Controls.Add(windows);
 
             Controls.Add(split); Controls.Add(bottom);

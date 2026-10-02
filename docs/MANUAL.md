@@ -71,7 +71,7 @@ The servers run in the background without windows of their own. **Open server co
 - The upper part is the **worldserver**: everything it prints, for example its progress while loading. In the line below it you type GM commands, with or without the leading dot; the answer appears in the console. The arrow keys bring back earlier commands.
 - The lower part is the **authserver**. It only reports logins and takes no commands.
 
-The window can stay open next to the server management. Closing it, or closing AFK Realm, does not stop the servers; they keep running, and the consoles show their output again when you open them.
+The consoles are a separate window with its own entry in the taskbar. Leave it open, put it on a second screen or next to the game, and keep working in AFK Realm – it stays usable even while the settings, the modules or the game master tools are open. Closing it, or closing AFK Realm, does not stop the servers; they keep running, and the consoles show their output again when you open them.
 
 Commands are sent through the same connection as the [game master tools](#6-game-master-tools) use, so they work once the server was started through AFK Realm and has finished loading.
 

@@ -39,6 +39,36 @@ namespace CoAInstaller
         readonly Button consoles = Ui.Secondary("Open server consoles …");
         ConsolesDialog consolesWindow;
 
+        /// <summary>
+        /// The consoles are a window of their own with its own taskbar entry. It runs on its own
+        /// thread, so it stays usable while AFK Realm shows another window (settings, modules,
+        /// game master tools) or is busy.
+        /// </summary>
+        void OpenConsoles()
+        {
+            var open = consolesWindow;
+            if (open != null && !open.IsDisposed && open.IsHandleCreated)
+            {
+                try { open.BeginInvoke((Action)(() => { if (open.WindowState == FormWindowState.Minimized) open.WindowState = FormWindowState.Normal; open.Activate(); })); return; }
+                catch { }
+            }
+            var thread = new System.Threading.Thread(() =>
+            {
+                // A problem in this window must never take the server management down with it.
+                try
+                {
+                    var window = new ConsolesDialog(inst, ctl);
+                    consolesWindow = window;
+                    Application.Run(window);
+                }
+                catch { }
+                finally { consolesWindow = null; }
+            });
+            thread.SetApartmentState(System.Threading.ApartmentState.STA);
+            thread.IsBackground = true;     // closes with AFK Realm
+            thread.Start();
+        }
+
         static Label State() { return new Label { AutoSize = true, Font = Ui.Bold, Margin = new Padding(0, 6, 0, 2) }; }
 
         public ManagerPage(MainForm main) : base(main)
@@ -59,12 +89,7 @@ namespace CoAInstaller
             Body.Controls.Add(StatusRow("Worldserver (game world)", worldState));
             var buttons = Ui.Row(); buttons.Controls.Add(start); buttons.Controls.Add(stop); buttons.Controls.Add(consoles);
             consoles.Padding = new Padding(12, 6, 12, 6); consoles.Margin = new Padding(16, 3, 3, 3);
-            // Not modal: it can stay open next to the server management, for example while the server starts.
-            consoles.Click += (s, e) =>
-            {
-                if (consolesWindow == null || consolesWindow.IsDisposed) { consolesWindow = new ConsolesDialog(inst, ctl); consolesWindow.Show(FindForm()); }
-                else { consolesWindow.WindowState = FormWindowState.Normal; consolesWindow.Activate(); }
-            };
+            consoles.Click += (s, e) => OpenConsoles();
             Body.Controls.Add(buttons);
             Body.Controls.Add(busy);
             Body.Controls.Add(Ui.Hint("\"Stop server\" saves all characters and shuts down cleanly. The servers run in the background; " +
@@ -185,7 +210,8 @@ namespace CoAInstaller
         protected override void Dispose(bool disposing)
         {
             poll.Stop();
-            if (disposing && consolesWindow != null && !consolesWindow.IsDisposed) consolesWindow.Close();
+            var open = consolesWindow;
+            if (disposing && open != null && !open.IsDisposed && open.IsHandleCreated) { try { open.BeginInvoke((Action)open.Close); } catch { } }
             base.Dispose(disposing);
         }
 
