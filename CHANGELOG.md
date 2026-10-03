@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.1-preview
+
+- Game master tools: "Rename" gives a character a new name right away, or lets the player choose one at the next login
+
 ## 0.6.0-preview
 
 - AFK Realm updates itself: a click on the "new version" banner downloads the release from GitHub, checks it, replaces the program and restarts it; a running server keeps running
