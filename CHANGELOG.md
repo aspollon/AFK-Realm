@@ -2,7 +2,7 @@
 
 ## 0.6.1-preview
 
-- Game master tools: "Rename" gives a character a new name right away, or lets the player choose one at the next login
+- Game master tools: "Change name" lets the player choose a new character name at the next login
 
 ## 0.6.0-preview
 

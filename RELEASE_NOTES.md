@@ -4,7 +4,7 @@ Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with 
 
 ## New in 0.6.1
 
-- **Rename a character**: *Game master tools → Player → Rename …* gives a character a new name right away. Leave the name empty and the player chooses it at the next login instead – that is also the way to a name with a first and a last part.
+- **Change a character's name**: *Game master tools → Player → Change name* marks a character so that its player chooses a new name at the next login – next to *Customize appearance*, *Change race* and *Change faction*.
 
 ## New in 0.6.0
 
@@ -22,7 +22,7 @@ Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with 
 
 - **Game master tools** (*Server management → Game master tools*): AFK Realm now talks to the running server. Starting the server through AFK Realm sets up the connection automatically (only reachable from your own PC).
 - **Quest helper**: type an NPC name, a quest title or a quest id and see the matching quests with who gives them and who takes them – read from your server's own database, so it fits CoA's changed world. Or let AFK Realm list the open quests around a character. Then *Give quest*, *Complete*, *Reward*, *Remove* or *Check* with one click, also for characters that are offline. Handy when a quest giver cannot be clicked or a quest item does not drop.
-- **Player actions**: unstuck (to the inn), revive, kick, set level, send gold or a mail, rename the character, let a player customize the character or change its race or faction at the next login, and an announcement to everyone.
+- **Player actions**: unstuck (to the inn), revive, kick, set level, send gold or a mail, let a player rename or customize the character or change its race or faction at the next login, and an announcement to everyone.
 - **Server console**: every other GM command can be typed right in the window; the server's answer is shown below.
 - **No more console windows**: authserver and worldserver now run in the background. *Open server consoles* shows both in one window, one above the other: what they print, and a command line for GM commands to the worldserver. The classic windows can be switched back on with one tick.
 - **User guide**: [docs/MANUAL.md](docs/MANUAL.md) explains every window – what it is for and how to use it.

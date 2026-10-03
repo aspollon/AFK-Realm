@@ -181,7 +181,7 @@ The server's answer appears in the console at the bottom.
 | **Set level …** | Sets the character's level. |
 | **Send gold …** | Sends gold by in-game mail. |
 | **Send mail …** | Sends an in-game mail with a subject and a text. |
-| **Rename …** | Gives the character a new name right away; a character that is online is logged out for it. Leave the field empty and the player types the new name at the next login instead – the only way to a name with a first and a last part. |
+| **Change name** | At the next login the player has to type a new name for the character on the login screen. |
 | **Customize appearance** | At the next login the player can redo the character's looks, gender and name on the login screen. |
 | **Change race** | At the next login the player can pick another race of the same faction (and redo the looks and the name). |
 | **Change faction** | At the next login the player can move the character to the other faction and pick one of its races. |

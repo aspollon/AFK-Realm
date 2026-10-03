@@ -117,15 +117,15 @@ namespace CoAInstaller
                 if (v == null || v[0].Trim().Length == 0) return;
                 Player("send mail {0} \"" + Clean(v[0]) + "\" \"" + Clean(v[1]) + "\"", null);
             }));
-            p2.Controls.Add(Action("Rename …", Rename));
             player.Controls.Add(p2);
             player.Controls.Add(Ui.Heading("At the next login"));
             var p4 = Ui.Row();
+            p4.Controls.Add(Action("Change name", () => Player("character rename {0}", null)));
             p4.Controls.Add(Action("Customize appearance", () => Player("character customize {0}", null)));
             p4.Controls.Add(Action("Change race", () => Player("character changerace {0}", null)));
             p4.Controls.Add(Action("Change faction", () => Player("character changefaction {0}", null)));
             player.Controls.Add(p4);
-            player.Controls.Add(Ui.Hint("The character is marked on the login screen the next time its player logs in: \"Customize appearance\" lets them redo looks, gender and name, \"Change race\" also lets them pick another race of the same faction, \"Change faction\" a race of the other faction. A character that is online has to log out to the character list first.", 700));
+            player.Controls.Add(Ui.Hint("The character is marked on the login screen the next time its player logs in: \"Change name\" asks for a new name, \"Customize appearance\" lets them redo looks, gender and name, \"Change race\" also lets them pick another race of the same faction, \"Change faction\" a race of the other faction. A character that is online has to log out to the character list first.", 700));
             player.Controls.Add(Ui.Heading("Message to everyone"));
             var p3 = Ui.Row(); p3.Controls.Add(announce);
             p3.Controls.Add(Action("Announce", () => { string t = Clean(announce.Text); if (t.Length > 0) { Send("announce " + t, null); announce.Text = ""; } }));
@@ -270,37 +270,6 @@ namespace CoAInstaller
             history.Remove(command); history.Add(command); historyAt = history.Count;
             input.Text = "";
             Send(command, null);
-        }
-
-        /// <summary>
-        /// Gives the character a new name right away, or - with no name entered - lets the player pick
-        /// one at the next login. The server's command takes the new name as a single word, so a name
-        /// with a first and a last part can only be chosen by the player on the login screen.
-        /// </summary>
-        void Rename()
-        {
-            var who = Who;
-            if (who == null) { Ui.Error(this, "Choose a character on the left first."); return; }
-            string v = Prompt.Ask(this, "Rename " + who.Name, "New name (leave empty to let the player choose at the next login)", "");
-            if (v == null) return;
-            v = v.Trim();
-            if (v.Length == 0) { Player("character rename {0}", null); return; }
-            if (v.IndexOf(' ') >= 0)
-            {
-                Ui.Error(this, "A name with a first and a last part cannot be set from here. Leave the field empty instead: the player then types the new name on the login screen, where both parts are possible.");
-                return;
-            }
-            foreach (char c in v) if (!char.IsLetter(c)) { Ui.Error(this, "A character name consists of letters only."); return; }
-            if (v.Length > 12) { Ui.Error(this, "A character name has at most 12 letters."); return; }
-            v = char.ToUpper(v[0]) + v.Substring(1).ToLower();
-            if (who.Online && !Ui.Confirm(this, who.Name + " is online and is logged out by the rename. Rename now?")) return;
-            // The server writes the new name a moment after it answers; the list is read after that.
-            Player("character rename {0} " + v, () =>
-            {
-                var t = new Timer { Interval = 1500 };
-                t.Tick += (s, e) => { t.Stop(); t.Dispose(); if (!IsDisposed) LoadPeople(); };
-                t.Start();
-            });
         }
 
         void Player(string format, Action done)
