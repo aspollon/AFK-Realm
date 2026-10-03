@@ -265,6 +265,8 @@ AFK Realm also allows the servers through the Windows Firewall.
 
 **Updates.** A banner at the top appears when newer server code (CoA core, Playerbots) or a newer AFK Realm is available. **Check for updates and install** downloads the newest code and rebuilds only what changed. Before it changes anything, the server is backed up.
 
+**Updating AFK Realm itself.** When the banner says a new AFK Realm is available, click it and confirm. AFK Realm downloads the new version from GitHub, checks that the file is complete and unaltered, replaces itself and restarts; the line under the server buttons then confirms the new version. A running server keeps running. If the download fails, nothing is changed and AFK Realm offers to open the download page instead.
+
 **Backups …** lists the backups. A backup holds the server programs, the settings and all databases, together with the versions they were built from.
 
 - One is made automatically before every update and every module change.

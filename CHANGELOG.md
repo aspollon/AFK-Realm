@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.0-preview
+
+- AFK Realm updates itself: a click on the "new version" banner downloads the release from GitHub, checks it, replaces the program and restarts it; a running server keeps running
+
 ## 0.5.0-preview
 
 - Server name: a new installation asks for the name players see in the realm list; "Server name" in the server management renames the server later

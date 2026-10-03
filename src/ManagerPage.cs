@@ -24,7 +24,7 @@ namespace CoAInstaller
         readonly Label nameNote = Ui.Hint("");
         readonly LinkLabel serverUpdate = UpdateLink(), toolUpdate = UpdateLink();
         Panel serverBanner, toolBanner;
-        string toolUrl;
+        string toolUrl, toolVersion, toolDownload, toolSha256;
         static LinkLabel UpdateLink()
         {
             return new LinkLabel { AutoSize = true, Font = Ui.Bold, LinkColor = Ui.Accent, ActiveLinkColor = Ui.AccentDark, Margin = new Padding(0) };
@@ -82,7 +82,7 @@ namespace CoAInstaller
             Body.Controls.Add(serverBanner);
             Body.Controls.Add(toolBanner);
             serverUpdate.LinkClicked += (s, e) => RunEngine("Update", "Install the server update now?\n\nThe current server is backed up first, then rebuilt with the newest CoA core and Playerbots, which can take a while. A running server is stopped cleanly first.");
-            toolUpdate.LinkClicked += (s, e) => { if (toolUrl != null) Process.Start(toolUrl); };
+            toolUpdate.LinkClicked += (s, e) => UpdateTool();
 
             // --- status and start/stop
             Body.Controls.Add(Ui.Heading("Server"));
@@ -218,6 +218,7 @@ namespace CoAInstaller
             Settings.LastInstall = inst.Root;
             RefreshStatus(); poll.Start();
             LoadRealm();
+            if (SelfUpdate.JustUpdated) { SelfUpdate.JustUpdated = false; busy.Text = Product.Name + " was updated to version " + Product.Version + "."; }
             CheckForUpdates();
         }
         protected override void Dispose(bool disposing)
@@ -245,14 +246,31 @@ namespace CoAInstaller
                         }
                         if (r.ToolVersion != null)
                         {
-                            toolUrl = r.ToolUrl;
-                            toolUpdate.Text = "New: " + Product.Name + " " + r.ToolVersion + " is available  –  click to download";
+                            toolUrl = r.ToolUrl; toolVersion = r.ToolVersion; toolDownload = r.ToolDownload; toolSha256 = r.ToolSha256;
+                            toolUpdate.Text = "New: " + Product.Name + " " + r.ToolVersion + " is available  –  click to " + (toolDownload != null ? "update" : "download");
                             toolBanner.Visible = true;
                         }
                     }));
                 }
                 catch { }
             });
+        }
+
+        /// <summary>Downloads the newer release, puts it in place of this program and restarts. Servers keep running.</summary>
+        void UpdateTool()
+        {
+            if (toolUrl == null) return;
+            if (toolDownload == null) { Process.Start(toolUrl); return; }      // a release without the exe: show its page
+            if (!Ui.Confirm(this, "Update " + Product.Name + " to version " + toolVersion + " now?\n\n" +
+                "The new version is downloaded from GitHub, then " + Product.Name + " restarts. A running server keeps running.")) return;
+            string copy = Path.Combine(inst.Root, "Builder", Product.FileStem + ".exe");
+            Main.RunBusy(busy, st => { st("Downloading the update ..."); SelfUpdate.Download(toolDownload, toolSha256, st); st("Installing the update ..."); SelfUpdate.Replace(copy); },
+                ex =>
+                {
+                    if (ex == null) { SelfUpdate.Restart(); return; }
+                    busy.Text = "";
+                    if (Ui.Confirm(this, "The update could not be installed:\n\n" + ex.Message + "\n\nOpen the download page instead?")) Process.Start(toolUrl);
+                });
         }
 
         bool polling;

@@ -17,6 +17,7 @@ namespace CoAInstaller
         {
             public readonly List<string> Server = new List<string>();   // e.g. "CoA core: 12 new changes"
             public string ToolVersion, ToolUrl;                           // newer AFK Realm release, if any
+            public string ToolDownload, ToolSha256;                       // its exe (and checksum, when GitHub lists one)
         }
 
         public static Result Run(Install inst)
@@ -52,11 +53,27 @@ namespace CoAInstaller
             try
             {
                 string json = Get("https://api.github.com/repos/" + Product.GitHubRepo + "/releases?per_page=10");
-                foreach (Match rel in Regex.Matches(json, @"""html_url""\s*:\s*""([^""]+/releases/tag/[^""]+)""[\s\S]*?""tag_name""\s*:\s*""([^""]+)""[\s\S]*?""draft""\s*:\s*(true|false)"))
+                var parser = new System.Web.Script.Serialization.JavaScriptSerializer { MaxJsonLength = int.MaxValue };
+                foreach (var item in (object[])parser.DeserializeObject(json))
                 {
-                    if (rel.Groups[3].Value == "true") continue;
-                    string tag = rel.Groups[2].Value.TrimStart('v', 'V');
-                    if (IsNewer(tag, Product.Version)) { r.ToolVersion = tag; r.ToolUrl = rel.Groups[1].Value; }
+                    var rel = (Dictionary<string, object>)item;
+                    if (Equals(rel["draft"], true)) continue;
+                    string tag = Convert.ToString(rel["tag_name"]);
+                    if (IsNewer(tag.TrimStart('v', 'V'), Product.Version))
+                    {
+                        r.ToolVersion = tag.TrimStart('v', 'V'); r.ToolUrl = Convert.ToString(rel["html_url"]);
+                        object assets;
+                        if (rel.TryGetValue("assets", out assets) && assets is object[])
+                            foreach (var a in (object[])assets)
+                            {
+                                var asset = (Dictionary<string, object>)a;
+                                if (!string.Equals(Convert.ToString(asset["name"]), Product.FileStem + ".exe", StringComparison.OrdinalIgnoreCase)) continue;
+                                r.ToolDownload = Convert.ToString(asset["browser_download_url"]);
+                                object digest;
+                                var m = asset.TryGetValue("digest", out digest) ? Regex.Match(Convert.ToString(digest), "^sha256:([0-9a-fA-F]{64})$") : Match.Empty;
+                                if (m.Success) r.ToolSha256 = m.Groups[1].Value;
+                            }
+                    }
                     break;   // GitHub lists the newest release first
                 }
             }
