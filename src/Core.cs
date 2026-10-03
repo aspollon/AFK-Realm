@@ -23,7 +23,7 @@ namespace CoAInstaller
         public const string Name = "AFK Realm";                   // window titles, dialogs
         public const string ShortName = "AFK Realm";              // desktop shortcut, firewall rules
         public const string FileStem = "AFK-Realm";                // exe name, settings folder
-        public const string Version = "0.4.1-preview";            // pre-release until testers confirm it works
+        public const string Version = "0.5.0-preview";            // pre-release until testers confirm it works
         public const string Tagline = "build, run and tweak your own server the lazy way";
         public const string BuildsFor = "Conquest of AzerothCore";
         public const string WindowTitle = Name + " (preview)";
@@ -150,7 +150,10 @@ namespace CoAInstaller
                     p.WaitForExit();
                     string err = errTask.Result;
                     if (p.ExitCode != 0)
-                        throw new InvalidOperationException(string.Join(" ", err.Split('\n').Where(l => !l.Contains("Using a password")).Select(l => l.Trim())).Trim());
+                    {
+                        string message = string.Join(" ", err.Split('\n').Where(l => !l.Contains("Using a password")).Select(l => l.Trim())).Trim();
+                        throw new InvalidOperationException(message.Length > 0 ? message : "The database did not answer (mysql.exe ended with code " + p.ExitCode + ").");
+                    }
                     return output.Split('\n').Select(l => l.TrimEnd('\r')).Where(l => l.Length > 0).ToList();
                 }
             }
@@ -628,6 +631,25 @@ namespace CoAInstaller
 
         /// <summary>With CharDelete.KeepDays = 0 the worldserver never purges deleted characters.</summary>
         public static bool PurgesDeletedCharacters(Install inst) { return Conf.GetInt(inst.WorldConf, "CharDelete.KeepDays", 30) != 0; }
+
+        public const string RealmNameRules = "Up to 32 characters: English letters, digits, spaces, hyphen, apostrophe and dot. It has to start with a letter or digit.";
+        /// <summary>Why a realm name cannot be used, or null. The game client also uses the name as a folder name for its settings.</summary>
+        public static string CheckRealmName(string name)
+        {
+            if (string.IsNullOrEmpty(name)) return "Please enter a server name.";
+            if (name.Length > 32) return "The server name can have 32 characters at most.";
+            if (!System.Text.RegularExpressions.Regex.IsMatch(name, "^[A-Za-z0-9][A-Za-z0-9 '.\\-]*$")) return "Please use only English letters, digits, spaces, hyphen, apostrophe and dot, starting with a letter or digit.";
+            return null;
+        }
+        public static string GetRealmName(Install inst)
+        {
+            var r = MySql.Query(inst, DbLogin.FromConfig(inst), "SELECT name FROM acore_auth.realmlist ORDER BY id LIMIT 1;");
+            return r.Count > 0 ? r[0] : "";
+        }
+        public static void SetRealmName(Install inst, string name)
+        {
+            MySql.Query(inst, DbLogin.FromConfig(inst), "UPDATE acore_auth.realmlist SET name=" + MySql.Quote(name) + " ORDER BY id LIMIT 1;");
+        }
 
         public static string GetRealmAddress(Install inst)
         {

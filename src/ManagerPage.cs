@@ -20,6 +20,8 @@ namespace CoAInstaller
         readonly TextBox accName = Ui.Input(200), accPw1 = Ui.Input(200, true), accPw2 = Ui.Input(200, true);
         readonly ComboBox accLevel = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 200, Font = Ui.Base };
         readonly TextBox realm = Ui.Input(200);
+        readonly TextBox realmName = Ui.Input(200);
+        readonly Label nameNote = Ui.Hint("");
         readonly LinkLabel serverUpdate = UpdateLink(), toolUpdate = UpdateLink();
         Panel serverBanner, toolBanner;
         string toolUrl;
@@ -149,6 +151,17 @@ namespace CoAInstaller
             manage.Click += (s, e) => { using (var d = new AccountsDialog(inst, ctl)) d.ShowDialog(this); };
             var accRow = Ui.Row(); accRow.Controls.Add(create); accRow.Controls.Add(manage);
             Body.Controls.Add(accRow);
+
+            // --- server name
+            Body.Controls.Add(Ui.Heading("Server name"));
+            Body.Controls.Add(Ui.Hint("The name players see in the realm list when they log in. The game client keeps each character's interface settings " +
+                "in a folder named after the server (WTF\\Account\\<account>\\<server name>), so after renaming it starts with fresh ones unless you rename that folder too."));
+            var nameRow = Ui.Row(); nameRow.Controls.Add(Ui.FieldLabel("Server name")); nameRow.Controls.Add(realmName);
+            var rename = Ui.Secondary("Rename"); nameRow.Controls.Add(rename);
+            rename.Click += (s, e) => ApplyRealmName();
+            realmName.MaxLength = 32;
+            Body.Controls.Add(nameRow);
+            Body.Controls.Add(nameNote);
 
             // --- playing with others
             Body.Controls.Add(Ui.Heading("Play with others"));
@@ -370,6 +383,20 @@ namespace CoAInstaller
         {
             if (ctl.Db == null) { realm.Text = realm.Text.Length > 0 ? realm.Text : ""; return; }
             try { realm.Text = Accounts.GetRealmAddress(inst); } catch { }
+            try { realmName.Text = Accounts.GetRealmName(inst); } catch { }
+        }
+        void ApplyRealmName()
+        {
+            string n = realmName.Text.Trim();
+            string err = Accounts.CheckRealmName(n);
+            if (err != null) { Ui.Error(this, err); return; }
+            Main.RunBusy(nameNote, st => { EnsureDatabase(st); st("Renaming the server ..."); Accounts.SetRealmName(inst, n); },
+                ex =>
+                {
+                    if (ex != null) { nameNote.Text = ""; Ui.Error(this, ex.Message); return; }
+                    nameNote.Text = "The server is now called \"" + n + "\". Restart the auth- and worldserver for it to take effect.";
+                    RefreshStatus(); LoadRealm();
+                });
         }
         void ApplyRealm()
         {

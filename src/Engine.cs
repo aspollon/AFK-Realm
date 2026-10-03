@@ -108,6 +108,9 @@ namespace CoAInstaller
             return path;
         }
 
+        /// <summary>Name for the realm on a new installation; empty keeps the name it has.</summary>
+        public string RealmName;
+
         public void Start(Install inst, string mode, string dbPassword, int dbPort, string extraArgs = null)
         {
             Directory.CreateDirectory(inst.Root);
@@ -122,6 +125,7 @@ namespace CoAInstaller
                 WorkingDirectory = inst.Root
             };
             psi.EnvironmentVariables["AC_DB_PASSWORD"] = dbPassword ?? "";
+            psi.EnvironmentVariables["AC_REALM_NAME"] = RealmName ?? "";
             proc = new Process { StartInfo = psi, EnableRaisingEvents = true };
             proc.OutputDataReceived += (s, e) => { if (e.Data != null) Handle(e.Data); };
             proc.ErrorDataReceived += (s, e) => { if (e.Data != null) Handle(e.Data); };

@@ -1,6 +1,10 @@
-# AFK Realm 0.4.1 – preview
+# AFK Realm 0.5.0 – preview
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11.
+
+## New in 0.5.0
+
+- **Server name**: when you install a new server, AFK Realm asks what it should be called – the name players see in the realm list, instead of always "AzerothCore". An existing server is renamed under *Server management → Server name*.
 
 ## Fixed in 0.4.1
 

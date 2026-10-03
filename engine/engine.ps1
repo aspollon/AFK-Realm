@@ -669,6 +669,21 @@ function Repair-IncompleteDatabases([string]$Password) {
 # errors show up here instead of in a server window that closes. The SQL files of
 # modules installed through AFK Realm are held back from dbimport and applied
 # afterwards with a record of their changes (see Invoke-ModuleSql).
+# The name players see in the realm list. Chosen in the app on a new installation
+# (passed in AC_REALM_NAME); without it the realm keeps the name it has.
+function Set-RealmName([string]$Password) {
+    $name = "$($env:AC_REALM_NAME)".Trim()
+    if (-not $name) { return }
+    if ($name.Length -gt 32 -or $name -notmatch "^[A-Za-z0-9][A-Za-z0-9 '.\-]*$") { Write-Log "The server name '$name' is not usable; the realm keeps its name." Yellow; return }
+    $options = New-ClientOptions 'acore' $Password
+    try {
+        $quoted = "'" + $name.Replace("'", "''") + "'"
+        Invoke-Sql $options "UPDATE acore_auth.realmlist SET name = $quoted ORDER BY id LIMIT 1;" | Out-Null
+        Write-Log "Server name: $name"
+    } catch { Write-Log "The server name could not be set: $($_.Exception.Message)" Yellow
+    } finally { Remove-Item $options -Force -ErrorAction SilentlyContinue }
+}
+
 function Update-Databases([string]$Password) {
     $dbimport = Join-Path $Paths.Server 'dbimport.exe'
     if (-not (Test-Path $dbimport)) { Write-Log 'dbimport.exe was not built; the worldserver applies the updates on its first start.' Yellow; return }
@@ -1727,6 +1742,7 @@ try {
     Set-ServerConfig $password
     Repair-IncompleteDatabases $password
     Update-Databases $password
+    Set-RealmName $password
     Resolve-DbcTools
     Write-Launchers $password
     Test-Installation

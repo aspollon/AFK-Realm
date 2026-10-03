@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0-preview
+
+- Server name: a new installation asks for the name players see in the realm list; "Server name" in the server management renames the server later
+- A database error without a message from MySQL no longer shows an empty error window
+
 ## 0.4.1-preview
 
 - Fix: game master actions failed with "character does not exist" for characters with a first and last name (CoA allows a space in names)

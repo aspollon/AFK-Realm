@@ -123,6 +123,32 @@ namespace CoAInstaller
             if (inst.IsInstalled && !Ui.Confirm(this, "A server is already installed here. Recompile it completely?\n\nDatabase, characters and map data are kept."))
                 return false;
             Main.Target = inst;
+            // An existing server keeps its name; it can be changed in the server management.
+            if (inst.IsInstalled) { Main.RealmName = null; Main.Navigate(new PasswordPage(Main)); }
+            else Main.Navigate(new ServerNamePage(Main));
+            return true;
+        }
+    }
+
+    class ServerNamePage : Page
+    {
+        readonly TextBox name = Ui.Input(300);
+        public ServerNamePage(MainForm main) : base(main)
+        {
+            Body.Controls.Add(Ui.Title("Name your server"));
+            Body.Controls.Add(Ui.Para("This is the name players see in the realm list when they log in. You can change it later in the server management."));
+            var row = Ui.Row(); row.Controls.Add(Ui.FieldLabel("Server name")); row.Controls.Add(name);
+            Body.Controls.Add(row);
+            Body.Controls.Add(Ui.Hint(Accounts.RealmNameRules));
+            name.MaxLength = 32;
+            name.Text = string.IsNullOrEmpty(main.RealmName) ? "AzerothCore" : main.RealmName;
+        }
+        public override bool OnNext()
+        {
+            string n = name.Text.Trim();
+            string err = Accounts.CheckRealmName(n);
+            if (err != null) { Ui.Error(this, err); return false; }
+            Main.RealmName = n;
             Main.Navigate(new PasswordPage(Main));
             return true;
         }
@@ -163,7 +189,7 @@ namespace CoAInstaller
         public SummaryPage(MainForm main) : base(main)
         {
             Body.Controls.Add(Ui.Title("Ready to install"));
-            Body.Controls.Add(Ui.Para("Target: " + main.Target.Root));
+            Body.Controls.Add(Ui.Para("Target: " + main.Target.Root + (string.IsNullOrEmpty(main.RealmName) ? "" : "\nServer name: " + main.RealmName)));
             Body.Controls.Add(Ui.Heading("What happens now"));
             foreach (var ph in EngineRunner.For("Install"))
                 Body.Controls.Add(new Label { Text = "•  " + ph.Title, AutoSize = true, Font = Ui.Base, Margin = new Padding(8, 1, 0, 1) });
@@ -235,6 +261,7 @@ namespace CoAInstaller
             try
             {
                 if (mode == "Install") CopySelfAndShortcut();
+                runner.RealmName = mode == "Install" ? Main.RealmName : null;
                 runner.Start(Main.Target, mode, Main.DbPassword, Main.DbPort, Main.EngineArgs);
             }
             catch (Exception ex) { Done(false, "The installation could not be started: " + ex.Message); }

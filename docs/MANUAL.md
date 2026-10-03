@@ -42,8 +42,11 @@ Everything AFK Realm installs goes into the one folder you choose. Nothing is in
 1. Start `AFK-Realm.exe`. Windows may warn about an unknown publisher because the program is not code-signed; choose *More info → Run anyway*.
 2. Choose **Install a new server**.
 3. Pick a folder, for example `C:\CoA-Server`. Use a short path on a local drive.
-4. Set a **database password** (at least 10 characters). You do not need to type it again later, but keep it somewhere.
-5. Read the summary and click **Install**.
+4. Give the server a **name**. It is what players see in the realm list when they log in; you can change it later (see [Server name](#server-name)).
+5. Set a **database password** (at least 10 characters). You do not need to type it again later, but keep it somewhere.
+6. Read the summary and click **Install**.
+
+![Name your server](screenshots/19-name-your-server.png)
 
 The progress page shows each step. If Visual Studio is missing, its installer window opens along the way; do not close it.
 
@@ -238,6 +241,16 @@ After installing a module, read its README: some modules need a step in the game
 Export and import are how you move a player from one server to another, for example from a test server to the real one.
 
 ## 9. Playing with others
+
+### Server name
+
+Under **Server name** in the server management you can rename the server at any time: type the new name and click **Rename**, then stop and start the server. The name can have up to 32 characters (English letters, digits, spaces, hyphen, apostrophe, dot).
+
+![Server name](screenshots/18-server-name.png)
+
+The game client stores each character's interface settings in a folder named after the server (`WTF\Account\<account>\<server name>`). After a rename the client starts with fresh settings for the characters. To keep the old ones, close the game and rename that folder to the new server name.
+
+### Letting others in
 
 By default only you can reach the server (`127.0.0.1`). To let others in:
 

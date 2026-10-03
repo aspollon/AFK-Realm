@@ -22,6 +22,7 @@ namespace CoAInstaller
         // Wizard state
         public Install Target;
         public string DbPassword;
+        public string RealmName;    // server name chosen for a new installation
         public int DbPort = 3307;
         public string EngineArgs;   // extra engine arguments of the current run (e.g. the backup to restore)
         public bool CreateShortcut = true;
