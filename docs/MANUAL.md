@@ -205,11 +205,14 @@ The arrow keys bring back earlier commands. Commands that need you to stand in t
 
 ![Modules](screenshots/12-modules.png)
 
-- The list is the AzerothCore module catalog. Installed modules are ticked.
+- At the top, under **Modules by AFK Realm**, are modules made for this server. They fit CoA and bring everything they need.
+- Below that, the list is the AzerothCore module catalog. Installed modules are ticked.
 - **Tick** a module to install it, **untick** it to remove it, then click **Apply changes**.
 - Click a module to see what AFK Realm found out about it: whether it brings database changes and settings, whether it needs a change to the server core (not supported), files for the game client or the Eluna module, and when it was last changed. **Show README** opens its description.
 - A module that is not in the list can be added by its Git address at the bottom.
 - Playerbots and the modules that come with CoA are shown as *included* / *part of CoA* and cannot be changed here.
+
+**Modules by AFK Realm.** *mod-playerbots-auctions* lets the bots use the auction house like players: they travel to a city when they have enough to sell, put their loot up at prices of their own, buy and bid on what they need, gather and craft with their professions and sell junk to vendors. It needs two small changes to Playerbots and one setting; AFK Realm makes them when it builds the server and takes them back when you remove the module. A module's file `afk-realm.json` lists what it brings; a change that no longer fits a newer Playerbots version is left out and reported, and the server is built without it. The module's own options are in the [server settings](#5-server-settings) under `mod_playerbots_auctions.conf`.
 
 **What happens on Apply:** the server is stopped and backed up, the modules are downloaded, the server is rebuilt and the modules' database changes are applied.
 

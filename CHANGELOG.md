@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.2-preview
+
+- Module manager: new section "Modules by AFK Realm" at the top of the list, with modules made for this server
+- First module of that kind: mod-playerbots-auctions – the bots use the auction house like players (sell, buy, bid, craft, gather)
+- Modules can bring changes for the CoA core or Playerbots and settings for other config files (file afk-realm.json in the module). AFK Realm applies the patches to the fresh source with every build, leaves one out when it no longer fits or is no longer needed, and takes patches and settings back when the module is removed
+
 ## 0.6.1-preview
 
 - Game master tools: "Change name" lets the player choose a new character name at the next login

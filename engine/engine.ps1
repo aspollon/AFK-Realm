@@ -108,6 +108,7 @@ $Paths = @{
     Backups     = Join-Path $InstallRoot 'Backups'
     ModuleList  = Join-Path $InstallRoot 'Dependencies\modules.txt'
     ModuleTrash = Join-Path $InstallRoot 'Dependencies\ModulesRemoved'
+    ModuleSettings = Join-Path $InstallRoot 'Dependencies\module-settings.txt'
 }
 $Paths.Modules = Join-Path $Paths.Source 'modules'
 $Paths.Playerbots = Join-Path $Paths.Modules $Project.Playerbots.Folder
@@ -1395,6 +1396,138 @@ function Sync-ModuleFolders([string]$Git, [string]$Root, [string[]]$Before) {
 }
 
 # =============================================================================
+#  What a module brings along for the core, Playerbots and other config files
+# =============================================================================
+# A module can carry a file afk-realm.json. It names patches for the CoA core or for
+# Playerbots - the two source trees AFK Realm downloads itself and resets with every
+# update - and settings the module needs in other config files:
+#
+#   { "patches":  [ { "name": "...", "target": "mod-playerbots" | "core", "file": "patches/x.patch", "why": "..." } ],
+#     "settings": [ { "file": "playerbots.conf", "key": "...", "value": "...", "why": "..." } ] }
+#
+# Patches are applied to the fresh source before every build. One that no longer fits
+# (the code it changes has changed) or is no longer needed (the change is in the source
+# already) is left out, and the server is built without it.
+$ModuleManifestName = 'afk-realm.json'
+
+function Get-ModuleManifests {
+    foreach ($dir in @(Get-ChildItem $Paths.Modules -Directory -ErrorAction SilentlyContinue)) {
+        $file = Join-Path $dir.FullName $ModuleManifestName
+        if (-not (Test-Path $file)) { continue }
+        try { $data = [IO.File]::ReadAllText($file) | ConvertFrom-Json }
+        catch { Write-Log "$($dir.Name): $ModuleManifestName could not be read ($($_.Exception.Message)); ignored." Yellow; continue }
+        if ($data) { @{ Name = $dir.Name; Folder = $dir.FullName; Data = $data } }
+    }
+}
+
+# A property of a manifest entry as text, or '' when it is not there.
+function Get-ManifestText($Entry, [string]$Name) {
+    if ($null -eq $Entry) { return '' }
+    $property = $Entry.PSObject.Properties[$Name]
+    if ($property -and $null -ne $property.Value) { return "$($property.Value)" }
+    return ''
+}
+function Get-ManifestList($Data, [string]$Name) {
+    $property = $Data.PSObject.Properties[$Name]
+    if ($property -and $property.Value) { return ,@($property.Value | Where-Object { $_ -is [psobject] }) }
+    return ,@()
+}
+
+function Get-PatchTarget([string]$Target) {
+    switch ($Target) {
+        'core' { return $Paths.Source }
+        'mod-playerbots' { return $Paths.Playerbots }
+        default { return $null }
+    }
+}
+
+# Takes earlier patches out again: both trees go back to the revision they were downloaded at.
+# Module folders inside the core tree are not tracked by it and stay as they are.
+function Reset-PatchedSources([string]$Git) {
+    foreach ($folder in @($Paths.Source, $Paths.Playerbots)) {
+        if (Test-Path (Join-Path $folder '.git')) { [void](Invoke-Program $Git @('-C', $folder, 'reset', '--hard', '--quiet', 'HEAD') -AllowFailure) }
+    }
+}
+
+function Invoke-ModulePatches([string]$Git) {
+    Reset-PatchedSources $Git
+    foreach ($manifest in @(Get-ModuleManifests)) {
+        foreach ($patch in (Get-ManifestList $manifest.Data 'patches')) {
+            $relative = (Get-ManifestText $patch 'file').Replace('\', '/')
+            $targetName = Get-ManifestText $patch 'target'
+            $why = Get-ManifestText $patch 'why'
+            $label = '{0}: {1}' -f $manifest.Name, $(if (Get-ManifestText $patch 'name') { Get-ManifestText $patch 'name' } else { $relative })
+            $target = Get-PatchTarget $targetName
+            if ($relative -notmatch '^[\w.\-]+(/[\w.\-]+)*\.(patch|diff)$' -or $relative -match '(^|/)\.\.(/|$)' -or -not $target) {
+                Write-Log "$label - not a valid patch entry (file inside the module, target core or mod-playerbots); ignored." Yellow; continue
+            }
+            $file = Join-Path $manifest.Folder $relative.Replace('/', '\')
+            if (-not (Test-Path $file) -or -not (Test-Path (Join-Path $target '.git'))) { Write-Log "$label - the patch file or its target is missing; ignored." Yellow; continue }
+            $apply = @('-C', $target, 'apply', '--ignore-whitespace', '--whitespace=nowarn')
+            if ((Invoke-Program $Git ($apply + @('--check', $file)) -AllowFailure) -eq 0 -and (Invoke-Program $Git ($apply + @($file)) -AllowFailure) -eq 0) {
+                Write-Log "$label - applied to $targetName." Green
+            } elseif ((Invoke-Program $Git ($apply + @('--reverse', '--check', $file)) -AllowFailure) -eq 0) {
+                Write-Log "$label - already part of $targetName, not needed any more."
+            } else {
+                Write-Log "$label - does not fit the current $targetName any more; the server is built without it." Yellow
+                Send-Event 'NOTE' ("$label could not be applied: the code it changes has changed. The server is built without it." + $(if ($why) { " ($why)" } else { '' }))
+            }
+        }
+    }
+}
+
+function Get-ConfigValue([string]$File, [string]$Key) {
+    $m = [regex]::Match([IO.File]::ReadAllText($File), '(?m)^[ \t]*' + [regex]::Escape($Key) + '[ \t]*=[ \t]*(.*?)[ \t]*\r?$')
+    if ($m.Success) { return $m.Groups[1].Value }
+    return $null
+}
+
+# Settings a module asks for in other config files are written once, when the module is
+# new, and remembered with the value that was there before. Changing them later is up to
+# the user; when the module is gone, a value that is still the module's goes back.
+function Set-ModuleSettings {
+    $known = New-Object Collections.Generic.List[object]
+    if (Test-Path $Paths.ModuleSettings) {
+        foreach ($line in [IO.File]::ReadAllLines($Paths.ModuleSettings)) {
+            $f = $line.Split('|')
+            if ($f.Count -eq 5) { $known.Add(@{ Module = $f[0]; File = $f[1]; Key = $f[2]; Value = $f[3]; Previous = $f[4] }) }
+        }
+    }
+    $find = { param($name) @(Get-ChildItem $Paths.Configs -Recurse -File -Filter $name -ErrorAction SilentlyContinue) | Select-Object -First 1 }
+    $kept = New-Object Collections.Generic.List[object]
+    foreach ($entry in $known) {
+        if (Test-Path (Join-Path $Paths.Modules $entry.Module)) { $kept.Add($entry); continue }
+        $config = & $find $entry.File
+        if ($config -and (Get-ConfigValue $config.FullName $entry.Key) -eq $entry.Value) {
+            Set-ConfigValue $config.FullName $entry.Key $entry.Previous
+            Write-Log "$($entry.Module) is gone: $($entry.Key) in $($entry.File) is $($entry.Previous) again."
+        }
+    }
+    foreach ($manifest in @(Get-ModuleManifests)) {
+        foreach ($setting in (Get-ManifestList $manifest.Data 'settings')) {
+            $name = Get-ManifestText $setting 'file'; $key = Get-ManifestText $setting 'key'; $value = Get-ManifestText $setting 'value'
+            $why = Get-ManifestText $setting 'why'
+            if ($name -notmatch '^[\w.\-]+\.conf$' -or $key -notmatch '^[A-Za-z][\w.]*$' -or $value -match '[\r\n|]') {
+                Write-Log "$($manifest.Name): the setting $key in $name is not valid; ignored." Yellow; continue
+            }
+            if ($kept | Where-Object { $_.Module -eq $manifest.Name -and $_.File -eq $name -and $_.Key -eq $key }) { continue }
+            $config = & $find $name
+            if (-not $config) { Write-Log "$($manifest.Name): $name was not found, $key was not set." Yellow; continue }
+            $previous = Get-ConfigValue $config.FullName $key
+            if ($null -eq $previous) { Write-Log "$($manifest.Name): $name has no option $key; not set." Yellow; continue }
+            if ($previous -ne $value) {
+                Set-ConfigValue $config.FullName $key $value
+                Write-Log "$($manifest.Name): $key in $name set to $value (was $previous)." Green
+                Send-Event 'NOTE' ("$($manifest.Name) set $key to $value in $name (was $previous)." + $(if ($why) { " $why" } else { '' }))
+            }
+            $kept.Add(@{ Module = $manifest.Name; File = $name; Key = $key; Value = $value; Previous = $previous })
+        }
+    }
+    if ($kept.Count -eq 0) { Remove-Item $Paths.ModuleSettings -Force -ErrorAction SilentlyContinue; return }
+    [IO.File]::WriteAllLines($Paths.ModuleSettings, @($kept | ForEach-Object { '{0}|{1}|{2}|{3}|{4}' -f $_.Module, $_.File, $_.Key, $_.Value, $_.Previous }))
+}
+
+# =============================================================================
 #  Snapshots (backup and rollback)
 # =============================================================================
 # A snapshot holds everything an update changes: the server programs, the configs,
@@ -1712,6 +1845,8 @@ try {
     }
     if ($compile) {
         try {
+            # What the installed modules bring for the core and Playerbots goes into the fresh source.
+            Invoke-ModulePatches $git
             Enter-Phase 'configure' 'Preparing the build (CMake)'
             Invoke-Configure $cmake $vs $openssl $boost -Clean:($action -eq 'Rebuild')
             Enter-Phase 'compile' 'Compiling the server'
@@ -1720,6 +1855,7 @@ try {
             if (-not $moduleState) { throw }
             # The new programs are only installed after a successful build, so the server is unchanged.
             Undo-ModuleFolders $moduleState
+            try { Invoke-ModulePatches $git } catch { }
             $names = @($moduleState.Added | ForEach-Object { Split-Path $_ -Leaf })
             if ($names.Count -gt 0) {
                 throw ('The server could not be built with ' + ($names -join ', ') + '. The module was taken out again and your server is unchanged. ' +
@@ -1740,6 +1876,7 @@ try {
     Import-WorldData $password
     Enter-Phase 'finish' 'Configuration and final checks'
     Set-ServerConfig $password
+    Set-ModuleSettings
     Repair-IncompleteDatabases $password
     Update-Databases $password
     Set-RealmName $password

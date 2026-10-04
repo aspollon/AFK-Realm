@@ -19,6 +19,8 @@ namespace CoAInstaller
         public int Stars;
         public DateTime Pushed;
         public bool Archived, InCatalog;
+        /// <summary>Made for AFK Realm: listed first, in a section of its own.</summary>
+        public bool Own;
         public ModuleState State;
         public string Status = "", InstalledOn = "";                      // from modules.txt
         public string[] CreatedTables = new string[0], ManualTables = new string[0];
@@ -45,6 +47,19 @@ namespace CoAInstaller
     static class ModuleCatalog
     {
         const string Topic = "azerothcore-module";
+        /// <summary>A module can bring changes for the core or Playerbots; this file in its folder names them (see the engine).</summary>
+        public const string ManifestName = "afk-realm.json";
+
+        /// <summary>Modules made for AFK Realm. They are always in the list, whatever the catalog says.</summary>
+        static ModuleEntry[] OwnModules()
+        {
+            return new[]
+            {
+                new ModuleEntry { Name = "mod-playerbots-auctions", FullName = "aspollon/mod-playerbots-auctions", Branch = "main", Own = true,
+                    Url = "https://github.com/aspollon/mod-playerbots-auctions", CloneUrl = "https://github.com/aspollon/mod-playerbots-auctions.git",
+                    Description = "The bots use the auction house like players: they sell their loot, buy and bid, craft and gather" },
+            };
+        }
         static readonly Dictionary<string, ModuleAnalysis> analyses = new Dictionary<string, ModuleAnalysis>(StringComparer.OrdinalIgnoreCase);
 
         static string CacheFile(Install inst) { return Path.Combine(inst.Root, "Dependencies", "Cache", "module-catalog.txt"); }
@@ -187,6 +202,12 @@ namespace CoAInstaller
         public static List<ModuleEntry> Merge(Install inst, List<ModuleEntry> catalog)
         {
             var result = new List<ModuleEntry>(catalog ?? new List<ModuleEntry>());
+            foreach (var own in OwnModules())
+            {
+                var listed = result.FirstOrDefault(e => e.FullName.Equals(own.FullName, StringComparison.OrdinalIgnoreCase));
+                if (listed != null) { listed.Own = true; if (listed.Description.Length == 0) listed.Description = own.Description; }
+                else result.Insert(0, own);
+            }
             var managed = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
             string listFile = Path.Combine(inst.Root, "Dependencies", "modules.txt");
             if (File.Exists(listFile))
@@ -204,8 +225,11 @@ namespace CoAInstaller
                 string folder = Path.Combine(dir, name);
                 string[] info; managed.TryGetValue(name, out info);
                 bool hasGit = Directory.Exists(Path.Combine(folder, ".git"));
-                var state = info != null ? ModuleState.Managed : hasGit ? ModuleState.ByHand : ModuleState.PartOfCoA;
+                // A folder without its own Git history is normally a module that ships with the core - unless it is one of ours, copied in by hand.
+                bool own = OwnModules().Any(o => o.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+                var state = info != null ? ModuleState.Managed : hasGit || own ? ModuleState.ByHand : ModuleState.PartOfCoA;
                 string url = info != null ? info[1] : OriginUrl(folder);
+                if (url.Length == 0 && own) url = OwnModules().First(o => o.Name.Equals(name, StringComparison.OrdinalIgnoreCase)).CloneUrl;
                 string full = GitHubName(url);
                 // Prefer the catalog entry of the same repository, else one with the same name.
                 var entry = result.FirstOrDefault(e => full != null && e.FullName.Equals(full, StringComparison.OrdinalIgnoreCase))
@@ -304,7 +328,11 @@ namespace CoAInstaller
 
             if (!code && dbs.Count == 0)
                 a.Add(2, "This does not look like a server module (no source code and no SQL files).");
-            if (patches.Count > 0 || Regex.IsMatch(readme, @"git\s+apply|patch\s+-p\d|apply\s+(the\s+)?(core\s+)?patch|core\s+patch", RegexOptions.IgnoreCase))
+            bool manifest = paths.Any(p => p.Equals(ManifestName, StringComparison.OrdinalIgnoreCase));
+            if (manifest && patches.Count > 0)
+                a.Add(0, "It brings " + patches.Count + (patches.Count == 1 ? " change" : " changes") + " for the CoA core or Playerbots. " + Product.Name +
+                    " applies them with every build and leaves one out when it no longer fits or is no longer needed.");
+            else if (patches.Count > 0 || Regex.IsMatch(readme, @"git\s+apply|patch\s+-p\d|apply\s+(the\s+)?(core\s+)?patch|core\s+patch", RegexOptions.IgnoreCase))
                 a.Add(2, "It needs changes to the server core (a patch). " + Product.Name + " cannot apply those, so the module will most likely not work or not compile.");
             if (Regex.IsMatch(readme, @"\.mpq\b|client[\s-]+(side\s+)?patch|patch-[a-z0-9]\.mpq|client\s+dbc|dbc\s+files?\s+(to|for|in)\s+(the\s+)?client", RegexOptions.IgnoreCase))
                 a.Add(1, "The README mentions files for the game client (MPQ/DBC patches). Every player may need them; see the README.");

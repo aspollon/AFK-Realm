@@ -35,7 +35,7 @@ Pre-built repacks go stale quickly. Building from source keeps you on the latest
 - **Accounts**: create accounts with GM levels, list all player accounts (bot accounts are filtered out) with their characters, delete accounts, set new passwords and change access levels
 - **Account transfer**: export an account with all its characters, items, mail and pets to an `.afkaccount` file and import it on another server – ids are renumbered, taken names are renamed at the next login
 - **Game master tools**: a line to the running server (its SOAP service, switched on for this PC only) with a quest helper – find quests by NPC name, quest title or id, or list the open quests around a character, then give, complete, reward or remove them with one click – plus unstuck, revive, level, rename, gold and mail for a character, announcements, and a console for every other GM command
-- **Modules**: browse the AzerothCore module catalog, tick modules to install them and untick them to remove them. Before installing, each module is checked (database changes, settings, core patches, client files, age) and its README is one click away. The server is backed up and rebuilt; if a module does not compile, it is taken out again and the server stays as it was. The database changes of every module installed this way are recorded, so removing it undoes them
+- **Modules**: modules made for this server at the top ("Modules by AFK Realm", first of them: the bots use the auction house like players), then the AzerothCore module catalog: browse it, tick modules to install them and untick them to remove them. Before installing, each module is checked (database changes, settings, core patches, client files, age) and its README is one click away. The server is backed up and rebuilt; if a module does not compile, it is taken out again and the server stays as it was. The database changes of every module installed this way are recorded, so removing it undoes them
 - **Bot reset**: one click deletes all random bots with their characters, guilds and arena teams (your own characters are kept); new bots are created at the next start
 - **Map data**: extracts maps, vmaps, mmaps and the CoA client DBC tables from your game client with one click
 - **Server name**: choose the name shown in the realm list during installation and change it later with one click
@@ -103,6 +103,19 @@ When the server is started through AFK Realm, the worldserver's SOAP service is 
 ### Modules and their database changes
 
 Modules installed through *Manage modules* are cloned into `Dependencies\Source\modules`. Their SQL files (`data/sql/db-world`, `db-characters`, `db-auth`) are not left to the core's updater: AFK Realm applies them itself, copies the tables they name beforehand and stores the differences (added, changed and removed rows, new and deleted tables) in the database `afk_modules`, which is part of every backup. The files are then entered into the core's `updates` tables with the core's own hash, so they are never applied twice. Removing the module puts every recorded row and table back, but only rows that still look exactly as the module left them; rows changed later (for example by a server update) are kept and listed in the log. Changes that cannot be recorded (a module that alters the structure of an existing table, or changes tables in other ways) are reported; a backup from before the module restores them. Data players created through a module (items in bags, learned spells) is not tracked.
+
+### What a module can bring along
+
+A module can carry a file `afk-realm.json` in its folder. It names patches for the CoA core or for Playerbots – the two source trees AFK Realm downloads itself and resets with every update – and settings the module needs in other config files:
+
+```json
+{
+  "patches":  [ { "name": "Bots keep their bags", "target": "mod-playerbots", "file": "patches/mod-playerbots/keep-bags-on-refresh.patch", "why": "..." } ],
+  "settings": [ { "file": "playerbots.conf", "key": "AiPlayerbot.LootDistance", "value": "40.0", "why": "..." } ]
+}
+```
+
+Before every build both trees are reset and the patches of all installed modules are applied with `git apply`. A patch that no longer fits is left out and reported, one whose change is already in the source is skipped silently; the build goes on either way. Settings are written once, when the module is new, together with the value that was there before (`Dependencies\module-settings.txt`); when the module is removed, a value that is still the module's goes back. `target` is `core` or `mod-playerbots`, nothing else.
 
 Folder layout after installation:
 

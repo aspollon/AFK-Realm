@@ -131,7 +131,7 @@ namespace CoAInstaller
 
             // --- modules
             Body.Controls.Add(Ui.Heading("Modules"));
-            Body.Controls.Add(Ui.Hint("Add or remove AzerothCore modules from the module catalog. The server is backed up and rebuilt; " +
+            Body.Controls.Add(Ui.Hint("Add or remove modules: those made for this server (for example bots that use the auction house) and the AzerothCore module catalog. The server is backed up and rebuilt; " +
                 "database changes of modules installed here are recorded, so removing a module undoes them."));
             var modulesBtn = Ui.Secondary("Manage modules …");
             modulesBtn.Click += (s, e) => ManageModules();

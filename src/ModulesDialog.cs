@@ -33,6 +33,10 @@ namespace CoAInstaller
         readonly Button apply = Ui.Primary("Apply changes …");
         readonly TextBox customUrl = new TextBox { Font = Ui.Base, Width = 380, Margin = new Padding(0, 3, 8, 3) };
 
+        // The modules made for AFK Realm stand above the catalog, in a section of their own.
+        readonly FlowLayoutPanel ownPanel = new FlowLayoutPanel { FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoSize = true, Dock = DockStyle.Top, Padding = new Padding(0, 0, 0, 2) };
+        readonly Dictionary<ModuleEntry, Label> ownStatus = new Dictionary<ModuleEntry, Label>();
+        ModuleEntry ownSelected;
         List<ModuleEntry> all = new List<ModuleEntry>();
         readonly HashSet<ModuleEntry> ticked = new HashSet<ModuleEntry>();
         bool filling;
@@ -46,7 +50,7 @@ namespace CoAInstaller
             var top = Ui.Column(); top.Dock = DockStyle.Top; top.AutoSize = true; top.Padding = new Padding(16, 12, 16, 4);
             top.Controls.Add(Ui.Para("Tick a module to install it, untick it to remove it, then choose \"Apply changes\". " + Product.Name +
                 " backs up the server, downloads the modules and rebuilds the server. Database changes of modules installed here are recorded, " +
-                "so removing a module also undoes them. The list comes from the AzerothCore module catalog; not every module works with CoA.", 1040));
+                "so removing a module also undoes them. \"Modules by " + Product.Name + "\" are made for this server; the rest of the list comes from the AzerothCore module catalog, and not every module there works with CoA.", 1040));
             var filter = Ui.Row();
             filter.Controls.Add(new Label { Text = "Search", AutoSize = true, Font = Ui.Base, Margin = new Padding(0, 6, 6, 0) });
             filter.Controls.Add(search); filter.Controls.Add(hideOld); filter.Controls.Add(onlyInstalled);
@@ -61,6 +65,7 @@ namespace CoAInstaller
             list.Columns.Add("Status", 115);
             var listPanel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(16, 4, 8, 4) };
             listPanel.Controls.Add(list);
+            listPanel.Controls.Add(ownPanel);
 
             var details = Ui.Column(); details.Padding = new Padding(4, 4, 8, 4);
             details.Controls.Add(detailName); details.Controls.Add(detailText); details.Controls.Add(detailLink);
@@ -90,7 +95,7 @@ namespace CoAInstaller
             hideOld.CheckedChanged += (s, e) => Fill();
             onlyInstalled.CheckedChanged += (s, e) => Fill();
             list.ItemCheck += OnItemCheck;
-            list.SelectedIndexChanged += (s, e) => ShowDetails();
+            list.SelectedIndexChanged += (s, e) => { if (list.SelectedItems.Count > 0) SelectOwn(null); ShowDetails(); };
             detailLink.LinkClicked += (s, e) => { var m = Selected; if (m != null && m.Url.StartsWith("http")) Process.Start(m.Url); };
             readme.Click += (s, e) => ShowReadme();
             apply.Click += (s, e) => Apply();
@@ -98,7 +103,58 @@ namespace CoAInstaller
             Shown += (s, e) => LoadList(false);
         }
 
-        ModuleEntry Selected { get { return list.SelectedItems.Count == 1 ? list.SelectedItems[0].Tag as ModuleEntry : null; } }
+        ModuleEntry Selected { get { return ownSelected ?? (list.SelectedItems.Count == 1 ? list.SelectedItems[0].Tag as ModuleEntry : null); } }
+
+        /// <summary>Marks one of the modules by AFK Realm as the one the details are shown for (null: none).</summary>
+        void SelectOwn(ModuleEntry m)
+        {
+            ownSelected = m;
+            foreach (Control row in ownPanel.Controls) if (row.Tag is ModuleEntry) row.BackColor = row.Tag == m ? Ui.Panel : Color.White;
+        }
+
+        /// <summary>The section "Modules by AFK Realm": one row per module, with a tick like the list below.</summary>
+        void FillOwn()
+        {
+            ownPanel.SuspendLayout();
+            ownPanel.Controls.Clear(); ownStatus.Clear();
+            var mine = all.Where(m => m.Own).OrderBy(m => m.Name).ToList();
+            if (ownSelected != null && !mine.Contains(ownSelected)) ownSelected = null;
+            if (mine.Count > 0)
+            {
+                ownPanel.Controls.Add(new Label { Text = "Modules by " + Product.Name, AutoSize = true, Font = Ui.H2, ForeColor = Ui.Accent, Margin = new Padding(0, 0, 0, 2) });
+                foreach (var m in mine)
+                {
+                    var entry = m;
+                    var row = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, WrapContents = false, AutoSize = true, Tag = entry, Margin = new Padding(0, 0, 0, 2), Padding = new Padding(2, 2, 6, 2),
+                        BackColor = entry == ownSelected ? Ui.Panel : Color.White };
+                    var tick = new CheckBox { Text = entry.Name, AutoSize = true, Font = Ui.Bold, Checked = ticked.Contains(entry), Enabled = entry.State != ModuleState.PartOfCoA, Margin = new Padding(2, 1, 10, 0) };
+                    var text = new Label { Text = entry.Description, AutoSize = true, Font = Ui.Base, ForeColor = Ui.Text, Margin = new Padding(0, 4, 10, 0), MaximumSize = new Size(360, 0) };
+                    var state = new Label { Text = StatusText(entry), AutoSize = true, Font = Ui.Small, ForeColor = Ui.Muted, Margin = new Padding(0, 5, 0, 0) };
+                    ownStatus[entry] = state;
+                    tick.CheckedChanged += (s, e) =>
+                    {
+                        if (filling) return;
+                        if (tick.Checked) ticked.Add(entry); else ticked.Remove(entry);
+                        state.Text = StatusText(entry);
+                        Pick(entry);
+                        UpdateApply();
+                    };
+                    EventHandler pick = (s, e) => Pick(entry);
+                    row.Click += pick; text.Click += pick; state.Click += pick;
+                    row.Controls.Add(tick); row.Controls.Add(text); row.Controls.Add(state);
+                    ownPanel.Controls.Add(row);
+                }
+                ownPanel.Controls.Add(new Label { Text = "AzerothCore module catalog", AutoSize = true, Font = Ui.H2, ForeColor = Ui.Text, Margin = new Padding(0, 8, 0, 2) });
+            }
+            ownPanel.ResumeLayout();
+        }
+
+        void Pick(ModuleEntry m)
+        {
+            list.SelectedItems.Clear();
+            SelectOwn(m);
+            ShowDetails();
+        }
 
         void LoadList(bool refresh)
         {
@@ -129,10 +185,11 @@ namespace CoAInstaller
         void Fill()
         {
             filling = true;
+            FillOwn();
             list.BeginUpdate();
             list.Items.Clear();
             string q = search.Text.Trim();
-            var shown = all.Where(m =>
+            var shown = all.Where(m => !m.Own &&
                     (!hideOld.Checked || m.Installed || ticked.Contains(m) || m.Pushed == DateTime.MinValue || m.Pushed > DateTime.UtcNow.AddYears(-2)) &&
                     (!onlyInstalled.Checked || m.Installed) &&
                     (q.Length == 0 || m.Name.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0 || m.Description.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0 ||
@@ -214,6 +271,7 @@ namespace CoAInstaller
                 return;
             }
             if (m.State == ModuleState.PartOfCoA) { AddCheck(0, "This module is already part of the CoA core."); return; }
+            if (m.Own) AddCheck(0, "Made for " + Product.Name + " and the CoA server it builds.");
             if (m.State == ModuleState.Managed)
             {
                 AddCheck(0, "Installed through " + Product.Name + (m.InstalledOn.Length > 0 ? " on " + m.InstalledOn : "") + ". Removing it undoes its recorded database changes.");
@@ -236,7 +294,8 @@ namespace CoAInstaller
                     {
                         if (Selected != m) return;
                         checks.Controls.Clear();
-                        if (error != null) { AddCheck(1, "The module could not be checked: " + error); return; }
+                        if (m.Own) AddCheck(0, "Made for " + Product.Name + " and the CoA server it builds.");
+                        if (error != null) { AddCheck(m.Own ? -1 : 1, "The module could not be checked" + (m.Own ? " online right now" : "") + ": " + error); return; }
                         foreach (var c in a.Checks.OrderByDescending(c => c.Key)) AddCheck(c.Key, c.Value);
                         AddCheck(-1, "Check the README for anything you need to set up yourself, for example in the game.");
                         readme.Visible = a.ReadmeText.Length > 0;
@@ -286,6 +345,7 @@ namespace CoAInstaller
             customUrl.Text = "";
             search.Text = known.Name;
             Fill();
+            if (known.Own) { if (!known.Installed && known.State != ModuleState.PartOfCoA) ticked.Add(known); search.Text = ""; Fill(); Pick(known); return; }
             foreach (ListViewItem it in list.Items) if (it.Tag == known) { it.Selected = true; if (!known.Installed) it.Checked = true; it.EnsureVisible(); }
         }
 
