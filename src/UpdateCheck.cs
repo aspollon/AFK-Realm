@@ -8,7 +8,7 @@ using System.Text.RegularExpressions;
 namespace CoAInstaller
 {
     /// <summary>
-    /// Looks on GitHub for newer server code (CoA core, Playerbots) and a newer AFK Realm release.
+    /// Looks on GitHub for newer server code (CoA core, Playerbots, installed modules) and a newer AFK Realm release.
     /// Read-only and quiet: without internet it simply reports nothing.
     /// </summary>
     static class UpdateCheck
@@ -50,6 +50,31 @@ namespace CoAInstaller
                     catch { }
                 }
             }
+            // Additional modules: the same question for each one that came from GitHub (at most ten, to stay
+            // well inside the number of requests GitHub allows without signing in).
+            try
+            {
+                string modules = Path.Combine(inst.SourceDir, "modules");
+                int asked = 0;
+                if (Directory.Exists(modules))
+                    foreach (var folder in Directory.GetDirectories(modules))
+                    {
+                        string name = Path.GetFileName(folder);
+                        if (name.Equals("mod-playerbots", StringComparison.OrdinalIgnoreCase) || asked >= 10) continue;
+                        string branch, revision, repo = GitHubRepoOf(folder);
+                        if (repo == null || !ReadHead(folder, out branch, out revision)) continue;
+                        asked++;
+                        try
+                        {
+                            string json = Get("https://api.github.com/repos/" + repo + "/compare/" + revision + "..." + Uri.EscapeDataString(branch));
+                            var ahead = Regex.Match(json, @"""ahead_by""\s*:\s*(\d+)");
+                            int n = ahead.Success ? int.Parse(ahead.Groups[1].Value) : 0;
+                            if (n > 0) r.Server.Add(name + ": " + n + (n == 1 ? " new change" : " new changes"));
+                        }
+                        catch { }
+                    }
+            }
+            catch { }
             try
             {
                 string json = Get("https://api.github.com/repos/" + Product.GitHubRepo + "/releases?per_page=10");
@@ -79,6 +104,40 @@ namespace CoAInstaller
             }
             catch { }
             return r;
+        }
+
+        /// <summary>"owner/repo" of the module's origin on GitHub, or null.</summary>
+        static string GitHubRepoOf(string folder)
+        {
+            try
+            {
+                string config = Path.Combine(folder, ".git", "config");
+                if (!File.Exists(config)) return null;
+                var url = Regex.Match(File.ReadAllText(config), @"\[remote ""origin""\][^\[]*?url\s*=\s*(\S+)", RegexOptions.IgnoreCase);
+                var m = url.Success ? Regex.Match(url.Groups[1].Value, @"github\.com[/:]([\w.\-]+)/([\w.\-]+?)(?:\.git)?/?$", RegexOptions.IgnoreCase) : Match.Empty;
+                return m.Success ? m.Groups[1].Value + "/" + m.Groups[2].Value : null;
+            }
+            catch { return null; }
+        }
+
+        /// <summary>The branch a module's folder is on and the commit it stands at, read from its .git folder.</summary>
+        static bool ReadHead(string folder, out string branch, out string revision)
+        {
+            branch = revision = null;
+            try
+            {
+                string git = Path.Combine(folder, ".git");
+                var head = Regex.Match(File.ReadAllText(Path.Combine(git, "HEAD")).Trim(), @"^ref:\s*(refs/heads/(\S+))$");
+                if (!head.Success) return false;                          // not on a branch
+                branch = head.Groups[2].Value;
+                string loose = Path.Combine(git, head.Groups[1].Value.Replace('/', Path.DirectorySeparatorChar));
+                if (File.Exists(loose)) revision = File.ReadAllText(loose).Trim();
+                else if (File.Exists(Path.Combine(git, "packed-refs")))
+                    foreach (var line in File.ReadAllLines(Path.Combine(git, "packed-refs")))
+                        if (line.EndsWith(" " + head.Groups[1].Value)) revision = line.Substring(0, line.IndexOf(' '));
+                return revision != null && Regex.IsMatch(revision, "^[0-9a-f]{40}$");
+            }
+            catch { return false; }
         }
 
         static string Get(string url)

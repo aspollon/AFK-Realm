@@ -6,6 +6,7 @@ Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with 
 
 - **Modules by AFK Realm**: the module manager now starts with a section of modules made for this server. The first one is **mod-playerbots-auctions**: the bots use the auction house like players. They travel to a city when they have enough to sell, price their loot, buy and bid on what they need, gather and craft with their professions, and sell their junk to vendors. Tick it, apply, done.
 - **Modules can bring what they need.** Until now a module that needed a change in the core or in Playerbots could not be installed through AFK Realm. A module can now carry those changes itself: AFK Realm applies them to the freshly downloaded source with every build, leaves a change out when it no longer fits or when the original has it already, and takes everything back when the module is removed. The auction module uses this for two small changes to Playerbots (bots keep what is in their bags; no crash on level-scaled loot) and one setting.
+- **Module updates are announced.** The notice at the top of the server management now also says when an installed module has new changes on GitHub; *Check for updates and install* gets them, as before.
 - This is new and was tested on one server only. As always: AFK Realm backs up the server before it changes anything.
 
 ## New in 0.6.1
