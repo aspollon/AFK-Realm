@@ -1,6 +1,10 @@
-# AFK Realm 0.6.2 – preview
+# AFK Realm 0.6.3 – preview
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11.
+
+## New in 0.6.3
+
+- **Reset random bots no longer reports a failure that was none.** On fast PCs the reset said the worldserver had started normally and nothing was deleted, although all bots were gone. If you saw that message: the bots were deleted, nothing needs to be repeated.
 
 ## New in 0.6.2
 

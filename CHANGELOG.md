@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.3-preview
+
+- Fix: "Reset random bots" reported "The worldserver started normally instead of deleting the bots. Nothing was deleted." on fast PCs although the bots had been deleted: the worldserver finished loading before it shut itself down
+
 ## 0.6.2-preview
 
 - Module manager: new section "Modules by AFK Realm" at the top of the list, with modules made for this server

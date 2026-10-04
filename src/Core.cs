@@ -23,7 +23,7 @@ namespace CoAInstaller
         public const string Name = "AFK Realm";                   // window titles, dialogs
         public const string ShortName = "AFK Realm";              // desktop shortcut, firewall rules
         public const string FileStem = "AFK-Realm";                // exe name, settings folder
-        public const string Version = "0.6.2-preview";            // pre-release until testers confirm it works
+        public const string Version = "0.6.3-preview";            // pre-release until testers confirm it works
         public const string Tagline = "build, run and tweak your own server the lazy way";
         public const string BuildsFor = "Conquest of AzerothCore";
         public const string WindowTitle = Name + " (preview)";
@@ -457,21 +457,29 @@ namespace CoAInstaller
                 status("Deleting all random bots, their guilds and arena teams. The server log shows the progress ...");
                 var p = StartConsole(inst.WorldExe, inst.WorldConf);
                 if (p == null) throw new InvalidOperationException("The worldserver could not be started.");
+                string log = Path.Combine(inst.ServerDir, "Playerbots.log");
+                Func<bool> confirmed = () =>
+                {
+                    string text = "";
+                    try { using (var fs = new FileStream(log, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)) using (var r = new StreamReader(fs)) text = r.ReadToEnd(); } catch { }
+                    return text.IndexOf("Random bot accounts and data deleted", StringComparison.OrdinalIgnoreCase) >= 0;
+                };
                 var until = DateTime.Now.AddMinutes(60);
                 while (!p.WaitForExit(2000))
                 {
                     if (Net.PortOpen(WorldPort))
                     {
+                        // After deleting, the worldserver asks itself to stop - but a fast PC has it finish
+                        // loading and open its port first. That is not a normal start: the bots are gone.
+                        bool deleted = confirmed();
                         StopConsoleProcess(p, 180);
+                        if (deleted) break;
                         throw new InvalidOperationException("The worldserver started normally instead of deleting the bots. Nothing was deleted.");
                     }
                     if (DateTime.Now > until)
                         throw new InvalidOperationException("Deleting the bots takes longer than an hour. Check the server log; the reset settings have been switched off again.");
                 }
-                string log = Path.Combine(inst.ServerDir, "Playerbots.log");
-                string text = "";
-                try { using (var fs = new FileStream(log, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)) using (var r = new StreamReader(fs)) text = r.ReadToEnd(); } catch { }
-                if (text.IndexOf("Random bot accounts and data deleted", StringComparison.OrdinalIgnoreCase) < 0)
+                if (!confirmed())
                     throw new InvalidOperationException("The worldserver closed without confirming the deletion. The end of its log:\n\n" + LogTail(Path.Combine(inst.ServerDir, "Server.log"), 8));
             }
             finally { RestoreAfterBotReset(); }
