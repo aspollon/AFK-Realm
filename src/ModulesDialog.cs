@@ -116,7 +116,8 @@ namespace CoAInstaller
         void FillOwn()
         {
             ownPanel.SuspendLayout();
-            ownPanel.Controls.Clear(); ownStatus.Clear();
+            foreach (var old in ownPanel.Controls.Cast<Control>().ToList()) { ownPanel.Controls.Remove(old); old.Dispose(); }
+            ownStatus.Clear();
             var mine = all.Where(m => m.Own).OrderBy(m => m.Name).ToList();
             if (ownSelected != null && !mine.Contains(ownSelected)) ownSelected = null;
             if (mine.Count > 0)
@@ -134,6 +135,13 @@ namespace CoAInstaller
                     tick.CheckedChanged += (s, e) =>
                     {
                         if (filling) return;
+                        var clash = tick.Checked && !entry.Installed ? Clash(entry) : null;
+                        if (clash != null)
+                        {
+                            filling = true; tick.Checked = false; filling = false;
+                            Ui.Error(this, ClashText(entry, clash));
+                            return;
+                        }
                         if (tick.Checked) ticked.Add(entry); else ticked.Remove(entry);
                         state.Text = StatusText(entry);
                         Pick(entry);
@@ -173,7 +181,10 @@ namespace CoAInstaller
                         all = merged;
                         ticked.Clear();
                         foreach (var m in all.Where(m => m.Installed || m.State == ModuleState.PartOfCoA)) ticked.Add(m);
+                        ownSelected = null;
+                        FillOwn();
                         Fill();
+                        ShowDetails();
                         status.Text = error ?? warning ?? (all.Count(m => m.InCatalog) + " modules in the catalog.");
                         status.ForeColor = error != null || warning != null ? Ui.Warn : Ui.Muted;
                     }));
@@ -185,7 +196,6 @@ namespace CoAInstaller
         void Fill()
         {
             filling = true;
-            FillOwn();
             list.BeginUpdate();
             list.Items.Clear();
             string q = search.Text.Trim();
@@ -234,17 +244,28 @@ namespace CoAInstaller
             bool on = e.NewValue == CheckState.Checked;
             if (on && !m.Installed)
             {
-                var clash = all.FirstOrDefault(o => o != m && ticked.Contains(o) && o.Name.Equals(m.Name, StringComparison.OrdinalIgnoreCase));
+                var clash = Clash(m);
                 if (clash != null)
                 {
                     e.NewValue = CheckState.Unchecked;
-                    BeginInvoke((Action)(() => Ui.Error(this, "Another module named \"" + m.Name + "\" (" + (clash.FullName.Length > 0 ? clash.FullName : clash.CloneUrl) + ") is already chosen. Only one module of the same name can be installed.")));
+                    BeginInvoke((Action)(() => Ui.Error(this, ClashText(m, clash))));
                     return;
                 }
             }
             if (on) ticked.Add(m); else ticked.Remove(m);
             list.Items[e.Index].SubItems[4].Text = StatusText(m);
             BeginInvoke((Action)UpdateApply);
+        }
+
+        /// <summary>Another chosen or installed module with the same folder name, or null.</summary>
+        ModuleEntry Clash(ModuleEntry m)
+        {
+            return all.FirstOrDefault(o => o != m && ticked.Contains(o) && o.Name.Equals(m.Name, StringComparison.OrdinalIgnoreCase));
+        }
+
+        static string ClashText(ModuleEntry m, ModuleEntry clash)
+        {
+            return "Another module named \"" + m.Name + "\" (" + (clash.FullName.Length > 0 ? clash.FullName : clash.CloneUrl) + ") is already chosen. Only one module of the same name can be installed.";
         }
 
         void UpdateApply()
@@ -345,7 +366,11 @@ namespace CoAInstaller
             customUrl.Text = "";
             search.Text = known.Name;
             Fill();
-            if (known.Own) { if (!known.Installed && known.State != ModuleState.PartOfCoA) ticked.Add(known); search.Text = ""; Fill(); Pick(known); return; }
+            if (known.Own)
+            {
+                if (!known.Installed && known.State != ModuleState.PartOfCoA && Clash(known) == null) ticked.Add(known);
+                search.Text = ""; FillOwn(); Fill(); Pick(known); return;
+            }
             foreach (ListViewItem it in list.Items) if (it.Tag == known) { it.Selected = true; if (!known.Installed) it.Checked = true; it.EnsureVisible(); }
         }
 

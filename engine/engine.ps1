@@ -1424,7 +1424,8 @@ function Get-ModuleManifests {
 function Get-ManifestText($Entry, [string]$Name) {
     if ($null -eq $Entry) { return '' }
     $property = $Entry.PSObject.Properties[$Name]
-    if ($property -and $null -ne $property.Value) { return "$($property.Value)" }
+    # One line only: these texts go into the log, and the window reads the log line by line.
+    if ($property -and $null -ne $property.Value) { return ("$($property.Value)" -replace '[\r\n]+', ' ').Trim() }
     return ''
 }
 function Get-ManifestList($Data, [string]$Name) {
@@ -1445,11 +1446,16 @@ function Get-PatchTarget([string]$Target) {
 # Module folders inside the core tree are not tracked by it and stay as they are.
 function Reset-PatchedSources([string]$Git) {
     foreach ($folder in @($Paths.Source, $Paths.Playerbots)) {
-        if (Test-Path (Join-Path $folder '.git')) { [void](Invoke-Program $Git @('-C', $folder, 'reset', '--hard', '--quiet', 'HEAD') -AllowFailure) }
+        if (-not (Test-Path (Join-Path $folder '.git'))) { continue }
+        [void](Invoke-Program $Git @('-C', $folder, 'reset', '--hard', '--quiet', 'HEAD') -AllowFailure)
+        # Files a patch added are not tracked, so the reset leaves them: they are cleaned out as well.
+        $clean = @('-C', $folder, 'clean', '-ffd', '--quiet')
+        if ($folder -eq $Paths.Source) { $clean += @('-e', 'modules/') }
+        [void](Invoke-Program $Git $clean -AllowFailure)
     }
 }
 
-function Invoke-ModulePatches([string]$Git) {
+function Invoke-ModulePatches([string]$Git, [switch]$Quiet) {
     Reset-PatchedSources $Git
     foreach ($manifest in @(Get-ModuleManifests)) {
         foreach ($patch in (Get-ManifestList $manifest.Data 'patches')) {
@@ -1458,7 +1464,7 @@ function Invoke-ModulePatches([string]$Git) {
             $why = Get-ManifestText $patch 'why'
             $label = '{0}: {1}' -f $manifest.Name, $(if (Get-ManifestText $patch 'name') { Get-ManifestText $patch 'name' } else { $relative })
             $target = Get-PatchTarget $targetName
-            if ($relative -notmatch '^[\w.\-]+(/[\w.\-]+)*\.(patch|diff)$' -or $relative -match '(^|/)\.\.(/|$)' -or -not $target) {
+            if ($relative -notmatch '^[\w.\-]+(/[\w.\-]+)*\.(patch|diff)\z' -or $relative -match '(^|/)\.\.(/|$)' -or -not $target) {
                 Write-Log "$label - not a valid patch entry (file inside the module, target core or mod-playerbots); ignored." Yellow; continue
             }
             $file = Join-Path $manifest.Folder $relative.Replace('/', '\')
@@ -1470,7 +1476,7 @@ function Invoke-ModulePatches([string]$Git) {
                 Write-Log "$label - already part of $targetName, not needed any more."
             } else {
                 Write-Log "$label - does not fit the current $targetName any more; the server is built without it." Yellow
-                Send-Event 'NOTE' ("$label could not be applied: the code it changes has changed. The server is built without it." + $(if ($why) { " ($why)" } else { '' }))
+                if (-not $Quiet) { Send-Event 'NOTE' ("$label could not be applied: the code it changes has changed. The server is built without it." + $(if ($why) { " ($why)" } else { '' })) }
             }
         }
     }
@@ -1489,7 +1495,8 @@ function Set-ModuleSettings {
     $known = New-Object Collections.Generic.List[object]
     if (Test-Path $Paths.ModuleSettings) {
         foreach ($line in [IO.File]::ReadAllLines($Paths.ModuleSettings)) {
-            $f = $line.Split('|')
+            # The value that was there before comes last and may contain anything, a '|' too.
+            $f = $line.Split([char[]]'|', 5)
             if ($f.Count -eq 5) { $known.Add(@{ Module = $f[0]; File = $f[1]; Key = $f[2]; Value = $f[3]; Previous = $f[4] }) }
         }
     }
@@ -1507,7 +1514,7 @@ function Set-ModuleSettings {
         foreach ($setting in (Get-ManifestList $manifest.Data 'settings')) {
             $name = Get-ManifestText $setting 'file'; $key = Get-ManifestText $setting 'key'; $value = Get-ManifestText $setting 'value'
             $why = Get-ManifestText $setting 'why'
-            if ($name -notmatch '^[\w.\-]+\.conf$' -or $key -notmatch '^[A-Za-z][\w.]*$' -or $value -match '[\r\n|]') {
+            if ($name -notmatch '^[\w.\-]+\.conf\z' -or $key -notmatch '^[A-Za-z][\w.]*\z' -or $value -match '[\r\n|]') {
                 Write-Log "$($manifest.Name): the setting $key in $name is not valid; ignored." Yellow; continue
             }
             if ($kept | Where-Object { $_.Module -eq $manifest.Name -and $_.File -eq $name -and $_.Key -eq $key }) { continue }
@@ -1627,6 +1634,9 @@ function New-Snapshot([string]$Password, [string]$Reason) {
         }
     } finally { $zip.Dispose() }
 
+    # Which settings modules made in other config files belongs to the configuration saved above.
+    if (Test-Path $Paths.ModuleSettings) { Copy-Item $Paths.ModuleSettings (Join-Path $partial 'module-settings.txt') }
+
     $stamp = if (Test-Path $Paths.BuildMarker) { [IO.File]::ReadAllText($Paths.BuildMarker).Trim() } else { '' }
     $revisions = if (Test-Path $Paths.Revisions) { [IO.File]::ReadAllLines($Paths.Revisions) } else { @() }
     $core = @($revisions | Where-Object { $_ -like 'core|*' } | ForEach-Object { $_.Split('|')[3] }) + @('') | Select-Object -First 1
@@ -1680,6 +1690,8 @@ function Restore-Snapshot([string]$Name, [string]$Password) {
             [IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $target, $true)
         }
     } finally { $zip.Dispose() }
+    $savedSettings = Join-Path $folder 'module-settings.txt'
+    if (Test-Path $savedSettings) { Copy-Item $savedSettings $Paths.ModuleSettings -Force } else { Remove-Item $Paths.ModuleSettings -Force -ErrorAction SilentlyContinue }
     Write-Log 'Server programs and configuration restored.'
 
     # The sources go back to the snapshot's versions, so "Check for updates" offers the newer code again.
@@ -1855,7 +1867,7 @@ try {
             if (-not $moduleState) { throw }
             # The new programs are only installed after a successful build, so the server is unchanged.
             Undo-ModuleFolders $moduleState
-            try { Invoke-ModulePatches $git } catch { }
+            try { Invoke-ModulePatches $git -Quiet } catch { }
             $names = @($moduleState.Added | ForEach-Object { Split-Path $_ -Leaf })
             if ($names.Count -gt 0) {
                 throw ('The server could not be built with ' + ($names -join ', ') + '. The module was taken out again and your server is unchanged. ' +

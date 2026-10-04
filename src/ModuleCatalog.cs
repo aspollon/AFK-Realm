@@ -289,7 +289,8 @@ namespace CoAInstaller
             if (!m.InCatalog)
             {
                 var repo = json.DeserializeObject(Get("https://api.github.com/repos/" + full)) as Dictionary<string, object>;
-                m.Branch = Text(repo, "default_branch"); m.Description = Text(repo, "description");
+                m.Branch = Text(repo, "default_branch");
+                if (!m.Own || m.Description.Length == 0) m.Description = Text(repo, "description");
                 m.Archived = Text(repo, "archived") == "True";
                 DateTime pushed; if (DateTime.TryParse(Text(repo, "pushed_at"), CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out pushed)) m.Pushed = pushed;
                 m.FullName = full;
