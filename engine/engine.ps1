@@ -835,7 +835,11 @@ function Invoke-Configure([string]$CMake, $VisualStudio, [string]$OpenSsl, [stri
     # A cache created for another Visual Studio instance cannot be switched, so it is started fresh.
     $cache = Join-Path $Paths.Build 'CMakeCache.txt'
     $instance = $VisualStudio.Path.Replace('\', '/')
-    if ($Clean -or ((Test-Path $cache) -and -not ([IO.File]::ReadAllText($cache).Contains("CMAKE_GENERATOR_INSTANCE:INTERNAL=$instance")))) {
+    # CMake notes the instance as INTERNAL when it found it itself and as UNINITIALIZED when it was named on
+    # the command line (as below), so the type is not looked at. Looking for INTERNAL only threw the build
+    # folder away before every build, and every update compiled everything again.
+    $sameInstance = (Test-Path $cache) -and [regex]::IsMatch([IO.File]::ReadAllText($cache), '(?m)^CMAKE_GENERATOR_INSTANCE:[A-Z]+=' + [regex]::Escape($instance) + '(,|\r?$)')
+    if ($Clean -or ((Test-Path $cache) -and -not $sameInstance)) {
         Remove-Item $Paths.Build -Recurse -Force -ErrorAction SilentlyContinue
     }
     New-Item -ItemType Directory -Force -Path $Paths.Build, $Paths.Server | Out-Null
