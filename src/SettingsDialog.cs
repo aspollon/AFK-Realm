@@ -202,6 +202,7 @@ namespace CoAInstaller
                     Edit(o, dash > 0 ? t.Substring(0, dash) : t);
                 };
                 combo.SelectedIndexChanged += apply;
+                combo.TextChanged += apply;
                 combo.Leave += apply;
                 combo.KeyDown += (s, e) => { if (e.KeyCode == Keys.Enter) apply(s, e); };
                 editor = combo;
@@ -211,6 +212,9 @@ namespace CoAInstaller
                 var tb = Ui.Input(o.Kind == OptionKind.Number ? 160 : 420);
                 tb.Text = value;
                 EventHandler apply = (s, e) => Edit(o, tb.Text);
+                // While typing already, not only when the field is left: "Save changes" is disabled until
+                // there is a change, and a disabled button cannot take the focus away from the field.
+                tb.TextChanged += apply;
                 tb.Leave += apply;
                 tb.KeyDown += (s, e) => { if (e.KeyCode == Keys.Enter) { e.SuppressKeyPress = true; apply(s, e); } };
                 editor = tb;

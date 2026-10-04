@@ -5,6 +5,7 @@
 - Module manager: new section "Modules by AFK Realm" at the top of the list, with modules made for this server
 - First module of that kind: mod-playerbots-auctions – the bots use the auction house like players (sell, buy, bid, craft, gather)
 - Modules can bring changes for the CoA core or Playerbots and settings for other config files (file afk-realm.json in the module). AFK Realm applies the patches to the fresh source with every build, leaves one out when it no longer fits or is no longer needed, and takes patches and settings back when the module is removed
+- Fix: in the server settings, "Save changes" stayed grey after typing a new value until the field was left; a change now counts while typing
 - The update notice at the top of the server management now also tells when an installed module has new changes (before, only "Check for updates and install" looked at modules)
 
 ## 0.6.1-preview
