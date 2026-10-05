@@ -58,17 +58,21 @@ namespace CoAInstaller
             quests.Columns.Add("Id", 54, HorizontalAlignment.Right);
             quests.Columns.Add("Quest", 220);
             quests.Columns.Add("Lvl", 38, HorizontalAlignment.Right);
+            quests.Columns.Add("Status", 82);
+            quests.Columns.Add("Progress", 0);
             quests.Columns.Add("Given by", 150);
             quests.Columns.Add("Handed in to", 150);
             quests.Columns.Add("Yards", 50, HorizontalAlignment.Right);
-            quests.Columns.Add("Status", 82);
+            quests.ShowItemToolTips = true;
             var search = Ui.Row(); search.Dock = DockStyle.Top; search.Margin = new Padding(0);
             search.Controls.Add(new Label { Text = "NPC name, quest title or id", AutoSize = true, Font = Ui.Base, Margin = new Padding(0, 6, 6, 0) });
             search.Controls.Add(questText);
             var find = Ui.Primary("Search"); find.Padding = new Padding(10, 3, 10, 3);
             search.Controls.Add(find);
             var near = Ui.Row(); near.Dock = DockStyle.Top; near.Margin = new Padding(0);
-            var nearBtn = Ui.Secondary("Quests near the character"); nearBtn.Padding = new Padding(10, 3, 10, 3);
+            var logBtn = Ui.Secondary("Quest log"); logBtn.Padding = new Padding(10, 3, 10, 3); logBtn.Margin = new Padding(0, 2, 8, 2);
+            near.Controls.Add(logBtn);
+            var nearBtn = Ui.Secondary("New quests nearby"); nearBtn.Padding = new Padding(10, 3, 10, 3);
             near.Controls.Add(nearBtn);
             near.Controls.Add(new Label { Text = "within", AutoSize = true, Font = Ui.Base, Margin = new Padding(8, 6, 4, 0) });
             near.Controls.Add(radius);
@@ -80,8 +84,9 @@ namespace CoAInstaller
             questButtons.Controls.Add(Action("Reward", () => Quest("reward")));
             questButtons.Controls.Add(Action("Remove", () => Quest("remove")));
             questButtons.Controls.Add(Action("Check", () => Quest("status")));
-            var questNote = new Label { Dock = DockStyle.Bottom, Height = 50, Font = Ui.Small, ForeColor = Ui.Muted,
-                Text = "Give puts the quest into the character's log. Complete marks every objective as done and adds missing quest items. " +
+            var questNote = new Label { Dock = DockStyle.Bottom, Height = 66, Font = Ui.Small, ForeColor = Ui.Muted,
+                Text = "Choosing a character shows its quest log; \"New quests nearby\" lists what it could still take around it. " +
+                       "Give puts the quest into the character's log. Complete marks every objective as done and adds missing quest items. " +
                        "Reward hands a completed quest in: experience, money and the reward (the first one, if there is a choice). Works for offline characters too." };
             var questTab = new TabPage("Quests") { BackColor = Color.White, Padding = new Padding(10) };
             questTab.Controls.Add(quests); questTab.Controls.Add(questHint); questTab.Controls.Add(near); questTab.Controls.Add(search);
@@ -150,10 +155,16 @@ namespace CoAInstaller
 
             Controls.Add(right); Controls.Add(left); Controls.Add(top);
 
-            refresh.Click += (s, e) => LoadPeople();
+            refresh.Click += (s, e) => LoadPeople(true);
             offline.CheckedChanged += (s, e) => LoadPeople();
             bots.CheckedChanged += (s, e) => LoadPeople();
-            people.SelectedIndexChanged += (s, e) => { if (quests.Items.Count > 0 && quests.Tag as string == "search") SearchQuests(); };
+            // A search stays a search, with the status of whoever is chosen; otherwise the list follows the character.
+            people.SelectedIndexChanged += (s, e) =>
+            {
+                if (quests.Tag as string == "search" && quests.Items.Count > 0) SearchQuests();
+                else if (Who != null) ShowLog(false);
+            };
+            logBtn.Click += (s, e) => { if (Who == null) Ui.Error(this, "Choose a character on the left first."); else ShowLog(true); };
             find.Click += (s, e) => SearchQuests();
             questText.KeyDown += (s, e) => { if (e.KeyCode == Keys.Enter) { e.SuppressKeyPress = true; SearchQuests(); } };
             nearBtn.Click += (s, e) => NearQuests();
@@ -207,7 +218,10 @@ namespace CoAInstaller
 
         // ---------------------------------------------------------------- characters
 
-        void LoadPeople()
+        void LoadPeople() { LoadPeople(false); }
+
+        /// <param name="thenLog">Show the quest log of the chosen character afterwards, as it is right now.</param>
+        void LoadPeople(bool thenLog)
         {
             bool off = offline.Checked, bot = bots.Checked;
             int keep = Who != null ? Who.Guid : 0;
@@ -234,6 +248,7 @@ namespace CoAInstaller
                     people.EndUpdate();
                     if (people.SelectedItems.Count == 0 && people.Items.Count == 1) people.Items[0].Selected = true;
                     if (list.Count == 0) Print(off ? "No characters found." : "Nobody is online. Tick \"Offline too\" to see all characters.");
+                    if (thenLog && Who != null) ShowLog(true);
                 });
             });
         }
@@ -290,12 +305,21 @@ namespace CoAInstaller
                 var it = new ListViewItem(q.Id.ToString()) { Tag = q };
                 it.SubItems.Add(q.Title);
                 it.SubItems.Add(q.Level > 0 ? q.Level.ToString() : "");
+                it.SubItems.Add(q.StatusText);
+                it.SubItems.Add(q.Progress);
                 it.SubItems.Add(q.Givers);
                 it.SubItems.Add(q.Takers);
                 it.SubItems.Add(q.Distance >= 0 ? Math.Round(q.Distance).ToString() : "");
-                it.SubItems.Add(q.StatusText);
+                if (q.Progress.Length > 0) it.ToolTipText = q.Title + ": " + q.Progress;
                 quests.Items.Add(it);
             }
+            // The quest log shows how far each objective is instead of a distance; the other lists the other way round.
+            bool log = kind == "log";
+            quests.Columns[1].Width = log ? 170 : 220;
+            quests.Columns[4].Width = log ? 220 : 0;
+            quests.Columns[5].Width = log ? 95 : 150;
+            quests.Columns[6].Width = log ? 95 : 150;
+            quests.Columns[7].Width = log ? 0 : 50;
             quests.EndUpdate();
             quests.Tag = kind;
             questHint.Text = hint;
@@ -306,6 +330,7 @@ namespace CoAInstaller
             string text = questText.Text.Trim();
             if (text.Length == 0) return;
             var who = Who;
+            ++logTicket;        // a quest log still on its way must not replace the result
             Background(() =>
             {
                 var list = GameData.SearchQuests(inst, text, who != null ? who.Guid : 0);
@@ -314,11 +339,38 @@ namespace CoAInstaller
             });
         }
 
+        int logTicket;
+
+        /// <summary>
+        /// The quest log of the chosen character. With <paramref name="live"/> the server saves first, so
+        /// the list shows this very moment; without, what the server saved last (a few minutes old at most).
+        /// </summary>
+        void ShowLog(bool live)
+        {
+            var who = Who;
+            if (who == null) return;
+            int ticket = ++logTicket;
+            live = live && who.Online && AdminLink.Problem(inst, ctl) == null;
+            questHint.Text = "Reading the quest log of " + who.Name + " …";
+            Background(() =>
+            {
+                if (live) { try { AdminLink.Run(inst, "saveall"); System.Threading.Thread.Sleep(1500); } catch { live = false; } }
+                var list = GameData.QuestLog(inst, who.Guid);
+                UI(() =>
+                {
+                    if (ticket != logTicket) return;        // another character was chosen in the meantime
+                    Fill(list, "log", (list.Count == 0 ? who.Name + " has no quests in its log" : list.Count + " quest(s) in the log of " + who.Name) +
+                        (!who.Online ? "." : live ? ", as of now." : ", as of the server's last save. \"Quest log\" reads it fresh."));
+                });
+            });
+        }
+
         void NearQuests()
         {
             var who = Who;
             if (who == null) { Ui.Error(this, "Choose a character on the left first."); return; }
             int r = (int)radius.Value; bool level = levelOnly.Checked;
+            ++logTicket;
             bool live = who.Online && AdminLink.Problem(inst, ctl) == null;
             questHint.Text = "Looking around " + who.Name + " …";
             Background(() =>
@@ -328,7 +380,7 @@ namespace CoAInstaller
                 var now = GameData.Character(inst, who.Guid);
                 if (now == null) { UI(() => questHint.Text = "The character was not found."); return; }
                 var list = GameData.QuestsNear(inst, now, r, level);
-                UI(() => Fill(list, "near", (list.Count == 0 ? "No open quests" : list.Count + " open quest(s)") + " within " + r + " yards of " + now.Name +
+                UI(() => Fill(list, "near", (list.Count == 0 ? "No new quests" : list.Count + " quest(s) it does not have yet") + " within " + r + " yards of " + now.Name +
                     " in " + GameData.ZoneName(inst, now.Zone) + (live ? "." : " (position as last saved by the server).") +
                     (level ? "" : " Quests it cannot take yet are included; \"Check\" tells why.")));
             });
@@ -346,7 +398,7 @@ namespace CoAInstaller
                 else if (verb == "complete") quest.Status = 1;
                 else if (verb == "reward") quest.Status = 100;
                 else if (verb == "remove") quest.Status = -1;
-                if (item != null && verb != "status") item.SubItems[6].Text = quest.StatusText;
+                if (item != null && verb != "status") item.SubItems[3].Text = quest.StatusText;
             });
         }
     }

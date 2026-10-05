@@ -136,8 +136,13 @@ The Quests tab solves these by doing by hand what the game should have done.
 
 **Step 1: find the quest**
 
+![The quest log of a character](screenshots/14-game-master.png)
+
+- **Quest log**: choosing a character on the left shows what it has in its quest log right now, with **Progress**: how far each objective is (*Large Candle 3/8*). A player who is stuck somewhere in the wilds only has to tell you his name - you see which quest is the problem without him walking back to the quest giver. For a character that is online the list shows the server's last save; **Quest log** (or *Refresh* above the characters) lets the server save first and shows this very moment.
 - **Search**: type the name of the NPC (or object), the title of the quest, or the quest id, and press *Search*. The list shows every matching quest with who gives it (*Given by*) and who takes it (*Handed in to*). This comes from your server's own database, so it matches CoA; online databases often do not.
-- **Quests near the character**: lists the open quests around the selected character, nearest first, with the distance in yards. It also lists quests the character already has and can hand in nearby. With **Only quests it can take now** ticked, quests are left out that its level, race or class do not allow or that need an earlier quest first.
+- **New quests nearby**: lists the quests around the selected character that it does not have yet and has not done, nearest first, with the distance to the quest giver in yards. What is in its quest log already is left out - that is what *Quest log* shows. With **Only quests it can take now** ticked, quests are left out that its level, race or class do not allow or that need an earlier quest first.
+
+  ![New quests nearby](screenshots/20-new-quests-nearby.png)
 
   For a character that is online, the server saves all characters first so that the position is the current one.
 

@@ -16,6 +16,7 @@ namespace CoAInstaller
     class QuestInfo
     {
         public int Id, Level, MinLevel; public string Title = "", Givers = "", Takers = "";
+        public string Progress = "";       // the objectives with their counts, for a quest in the log
         public int Status = -1;            // -1 not taken, 1 complete, 3 in progress, 5 failed, 100 rewarded
         public double Distance = -1;       // to the nearest giver or taker, when searched by position
         public bool CanTake = true;        // level, race, class and the quest before it allow it
@@ -138,9 +139,69 @@ namespace CoAInstaller
             return list;
         }
 
+        /// <summary>The query behind <see cref="QuestLog"/>: one row per quest in the character's log.</summary>
+        internal static string QuestLogSql(int guid)
+        {
+            var sb = new System.Text.StringBuilder();
+            sb.Append("SELECT q.ID, q.LogTitle, q.QuestLevel, q.MinLevel, ");
+            sb.Append(Names("creature_queststarter", "creature_template", ", ")).Append(", ").Append(Names("gameobject_queststarter", "gameobject_template", ", ")).Append(", ");
+            sb.Append(Names("creature_questender", "creature_template", ", ")).Append(", ").Append(Names("gameobject_questender", "gameobject_template", ", ")).Append(", s.status");
+            // Four things to kill, use or talk to (a negative id is an object), then six things to bring.
+            for (int i = 1; i <= 4; i++)
+                sb.Append(", q.RequiredNpcOrGoCount").Append(i).Append(", s.mobcount").Append(i).Append(", REPLACE(IFNULL(IFNULL(NULLIF(q.ObjectiveText").Append(i).Append(", ''), IF(q.RequiredNpcOrGo").Append(i)
+                  .Append(" > 0, (SELECT t.name FROM ").Append(W).Append("creature_template t WHERE t.entry = q.RequiredNpcOrGo").Append(i)
+                  .Append("), (SELECT t.name FROM ").Append(W).Append("gameobject_template t WHERE t.entry = -q.RequiredNpcOrGo").Append(i)
+                  .Append("))), CONCAT(IF(q.RequiredNpcOrGo").Append(i).Append(" > 0, 'creature ', 'object '), ABS(q.RequiredNpcOrGo").Append(i).Append("))), '\t', ' ')");
+            for (int i = 1; i <= 6; i++)
+                sb.Append(", q.RequiredItemCount").Append(i).Append(", s.itemcount").Append(i).Append(", REPLACE(IFNULL((SELECT t.name FROM ").Append(W)
+                  .Append("item_template t WHERE t.entry = q.RequiredItemId").Append(i).Append("), ''), '\t', ' ')");
+            sb.Append(" FROM ").Append(C).Append("character_queststatus s JOIN ").Append(W).Append("quest_template q ON q.ID = s.quest WHERE s.guid = ").Append(N(guid))
+              .Append(" AND s.status <> 0 ORDER BY q.QuestLevel, q.LogTitle LIMIT 100;");
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// What the character has in its quest log right now, with how far each objective is. For a
+        /// character that is online this is the state of the server's last save.
+        /// </summary>
+        public static List<QuestInfo> QuestLog(Install inst, int guid)
+        {
+            var list = new List<QuestInfo>();
+            if (guid <= 0) return list;
+            foreach (var row in MySql.Query(inst, DbLogin.FromConfig(inst), "SET SESSION group_concat_max_len = 4000;\n" + QuestLogSql(guid)))
+            {
+                var q = ParseLogRow(row);
+                if (q != null) list.Add(q);
+            }
+            return list;
+        }
+
+        internal static QuestInfo ParseLogRow(string row)
+        {
+            var f = row.Split('\t');
+            if (f.Length < 9 + 30) return null;
+            var q = new QuestInfo
+            {
+                Id = int.Parse(f[0], CultureInfo.InvariantCulture), Title = f[1], Level = int.Parse(f[2], CultureInfo.InvariantCulture), MinLevel = int.Parse(f[3], CultureInfo.InvariantCulture),
+                Givers = Join(f[4], f[5]), Takers = Join(f[6], f[7]), Status = int.Parse(f[8], CultureInfo.InvariantCulture)
+            };
+            var parts = new List<string>();
+            for (int i = 0; i < 10; i++)
+            {
+                int need, have; string name = f[9 + i * 3 + 2];
+                if (!int.TryParse(f[9 + i * 3], NumberStyles.Integer, CultureInfo.InvariantCulture, out need) || need <= 0) continue;
+                int.TryParse(f[9 + i * 3 + 1], NumberStyles.Integer, CultureInfo.InvariantCulture, out have);
+                if (name == "NULL" || name.Length == 0) name = i < 4 ? "objective " + (i + 1) : "item";
+                // The server stops counting when the quest is complete; the log then shows it as done.
+                parts.Add(name + " " + (q.Status == 1 ? need : Math.Min(have, need)) + "/" + need);
+            }
+            q.Progress = parts.Count > 0 ? string.Join(", ", parts.ToArray()) : (q.Status == 1 ? "done" : "nothing to count (talk, travel or explore)");
+            return q;
+        }
+
         /// <summary>
         /// Quests whose giver stands within <paramref name="radius"/> yards of the character and that
-        /// it has not done yet, plus quests in its log that can be handed in nearby. With
+        /// it neither has in its log nor has done. With
         /// <paramref name="takeableOnly"/> quests are left out that its level, race or class do not
         /// allow or that need an earlier quest first.
         /// </summary>
@@ -185,8 +246,8 @@ namespace CoAInstaller
                 if (q.Distance < 0 || d < q.Distance) q.Distance = d;
                 if (f[4] == "give") q.Givers = Join(q.Givers, f[5]); else q.Takers = Join(q.Takers, f[5]);
             }
-            // A quest the character does not have is only of interest when its giver is near.
-            return order.Where(q => (q.Status >= 0 || q.Givers.Length > 0) && (!takeableOnly || q.Status >= 0 || q.CanTake))
+            // What is in the log already is shown by the quest log; here only what it could still take, from a giver nearby.
+            return order.Where(q => q.Status < 0 && q.Givers.Length > 0 && (!takeableOnly || q.CanTake))
                         .OrderBy(q => q.Distance).ToList();
         }
 

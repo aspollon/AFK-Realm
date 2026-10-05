@@ -1,6 +1,11 @@
-# AFK Realm 0.6.3 – preview
+# AFK Realm 0.6.4 – preview
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11.
+
+## New in 0.6.4
+
+- **See a character's quest log.** In the game master tools, choosing a character now shows the quests it has in its log, with the progress of every objective (*Large Candle 3/8*). A player who is stuck only has to tell you his name: you see the quest that causes the trouble and can complete, reward or remove it right there. *Quest log* and *Refresh* read the log fresh from the running server.
+- **New quests nearby.** The search around a character now leaves out what it already has in its log and lists only quests it could still take.
 
 ## New in 0.6.3
 

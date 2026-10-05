@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.4-preview
+
+- Game master tools: choosing a character shows its quest log, with how far each objective is ("Large Candle 3/8"); "Quest log" and "Refresh" read it fresh from the running server
+- "Quests near the character" is now "New quests nearby" and lists only quests the character does not have in its log yet
+
 ## 0.6.3-preview
 
 - Fix: "Reset random bots" reported "The worldserver started normally instead of deleting the bots. Nothing was deleted." on fast PCs although the bots had been deleted: the worldserver finished loading before it shut itself down
