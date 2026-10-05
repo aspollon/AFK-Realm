@@ -210,7 +210,7 @@ The arrow keys bring back earlier commands. Commands that need you to stand in t
 
 **Database editor …** opens the server's databases: look into any table, change values and run SQL, without installing a separate program such as HeidiSQL. The server has to be running (at least its database).
 
-> **Only for people who know what they are doing.** These tables are the server itself. A wrong value, or an `UPDATE` or `DELETE` without `WHERE`, can break quests, creatures, characters or accounts, in the worst case the whole server, and there is no undo. If you do not know what a table is for, leave it alone. **Make a backup first** – the button for it is right in the window.
+> **Only for people who know what they are doing.** These tables are the server itself. A wrong value, or an `UPDATE` or `DELETE` without `WHERE`, can break quests, creatures, characters or accounts, in the worst case the whole server. If you do not know what a table is for, leave it alone. **Make a backup first** – the button for it is right in the window.
 
 ![Database editor](screenshots/21-database-editor.png)
 
@@ -243,7 +243,7 @@ Type any SQL and press **Run (F5)** (or Ctrl+Enter). Several statements are sepa
 
 Choose the file. AFK Realm reads it first and tells you in one sentence what it does, with the tables by name below. A file exported with AFK Realm knows which database it belongs to; for any other file you choose the database (the place you got the file from usually says: world, characters or auth – most module files are for the world). Then press **Import**.
 
-**Undo last import …** Before an import runs, AFK Realm keeps a copy of exactly the tables the file touches (in `Backups\import-undo`; the newest five are kept). If the import turns out wrong – the server does not start, a quest is broken – press **Undo last import …**: those tables are put back as they were before the import, and tables the import created are removed. Pressing it again undoes the import before that one. Whatever else changed in these tables since the import is lost with it, so undo soon rather than days later. If an import stops with an error, the statements before the error were already carried out; the undo takes those back too.
+An import can be taken back with **Undo last change …** (see below). If an import stops with an error, the statements before the error were already carried out; the undo takes those back too.
 
 Still, only import files from a source you trust: an SQL file can change or delete anything. Files imported this way are not recorded like the database changes of modules installed through *Manage modules*, so removing a module later does not take them back – a backup from before does.
 
@@ -252,6 +252,15 @@ Still, only import files from a source you trust: an SQL file can change or dele
 ![Export](screenshots/23-database-export.png)
 
 Tick what you want: a whole database, or open a database and tick single tables. The table you have open is ticked already. Importing the file later replaces exactly these tables with the state they had at the export; all other tables stay as they are. Mind what you give away: `acore_auth` holds your players' accounts.
+
+**Undo last change …**
+
+You changed something, restarted the server and it does not work? **Undo last change …** (bottom left) takes back the last thing that was changed through this window – a save in the Table tab, statements run in the SQL tab, or an import. Pressing it again takes back the change before that; the last ten are kept (in `Backups\undo`).
+
+- After **Save changes** in the Table tab, the undo puts back exactly the rows you changed, added or deleted. Nothing else in the table is touched.
+- Before statements in the **SQL tab** and before an **import**, AFK Realm keeps a copy of the tables they name. The undo puts these tables back as they were at that moment and removes tables that were newly created. Whatever else changed in these tables since then is lost with it, so undo soon rather than days later. For a large table the copy takes a moment.
+- If AFK Realm cannot tell which tables an SQL statement changes (for example when a table is written without its database), it says so before running it; such a change cannot be undone here.
+- It is no substitute for a backup: it only knows changes made in this window, not what the server, the players or other programs did.
 
 **When does a change show in the game?**
 

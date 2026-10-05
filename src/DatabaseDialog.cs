@@ -39,7 +39,7 @@ namespace CoAInstaller
         readonly Button save = Ui.Primary("Save changes"), discard = Ui.Secondary("Discard"), addRow = Ui.Secondary("Add row"), delRow = Ui.Secondary("Delete row"),
             prev = Ui.Secondary("< Previous"), next = Ui.Secondary("Next >"), apply = Ui.Secondary("Filter"), run = Ui.Primary("Run (F5)");
 
-        readonly Button export = Ui.Secondary("Export …"), import = Ui.Secondary("Import SQL file …"), undo = Ui.Secondary("Undo last import …");
+        readonly Button export = Ui.Secondary("Export …"), import = Ui.Secondary("Import SQL file …"), undo = Ui.Secondary("Undo last change …");
         string db, table;                               // the table shown in the grid
         List<ColumnInfo> columns = new List<ColumnInfo>();
         int page; bool more, loading, busy;
@@ -141,7 +141,7 @@ namespace CoAInstaller
             run.Click += (s, e) => RunSql();
             export.Click += (s, e) => Export();
             import.Click += (s, e) => Import();
-            undo.Click += (s, e) => UndoImport();
+            undo.Click += (s, e) => UndoLast();
             resultPick.SelectedIndexChanged += (s, e) => ShowResult(resultPick.SelectedIndex);
             allow.CheckedChanged += (s, e) => Allow();
             backup.Click += (s, e) => { if (Leave("Back up the server now? This window closes; the backup shows its progress and can be restored under \"Backups …\".")) { BackUpNow = true; Close(); } };
@@ -388,7 +388,14 @@ namespace CoAInstaller
             grid.EndEdit();
             string target = Id(db) + "." + Id(table);
             var statements = new List<string>(); int updates = 0, inserts = 0;
-            foreach (var original in deleted) statements.Add("DELETE FROM " + target + " WHERE " + KeyClause(original) + " LIMIT 1;");
+            // For every statement the one that takes it back, to be run in reverse order.
+            var back = new List<string>(); bool wholeTable = false;
+            string allColumns = string.Join(", ", columns.Select(c => Id(c.Name)));
+            foreach (var original in deleted)
+            {
+                statements.Add("DELETE FROM " + target + " WHERE " + KeyClause(original) + " LIMIT 1;");
+                back.Add("INSERT INTO " + target + " (" + allColumns + ") VALUES (" + string.Join(", ", columns.Select((c, i) => Literal(original[i], c))) + ");");
+            }
             foreach (DataGridViewRow row in grid.Rows)
             {
                 var state = row.Tag as RowState;
@@ -404,6 +411,10 @@ namespace CoAInstaller
                     }
                     statements.Add("INSERT INTO " + target + " (" + string.Join(", ", names) + ") VALUES (" + string.Join(", ", values) + ");");
                     ++inserts;
+                    // Taking a new row back needs its key; one the database counts up itself is not known here.
+                    var now = columns.Select((c, i) => Value(row.Cells[i], c)).ToArray();
+                    if (columns.Where((c, i) => c.Key && string.IsNullOrEmpty(now[i])).Any()) wholeTable = true;
+                    else back.Add("DELETE FROM " + target + " WHERE " + KeyClause(now) + " LIMIT 1;");
                 }
                 else
                 {
@@ -413,6 +424,11 @@ namespace CoAInstaller
                     if (sets.Count == 0) continue;
                     statements.Add("UPDATE " + target + " SET " + string.Join(", ", sets) + " WHERE " + KeyClause(state.Original) + " LIMIT 1;");
                     ++updates;
+                    var now = columns.Select((c, i) => Value(row.Cells[i], c)).ToArray();
+                    var old = new List<string>();
+                    for (int i = 0; i < columns.Count; i++)
+                        if (row.Cells[i].Tag as string == "changed") old.Add(Id(columns[i].Name) + " = " + Literal(state.Original[i], columns[i]));
+                    back.Add("UPDATE " + target + " SET " + string.Join(", ", old) + " WHERE " + KeyClause(now) + " LIMIT 1;");
                 }
             }
             if (statements.Count == 0) return;
@@ -421,9 +437,19 @@ namespace CoAInstaller
             // All or nothing where the table allows it (InnoDB); the client stops at the first error.
             string script = "START TRANSACTION;\n" + string.Join("\n", statements) + "\nCOMMIT;\n";
             tableHint.Text = "Saving …";
+            string undoFile = NewUndoFile("edit of " + db + "." + table), database = db, name = table; var known = tablesOf;
+            back.Reverse();
             Background(() =>
             {
-                MySql.Tables(inst, Login, script, 1);
+                if (wholeTable) WriteCopies(undoFile, new Dictionary<string, SortedSet<string>> { { database, new SortedSet<string> { name } } }, known);
+                else
+                {
+                    File.WriteAllText(undoFile, "-- " + Product.Name + " " + RowsMark + ", " + DateTime.Now.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture) +
+                        "\nSTART TRANSACTION;\n" + string.Join("\n", back) + "\nCOMMIT;\n", new UTF8Encoding(false));
+                    PruneUndo();
+                }
+                try { MySql.Tables(inst, Login, script, 1); }
+                catch { try { File.Delete(undoFile); } catch { } throw; }
             }, () => { deleted.Clear(); LoadPage(true); }, error => { tableHint.Text = "Not saved."; Ui.Error(this, "The database refused the changes; nothing was written (tables of the MyISAM kind keep what came before the error):\n\n" + error); });
         }
 
@@ -448,13 +474,32 @@ namespace CoAInstaller
             string text = sql.SelectionLength > 0 ? sql.SelectedText : sql.Text;
             if (busy || text.Trim().Length == 0) return;
             if (!allow.Checked && !ReadsOnly(text)) { Ui.Error(this, "This would change something. Tick \"Allow changes\" at the top first."); return; }
-            sqlHint.Text = "Running …";
+            // Statements that change something: keep the tables they name first, so the change can be undone.
+            Dictionary<string, SortedSet<string>> touched = null; string undoFile = null; var known = tablesOf;
+            if (allow.Checked && !ReadsOnly(text))
+            {
+                var plan = Scan(new StringReader(text));
+                touched = Touched(plan, null);
+                if (plan.Other || plan.Loose || touched.Count == 0 || touched.Keys.Any(d => !known.ContainsKey(d)))
+                {
+                    if (!Ui.Confirm(this, Product.Name + " cannot tell for sure which tables this changes" + (plan.Loose ? " (name the database with each table: acore_world.creature_template)" : "") +
+                        ", so \"Undo last change\" will not be able to take it back.\n\nRun it anyway?")) return;
+                    touched = null;
+                }
+                else undoFile = NewUndoFile("SQL on " + string.Join(", ", touched.SelectMany(d => d.Value.Select(t => d.Key + "." + t)).Take(3)) + (touched.Sum(d => d.Value.Count) > 3 ? " and more" : ""));
+            }
+            sqlHint.Text = undoFile != null ? "Keeping a copy of " + touched.Sum(d => d.Value.Count) + " table(s) for the undo, then running … (large tables take a moment)" : "Running …";
             DateTime start = DateTime.Now;
             // The number of rows the last statement changed comes back as a result of its own.
             // Without the switch the session itself is read-only, whatever the text says.
             string script = (allow.Checked ? "" : "SET SESSION TRANSACTION READ ONLY;\n") + text.TrimEnd() + "\n;SELECT ROW_COUNT() AS afk_rows_changed;\n";
             Background(() =>
             {
+                if (undoFile != null)
+                {
+                    try { WriteCopies(undoFile, touched, known); }
+                    catch (Exception ex) { throw new InvalidOperationException("The copy for \"Undo last change\" could not be made, so nothing was run.\n\n" + ex.Message); }
+                }
                 var list = MySql.Tables(inst, Login, script, QueryRows);
                 UI(() =>
                 {
@@ -472,10 +517,11 @@ namespace CoAInstaller
                     resultPick.Visible = list.Count > 1;
                     if (list.Count > 0) { resultPick.SelectedIndex = list.Count - 1; ShowResult(list.Count - 1); } else { result.Rows.Clear(); result.Columns.Clear(); }
                     string took = (DateTime.Now - start).TotalSeconds.ToString("0.0", CultureInfo.InvariantCulture) + " s";
+                    Buttons();
                     sqlHint.Text = "Done in " + took + (changed != null ? ": " + changed : "") + (list.Count == 0 && changed == null ? ". No rows came back." : "") +
                         (list.Count > 0 ? ". " + list[list.Count - 1].Total + " row(s)" + (list[list.Count - 1].Total > QueryRows ? ", the first " + QueryRows + " are shown" : "") + "." : ".");
                 });
-            }, error => { sqlHint.Text = "Stopped with an error. Statements before it were carried out."; Ui.Error(this, error); });
+            }, error => { sqlHint.Text = "Stopped with an error. Statements before it were carried out" + (undoFile != null && File.Exists(undoFile) ? "; \"Undo last change\" takes them back." : "."); Ui.Error(this, error); });
         }
 
         void ShowResult(int index)
@@ -629,10 +675,14 @@ namespace CoAInstaller
 
         internal static FilePlan Scan(string file)
         {
+            using (var r = new StreamReader(file, new UTF8Encoding(false))) return Scan(r);
+        }
+
+        internal static FilePlan Scan(TextReader r)
+        {
             const long limit = 96L * 1024 * 1024;
             var plan = new FilePlan();
             var verb = new Regex(@"(?:^|;)\s*(DROP\s+TABLE(?:\s+IF\s+EXISTS)?|CREATE\s+TABLE(?:\s+IF\s+NOT\s+EXISTS)?|INSERT(?:\s+IGNORE)?\s+INTO|REPLACE\s+INTO|DELETE\s+FROM|TRUNCATE(?:\s+TABLE)?|ALTER\s+TABLE|UPDATE|USE|DROP\s+DATABASE|CREATE\s+DATABASE(?:\s+IF\s+NOT\s+EXISTS)?)\s+((?:`[^`]+`|[A-Za-z0-9_$]+)(?:\.(?:`[^`]+`|[A-Za-z0-9_$]+))?)", RegexOptions.IgnoreCase);
-            using (var r = new StreamReader(file, new UTF8Encoding(false)))
             {
                 long read = 0; string line, use = null;
                 while ((line = r.ReadLine()) != null)
@@ -726,7 +776,7 @@ namespace CoAInstaller
                 var box = new TextBox { Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Vertical, Dock = DockStyle.Fill, Font = Ui.Small, BackColor = Ui.Panel, BorderStyle = BorderStyle.FixedSingle, Text = text.ToString().TrimEnd(), TabStop = false, Visible = text.Length > 0 };
                 var foot = new FlowLayoutPanel { Dock = DockStyle.Bottom, AutoSize = true, FlowDirection = FlowDirection.TopDown, WrapContents = false };
                 foot.Controls.Add(new Label { AutoSize = true, MaximumSize = new Size(520, 0), Font = Ui.Small, ForeColor = Ui.Warn, Margin = new Padding(0, 8, 0, 0),
-                    Text = "The whole file is carried out. Before that, AFK Realm keeps a copy of the tables the file touches, so \"Undo last import\" can put them back as they were. Still: only import files from a source you trust." });
+                    Text = "The whole file is carried out. Before that, AFK Realm keeps a copy of the tables the file touches, so \"Undo last change\" can put them back as they were. Still: only import files from a source you trust." });
                 var ok = Ui.Primary("Import"); var cancel = Ui.Secondary("Cancel"); ok.DialogResult = DialogResult.OK; cancel.DialogResult = DialogResult.Cancel;
                 var row = Ui.Row(); row.Margin = new Padding(0, 10, 0, 0); row.Controls.Add(ok); row.Controls.Add(cancel); foot.Controls.Add(row);
                 f.Controls.Add(box); f.Controls.Add(foot); f.Controls.Add(head); f.CancelButton = cancel;
@@ -738,93 +788,134 @@ namespace CoAInstaller
 
             // What to keep a copy of: the tables the file names, each in its database. When the file could not be
             // read to the end, or does things beyond tables, whole databases are kept instead.
-            var touched = new Dictionary<string, SortedSet<string>>();
-            foreach (var name in plan.Rebuilt.Concat(plan.Created).Concat(plan.Altered).Concat(plan.Emptied).Concat(plan.Written))
-            {
-                int dot = name.IndexOf('.');
-                string d = dot < 0 ? target : name.Substring(0, dot), t = name.Substring(dot + 1);
-                if (!touched.ContainsKey(d)) touched[d] = new SortedSet<string>();
-                touched[d].Add(t);
-            }
-            bool whole = plan.Partial || plan.Other || touched.Count == 0;
-            if (whole) { touched.Clear(); foreach (var d in named.Concat(choose ? new[] { target } : new string[0]).Distinct()) touched[d] = null; }
+            var touched = Touched(plan, target);
+            if (plan.Partial || plan.Other || touched.Count == 0) { touched.Clear(); foreach (var d in named.Concat(choose ? new[] { target } : new string[0]).Distinct()) touched[d] = null; }
             var known = tablesOf;
-            string undoFile = Path.Combine(UndoFolder, DateTime.Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture) + " " + Path.GetFileNameWithoutExtension(file) + ".sql");
+            string undoFile = NewUndoFile("import of " + Path.GetFileName(file));
 
             Label hint = tableTabShown() ? tableHint : sqlHint;
             hint.Text = "Keeping a copy of what the file touches, then importing " + Path.GetFileName(file) + " …";
             bool copied = false;
             Background(() =>
             {
-                Directory.CreateDirectory(UndoFolder);
-                try
-                {
-                    using (var dst = File.Create(undoFile))
-                    {
-                        var enc = new UTF8Encoding(false);
-                        Action<string> write = line => { var b = enc.GetBytes(line + "\n"); dst.Write(b, 0, b.Length); };
-                        write("-- " + Product.Name + " undo: the tables as they were before importing " + Path.GetFileName(file) + " on " + DateTime.Now.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture));
-                        foreach (var d in touched.Keys)
-                        {
-                            if (!known.ContainsKey(d)) continue;                    // a database the file creates itself
-                            if (touched[d] == null) { MySql.DumpTables(inst, Login, d, null, dst); continue; }
-                            var there = touched[d].Where(known[d].Contains).ToList();
-                            write("USE " + Id(d) + ";");
-                            foreach (var t in touched[d].Where(t => !known[d].Contains(t))) write("DROP TABLE IF EXISTS " + Id(t) + ";");      // new with the import: gone with the undo
-                            if (there.Count > 0) MySql.DumpTables(inst, Login, d, there, dst);
-                        }
-                    }
-                }
-                catch (Exception ex) { try { File.Delete(undoFile); } catch { } throw new InvalidOperationException("The copy for \"Undo last import\" could not be made, so nothing was imported.\n\n" + ex.Message); }
+                try { WriteCopies(undoFile, touched, known); }
+                catch (Exception ex) { throw new InvalidOperationException("The copy for \"Undo last change\" could not be made, so nothing was imported.\n\n" + ex.Message); }
                 copied = true;
-                foreach (var old in UndoFiles().Skip(5)) try { File.Delete(old); } catch { }
                 MySql.RunFile(inst, Login, target, file);
             }, () =>
             {
                 MessageBox.Show(this, Path.GetFileName(file) + " was imported into " + where_ + ".\n\nThe worldserver reads most world tables only when it starts: restart the server for the change to show in the game.\n\n" +
-                    "If it does not work out, \"Undo last import\" puts everything back as it was.", Product.Name, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    "If it does not work out, \"Undo last change\" puts everything back as it was.", Product.Name, MessageBoxButtons.OK, MessageBoxIcon.Information);
                 Refill("Imported " + Path.GetFileName(file) + " into " + where_ + ".");
             }, error =>
             {
                 if (!copied) { hint.Text = "Nothing was imported."; Ui.Error(this, error); return; }
-                Ui.Error(this, "The import stopped with an error. Statements before it were carried out, so the database may hold only a part of the file. \"Undo last import\" puts everything back as it was.\n\n" + error);
+                Ui.Error(this, "The import stopped with an error. Statements before it were carried out, so the database may hold only a part of the file. \"Undo last change\" puts everything back as it was.\n\n" + error);
                 Refill("The import stopped with an error.");
             });
         }
 
-        string UndoFolder { get { return Path.Combine(inst.Root, "Backups", "import-undo"); } }
+        // ---------------------------------------------------------------- undo
 
-        /// <summary>The copies made before imports, newest first.</summary>
+        // Before anything is changed here - a save in the grid, statements in the SQL tab, an import - what is needed
+        // to take it back is written to a file: the old rows for a save, whole tables otherwise. "Undo last change"
+        // runs the newest file and removes it, so pressing it again goes one step further back.
+
+        const string RowsMark = "undo (rows)", TablesMark = "undo (tables)";
+        string UndoFolder { get { return Path.Combine(inst.Root, "Backups", "undo"); } }
+
+        /// <summary>The undo files, newest first.</summary>
         List<string> UndoFiles()
         {
             try { return Directory.Exists(UndoFolder) ? Directory.GetFiles(UndoFolder, "*.sql").OrderByDescending(f => Path.GetFileName(f), StringComparer.Ordinal).ToList() : new List<string>(); }
             catch { return new List<string>(); }
         }
 
-        void UndoImport()
+        string NewUndoFile(string label)
+        {
+            foreach (char c in Path.GetInvalidFileNameChars()) label = label.Replace(c, '_');
+            if (label.Length > 90) label = label.Substring(0, 90);
+            Directory.CreateDirectory(UndoFolder);
+            return Path.Combine(UndoFolder, DateTime.Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture) + " " + label.Trim() + ".sql");
+        }
+
+        /// <summary>Keeps the newest ten files, and of those only as many as fit into 2 GB (the newest always stays).</summary>
+        void PruneUndo()
+        {
+            long total = 0; int n = 0;
+            foreach (var f in UndoFiles())
+            {
+                try { total += new FileInfo(f).Length; if (++n > 10 || (n > 1 && total > 2L * 1024 * 1024 * 1024)) File.Delete(f); } catch { }
+            }
+        }
+
+        /// <summary>The tables a text names, by database; names without a database go to fallback (or are left out when there is none).</summary>
+        static Dictionary<string, SortedSet<string>> Touched(FilePlan plan, string fallback)
+        {
+            var touched = new Dictionary<string, SortedSet<string>>();
+            foreach (var name in plan.Rebuilt.Concat(plan.Created).Concat(plan.Altered).Concat(plan.Emptied).Concat(plan.Written))
+            {
+                int dot = name.IndexOf('.');
+                string d = dot < 0 ? fallback : name.Substring(0, dot), t = name.Substring(dot + 1);
+                if (d == null) continue;
+                if (!touched.ContainsKey(d)) touched[d] = new SortedSet<string>();
+                touched[d].Add(t);
+            }
+            return touched;
+        }
+
+        /// <summary>Writes the tables as they are now to an undo file; a table that does not exist yet is dropped by the undo. null: the whole database.</summary>
+        void WriteCopies(string undoFile, Dictionary<string, SortedSet<string>> touched, Dictionary<string, List<string>> known)
+        {
+            try
+            {
+                using (var dst = File.Create(undoFile))
+                {
+                    var enc = new UTF8Encoding(false);
+                    Action<string> write = line => { var b = enc.GetBytes(line + "\n"); dst.Write(b, 0, b.Length); };
+                    write("-- " + Product.Name + " " + TablesMark + ", " + DateTime.Now.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture));
+                    foreach (var d in touched.Keys)
+                    {
+                        if (!known.ContainsKey(d)) continue;                    // a database that does not exist yet
+                        if (touched[d] == null) { MySql.DumpTables(inst, Login, d, null, dst); continue; }
+                        var there = touched[d].Where(known[d].Contains).ToList();
+                        write("USE " + Id(d) + ";");
+                        foreach (var t in touched[d].Where(t => !known[d].Contains(t))) write("DROP TABLE IF EXISTS " + Id(t) + ";");
+                        if (there.Count > 0) MySql.DumpTables(inst, Login, d, there, dst);
+                    }
+                }
+            }
+            catch { try { File.Delete(undoFile); } catch { } throw; }
+            PruneUndo();
+        }
+
+        void UndoLast()
         {
             if (busy) return;
             var files = UndoFiles();
             if (files.Count == 0) return;
-            if (!allow.Checked) { Ui.Error(this, "Undoing an import changes the database. Tick \"Allow changes\" at the top first."); return; }
+            if (!allow.Checked) { Ui.Error(this, "Undoing a change changes the database. Tick \"Allow changes\" at the top first."); return; }
             string file = files[0], name = Path.GetFileNameWithoutExtension(file), what = name.Length > 16 ? name.Substring(16) : name; DateTime when;
             string at = DateTime.TryParseExact(name.Length >= 15 ? name.Substring(0, 15) : "", "yyyyMMdd-HHmmss", CultureInfo.InvariantCulture, DateTimeStyles.None, out when) ? when.ToString("g") : "";
-            if (!Ui.Confirm(this, "Undo the import of " + what + ".sql" + (at.Length > 0 ? " from " + at : "") + "?\n\n" +
-                "The tables it touched are put back exactly as they were before the import. Whatever changed in these tables since then is lost as well" +
-                (ctl.World != null ? "; the server is running, so restart it afterwards" : "") + ".")) return;
+            bool rows = false;
+            try { using (var r = new StreamReader(file)) rows = (r.ReadLine() ?? "").Contains(RowsMark); } catch { }
+            if (!Ui.Confirm(this, "Undo the last change: " + what + (at.Length > 0 ? ", " + at : "") + "?\n\n" +
+                (rows ? "The rows you changed, added or deleted are put back as they were before."
+                      : "The tables it touched are put back exactly as they were before. Whatever else changed in these tables since then is lost as well.") +
+                (ctl.World != null ? "\n\nThe server is running: restart it afterwards for this to show in the game." : "") +
+                (files.Count > 1 ? "\n\n" + (files.Count - 1) + " earlier change(s) can be undone after this one." : ""))) return;
             if (Dirty && !Ui.Confirm(this, "There are changes in the table that were not saved; they are lost. Go on?")) return;
             Label hint = tableTabShown() ? tableHint : sqlHint;
-            hint.Text = "Putting the tables back …";
+            hint.Text = "Putting it back …";
             string any = tablesOf.ContainsKey("acore_world") ? "acore_world" : tablesOf.Keys.First();
             Background(() => MySql.RunFile(inst, Login, any, file), () =>
             {
                 try { File.Delete(file); } catch { }
-                MessageBox.Show(this, "The import of " + what + ".sql was undone." + (ctl.World != null ? "\n\nRestart the server for it to show in the game." : ""), Product.Name, MessageBoxButtons.OK, MessageBoxIcon.Information);
-                Refill("The import of " + what + ".sql was undone.");
+                Refill("Undone: " + what + ".");
             }, error =>
             {
-                Ui.Error(this, "Putting the tables back stopped with an error. The copy is kept in\n" + file + "\n\n" + error);
-                Refill("Undoing the import stopped with an error.");
+                Ui.Error(this, "Undoing stopped with an error. The file is kept in\n" + file + "\n\n" + error);
+                Refill("Undoing stopped with an error.");
             });
         }
 
@@ -862,7 +953,7 @@ namespace CoAInstaller
             {
                 var answer = MessageBox.Show(this,
                     "From here on you can change and delete the server's data.\n\n" +
-                    "A mistake can break quests, creatures, characters or accounts, in the worst case the whole server. There is no undo: what is saved is saved.\n\n" +
+                    "A mistake can break quests, creatures, characters or accounts, in the worst case the whole server. \"Undo last change\" can take back what you change in this window, but it is no substitute for a backup.\n\n" +
                     "Back up the server first? The backup holds all databases and can be restored under \"Backups …\".\n\n" +
                     "Yes: back up now (this window closes)\nNo: go on without a backup\nCancel: do not allow changes",
                     Product.Name, MessageBoxButtons.YesNoCancel, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button1);
