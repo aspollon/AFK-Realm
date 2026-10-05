@@ -67,6 +67,7 @@ The top of the **Server management** shows the three parts of the server:
 
 - **Start server** starts all three in the right order. The worldserver needs a few minutes to load; you can keep using AFK Realm meanwhile. When it says *The server is running. You can log in now.*, it is ready.
 - **Stop server** saves all characters and shuts everything down cleanly. Always stop the server this way.
+- **Restart server** does both in one go: it saves all characters, shuts the auth- and worldserver down cleanly and starts them again. Use it after changing settings or the database, which the worldserver only reads when it starts.
 
 The servers run in the background without windows of their own. **Open server consoles …** shows both in one window:
 
@@ -240,9 +241,11 @@ Type any SQL and press **Run (F5)** (or Ctrl+Enter). Several statements are sepa
 
 ![Import](screenshots/24-database-import.png)
 
-Choose the file. AFK Realm reads it first and tells you in one sentence what it does, with the tables by name below. A file exported with AFK Realm knows which database it belongs to; for any other file you choose the database (the place you got the file from usually says: world, characters or auth – most module files are for the world). Then press **Import**. If the import stops with an error, the statements before the error were already carried out.
+Choose the file. AFK Realm reads it first and tells you in one sentence what it does, with the tables by name below. A file exported with AFK Realm knows which database it belongs to; for any other file you choose the database (the place you got the file from usually says: world, characters or auth – most module files are for the world). Then press **Import**.
 
-Only import files from a source you trust: an SQL file can change or delete anything. Files imported this way are not recorded like the database changes of modules installed through *Manage modules*, so removing a module later does not take them back – a backup from before does.
+**Undo last import …** Before an import runs, AFK Realm keeps a copy of exactly the tables the file touches (in `Backups\import-undo`; the newest five are kept). If the import turns out wrong – the server does not start, a quest is broken – press **Undo last import …**: those tables are put back as they were before the import, and tables the import created are removed. Pressing it again undoes the import before that one. Whatever else changed in these tables since the import is lost with it, so undo soon rather than days later. If an import stops with an error, the statements before the error were already carried out; the undo takes those back too.
+
+Still, only import files from a source you trust: an SQL file can change or delete anything. Files imported this way are not recorded like the database changes of modules installed through *Manage modules*, so removing a module later does not take them back – a backup from before does.
 
 **Export …** writes whole tables to one SQL file – to keep a copy of a table before you change it, to hand your version of a table to someone else, or to carry data to another server.
 

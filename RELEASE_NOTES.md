@@ -6,6 +6,8 @@ Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with 
 
 - **Database editor** (*Server management → Database editor*): look into every table of the server, change values and run any SQL right in AFK Realm, without HeidiSQL or another program. Find a table by typing a part of its name, narrow the rows with a condition, edit cells, add and delete rows; nothing is written until you press *Save changes*. The SQL tab runs whatever you type and shows the results.
 - **Import and export.** *Import SQL file …* runs an SQL file, for example one a module wants imported by hand: choose the file, read in one sentence what it will do, press *Import*. *Export …* writes the tables or whole databases you tick to one file, which can be imported again here or on another server.
+- **Imports can be undone.** Before a file is imported, AFK Realm keeps a copy of exactly the tables it touches. If the import turns out wrong, *Undo last import …* puts them back as they were.
+- **Restart server**: a new button next to *Start* and *Stop* shuts the server down cleanly and starts it again – handy after changing settings or the database.
 - **Safe until you say otherwise.** The editor only reads until you tick *Allow changes*. Doing so warns you plainly and offers to back up the whole server first; the backup can be restored under *Backups*.
 - **Only for people who know what they are doing.** A wrong change in these tables can break the server. If you do not know what a table is for, leave it alone.
 - Good to know: the worldserver reads most world tables only when it starts. If a change "does nothing", stop and start the server (or use the matching `reload` command), and for items delete the game client's `Cache` folder.

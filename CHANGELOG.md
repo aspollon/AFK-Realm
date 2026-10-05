@@ -4,6 +4,8 @@
 
 - New: database editor (Server management → Database editor): browse the server's databases and tables, filter rows with a WHERE condition, edit cells, add and delete rows (written only on "Save changes", in one transaction), and a SQL tab that runs any statements and shows the results
 - Database editor: "Import SQL file …" runs a file after saying what it does (tables replaced, created, rows deleted or written); the database is only asked for when the file does not name it. "Export …" writes the ticked tables or whole databases (structure and rows) to one SQL file
+- Database editor: before an import the tables the file touches are copied to Backups\\import-undo (newest five kept); "Undo last import …" puts them back and removes tables the import created
+- Server management: new button "Restart server" (clean stop of world- and authserver, then start; the database keeps running)
 - The editor is read-only until "Allow changes" is ticked; that shows a warning and offers to back up the whole server first ("Back up the server first …" does it at any time)
 - Manual: new chapter "Database editor", including when a change shows in the game (restart or reload, client cache, characters that are online)
 

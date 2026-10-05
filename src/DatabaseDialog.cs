@@ -39,7 +39,7 @@ namespace CoAInstaller
         readonly Button save = Ui.Primary("Save changes"), discard = Ui.Secondary("Discard"), addRow = Ui.Secondary("Add row"), delRow = Ui.Secondary("Delete row"),
             prev = Ui.Secondary("< Previous"), next = Ui.Secondary("Next >"), apply = Ui.Secondary("Filter"), run = Ui.Primary("Run (F5)");
 
-        readonly Button export = Ui.Secondary("Export …"), import = Ui.Secondary("Import SQL file …");
+        readonly Button export = Ui.Secondary("Export …"), import = Ui.Secondary("Import SQL file …"), undo = Ui.Secondary("Undo last import …");
         string db, table;                               // the table shown in the grid
         List<ColumnInfo> columns = new List<ColumnInfo>();
         int page; bool more, loading, busy;
@@ -86,7 +86,8 @@ namespace CoAInstaller
             // ---- left: databases and their tables
             var left = new Panel { Dock = DockStyle.Left, Width = 270, Padding = new Padding(16, 0, 8, 12) };
             var transfer = new FlowLayoutPanel { Dock = DockStyle.Bottom, AutoSize = true, WrapContents = false, Padding = new Padding(0, 6, 0, 0) };
-            foreach (var x in new[] { export, import }) { x.Font = Ui.Small; x.Padding = new Padding(8, 2, 8, 2); x.Margin = new Padding(0, 0, 6, 0); transfer.Controls.Add(x); }
+            transfer.WrapContents = true;
+            foreach (var x in new[] { export, import, undo }) { x.Font = Ui.Small; x.Padding = new Padding(8, 2, 8, 2); x.Margin = new Padding(0, 0, 6, 6); transfer.Controls.Add(x); }
             left.Controls.Add(tree); left.Controls.Add(tableFilter); left.Controls.Add(transfer);
             left.Controls.Add(new Label { Text = "Find a table", Dock = DockStyle.Top, Height = 22, Font = Ui.Small, ForeColor = Ui.Muted });
 
@@ -140,6 +141,7 @@ namespace CoAInstaller
             run.Click += (s, e) => RunSql();
             export.Click += (s, e) => Export();
             import.Click += (s, e) => Import();
+            undo.Click += (s, e) => UndoImport();
             resultPick.SelectedIndexChanged += (s, e) => ShowResult(resultPick.SelectedIndex);
             allow.CheckedChanged += (s, e) => Allow();
             backup.Click += (s, e) => { if (Leave("Back up the server now? This window closes; the backup shows its progress and can be restored under \"Backups …\".")) { BackUpNow = true; Close(); } };
@@ -187,6 +189,7 @@ namespace CoAInstaller
             apply.Enabled = !busy && table != null;
             run.Enabled = !busy;
             export.Enabled = import.Enabled = !busy && tablesOf.Count > 0;
+            undo.Enabled = !busy && tablesOf.Count > 0 && UndoFiles().Count > 0;
         }
 
         /// <summary>Asks before unsaved changes are thrown away.</summary>
@@ -628,7 +631,7 @@ namespace CoAInstaller
         {
             const long limit = 96L * 1024 * 1024;
             var plan = new FilePlan();
-            var verb = new Regex(@"^\s*(DROP\s+TABLE(?:\s+IF\s+EXISTS)?|CREATE\s+TABLE(?:\s+IF\s+NOT\s+EXISTS)?|INSERT(?:\s+IGNORE)?\s+INTO|REPLACE\s+INTO|DELETE\s+FROM|TRUNCATE(?:\s+TABLE)?|ALTER\s+TABLE|UPDATE|USE|DROP\s+DATABASE|CREATE\s+DATABASE(?:\s+IF\s+NOT\s+EXISTS)?)\s+((?:`[^`]+`|[A-Za-z0-9_$]+)(?:\.(?:`[^`]+`|[A-Za-z0-9_$]+))?)", RegexOptions.IgnoreCase);
+            var verb = new Regex(@"(?:^|;)\s*(DROP\s+TABLE(?:\s+IF\s+EXISTS)?|CREATE\s+TABLE(?:\s+IF\s+NOT\s+EXISTS)?|INSERT(?:\s+IGNORE)?\s+INTO|REPLACE\s+INTO|DELETE\s+FROM|TRUNCATE(?:\s+TABLE)?|ALTER\s+TABLE|UPDATE|USE|DROP\s+DATABASE|CREATE\s+DATABASE(?:\s+IF\s+NOT\s+EXISTS)?)\s+((?:`[^`]+`|[A-Za-z0-9_$]+)(?:\.(?:`[^`]+`|[A-Za-z0-9_$]+))?)", RegexOptions.IgnoreCase);
             using (var r = new StreamReader(file, new UTF8Encoding(false)))
             {
                 long read = 0; string line, use = null;
@@ -638,19 +641,20 @@ namespace CoAInstaller
                     if (read > limit) { plan.Partial = true; break; }
                     var named = Regex.Match(line.Length > 200 ? line.Substring(0, 200) : line, @"^--\s*(?:Host:.*)?Database:\s*`?([A-Za-z0-9_$]+)");
                     if (named.Success && plan.Named == null) plan.Named = named.Groups[1].Value;
-                    var m = verb.Match(line.Length > 400 ? line.Substring(0, 400) : line);
-                    if (!m.Success) continue;
-                    string what = Regex.Replace(m.Groups[1].Value.ToUpperInvariant(), @"\s+", " "), target = m.Groups[2].Value.Replace("`", "");
-                    if (what == "USE") { use = target; plan.Databases.Add(target); continue; }
-                    if (what.Contains("DATABASE")) { plan.Databases.Add(target); plan.Other = true; continue; }
-                    if (target.Contains(".")) plan.Databases.Add(target.Substring(0, target.IndexOf('.')));
-                    else if (use != null) target = use + "." + target;
-                    else plan.Loose = true;
-                    if (what.StartsWith("DROP TABLE")) plan.Rebuilt.Add(target);
-                    else if (what.StartsWith("CREATE TABLE")) plan.Created.Add(target);
-                    else if (what.StartsWith("DELETE") || what.StartsWith("TRUNCATE")) plan.Emptied.Add(target);
-                    else if (what.StartsWith("ALTER")) plan.Altered.Add(target);
-                    else plan.Written.Add(target);
+                    foreach (Match m in verb.Matches(line))
+                    {
+                        string what = Regex.Replace(m.Groups[1].Value.ToUpperInvariant(), @"\s+", " "), target = m.Groups[2].Value.Replace("`", "");
+                        if (what == "USE") { use = target; plan.Databases.Add(target); continue; }
+                        if (what.Contains("DATABASE")) { plan.Databases.Add(target); plan.Other = true; continue; }
+                        if (target.Contains(".")) plan.Databases.Add(target.Substring(0, target.IndexOf('.')));
+                        else if (use != null) target = use + "." + target;
+                        else plan.Loose = true;
+                        if (what.StartsWith("DROP TABLE")) plan.Rebuilt.Add(target);
+                        else if (what.StartsWith("CREATE TABLE")) plan.Created.Add(target);
+                        else if (what.StartsWith("DELETE") || what.StartsWith("TRUNCATE")) plan.Emptied.Add(target);
+                        else if (what.StartsWith("ALTER")) plan.Altered.Add(target);
+                        else plan.Written.Add(target);
+                    }
                 }
             }
             plan.Created.ExceptWith(plan.Rebuilt);
@@ -722,7 +726,7 @@ namespace CoAInstaller
                 var box = new TextBox { Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Vertical, Dock = DockStyle.Fill, Font = Ui.Small, BackColor = Ui.Panel, BorderStyle = BorderStyle.FixedSingle, Text = text.ToString().TrimEnd(), TabStop = false, Visible = text.Length > 0 };
                 var foot = new FlowLayoutPanel { Dock = DockStyle.Bottom, AutoSize = true, FlowDirection = FlowDirection.TopDown, WrapContents = false };
                 foot.Controls.Add(new Label { AutoSize = true, MaximumSize = new Size(520, 0), Font = Ui.Small, ForeColor = Ui.Warn, Margin = new Padding(0, 8, 0, 0),
-                    Text = "The whole file is carried out and cannot be undone. Only import files from a source you trust, and make a backup first if you have none." });
+                    Text = "The whole file is carried out. Before that, AFK Realm keeps a copy of the tables the file touches, so \"Undo last import\" can put them back as they were. Still: only import files from a source you trust." });
                 var ok = Ui.Primary("Import"); var cancel = Ui.Secondary("Cancel"); ok.DialogResult = DialogResult.OK; cancel.DialogResult = DialogResult.Cancel;
                 var row = Ui.Row(); row.Margin = new Padding(0, 10, 0, 0); row.Controls.Add(ok); row.Controls.Add(cancel); foot.Controls.Add(row);
                 f.Controls.Add(box); f.Controls.Add(foot); f.Controls.Add(head); f.CancelButton = cancel;
@@ -732,16 +736,95 @@ namespace CoAInstaller
             }
             string where_ = choose ? target : string.Join(", ", named);
 
-            Label hint = tableTabShown() ? tableHint : sqlHint;
-            hint.Text = "Importing " + Path.GetFileName(file) + " into " + where_ + " …";
-            Background(() => MySql.RunFile(inst, Login, target, file), () =>
+            // What to keep a copy of: the tables the file names, each in its database. When the file could not be
+            // read to the end, or does things beyond tables, whole databases are kept instead.
+            var touched = new Dictionary<string, SortedSet<string>>();
+            foreach (var name in plan.Rebuilt.Concat(plan.Created).Concat(plan.Altered).Concat(plan.Emptied).Concat(plan.Written))
             {
-                MessageBox.Show(this, Path.GetFileName(file) + " was imported into " + where_ + ".\n\nThe worldserver reads most world tables only when it starts: stop and start the server for the change to show in the game.", Product.Name, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                int dot = name.IndexOf('.');
+                string d = dot < 0 ? target : name.Substring(0, dot), t = name.Substring(dot + 1);
+                if (!touched.ContainsKey(d)) touched[d] = new SortedSet<string>();
+                touched[d].Add(t);
+            }
+            bool whole = plan.Partial || plan.Other || touched.Count == 0;
+            if (whole) { touched.Clear(); foreach (var d in named.Concat(choose ? new[] { target } : new string[0]).Distinct()) touched[d] = null; }
+            var known = tablesOf;
+            string undoFile = Path.Combine(UndoFolder, DateTime.Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture) + " " + Path.GetFileNameWithoutExtension(file) + ".sql");
+
+            Label hint = tableTabShown() ? tableHint : sqlHint;
+            hint.Text = "Keeping a copy of what the file touches, then importing " + Path.GetFileName(file) + " …";
+            bool copied = false;
+            Background(() =>
+            {
+                Directory.CreateDirectory(UndoFolder);
+                try
+                {
+                    using (var dst = File.Create(undoFile))
+                    {
+                        var enc = new UTF8Encoding(false);
+                        Action<string> write = line => { var b = enc.GetBytes(line + "\n"); dst.Write(b, 0, b.Length); };
+                        write("-- " + Product.Name + " undo: the tables as they were before importing " + Path.GetFileName(file) + " on " + DateTime.Now.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture));
+                        foreach (var d in touched.Keys)
+                        {
+                            if (!known.ContainsKey(d)) continue;                    // a database the file creates itself
+                            if (touched[d] == null) { MySql.DumpTables(inst, Login, d, null, dst); continue; }
+                            var there = touched[d].Where(known[d].Contains).ToList();
+                            write("USE " + Id(d) + ";");
+                            foreach (var t in touched[d].Where(t => !known[d].Contains(t))) write("DROP TABLE IF EXISTS " + Id(t) + ";");      // new with the import: gone with the undo
+                            if (there.Count > 0) MySql.DumpTables(inst, Login, d, there, dst);
+                        }
+                    }
+                }
+                catch (Exception ex) { try { File.Delete(undoFile); } catch { } throw new InvalidOperationException("The copy for \"Undo last import\" could not be made, so nothing was imported.\n\n" + ex.Message); }
+                copied = true;
+                foreach (var old in UndoFiles().Skip(5)) try { File.Delete(old); } catch { }
+                MySql.RunFile(inst, Login, target, file);
+            }, () =>
+            {
+                MessageBox.Show(this, Path.GetFileName(file) + " was imported into " + where_ + ".\n\nThe worldserver reads most world tables only when it starts: restart the server for the change to show in the game.\n\n" +
+                    "If it does not work out, \"Undo last import\" puts everything back as it was.", Product.Name, MessageBoxButtons.OK, MessageBoxIcon.Information);
                 Refill("Imported " + Path.GetFileName(file) + " into " + where_ + ".");
             }, error =>
             {
-                Ui.Error(this, "The import stopped with an error. Statements before it were carried out, so the database may hold only a part of the file:\n\n" + error);
+                if (!copied) { hint.Text = "Nothing was imported."; Ui.Error(this, error); return; }
+                Ui.Error(this, "The import stopped with an error. Statements before it were carried out, so the database may hold only a part of the file. \"Undo last import\" puts everything back as it was.\n\n" + error);
                 Refill("The import stopped with an error.");
+            });
+        }
+
+        string UndoFolder { get { return Path.Combine(inst.Root, "Backups", "import-undo"); } }
+
+        /// <summary>The copies made before imports, newest first.</summary>
+        List<string> UndoFiles()
+        {
+            try { return Directory.Exists(UndoFolder) ? Directory.GetFiles(UndoFolder, "*.sql").OrderByDescending(f => Path.GetFileName(f), StringComparer.Ordinal).ToList() : new List<string>(); }
+            catch { return new List<string>(); }
+        }
+
+        void UndoImport()
+        {
+            if (busy) return;
+            var files = UndoFiles();
+            if (files.Count == 0) return;
+            if (!allow.Checked) { Ui.Error(this, "Undoing an import changes the database. Tick \"Allow changes\" at the top first."); return; }
+            string file = files[0], name = Path.GetFileNameWithoutExtension(file), what = name.Length > 16 ? name.Substring(16) : name; DateTime when;
+            string at = DateTime.TryParseExact(name.Length >= 15 ? name.Substring(0, 15) : "", "yyyyMMdd-HHmmss", CultureInfo.InvariantCulture, DateTimeStyles.None, out when) ? when.ToString("g") : "";
+            if (!Ui.Confirm(this, "Undo the import of " + what + ".sql" + (at.Length > 0 ? " from " + at : "") + "?\n\n" +
+                "The tables it touched are put back exactly as they were before the import. Whatever changed in these tables since then is lost as well" +
+                (ctl.World != null ? "; the server is running, so restart it afterwards" : "") + ".")) return;
+            if (Dirty && !Ui.Confirm(this, "There are changes in the table that were not saved; they are lost. Go on?")) return;
+            Label hint = tableTabShown() ? tableHint : sqlHint;
+            hint.Text = "Putting the tables back …";
+            string any = tablesOf.ContainsKey("acore_world") ? "acore_world" : tablesOf.Keys.First();
+            Background(() => MySql.RunFile(inst, Login, any, file), () =>
+            {
+                try { File.Delete(file); } catch { }
+                MessageBox.Show(this, "The import of " + what + ".sql was undone." + (ctl.World != null ? "\n\nRestart the server for it to show in the game." : ""), Product.Name, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                Refill("The import of " + what + ".sql was undone.");
+            }, error =>
+            {
+                Ui.Error(this, "Putting the tables back stopped with an error. The copy is kept in\n" + file + "\n\n" + error);
+                Refill("Undoing the import stopped with an error.");
             });
         }
 

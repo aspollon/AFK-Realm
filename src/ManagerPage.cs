@@ -17,6 +17,7 @@ namespace CoAInstaller
         readonly Label mapState = Ui.Hint("");
         readonly Button start = Ui.Primary("Start server");
         readonly Button stop = Ui.Secondary("Stop server");
+        readonly Button restart = Ui.Secondary("Restart server");
         readonly TextBox accName = Ui.Input(200), accPw1 = Ui.Input(200, true), accPw2 = Ui.Input(200, true);
         readonly ComboBox accLevel = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 200, Font = Ui.Base };
         readonly TextBox realm = Ui.Input(200);
@@ -89,15 +90,16 @@ namespace CoAInstaller
             Body.Controls.Add(StatusRow("Database", dbState));
             Body.Controls.Add(StatusRow("Authserver (login)", authState));
             Body.Controls.Add(StatusRow("Worldserver (game world)", worldState));
-            var buttons = Ui.Row(); buttons.Controls.Add(start); buttons.Controls.Add(stop); buttons.Controls.Add(consoles);
+            var buttons = Ui.Row(); buttons.Controls.Add(start); buttons.Controls.Add(stop); buttons.Controls.Add(restart); buttons.Controls.Add(consoles);
             consoles.Padding = new Padding(12, 6, 12, 6); consoles.Margin = new Padding(16, 3, 3, 3);
             consoles.Click += (s, e) => OpenConsoles();
             Body.Controls.Add(buttons);
             Body.Controls.Add(busy);
-            Body.Controls.Add(Ui.Hint("\"Stop server\" saves all characters and shuts down cleanly. The servers run in the background; " +
+            Body.Controls.Add(Ui.Hint("\"Stop server\" saves all characters and shuts down cleanly; \"Restart server\" does that and starts it again, for example after changing settings or the database. The servers run in the background; " +
                 "\"Open server consoles\" shows what they print and takes GM commands."));
             start.Click += (s, e) => StartServer();
             stop.Click += (s, e) => StopServer();
+            restart.Click += (s, e) => RestartServer();
 
             // --- map data
             Body.Controls.Add(Ui.Heading("Map data"));
@@ -313,6 +315,7 @@ namespace CoAInstaller
                         ShowState(dbState, db, true); ShowState(authState, auth, true); ShowState(worldState, world, worldReady);
                         start.Enabled = !(auth && world);
                         stop.Enabled = db || auth || world;
+                        restart.Enabled = auth || world;
                         mapState.ForeColor = maps && dbc ? Ui.Ok : Ui.Warn;
                         mapState.Text = !maps ? "Map data is still missing. The worldserver cannot run without it."
                             : !dbc ? "The CoA DBC tables are missing. Use \"Create map data\" and tick \"Only refresh the CoA DBC tables\"."
@@ -394,6 +397,19 @@ namespace CoAInstaller
             if (!Ui.Confirm(this, "Stop the server now? All players are saved and logged out.")) return;
             Main.RunBusy(busy, st => { ctl.StopAll(st, true); st("Server is stopped."); },
                 err => { if (err != null) { busy.Text = ""; Ui.Error(this, err.Message); } RefreshStatus(); });
+        }
+
+        /// <summary>Stops auth- and worldserver cleanly and starts them again; the database keeps running.</summary>
+        void RestartServer()
+        {
+            if (!Ui.Confirm(this, "Restart the server now? All players are saved and logged out; they can log in again once the world has loaded.")) return;
+            Main.RunBusy(busy, st => { ctl.StopAll(st, false); st("Server is stopped. Starting it again ..."); },
+                err =>
+                {
+                    RefreshStatus();
+                    if (err != null) { busy.Text = ""; Ui.Error(this, err.Message); return; }
+                    StartServer();
+                });
         }
 
         void EnsureDatabase(Action<string> st) { if (ctl.Db == null) ctl.StartDatabase(st); }
