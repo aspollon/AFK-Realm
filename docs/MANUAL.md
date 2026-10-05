@@ -234,6 +234,21 @@ The arrow keys bring back earlier commands. Commands that need you to stand in t
 
 Type any SQL and press **Run (F5)** (or Ctrl+Enter). Several statements are separated by `;`; if a part of the text is selected, only that part is run. Name the database together with the table: `acore_world.creature_template`. Each `SELECT` gives a result table (the first 5000 rows are shown); with several results, choose one from the list next to the button. After a changing statement the line below says how many rows it changed. If a statement fails, the server's error message is shown; statements before it were already carried out.
 
+**Export and import**
+
+![Export](screenshots/23-database-export.png)
+
+**Export …** (bottom left) writes to an SQL file – to hand a table to someone else, to keep a copy before you change it, or to carry your settings to another server:
+
+- **The rows of a table**: the file holds only the rows. Importing it adds them to the table that is there; rows with the same key are replaced, all others stay. This is the one for sharing ("here are my vendor prices").
+- **Only the rows that match**: the same, limited to what the WHERE condition of the Table tab finds, for example one creature or one quest.
+- **The whole table** (structure and rows): importing it deletes the table on the other side and builds it anew, exactly as it is here.
+- **The whole database**: every table. Large and slow for `acore_world`; for a safety copy of the whole server use [Backups](#11-updates-backups-and-repair) instead.
+
+**Import SQL file …** runs an SQL file, for example one a module's README tells you to import by hand, or a file someone exported for you. It needs *Allow changes*. Choose the file and the database it is for; before anything happens AFK Realm reads the file and lists what it will do – which tables it deletes and rebuilds, where it deletes rows, where it writes rows. Read that list. If the import stops with an error, the statements before the error were already carried out.
+
+Only import files from a source you trust: an SQL file can change or delete anything. Files imported this way are not recorded like the database changes of modules installed through *Manage modules*, so removing a module later does not take them back – a backup from before does.
+
 **When does a change show in the game?**
 
 - The worldserver reads most tables of `acore_world` only when it starts. After changing them, **stop and start the server** – or reload the one table with a GM command in the [game master tools](#6-game-master-tools), for example `reload creature_template 1234`, `reload item_loot_template` or `reload all quest`. Not every table can be reloaded; a restart always works. If your changes "do nothing", this is almost always the reason.

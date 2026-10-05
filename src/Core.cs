@@ -305,6 +305,52 @@ namespace CoAInstaller
             finally { try { File.Delete(opt); } catch { } }
         }
 
+        /// <summary>One argument for a Windows command line, quoted the way the C runtime reads it back.</summary>
+        internal static string Arg(string s)
+        {
+            var sb = new StringBuilder("\""); int slashes = 0;
+            foreach (char c in s)
+            {
+                if (c == '\\') { ++slashes; continue; }
+                if (c == '"') { sb.Append('\\', slashes * 2 + 1); sb.Append('"'); }
+                else { sb.Append('\\', slashes); sb.Append(c); }
+                slashes = 0;
+            }
+            sb.Append('\\', slashes * 2); sb.Append('"');
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// Writes one table to an SQL file. rowsOnly: only its rows, as REPLACE statements that name their columns, so the
+        /// file adds to a table that exists (rows with the same key are replaced). Otherwise structure and rows: importing
+        /// that drops the table and builds it anew. where (may be null) limits the rows.
+        /// </summary>
+        public static void DumpTable(Install inst, DbLogin login, string database, string table, string where, bool rowsOnly, string file)
+        {
+            string opt = WriteOptions(login);
+            try
+            {
+                var psi = new ProcessStartInfo(Path.Combine(inst.MySqlBin, "mysqldump.exe"),
+                    "--defaults-extra-file=\"" + opt + "\" --single-transaction --skip-comments --hex-blob --no-tablespaces --skip-add-locks --skip-triggers --set-gtid-purged=OFF --default-character-set=utf8mb4 " +
+                    (rowsOnly ? "--no-create-info --replace --complete-insert " : "") + (string.IsNullOrEmpty(where) ? "" : "--where=" + Arg(where) + " ") + Arg(database) + " " + Arg(table))
+                { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true };
+                using (var p = Process.Start(psi))
+                {
+                    var errTask = p.StandardError.ReadToEndAsync();
+                    using (var dst = File.Create(file))
+                    {
+                        var head = new UTF8Encoding(false).GetBytes("-- " + Product.Name + " export: " + database + "." + table + (rowsOnly ? ", rows only" : ", structure and rows") +
+                            (string.IsNullOrEmpty(where) ? "" : ", where " + where.Replace("\r", " ").Replace("\n", " ")) + "\n-- Database: " + database + "\n\n");
+                        dst.Write(head, 0, head.Length);
+                        p.StandardOutput.BaseStream.CopyTo(dst);
+                    }
+                    p.WaitForExit();
+                    if (p.ExitCode != 0) { try { File.Delete(file); } catch { } throw new InvalidOperationException(errTask.Result.Trim()); }
+                }
+            }
+            finally { try { File.Delete(opt); } catch { } }
+        }
+
         public static string Quote(string s) { return "'" + s.Replace("\\", "\\\\").Replace("'", "''") + "'"; }
     }
 
