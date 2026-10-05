@@ -485,6 +485,7 @@ namespace CoAInstaller
                 {
                     if (!Ui.Confirm(this, Product.Name + " cannot tell for sure which tables this changes" + (plan.Loose ? " (name the database with each table: acore_world.creature_template)" : "") +
                         ", so \"Undo last change\" will not be able to take it back.\n\nRun it anyway?")) return;
+                    if (!LiveOk(touched.Keys)) return;
                     touched = null;
                 }
                 else if (!LiveOk(touched.Keys)) return;
@@ -897,18 +898,44 @@ namespace CoAInstaller
         }
 
         /// <summary>
-        /// The worldserver keeps characters that are online in its memory and writes them back, and it reads accounts
-        /// while it runs: a change to those databases under a running server can be overwritten or leave things half done.
+        /// Asked before every change while the worldserver runs: it keeps the characters that are online in its memory
+        /// and writes them back, and it reads the world tables only at its start. Offers to stop the server first.
+        /// False: the user cancelled.
         /// </summary>
         bool LiveOk(IEnumerable<string> databases)
         {
             if (ctl.World == null) return true;
-            var live = databases.Where(d => d == "acore_characters" || d == "acore_auth").Distinct().ToList();
-            if (live.Count == 0) return true;
-            return MessageBox.Show(this, "The server is running, and this changes " + string.Join(" and ", live) + ".\n\n" +
-                "The worldserver keeps the characters that are online in its memory and writes them back: what you change here can be overwritten a moment later, " +
-                "or a character can end up half changed. It is safer to stop the server first (or at least to make sure the players concerned are logged out).\n\n" +
-                "Go on while the server is running?", Product.Name, MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) == DialogResult.Yes;
+            bool players = databases.Any(d => d == "acore_characters" || d == "acore_auth");
+            var answer = MessageBox.Show(this, "The server is running. Changing its database now is risky.\n\n" +
+                (players ? "This changes characters or accounts: the worldserver keeps the characters that are online in its memory and writes them back, so your change can be overwritten a moment later, or a character can end up half changed.\n\n"
+                         : "The worldserver has read these tables when it started and goes on working with what it read; the change only shows after a restart, and until then the server and the database do not agree.\n\n") +
+                "Stop the server first? All players are saved and logged out.\n\n" +
+                "Yes: stop the server, then go on\nNo: go on while the server is running\nCancel: change nothing",
+                Product.Name, MessageBoxButtons.YesNoCancel, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button1);
+            if (answer == DialogResult.Cancel) return false;
+            if (answer == DialogResult.No) return true;
+            return StopServer();
+        }
+
+        /// <summary>Stops world- and authserver (the database keeps running) behind a small waiting window. False when that failed.</summary>
+        bool StopServer()
+        {
+            string error = null;
+            using (var f = new Form { Text = Product.Name, Font = Ui.Base, BackColor = Color.White, ShowIcon = false, ControlBox = false, FormBorderStyle = FormBorderStyle.FixedDialog,
+                StartPosition = FormStartPosition.CenterParent, ClientSize = new Size(460, 90) })
+            {
+                var note = new Label { Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleCenter, Text = "Stopping the server ..." };
+                f.Controls.Add(note);
+                f.Shown += (s, e) => System.Threading.ThreadPool.QueueUserWorkItem(_ =>
+                {
+                    try { ctl.StopAll(text => { try { f.BeginInvoke((Action)(() => note.Text = text)); } catch { } }, false); }
+                    catch (Exception ex) { error = ex.Message; }
+                    try { f.BeginInvoke((Action)(() => f.Close())); } catch { }
+                });
+                f.ShowDialog(this);
+            }
+            if (error != null) { Ui.Error(this, "The server could not be stopped, so nothing was changed:\n\n" + error); return false; }
+            return true;
         }
 
         void UndoLast()

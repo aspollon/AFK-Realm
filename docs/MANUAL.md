@@ -262,11 +262,15 @@ You changed something, restarted the server and it does not work? **Undo last ch
 - If AFK Realm cannot tell which tables an SQL statement changes (for example when a table is written without its database), it says so before running it; such a change cannot be undone here.
 - It is no substitute for a backup: it only knows changes made in this window, not what the server, the players or other programs did.
 
+**Changing the database while the server runs**
+
+Whenever you change something while the worldserver is running – a save, SQL statements, an import or an undo – AFK Realm warns you and asks whether to stop the server first. *Yes* stops the auth- and worldserver cleanly (players are saved and logged out; the database keeps running) and then carries out your change; start the server again afterwards with **Start server**. *No* makes the change while the server runs, *Cancel* changes nothing. Stopping first is the safe way: nothing can overwrite your change, and the server reads the new values when it starts.
+
 **When does a change show in the game?**
 
 - The worldserver reads most tables of `acore_world` only when it starts. After changing them, **stop and start the server** – or reload the one table with a GM command in the [game master tools](#6-game-master-tools), for example `reload creature_template 1234`, `reload item_loot_template` or `reload all quest`. Not every table can be reloaded; a restart always works. If your changes "do nothing", this is almost always the reason.
 - Items are also remembered by the game client. After changing an item, delete the `Cache` folder of the game client, otherwise it keeps showing the old values.
-- Characters that are online are written back by the server and overwrite what you typed. Change character data while the character is logged out, or while the server's world is stopped. AFK Realm asks before it writes to `acore_characters` or `acore_auth` while the worldserver is running – also for an import and for an undo.
+- Characters that are online are written back by the server and overwrite what you typed. Change character data while the character is logged out, or while the server's world is stopped.
 
 ## 8. Modules
 
