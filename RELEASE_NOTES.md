@@ -1,6 +1,13 @@
-# AFK Realm 0.6.4 – preview
+# AFK Realm 0.6.5 – preview
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11.
+
+## New in 0.6.5
+
+- **Database editor** (*Server management → Database editor*): look into every table of the server, change values and run any SQL right in AFK Realm, without HeidiSQL or another program. Find a table by typing a part of its name, narrow the rows with a condition, edit cells, add and delete rows; nothing is written until you press *Save changes*. The SQL tab runs whatever you type and shows the results.
+- **Safe until you say otherwise.** The editor only reads until you tick *Allow changes*. Doing so warns you plainly and offers to back up the whole server first; the backup can be restored under *Backups*.
+- **Only for people who know what they are doing.** A wrong change in these tables can break the server. If you do not know what a table is for, leave it alone.
+- Good to know: the worldserver reads most world tables only when it starts. If a change "does nothing", stop and start the server (or use the matching `reload` command), and for items delete the game client's `Cache` folder.
 
 ## New in 0.6.4
 
@@ -58,6 +65,7 @@ Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with 
 - Backs up the server before every update and rolls it back with one click
 - Installs and removes AzerothCore modules, including their database changes
 - Game master tools for the running server: quest helper, player actions and a console
+- Database editor: look into the server's tables, change values and run SQL, read-only until you allow changes
 
 ## Please note
 

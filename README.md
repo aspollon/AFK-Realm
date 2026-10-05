@@ -35,6 +35,7 @@ Pre-built repacks go stale quickly. Building from source keeps you on the latest
 - **Accounts**: create accounts with GM levels, list all player accounts (bot accounts are filtered out) with their characters, delete accounts, set new passwords and change access levels
 - **Account transfer**: export an account with all its characters, items, mail and pets to an `.afkaccount` file and import it on another server – ids are renumbered, taken names are renamed at the next login
 - **Game master tools**: a line to the running server (its SOAP service, switched on for this PC only) with a quest helper – see a character's quest log with the progress of every objective, find quests by NPC name, quest title or id, or list the new quests around a character, then give, complete, reward or remove them with one click – plus unstuck, revive, level, rename, gold and mail for a character, announcements, and a console for every other GM command
+- **Database editor**: browse and edit every table of the server and run any SQL without a separate program – read-only until you allow changes, with a clear warning and a one-click backup of the whole server before you touch anything
 - **Modules**: modules made for this server at the top ("Modules by AFK Realm", first of them: the bots use the auction house like players), then the AzerothCore module catalog: browse it, tick modules to install them and untick them to remove them. Before installing, each module is checked (database changes, settings, core patches, client files, age) and its README is one click away. The server is backed up and rebuilt; if a module does not compile, it is taken out again and the server stays as it was. The database changes of every module installed this way are recorded, so removing it undoes them
 - **Bot reset**: one click deletes all random bots with their characters, guilds and arena teams (your own characters are kept); new bots are created at the next start
 - **Map data**: extracts maps, vmaps, mmaps and the CoA client DBC tables from your game client with one click
@@ -53,8 +54,8 @@ Pre-built repacks go stale quickly. Building from source keeps you on the latest
 | ![Backups](docs/screenshots/11-backups.png) | ![Update](docs/screenshots/6-update-with-backup.png) |
 | **Game master tools** | **Modules** |
 | ![Game master](docs/screenshots/14-game-master.png) | ![Modules](docs/screenshots/12-modules.png) |
-| **Installing and removing modules** | |
-| ![Module changes](docs/screenshots/13-module-changes.png) | |
+| **Installing and removing modules** | **Database editor** |
+| ![Module changes](docs/screenshots/13-module-changes.png) | ![Database editor](docs/screenshots/21-database-editor.png) |
 | **Installation** | **Progress** |
 | ![Welcome](docs/screenshots/1-welcome.png) | ![Progress](docs/screenshots/5-progress.png) |
 

@@ -14,13 +14,14 @@ AFK Realm is work in progress, so a window may look slightly different from the 
    - [Quests: fixing quests that do not work](#quests-fixing-quests-that-do-not-work)
    - [Player: helping a character](#player-helping-a-character)
    - [Server console](#server-console)
-7. [Modules](#7-modules)
-8. [Accounts](#8-accounts)
-9. [Playing with others](#9-playing-with-others)
-10. [Updates, backups and repair](#10-updates-backups-and-repair)
-11. [Resetting the random bots](#11-resetting-the-random-bots)
-12. [Where everything is stored](#12-where-everything-is-stored)
-13. [When something goes wrong](#13-when-something-goes-wrong)
+7. [Database editor](#7-database-editor)
+8. [Modules](#8-modules)
+9. [Accounts](#9-accounts)
+10. [Playing with others](#10-playing-with-others)
+11. [Updates, backups and repair](#11-updates-backups-and-repair)
+12. [Resetting the random bots](#12-resetting-the-random-bots)
+13. [Where everything is stored](#13-where-everything-is-stored)
+14. [When something goes wrong](#14-when-something-goes-wrong)
 
 ---
 
@@ -204,7 +205,42 @@ pinfo Thrall
 
 The arrow keys bring back earlier commands. Commands that need you to stand in the game or to have something selected (for example `.gps` or `.npc move`) do not work from here; use them in the game.
 
-## 7. Modules
+## 7. Database editor
+
+**Database editor …** opens the server's databases: look into any table, change values and run SQL, without installing a separate program such as HeidiSQL. The server has to be running (at least its database).
+
+> **Only for people who know what they are doing.** These tables are the server itself. A wrong value, or an `UPDATE` or `DELETE` without `WHERE`, can break quests, creatures, characters or accounts, in the worst case the whole server, and there is no undo. If you do not know what a table is for, leave it alone. **Make a backup first** – the button for it is right in the window.
+
+![Database editor](screenshots/21-database-editor.png)
+
+**Looking is safe.** As long as **Allow changes** is not ticked, nothing can be changed: cells cannot be edited and the SQL tab only accepts statements that read (`SELECT`, `SHOW`, `DESCRIBE`, `EXPLAIN`).
+
+**Allow changes.** Ticking it shows the warning once and asks whether to back up the server first. *Yes* closes the window and makes a backup of everything, databases included (it appears under [Backups](#11-updates-backups-and-repair) and can be restored there); afterwards open the editor again. **Back up the server first …** does the same at any time.
+
+**Finding a table.** On the left are the databases with their tables: `acore_world` (creatures, items, quests, loot, vendors – the game world), `acore_characters` (characters and what they own), `acore_auth` (accounts, realm) and `acore_playerbots`. Type a part of a name into **Find a table** to narrow the list, then click a table.
+
+**The Table tab**
+
+- The table is shown 500 rows at a time; **< Previous** and **Next >** turn the pages.
+- **WHERE** narrows the rows: type a condition as in SQL, for example `name LIKE '%Linen%'` or `entry = 2589`, and press Enter.
+- With *Allow changes* ticked, click a cell and type. Changed cells turn yellow, added rows green. Type `NULL` for "no value" in a column that allows it. **Add row** appends an empty row (cells left empty get the column's default value), **Delete row** removes the rows of the selected cells.
+- Nothing is written until you press **Save changes**; AFK Realm tells you how many rows it will change, add and delete, and asks once more. **Discard** throws the changes away and reads the table again.
+- Rows are found by the table's primary key (its column names are bold). A table without one can only be read here; change it in the SQL tab.
+- Binary columns are shown as `0x…` and cannot be edited in the grid.
+
+**The SQL tab**
+
+![SQL tab](screenshots/22-database-sql.png)
+
+Type any SQL and press **Run (F5)** (or Ctrl+Enter). Several statements are separated by `;`; if a part of the text is selected, only that part is run. Name the database together with the table: `acore_world.creature_template`. Each `SELECT` gives a result table (the first 5000 rows are shown); with several results, choose one from the list next to the button. After a changing statement the line below says how many rows it changed. If a statement fails, the server's error message is shown; statements before it were already carried out.
+
+**When does a change show in the game?**
+
+- The worldserver reads most tables of `acore_world` only when it starts. After changing them, **stop and start the server** – or reload the one table with a GM command in the [game master tools](#6-game-master-tools), for example `reload creature_template 1234`, `reload item_loot_template` or `reload all quest`. Not every table can be reloaded; a restart always works. If your changes "do nothing", this is almost always the reason.
+- Items are also remembered by the game client. After changing an item, delete the `Cache` folder of the game client, otherwise it keeps showing the old values.
+- Characters that are online are written back by the server and overwrite what you typed. Change character data while the character is logged out, or while the server's world is stopped.
+
+## 8. Modules
 
 **Manage modules …** adds and removes AzerothCore modules.
 
@@ -229,7 +265,7 @@ What players got *through* a module while playing (items, spells) is not tracked
 
 After installing a module, read its README: some modules need a step in the game, for example creating a character for an auction house bot. A module's options appear in the [server settings](#5-server-settings).
 
-## 8. Accounts
+## 9. Accounts
 
 **Create account** in the server management: name, password and access level.
 
@@ -249,7 +285,7 @@ After installing a module, read its README: some modules need a step in the game
 
 Export and import are how you move a player from one server to another, for example from a test server to the real one.
 
-## 9. Playing with others
+## 10. Playing with others
 
 ### Server name
 
@@ -270,7 +306,7 @@ By default only you can reach the server (`127.0.0.1`). To let others in:
 
 AFK Realm also allows the servers through the Windows Firewall.
 
-## 10. Updates, backups and repair
+## 11. Updates, backups and repair
 
 **Updates.** A banner at the top appears when newer server code (CoA core, Playerbots) or a newer AFK Realm is available. **Check for updates and install** downloads the newest code and rebuilds only what changed. Before it changes anything, the server is backed up.
 
@@ -287,13 +323,13 @@ Map data is not part of a backup; updates do not touch it.
 
 **Repair setup** sets up the database and configuration again without rebuilding the server. Characters and accounts are kept. Use it when the server does not start after something was interrupted.
 
-## 11. Resetting the random bots
+## 12. Resetting the random bots
 
 **Reset random bots …** deletes every random bot with its characters, guilds, arena teams and mail. Your own accounts and characters are kept, including bots you created on your own accounts. New bots are created at the next server start, which then takes longer than usual.
 
 Use it after changing bot settings that only apply to newly created bots (for example their level range), or when the bots have become a mess.
 
-## 12. Where everything is stored
+## 13. Where everything is stored
 
 ```
 C:\CoA-Server\
@@ -309,7 +345,7 @@ C:\CoA-Server\
 - To move the server to another PC, use a fresh installation there and move the players with account export and import.
 - To remove everything, stop the server and delete the folder.
 
-## 13. When something goes wrong
+## 14. When something goes wrong
 
 | What you see | What to do |
 |---|---|
@@ -319,6 +355,7 @@ C:\CoA-Server\
 | *DataDir does not hold the CoA client DBC set* | *Create map data* → tick *Only refresh the CoA DBC tables*. |
 | Black screen at the realm selection | Run *Check for updates and install*. |
 | Friends cannot connect | Check the realm address under *Play with others*, restart the server, check the VPN on both PCs. |
+| A value changed in the database editor does not show in the game | The worldserver reads most world tables only at its start: stop and start the server (see [Database editor](#7-database-editor)). For items, also delete the game client's `Cache` folder. |
 | Game master tools: *Stop and start the server once* | Stop and start the server through AFK Realm. |
 | A module does not compile | Nothing to do: it was taken out again. It does not fit CoA. |
 | The server misbehaves after an update or a module | *Backups → Restore* the backup made before it. |

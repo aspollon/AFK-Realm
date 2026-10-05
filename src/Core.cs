@@ -23,7 +23,7 @@ namespace CoAInstaller
         public const string Name = "AFK Realm";                   // window titles, dialogs
         public const string ShortName = "AFK Realm";              // desktop shortcut, firewall rules
         public const string FileStem = "AFK-Realm";                // exe name, settings folder
-        public const string Version = "0.6.4-preview";            // pre-release until testers confirm it works
+        public const string Version = "0.6.5-preview";            // pre-release until testers confirm it works
         public const string Tagline = "build, run and tweak your own server the lazy way";
         public const string BuildsFor = "Conquest of AzerothCore";
         public const string WindowTitle = Name + " (preview)";
@@ -118,6 +118,15 @@ namespace CoAInstaller
         public DbLogin AsRoot() { return new DbLogin { Host = Host, Port = Port, User = "root", Password = Password }; }
     }
 
+    /// <summary>One result set of a query: column names and rows; a null value is the database's NULL.</summary>
+    class SqlTable
+    {
+        public string Statement = "";
+        public readonly List<string> Columns = new List<string>();
+        public readonly List<string[]> Rows = new List<string[]>();
+        public int Total;                  // rows the statement returned; more than Rows.Count when the list was cut
+    }
+
     /// <summary>Runs mysql.exe / mysqladmin.exe of the portable database with a temporary option file.</summary>
     static class MySql
     {
@@ -159,6 +168,90 @@ namespace CoAInstaller
             }
             finally { try { File.Delete(opt); } catch { } }
         }
+        /// <summary>
+        /// Executes SQL and returns every result set with its column names; NULL is a null string.
+        /// mysql.exe writes XML for this, the only output that tells NULL from the text "NULL".
+        /// At most <paramref name="maxRows"/> rows are kept per result set.
+        /// </summary>
+        public static List<SqlTable> Tables(Install inst, DbLogin login, string sql, int maxRows)
+        {
+            string opt = WriteOptions(login);
+            try
+            {
+                var psi = new ProcessStartInfo(Path.Combine(inst.MySqlBin, "mysql.exe"),
+                    "--defaults-extra-file=\"" + opt + "\" --xml --binary-as-hex")
+                {
+                    UseShellExecute = false, CreateNoWindow = true,
+                    RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true,
+                    StandardErrorEncoding = Encoding.UTF8
+                };
+                using (var p = Process.Start(psi))
+                {
+                    var input = new StreamWriter(p.StandardInput.BaseStream, new UTF8Encoding(false));
+                    input.Write(sql); input.Close();
+                    var errTask = p.StandardError.ReadToEndAsync();
+                    var raw = new MemoryStream();
+                    p.StandardOutput.BaseStream.CopyTo(raw);
+                    p.WaitForExit();
+                    string err = errTask.Result;
+                    // What ran before the error stays valid: a script may have changed something already.
+                    var tables = ParseXml(raw.ToArray(), maxRows);
+                    if (p.ExitCode != 0)
+                    {
+                        string message = string.Join(" ", err.Split('\n').Where(l => !l.Contains("Using a password")).Select(l => l.Trim())).Trim();
+                        throw new InvalidOperationException(message.Length > 0 ? message : "The database did not answer (mysql.exe ended with code " + p.ExitCode + ").");
+                    }
+                    return tables;
+                }
+            }
+            finally { try { File.Delete(opt); } catch { } }
+        }
+
+        /// <summary>The result sets of "mysql --xml": one document per statement, written one after the other.</summary>
+        internal static List<SqlTable> ParseXml(byte[] raw, int maxRows)
+        {
+            var list = new List<SqlTable>();
+            if (raw.Length == 0) return list;
+            var settings = new System.Xml.XmlReaderSettings { ConformanceLevel = System.Xml.ConformanceLevel.Fragment, CheckCharacters = false, DtdProcessing = System.Xml.DtdProcessing.Ignore };
+            // Each result starts with its own <?xml ...?> line, which is only allowed once: they are taken out.
+            string text = new UTF8Encoding(false).GetString(raw);
+            text = System.Text.RegularExpressions.Regex.Replace(text, @"<\?xml[^>]*\?>", "");
+            using (var reader = System.Xml.XmlReader.Create(new StringReader(text), settings))
+            {
+                SqlTable table = null; string[] row = null; var names = new List<string>(); var values = new List<string>();
+                while (reader.Read())
+                {
+                    if (reader.NodeType == System.Xml.XmlNodeType.Element && reader.Name == "resultset")
+                    {
+                        table = new SqlTable { Statement = reader.GetAttribute("statement") ?? "" };
+                        list.Add(table);
+                    }
+                    else if (reader.NodeType == System.Xml.XmlNodeType.Element && reader.Name == "row" && table != null)
+                    {
+                        names.Clear(); values.Clear();
+                        if (reader.IsEmptyElement) continue;
+                        while (reader.Read() && !(reader.NodeType == System.Xml.XmlNodeType.EndElement && reader.Name == "row"))
+                        {
+                            if (reader.NodeType != System.Xml.XmlNodeType.Element || reader.Name != "field") continue;
+                            names.Add(reader.GetAttribute("name") ?? "");
+                            bool nil = reader.GetAttribute("xsi:nil") == "true";
+                            if (reader.IsEmptyElement) { values.Add(nil ? null : ""); continue; }
+                            var sb = new StringBuilder();
+                            while (reader.Read() && !(reader.NodeType == System.Xml.XmlNodeType.EndElement && reader.Name == "field"))
+                                if (reader.NodeType == System.Xml.XmlNodeType.Text || reader.NodeType == System.Xml.XmlNodeType.CDATA ||
+                                    reader.NodeType == System.Xml.XmlNodeType.Whitespace || reader.NodeType == System.Xml.XmlNodeType.SignificantWhitespace)
+                                    sb.Append(reader.Value);
+                            values.Add(sb.ToString());
+                        }
+                        if (table.Columns.Count == 0) table.Columns.AddRange(names);
+                        ++table.Total;
+                        if (table.Rows.Count < maxRows) { row = values.ToArray(); table.Rows.Add(row); }
+                    }
+                }
+            }
+            return list;
+        }
+
         public static bool Shutdown(Install inst, DbLogin root)
         {
             string opt = WriteOptions(root);

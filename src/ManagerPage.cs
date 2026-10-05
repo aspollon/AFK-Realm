@@ -129,6 +129,22 @@ namespace CoAInstaller
             };
             Body.Controls.Add(gmBtn);
 
+            // --- database
+            Body.Controls.Add(Ui.Heading("Database"));
+            Body.Controls.Add(Ui.Hint("Look into the server's tables, change values and run SQL without a separate program. Read-only until you allow changes; " +
+                "meant for people who know what the tables are for - a wrong change can break the server, so back it up first."));
+            var dbBtn = Ui.Secondary("Database editor …");
+            dbBtn.Click += (s, e) =>
+            {
+                if (ctl.Db == null) { Ui.Error(this, "The database is not running. Start the server first."); return; }
+                using (var d = new DatabaseDialog(inst, ctl))
+                {
+                    d.ShowDialog(this);
+                    if (d.BackUpNow) RunEngine("Backup", null, false);
+                }
+            };
+            Body.Controls.Add(dbBtn);
+
             // --- modules
             Body.Controls.Add(Ui.Heading("Modules"));
             Body.Controls.Add(Ui.Hint("Add or remove modules: those made for this server (for example bots that use the auction house) and the AzerothCore module catalog. The server is backed up and rebuilt; " +

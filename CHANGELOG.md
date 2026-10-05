@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.5-preview
+
+- New: database editor (Server management → Database editor): browse the server's databases and tables, filter rows with a WHERE condition, edit cells, add and delete rows (written only on "Save changes", in one transaction), and a SQL tab that runs any statements and shows the results
+- The editor is read-only until "Allow changes" is ticked; that shows a warning and offers to back up the whole server first ("Back up the server first …" does it at any time)
+- Manual: new chapter "Database editor", including when a change shows in the game (restart or reload, client cache, characters that are online)
+
 ## 0.6.4-preview
 
 - Game master tools: choosing a character shows its quest log, with how far each objective is ("Large Candle 3/8"); "Quest log" and "Refresh" read it fresh from the running server
