@@ -3,7 +3,7 @@
 ## 0.6.5-preview
 
 - New: database editor (Server management → Database editor): browse the server's databases and tables, filter rows with a WHERE condition, edit cells, add and delete rows (written only on "Save changes", in one transaction), and a SQL tab that runs any statements and shows the results
-- Database editor: "Export …" writes the rows of a table (optionally only those matching the WHERE condition, as REPLACE statements), a whole table or a whole database to an SQL file; "Import SQL file …" runs a file against a chosen database after listing what the file does (tables dropped and rebuilt, rows deleted, rows written)
+- Database editor: "Import SQL file …" runs a file after saying what it does (tables replaced, created, rows deleted or written); the database is only asked for when the file does not name it. "Export …" writes the ticked tables or whole databases (structure and rows) to one SQL file
 - The editor is read-only until "Allow changes" is ticked; that shows a warning and offers to back up the whole server first ("Back up the server first …" does it at any time)
 - Manual: new chapter "Database editor", including when a change shows in the game (restart or reload, client cache, characters that are online)
 

@@ -321,31 +321,26 @@ namespace CoAInstaller
         }
 
         /// <summary>
-        /// Writes one table to an SQL file. rowsOnly: only its rows, as REPLACE statements that name their columns, so the
-        /// file adds to a table that exists (rows with the same key are replaced). Otherwise structure and rows: importing
-        /// that drops the table and builds it anew. where (may be null) limits the rows.
+        /// Writes tables of one database (structure and rows) to a stream; tables null means all of them. A "USE" line
+        /// goes first, so several databases can follow one another in one file and the file knows where it belongs.
         /// </summary>
-        public static void DumpTable(Install inst, DbLogin login, string database, string table, string where, bool rowsOnly, string file)
+        public static void DumpTables(Install inst, DbLogin login, string database, ICollection<string> tables, Stream dst)
         {
             string opt = WriteOptions(login);
             try
             {
                 var psi = new ProcessStartInfo(Path.Combine(inst.MySqlBin, "mysqldump.exe"),
                     "--defaults-extra-file=\"" + opt + "\" --single-transaction --skip-comments --hex-blob --no-tablespaces --skip-add-locks --skip-triggers --set-gtid-purged=OFF --default-character-set=utf8mb4 " +
-                    (rowsOnly ? "--no-create-info --replace --complete-insert " : "") + (string.IsNullOrEmpty(where) ? "" : "--where=" + Arg(where) + " ") + Arg(database) + " " + Arg(table))
+                    Arg(database) + (tables == null ? "" : " " + string.Join(" ", tables.Select(Arg))))
                 { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true };
                 using (var p = Process.Start(psi))
                 {
                     var errTask = p.StandardError.ReadToEndAsync();
-                    using (var dst = File.Create(file))
-                    {
-                        var head = new UTF8Encoding(false).GetBytes("-- " + Product.Name + " export: " + database + "." + table + (rowsOnly ? ", rows only" : ", structure and rows") +
-                            (string.IsNullOrEmpty(where) ? "" : ", where " + where.Replace("\r", " ").Replace("\n", " ")) + "\n-- Database: " + database + "\n\n");
-                        dst.Write(head, 0, head.Length);
-                        p.StandardOutput.BaseStream.CopyTo(dst);
-                    }
+                    var head = new UTF8Encoding(false).GetBytes("\n-- Database: " + database + "\nUSE `" + database.Replace("`", "``") + "`;\n\n");
+                    dst.Write(head, 0, head.Length);
+                    p.StandardOutput.BaseStream.CopyTo(dst);
                     p.WaitForExit();
-                    if (p.ExitCode != 0) { try { File.Delete(file); } catch { } throw new InvalidOperationException(errTask.Result.Trim()); }
+                    if (p.ExitCode != 0) throw new InvalidOperationException(errTask.Result.Trim());
                 }
             }
             finally { try { File.Delete(opt); } catch { } }

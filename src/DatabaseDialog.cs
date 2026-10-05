@@ -510,54 +510,100 @@ namespace CoAInstaller
             }
         }
 
+        /// <summary>What people call the server's databases.</summary>
+        static string Friendly(string database)
+        {
+            switch (database)
+            {
+                case "acore_world": return "World: creatures, items, quests, loot  (acore_world)";
+                case "acore_characters": return "Characters and what they own  (acore_characters)";
+                case "acore_auth": return "Accounts and realm  (acore_auth)";
+                case "acore_playerbots": return "Playerbots  (acore_playerbots)";
+                case "afk_modules": return "AFK Realm's record of module changes  (afk_modules)";
+                default: return database;
+            }
+        }
+
+        IEnumerable<string> DatabasesInOrder()
+        {
+            string[] first = { "acore_world", "acore_characters", "acore_auth", "acore_playerbots" };
+            return first.Where(tablesOf.ContainsKey).Concat(tablesOf.Keys.Where(k => !first.Contains(k)).OrderBy(k => k));
+        }
+
         void Export()
         {
-            if (busy) return;
-            string database = CurrentDb, name = table, filter = table != null ? where.Text.Trim() : "";
-            if (database == null) return;
-            var node = tree.SelectedNode;
-            if (name == null && node != null && node.Parent != null) { database = node.Parent.Text; name = node.Text; }
+            if (busy || tablesOf.Count == 0) return;
+            // What is open or chosen on the left starts out ticked.
+            string preDb = db, preTable = table; var node = tree.SelectedNode;
+            if (preTable == null && node != null) { preDb = node.Parent != null ? node.Parent.Text : node.Text; preTable = node.Parent != null ? node.Text : null; }
 
-            int choice;                                 // 0 rows, 1 rows that match, 2 whole table, 3 whole database
-            using (var f = new Form { Text = Product.Name + " – Export", Font = Ui.Base, BackColor = Color.White, ShowIcon = false, FormBorderStyle = FormBorderStyle.FixedDialog,
-                MaximizeBox = false, MinimizeBox = false, StartPosition = FormStartPosition.CenterParent, ClientSize = new Size(620, 100), AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, Padding = new Padding(16) })
+            var chosen = new Dictionary<string, List<string>>();
+            using (var f = new Form { Text = Product.Name + " – Export", Font = Ui.Base, BackColor = Color.White, ShowIcon = false, MinimizeBox = false, MaximizeBox = false,
+                StartPosition = FormStartPosition.CenterParent, ClientSize = new Size(520, 560), MinimumSize = new Size(420, 400), Padding = new Padding(16) })
             {
-                var col = new FlowLayoutPanel { FlowDirection = FlowDirection.TopDown, AutoSize = true, WrapContents = false, Dock = DockStyle.Fill };
-                var options = new List<RadioButton>();
-                Action<int, string, string> add = (id, title, about) =>
+                var pick = new TreeView { Dock = DockStyle.Fill, CheckBoxes = true, Font = Ui.Base, BorderStyle = BorderStyle.FixedSingle, ShowLines = false };
+                var count = new Label { Dock = DockStyle.Bottom, Height = 24, Font = Ui.Small, ForeColor = Ui.Muted, TextAlign = ContentAlignment.MiddleLeft };
+                var ok = Ui.Primary("Export …"); var cancel = Ui.Secondary("Cancel"); ok.DialogResult = DialogResult.OK; cancel.DialogResult = DialogResult.Cancel;
+                var buttons = new FlowLayoutPanel { Dock = DockStyle.Bottom, AutoSize = true, Padding = new Padding(0, 6, 0, 0) }; buttons.Controls.Add(ok); buttons.Controls.Add(cancel);
+                var head = new Label { Dock = DockStyle.Top, Height = 64, Text = "Tick what you want to export: a whole database, or open it and tick single tables. Everything goes into one file that can be imported again here or on another server." };
+                TreeNode show = null;
+                foreach (var name in DatabasesInOrder())
                 {
-                    var r = new RadioButton { Text = title, AutoSize = true, Font = Ui.Bold, Tag = id, Margin = new Padding(0, 8, 0, 0), Checked = options.Count == 0 };
-                    options.Add(r); col.Controls.Add(r);
-                    col.Controls.Add(new Label { Text = about, AutoSize = true, MaximumSize = new Size(580, 0), Font = Ui.Small, ForeColor = Ui.Muted, Margin = new Padding(20, 0, 0, 0) });
-                };
-                col.Controls.Add(new Label { Text = "Write to an SQL file that can be imported here or on another server:", AutoSize = true });
-                if (name != null)
-                {
-                    add(0, "The rows of " + name, "For sharing settings or content. Importing the file adds its rows to the table that is there; rows with the same key are replaced, all others stay.");
-                    if (filter.Length > 0) add(1, "Only the rows that match  " + (filter.Length > 50 ? filter.Substring(0, 50) + " …" : filter), "As above, but only the rows the WHERE condition of the Table tab finds.");
-                    add(2, "The whole table " + name + " (structure and rows)", "Importing the file deletes the table on the other side and builds it anew, exactly as it is here.");
+                    var d = pick.Nodes.Add(name, Friendly(name)); d.Tag = name;
+                    foreach (var t in tablesOf[name])
+                    {
+                        var n = d.Nodes.Add(t); n.Tag = t;
+                        if (name == preDb && t == preTable) { n.Checked = true; show = n; }
+                    }
+                    if (name == preDb && preTable == null) { d.Checked = true; foreach (TreeNode n in d.Nodes) n.Checked = true; show = d; }
                 }
-                add(3, "The whole database " + database, "Every table with structure and rows. Importing replaces all of them. This can take a while and become a large file.");
-                var ok = Ui.Primary("Choose file …"); var cancel = Ui.Secondary("Cancel");
-                ok.DialogResult = DialogResult.OK; cancel.DialogResult = DialogResult.Cancel;
-                var row = Ui.Row(); row.Margin = new Padding(0, 14, 0, 0); row.Controls.Add(ok); row.Controls.Add(cancel); col.Controls.Add(row);
-                f.Controls.Add(col); f.AcceptButton = ok; f.CancelButton = cancel;
+                Action recount = () =>
+                {
+                    int tables = pick.Nodes.Cast<TreeNode>().Sum(d => d.Nodes.Cast<TreeNode>().Count(n => n.Checked));
+                    count.Text = tables == 0 ? "Nothing ticked yet." : tables + " table(s) ticked.";
+                    ok.Enabled = tables > 0;
+                };
+                bool ticking = false;
+                pick.AfterCheck += (s, e) =>
+                {
+                    if (ticking) return;
+                    ticking = true;
+                    if (e.Node.Parent == null) foreach (TreeNode n in e.Node.Nodes) n.Checked = e.Node.Checked;      // a database: all its tables
+                    else e.Node.Parent.Checked = e.Node.Parent.Nodes.Cast<TreeNode>().All(n => n.Checked);
+                    ticking = false; recount();
+                };
+                f.Controls.Add(pick); f.Controls.Add(count); f.Controls.Add(buttons); f.Controls.Add(head); f.AcceptButton = ok; f.CancelButton = cancel;
+                f.Shown += (s, e) => { if (show != null) { show.EnsureVisible(); pick.SelectedNode = show; } recount(); };
                 if (f.ShowDialog(this) != DialogResult.OK) return;
-                choice = (int)options.First(o => o.Checked).Tag;
+                foreach (TreeNode d in pick.Nodes)
+                {
+                    var ticked = d.Nodes.Cast<TreeNode>().Where(n => n.Checked).Select(n => (string)n.Tag).ToList();
+                    if (ticked.Count > 0) chosen[(string)d.Tag] = ticked.Count == d.Nodes.Count ? null : ticked;        // null: the whole database
+                }
             }
+            if (chosen.Count == 0) return;
 
+            string suggestion = chosen.Count == 1 ? chosen.Keys.First() + (chosen.Values.First() != null && chosen.Values.First().Count == 1 ? "." + chosen.Values.First()[0] : "") : "server-export";
             string file;
-            using (var d = new SaveFileDialog { Filter = "SQL file (*.sql)|*.sql", OverwritePrompt = true, FileName = (choice == 3 ? database : database + "." + name) + ".sql" })
+            using (var d = new SaveFileDialog { Filter = "SQL file (*.sql)|*.sql", OverwritePrompt = true, FileName = suggestion + ".sql" })
             {
                 if (d.ShowDialog(this) != DialogResult.OK) return;
                 file = d.FileName;
             }
             Label hint = tableTabShown() ? tableHint : sqlHint;
-            hint.Text = "Exporting …";
+            hint.Text = "Exporting … large databases take a while.";
             Background(() =>
             {
-                if (choice == 3) MySql.Dump(inst, Login, database, file);
-                else MySql.DumpTable(inst, Login, database, name, choice == 1 ? filter : null, choice != 2, file);
+                try
+                {
+                    using (var dst = File.Create(file))
+                    {
+                        var head = new UTF8Encoding(false).GetBytes("-- " + Product.Name + " export\n");
+                        dst.Write(head, 0, head.Length);
+                        foreach (var name in chosen.Keys) MySql.DumpTables(inst, Login, name, chosen[name], dst);
+                    }
+                }
+                catch { try { File.Delete(file); } catch { } throw; }
             }, () =>
             {
                 hint.Text = "Exported to " + file + " (" + Size(new FileInfo(file).Length) + ").";
@@ -575,7 +621,7 @@ namespace CoAInstaller
             public readonly SortedSet<string> Rebuilt = new SortedSet<string>(), Created = new SortedSet<string>(), Written = new SortedSet<string>(),
                 Emptied = new SortedSet<string>(), Altered = new SortedSet<string>(), Databases = new SortedSet<string>();
             public string Named;                        // the database the file says it belongs to
-            public bool Partial, Other;
+            public bool Partial, Other, Loose;         // Loose: statements that name no database, so one has to be chosen
         }
 
         internal static FilePlan Scan(string file)
@@ -585,7 +631,7 @@ namespace CoAInstaller
             var verb = new Regex(@"^\s*(DROP\s+TABLE(?:\s+IF\s+EXISTS)?|CREATE\s+TABLE(?:\s+IF\s+NOT\s+EXISTS)?|INSERT(?:\s+IGNORE)?\s+INTO|REPLACE\s+INTO|DELETE\s+FROM|TRUNCATE(?:\s+TABLE)?|ALTER\s+TABLE|UPDATE|USE|DROP\s+DATABASE|CREATE\s+DATABASE(?:\s+IF\s+NOT\s+EXISTS)?)\s+((?:`[^`]+`|[A-Za-z0-9_$]+)(?:\.(?:`[^`]+`|[A-Za-z0-9_$]+))?)", RegexOptions.IgnoreCase);
             using (var r = new StreamReader(file, new UTF8Encoding(false)))
             {
-                long read = 0; string line;
+                long read = 0; string line, use = null;
                 while ((line = r.ReadLine()) != null)
                 {
                     read += line.Length + 1;
@@ -595,8 +641,11 @@ namespace CoAInstaller
                     var m = verb.Match(line.Length > 400 ? line.Substring(0, 400) : line);
                     if (!m.Success) continue;
                     string what = Regex.Replace(m.Groups[1].Value.ToUpperInvariant(), @"\s+", " "), target = m.Groups[2].Value.Replace("`", "");
-                    if (what == "USE" || what.Contains("DATABASE")) { plan.Databases.Add(target); if (what != "USE") plan.Other = true; continue; }
+                    if (what == "USE") { use = target; plan.Databases.Add(target); continue; }
+                    if (what.Contains("DATABASE")) { plan.Databases.Add(target); plan.Other = true; continue; }
                     if (target.Contains(".")) plan.Databases.Add(target.Substring(0, target.IndexOf('.')));
+                    else if (use != null) target = use + "." + target;
+                    else plan.Loose = true;
                     if (what.StartsWith("DROP TABLE")) plan.Rebuilt.Add(target);
                     else if (what.StartsWith("CREATE TABLE")) plan.Created.Add(target);
                     else if (what.StartsWith("DELETE") || what.StartsWith("TRUNCATE")) plan.Emptied.Add(target);
@@ -628,52 +677,67 @@ namespace CoAInstaller
             FilePlan plan;
             try { plan = Scan(file); } catch (Exception ex) { Ui.Error(this, "The file could not be read:\n\n" + ex.Message); return; }
 
+            // In one sentence, and the tables by name below it for those who want to know.
+            var parts = new List<string>();
+            if (plan.Rebuilt.Count > 0) parts.Add("replaces " + plan.Rebuilt.Count + " table(s) completely");
+            if (plan.Created.Count > 0) parts.Add("creates " + plan.Created.Count + " new table(s)");
+            if (plan.Altered.Count > 0) parts.Add("changes the structure of " + plan.Altered.Count + " table(s)");
+            if (plan.Emptied.Count > 0) parts.Add("deletes rows from " + plan.Emptied.Count + " table(s)");
+            int writes = plan.Written.Count(t => !plan.Rebuilt.Contains(t) && !plan.Created.Contains(t));
+            if (writes > 0) parts.Add("writes rows into " + writes + " table(s)");
+            if (plan.Other) parts.Add("creates or deletes whole databases");
+            string summary = parts.Count == 0 ? "No changes to tables were recognised in this file; it may still do other things."
+                : "This file " + (parts.Count == 1 ? parts[0] : string.Join(", ", parts.Take(parts.Count - 1)) + " and " + parts[parts.Count - 1]) + "." + (plan.Partial ? " (It is large; only its beginning was looked at.)" : "");
             var text = new StringBuilder();
-            Action<string, ICollection<string>> say = (title, names) => { if (names.Count > 0) text.AppendLine(title + " (" + names.Count + "): " + Names(names)).AppendLine(); };
-            say("DELETES these tables and builds them anew from the file", plan.Rebuilt);
-            say("Deletes rows from", plan.Emptied);
-            say("Changes the structure of", plan.Altered);
-            say("Creates the tables", plan.Created);
-            say("Writes rows into", plan.Written);
-            if (plan.Other) text.AppendLine("Creates or deletes whole databases: " + Names(plan.Databases)).AppendLine();
-            if (text.Length == 0) text.AppendLine("No statements were recognised that change tables. The file may still do other things.").AppendLine();
-            if (plan.Partial) text.AppendLine("The file is large; only its beginning was looked at.").AppendLine();
-            if (plan.Databases.Count > 0) text.AppendLine("The file names databases itself (" + Names(plan.Databases) + "): for those statements the choice above does not count.");
+            Action<string, ICollection<string>> say = (title, names) => { if (names.Count > 0) text.AppendLine(title + ": " + Names(names)); };
+            say("Replaced completely", plan.Rebuilt);
+            say("Created", plan.Created);
+            say("Structure changed", plan.Altered);
+            say("Rows deleted from", plan.Emptied);
+            say("Rows written into", plan.Written.Where(t => !plan.Rebuilt.Contains(t) && !plan.Created.Contains(t)).ToList());
 
+            // A file that says where it belongs (every export from here does) needs no choice.
+            var named = plan.Databases.Where(tablesOf.ContainsKey).ToList();
+            bool choose = plan.Loose || named.Count == 0;
             string target;
             using (var f = new Form { Text = Product.Name + " – Import", Font = Ui.Base, BackColor = Color.White, ShowIcon = false, FormBorderStyle = FormBorderStyle.FixedDialog,
-                MaximizeBox = false, MinimizeBox = false, StartPosition = FormStartPosition.CenterParent, ClientSize = new Size(640, 470), Padding = new Padding(16) })
+                MaximizeBox = false, MinimizeBox = false, StartPosition = FormStartPosition.CenterParent, ClientSize = new Size(560, 380), Padding = new Padding(16) })
             {
-                var pick = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 260, Font = Ui.Base };
-                foreach (var name in tablesOf.Keys) pick.Items.Add(name);
-                string guess = plan.Named != null && tablesOf.ContainsKey(plan.Named) ? plan.Named : CurrentDb;
-                pick.SelectedItem = guess; if (pick.SelectedIndex < 0 && pick.Items.Count > 0) pick.SelectedIndex = 0;
+                var pick = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 400, Font = Ui.Base, Margin = new Padding(0, 4, 0, 0) };
+                var order = DatabasesInOrder().ToList();
+                foreach (var name in order) pick.Items.Add(Friendly(name));
+                string guess = plan.Named != null && tablesOf.ContainsKey(plan.Named) ? plan.Named : named.Count > 0 ? named[0] : CurrentDb;
+                pick.SelectedIndex = Math.Max(0, order.IndexOf(guess));
                 var head = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, FlowDirection = FlowDirection.TopDown, WrapContents = false };
-                head.Controls.Add(new Label { Text = Path.GetFileName(file) + "  (" + Size(new FileInfo(file).Length) + ")", AutoSize = true, Font = Ui.Bold });
-                var into = Ui.Row(); into.Margin = new Padding(0, 8, 0, 0);
-                into.Controls.Add(new Label { Text = "Import into the database", AutoSize = true, Margin = new Padding(0, 6, 8, 0) }); into.Controls.Add(pick);
-                head.Controls.Add(into);
-                head.Controls.Add(new Label { Text = plan.Named != null && guess == plan.Named ? "The file says it comes from " + plan.Named + "." : "A module's README usually says which database a file is for (world, characters or auth).",
-                    AutoSize = true, Font = Ui.Small, ForeColor = Ui.Muted, Margin = new Padding(0, 2, 0, 8) });
-                head.Controls.Add(new Label { Text = "What the file does:", AutoSize = true });
-                var box = new TextBox { Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Vertical, Dock = DockStyle.Fill, Font = Ui.Small, BackColor = Ui.Panel, BorderStyle = BorderStyle.FixedSingle, Text = text.ToString().TrimEnd(), TabStop = false };
+                head.Controls.Add(new Label { Text = "Import " + Path.GetFileName(file) + "  (" + Size(new FileInfo(file).Length) + ")", AutoSize = true, Font = Ui.Bold });
+                if (choose)
+                {
+                    head.Controls.Add(new Label { Text = "Which database is this file for?", AutoSize = true, Margin = new Padding(0, 10, 0, 0) });
+                    head.Controls.Add(pick);
+                    head.Controls.Add(new Label { Text = "The file does not say. The place you got it from usually does (world, characters or auth); most module files are for the world.",
+                        AutoSize = true, MaximumSize = new Size(520, 0), Font = Ui.Small, ForeColor = Ui.Muted, Margin = new Padding(0, 2, 0, 0) });
+                }
+                else head.Controls.Add(new Label { Text = "Goes into: " + string.Join(", ", named), AutoSize = true, Margin = new Padding(0, 10, 0, 0) });
+                head.Controls.Add(new Label { Text = summary, AutoSize = true, MaximumSize = new Size(520, 0), Margin = new Padding(0, 10, 0, 6) });
+                var box = new TextBox { Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Vertical, Dock = DockStyle.Fill, Font = Ui.Small, BackColor = Ui.Panel, BorderStyle = BorderStyle.FixedSingle, Text = text.ToString().TrimEnd(), TabStop = false, Visible = text.Length > 0 };
                 var foot = new FlowLayoutPanel { Dock = DockStyle.Bottom, AutoSize = true, FlowDirection = FlowDirection.TopDown, WrapContents = false };
-                foot.Controls.Add(new Label { AutoSize = true, MaximumSize = new Size(600, 0), Font = Ui.Small, ForeColor = Ui.Warn, Margin = new Padding(0, 8, 0, 0),
-                    Text = "Only import files from a source you trust: an SQL file can change or delete anything, and there is no undo. If you have no backup from before, cancel and make one first." });
+                foot.Controls.Add(new Label { AutoSize = true, MaximumSize = new Size(520, 0), Font = Ui.Small, ForeColor = Ui.Warn, Margin = new Padding(0, 8, 0, 0),
+                    Text = "The whole file is carried out and cannot be undone. Only import files from a source you trust, and make a backup first if you have none." });
                 var ok = Ui.Primary("Import"); var cancel = Ui.Secondary("Cancel"); ok.DialogResult = DialogResult.OK; cancel.DialogResult = DialogResult.Cancel;
                 var row = Ui.Row(); row.Margin = new Padding(0, 10, 0, 0); row.Controls.Add(ok); row.Controls.Add(cancel); foot.Controls.Add(row);
                 f.Controls.Add(box); f.Controls.Add(foot); f.Controls.Add(head); f.CancelButton = cancel;
                 f.Shown += (s, e) => { box.SelectionLength = 0; cancel.Focus(); };
-                if (f.ShowDialog(this) != DialogResult.OK || pick.SelectedItem == null) return;
-                target = (string)pick.SelectedItem;
+                if (f.ShowDialog(this) != DialogResult.OK) return;
+                target = choose ? order[pick.SelectedIndex] : named[0];
             }
+            string where_ = choose ? target : string.Join(", ", named);
 
             Label hint = tableTabShown() ? tableHint : sqlHint;
-            hint.Text = "Importing " + Path.GetFileName(file) + " into " + target + " …";
+            hint.Text = "Importing " + Path.GetFileName(file) + " into " + where_ + " …";
             Background(() => MySql.RunFile(inst, Login, target, file), () =>
             {
-                MessageBox.Show(this, Path.GetFileName(file) + " was imported into " + target + ".\n\nThe worldserver reads most world tables only when it starts: stop and start the server for the change to show in the game.", Product.Name, MessageBoxButtons.OK, MessageBoxIcon.Information);
-                Refill("Imported " + Path.GetFileName(file) + " into " + target + ".");
+                MessageBox.Show(this, Path.GetFileName(file) + " was imported into " + where_ + ".\n\nThe worldserver reads most world tables only when it starts: stop and start the server for the change to show in the game.", Product.Name, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                Refill("Imported " + Path.GetFileName(file) + " into " + where_ + ".");
             }, error =>
             {
                 Ui.Error(this, "The import stopped with an error. Statements before it were carried out, so the database may hold only a part of the file:\n\n" + error);

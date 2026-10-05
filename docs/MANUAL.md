@@ -236,18 +236,19 @@ Type any SQL and press **Run (F5)** (or Ctrl+Enter). Several statements are sepa
 
 **Export and import**
 
-![Export](screenshots/23-database-export.png)
+**Import SQL file …** (bottom left) runs an SQL file completely – for example one a module's README tells you to import by hand, or a file someone exported for you. It needs *Allow changes*.
 
-**Export …** (bottom left) writes to an SQL file – to hand a table to someone else, to keep a copy before you change it, or to carry your settings to another server:
+![Import](screenshots/24-database-import.png)
 
-- **The rows of a table**: the file holds only the rows. Importing it adds them to the table that is there; rows with the same key are replaced, all others stay. This is the one for sharing ("here are my vendor prices").
-- **Only the rows that match**: the same, limited to what the WHERE condition of the Table tab finds, for example one creature or one quest.
-- **The whole table** (structure and rows): importing it deletes the table on the other side and builds it anew, exactly as it is here.
-- **The whole database**: every table. Large and slow for `acore_world`; for a safety copy of the whole server use [Backups](#11-updates-backups-and-repair) instead.
-
-**Import SQL file …** runs an SQL file, for example one a module's README tells you to import by hand, or a file someone exported for you. It needs *Allow changes*. Choose the file and the database it is for; before anything happens AFK Realm reads the file and lists what it will do – which tables it deletes and rebuilds, where it deletes rows, where it writes rows. Read that list. If the import stops with an error, the statements before the error were already carried out.
+Choose the file. AFK Realm reads it first and tells you in one sentence what it does, with the tables by name below. A file exported with AFK Realm knows which database it belongs to; for any other file you choose the database (the place you got the file from usually says: world, characters or auth – most module files are for the world). Then press **Import**. If the import stops with an error, the statements before the error were already carried out.
 
 Only import files from a source you trust: an SQL file can change or delete anything. Files imported this way are not recorded like the database changes of modules installed through *Manage modules*, so removing a module later does not take them back – a backup from before does.
+
+**Export …** writes whole tables to one SQL file – to keep a copy of a table before you change it, to hand your version of a table to someone else, or to carry data to another server.
+
+![Export](screenshots/23-database-export.png)
+
+Tick what you want: a whole database, or open a database and tick single tables. The table you have open is ticked already. Importing the file later replaces exactly these tables with the state they had at the export; all other tables stay as they are. Mind what you give away: `acore_auth` holds your players' accounts.
 
 **When does a change show in the game?**
 
