@@ -241,7 +241,7 @@ Type any SQL and press **Run (F5)** (or Ctrl+Enter). Several statements are sepa
 
 ![Import](screenshots/24-database-import.png)
 
-Choose the file. AFK Realm reads it first and tells you in one sentence what it does, with the tables by name below. A file exported with AFK Realm knows which database it belongs to; for any other file you choose the database (the place you got the file from usually says: world, characters or auth – most module files are for the world). Then press **Import**.
+Choose the file. AFK Realm reads it first and tells you in one sentence what it does, with the tables by name below. A file exported with AFK Realm knows which database it belongs to; for any other file AFK Realm suggests the database in which the file's tables are found, and you can change it (the place you got the file from usually says: world, characters or auth). Then press **Import**.
 
 An import can be taken back with **Undo last change …** (see below). If an import stops with an error, the statements before the error were already carried out; the undo takes those back too.
 
@@ -266,7 +266,7 @@ You changed something, restarted the server and it does not work? **Undo last ch
 
 - The worldserver reads most tables of `acore_world` only when it starts. After changing them, **stop and start the server** – or reload the one table with a GM command in the [game master tools](#6-game-master-tools), for example `reload creature_template 1234`, `reload item_loot_template` or `reload all quest`. Not every table can be reloaded; a restart always works. If your changes "do nothing", this is almost always the reason.
 - Items are also remembered by the game client. After changing an item, delete the `Cache` folder of the game client, otherwise it keeps showing the old values.
-- Characters that are online are written back by the server and overwrite what you typed. Change character data while the character is logged out, or while the server's world is stopped.
+- Characters that are online are written back by the server and overwrite what you typed. Change character data while the character is logged out, or while the server's world is stopped. AFK Realm asks before it writes to `acore_characters` or `acore_auth` while the worldserver is running – also for an import and for an undo.
 
 ## 8. Modules
 

@@ -433,6 +433,7 @@ namespace CoAInstaller
             }
             if (statements.Count == 0) return;
             string summary = string.Join(", ", new[] { updates > 0 ? updates + " row(s) changed" : null, inserts > 0 ? inserts + " added" : null, deleted.Count > 0 ? deleted.Count + " deleted" : null }.Where(x => x != null));
+            if (!LiveOk(new[] { db })) return;
             if (!Ui.Confirm(this, "Write to " + db + "." + table + ": " + summary + "?")) return;
             // All or nothing where the table allows it (InnoDB); the client stops at the first error.
             string script = "START TRANSACTION;\n" + string.Join("\n", statements) + "\nCOMMIT;\n";
@@ -444,7 +445,7 @@ namespace CoAInstaller
                 if (wholeTable) WriteCopies(undoFile, new Dictionary<string, SortedSet<string>> { { database, new SortedSet<string> { name } } }, known);
                 else
                 {
-                    File.WriteAllText(undoFile, "-- " + Product.Name + " " + RowsMark + ", " + DateTime.Now.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture) +
+                    File.WriteAllText(undoFile, "-- " + Product.Name + " " + RowsMark + ", " + DateTime.Now.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture) + ", databases: " + database +
                         "\nSTART TRANSACTION;\n" + string.Join("\n", back) + "\nCOMMIT;\n", new UTF8Encoding(false));
                     PruneUndo();
                 }
@@ -486,6 +487,7 @@ namespace CoAInstaller
                         ", so \"Undo last change\" will not be able to take it back.\n\nRun it anyway?")) return;
                     touched = null;
                 }
+                else if (!LiveOk(touched.Keys)) return;
                 else undoFile = NewUndoFile("SQL on " + string.Join(", ", touched.SelectMany(d => d.Value.Select(t => d.Key + "." + t)).Take(3)) + (touched.Sum(d => d.Value.Count) > 3 ? " and more" : ""));
             }
             sqlHint.Text = undoFile != null ? "Keeping a copy of " + touched.Sum(d => d.Value.Count) + " table(s) for the undo, then running … (large tables take a moment)" : "Running …";
@@ -753,14 +755,18 @@ namespace CoAInstaller
             // A file that says where it belongs (every export from here does) needs no choice.
             var named = plan.Databases.Where(tablesOf.ContainsKey).ToList();
             bool choose = plan.Loose || named.Count == 0;
-            string target;
+            string target, fits = null;
             using (var f = new Form { Text = Product.Name + " – Import", Font = Ui.Base, BackColor = Color.White, ShowIcon = false, FormBorderStyle = FormBorderStyle.FixedDialog,
                 MaximizeBox = false, MinimizeBox = false, StartPosition = FormStartPosition.CenterParent, ClientSize = new Size(560, 380), Padding = new Padding(16) })
             {
                 var pick = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 400, Font = Ui.Base, Margin = new Padding(0, 4, 0, 0) };
                 var order = DatabasesInOrder().ToList();
                 foreach (var name in order) pick.Items.Add(Friendly(name));
-                string guess = plan.Named != null && tablesOf.ContainsKey(plan.Named) ? plan.Named : named.Count > 0 ? named[0] : CurrentDb;
+                // The database most of the file's tables are found in is the likeliest one.
+                var loose = plan.Rebuilt.Concat(plan.Created).Concat(plan.Altered).Concat(plan.Emptied).Concat(plan.Written).Where(t => !t.Contains(".")).Distinct().ToList();
+                string home = order.Select(d => new { d, hits = loose.Count(t => tablesOf[d].Contains(t)) }).Where(x => x.hits > 0).OrderByDescending(x => x.hits).Select(x => x.d).FirstOrDefault();
+                string guess = plan.Named != null && tablesOf.ContainsKey(plan.Named) ? plan.Named : home ?? (named.Count > 0 ? named[0] : tablesOf.ContainsKey("acore_world") ? "acore_world" : CurrentDb);
+                if (home != null) fits = "Its tables are found in " + home + ".";
                 pick.SelectedIndex = Math.Max(0, order.IndexOf(guess));
                 var head = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, FlowDirection = FlowDirection.TopDown, WrapContents = false };
                 head.Controls.Add(new Label { Text = "Import " + Path.GetFileName(file) + "  (" + Size(new FileInfo(file).Length) + ")", AutoSize = true, Font = Ui.Bold });
@@ -768,7 +774,7 @@ namespace CoAInstaller
                 {
                     head.Controls.Add(new Label { Text = "Which database is this file for?", AutoSize = true, Margin = new Padding(0, 10, 0, 0) });
                     head.Controls.Add(pick);
-                    head.Controls.Add(new Label { Text = "The file does not say. The place you got it from usually does (world, characters or auth); most module files are for the world.",
+                    head.Controls.Add(new Label { Text = fits ?? "The file does not say. The place you got it from usually does (world, characters or auth); most module files are for the world.",
                         AutoSize = true, MaximumSize = new Size(520, 0), Font = Ui.Small, ForeColor = Ui.Muted, Margin = new Padding(0, 2, 0, 0) });
                 }
                 else head.Controls.Add(new Label { Text = "Goes into: " + string.Join(", ", named), AutoSize = true, Margin = new Padding(0, 10, 0, 0) });
@@ -791,6 +797,7 @@ namespace CoAInstaller
             var touched = Touched(plan, target);
             if (plan.Partial || plan.Other || touched.Count == 0) { touched.Clear(); foreach (var d in named.Concat(choose ? new[] { target } : new string[0]).Distinct()) touched[d] = null; }
             var known = tablesOf;
+            if (!LiveOk(touched.Keys)) return;
             string undoFile = NewUndoFile("import of " + Path.GetFileName(file));
 
             Label hint = tableTabShown() ? tableHint : sqlHint;
@@ -873,7 +880,7 @@ namespace CoAInstaller
                 {
                     var enc = new UTF8Encoding(false);
                     Action<string> write = line => { var b = enc.GetBytes(line + "\n"); dst.Write(b, 0, b.Length); };
-                    write("-- " + Product.Name + " " + TablesMark + ", " + DateTime.Now.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture));
+                    write("-- " + Product.Name + " " + TablesMark + ", " + DateTime.Now.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture) + ", databases: " + string.Join(" ", touched.Keys));
                     foreach (var d in touched.Keys)
                     {
                         if (!known.ContainsKey(d)) continue;                    // a database that does not exist yet
@@ -889,6 +896,21 @@ namespace CoAInstaller
             PruneUndo();
         }
 
+        /// <summary>
+        /// The worldserver keeps characters that are online in its memory and writes them back, and it reads accounts
+        /// while it runs: a change to those databases under a running server can be overwritten or leave things half done.
+        /// </summary>
+        bool LiveOk(IEnumerable<string> databases)
+        {
+            if (ctl.World == null) return true;
+            var live = databases.Where(d => d == "acore_characters" || d == "acore_auth").Distinct().ToList();
+            if (live.Count == 0) return true;
+            return MessageBox.Show(this, "The server is running, and this changes " + string.Join(" and ", live) + ".\n\n" +
+                "The worldserver keeps the characters that are online in its memory and writes them back: what you change here can be overwritten a moment later, " +
+                "or a character can end up half changed. It is safer to stop the server first (or at least to make sure the players concerned are logged out).\n\n" +
+                "Go on while the server is running?", Product.Name, MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) == DialogResult.Yes;
+        }
+
         void UndoLast()
         {
             if (busy) return;
@@ -898,7 +920,11 @@ namespace CoAInstaller
             string file = files[0], name = Path.GetFileNameWithoutExtension(file), what = name.Length > 16 ? name.Substring(16) : name; DateTime when;
             string at = DateTime.TryParseExact(name.Length >= 15 ? name.Substring(0, 15) : "", "yyyyMMdd-HHmmss", CultureInfo.InvariantCulture, DateTimeStyles.None, out when) ? when.ToString("g") : "";
             bool rows = false;
-            try { using (var r = new StreamReader(file)) rows = (r.ReadLine() ?? "").Contains(RowsMark); } catch { }
+            string head = "";
+            try { using (var r = new StreamReader(file)) head = r.ReadLine() ?? ""; } catch { }
+            rows = head.Contains(RowsMark);
+            int mark = head.IndexOf("databases: ", StringComparison.Ordinal);
+            if (!LiveOk(mark < 0 ? new string[0] : head.Substring(mark + 11).Split(' '))) return;
             if (!Ui.Confirm(this, "Undo the last change: " + what + (at.Length > 0 ? ", " + at : "") + "?\n\n" +
                 (rows ? "The rows you changed, added or deleted are put back as they were before."
                       : "The tables it touched are put back exactly as they were before. Whatever else changed in these tables since then is lost as well.") +
