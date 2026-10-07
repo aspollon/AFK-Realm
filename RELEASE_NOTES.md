@@ -1,6 +1,14 @@
-# AFK Realm 0.6.5 – preview
+# AFK Realm 0.6.6 – preview
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11.
+
+## New in 0.6.6
+
+- **Scheduled restart** (*Server management → Scheduled restart*): a world that has run for many hours can grow slow and use more and more memory, and a restart gives it back. AFK Realm can now do that on its own. Choose one of three rules: after the server has run for a number of hours, every day at a set time, or when the worldserver uses more than a set amount of memory.
+- **Players are told first.** A few minutes before (you choose how many), then at five and at one minute, everybody in the game reads that the server is about to restart. Then it is stopped cleanly – all characters are saved – and started again.
+- **You see what is going on.** The management page shows how long the worldserver has been running, how much memory it uses and when the next restart is due. A restart that has been announced can be postponed by an hour with one click, and every restart is noted in `logs\scheduled-restart.log`.
+- **Good to know:** AFK Realm does the restart itself, so it only happens while AFK Realm is open. Close AFK Realm and the server simply keeps running.
+- The memory rule could not be tried on a real server yet. If the status line shows no memory figure on your PC, use one of the other two rules and tell me.
 
 ## New in 0.6.5
 

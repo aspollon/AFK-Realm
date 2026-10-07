@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
@@ -39,6 +40,23 @@ namespace CoAInstaller
             return p;
         }
         readonly System.Windows.Forms.Timer poll = new System.Windows.Forms.Timer { Interval = 2000 };
+
+        // ---- scheduled restart (see RestartPlan)
+        RestartPlan plan;
+        readonly ComboBox planMode = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 290, Font = Ui.Base, Margin = new Padding(0, 2, 8, 2) };
+        readonly TextBox planValue = Ui.Input(70), planWarn = Ui.Input(44);
+        readonly Label planUnit = new Label { AutoSize = true, Font = Ui.Base, ForeColor = Ui.Text, Margin = new Padding(0, 6, 14, 0) };
+        readonly Label planWarnLead = new Label { Text = "Tell players", AutoSize = true, Font = Ui.Base, ForeColor = Ui.Text, Margin = new Padding(0, 6, 6, 0) };
+        readonly Label planWarnTail = new Label { Text = "minutes before", AutoSize = true, Font = Ui.Base, ForeColor = Ui.Text, Margin = new Padding(0, 6, 14, 0) };
+        readonly Button planApply = Ui.Secondary("Apply");
+        readonly Button planPostpone = Ui.Secondary("Postpone by an hour");
+        readonly Label planState = Ui.Hint("");
+        DateTime? restartAt;                    // the announced restart, once players have to be told
+        readonly HashSet<int> restartTold = new HashSet<int>();
+        DateTime restartSnooze = DateTime.MinValue;
+        int memoryOver;                         // status checks in a row with the worldserver over its limit
+        bool autoRestarting;
+        string lastAutoRestart = "";
         readonly Button consoles = Ui.Secondary("Open server consoles …");
         ConsolesDialog consolesWindow;
 
@@ -100,6 +118,29 @@ namespace CoAInstaller
             start.Click += (s, e) => StartServer();
             stop.Click += (s, e) => StopServer();
             restart.Click += (s, e) => RestartServer();
+
+            // --- scheduled restart
+            Body.Controls.Add(Ui.Heading("Scheduled restart"));
+            Body.Controls.Add(Ui.Hint("A world that has run for many hours can grow slow and use more and more memory; a restart gives it back. " + Product.Name +
+                " can do that on its own: players are told in the game beforehand, then the server is stopped cleanly and started again. " +
+                "This works while the server runs and " + Product.Name + " stays open."));
+            planMode.Items.AddRange(new object[] { "Off", "After the server has run for", "Every day at", "When the worldserver uses more than" });
+            var planRow = Ui.Row();
+            planRow.Controls.Add(planMode); planRow.Controls.Add(planValue); planRow.Controls.Add(planUnit);
+            Body.Controls.Add(planRow);
+            var warnRow = Ui.Row();
+            warnRow.Controls.Add(planWarnLead); warnRow.Controls.Add(planWarn); warnRow.Controls.Add(planWarnTail); warnRow.Controls.Add(planApply);
+            Body.Controls.Add(warnRow);
+            Body.Controls.Add(planState);
+            planPostpone.Visible = false; planPostpone.Margin = new Padding(0, 0, 0, 6);
+            Body.Controls.Add(planPostpone);
+            plan = RestartPlan.Load(inst);
+            planMode.SelectedIndex = plan.Mode;
+            ShowPlanFields();
+            planMode.SelectedIndexChanged += (s, e) => ShowPlanFields();
+            planMode.DropDownClosed += (s, e) => ShowPlanFields();
+            planApply.Click += (s, e) => ApplyPlan();
+            planPostpone.Click += (s, e) => PostponeRestart();
 
             // --- map data
             Body.Controls.Add(Ui.Heading("Map data"));
@@ -300,9 +341,13 @@ namespace CoAInstaller
             System.Threading.ThreadPool.QueueUserWorkItem(_ =>
             {
                 bool db = false, auth = false, world = false, worldReady = false, maps = false, dbc = false;
+                DateTime worldStart = DateTime.MinValue; long worldMemory = 0;
                 try
                 {
-                    db = ctl.Db != null; auth = ctl.Auth != null; world = ctl.World != null;
+                    db = ctl.Db != null; auth = ctl.Auth != null;
+                    var worldProcess = ctl.World;
+                    world = worldProcess != null;
+                    if (world) { try { worldStart = worldProcess.StartTime; worldMemory = Math.Max(worldProcess.PrivateMemorySize64, worldProcess.WorkingSet64); } catch { } }
                     worldReady = world && Net.PortOpen(ctl.WorldPort);
                     maps = inst.HasMapData; dbc = inst.HasClientDbc;
                 }
@@ -316,6 +361,7 @@ namespace CoAInstaller
                         start.Enabled = !(auth && world);
                         stop.Enabled = db || auth || world;
                         restart.Enabled = auth || world;
+                        Schedule(worldReady, worldStart, worldMemory);
                         mapState.ForeColor = maps && dbc ? Ui.Ok : Ui.Warn;
                         mapState.Text = !maps ? "Map data is still missing. The worldserver cannot run without it."
                             : !dbc ? "The CoA DBC tables are missing. Use \"Create map data\" and tick \"Only refresh the CoA DBC tables\"."
@@ -333,6 +379,7 @@ namespace CoAInstaller
 
         void StartServer()
         {
+            if (RestartInProgress()) return;
             if (!inst.HasMapData && !Ui.Confirm(this, "Map data is missing. The worldserver will not run properly without it.\n\nStart anyway?")) return;
             if (inst.HasMapData && !inst.HasClientDbc)
             { Ui.Error(this, "The CoA DBC tables are missing, so the worldserver would stop right away.\n\nOpen \"Create map data\", choose your CoA game folder and tick \"Only refresh the CoA DBC tables\"."); return; }
@@ -394,6 +441,7 @@ namespace CoAInstaller
 
         void StopServer()
         {
+            if (RestartInProgress()) return;
             if (!Ui.Confirm(this, "Stop the server now? All players are saved and logged out.")) return;
             Main.RunBusy(busy, st => { ctl.StopAll(st, true); st("Server is stopped."); },
                 err => { if (err != null) { busy.Text = ""; Ui.Error(this, err.Message); } RefreshStatus(); });
@@ -402,6 +450,7 @@ namespace CoAInstaller
         /// <summary>Stops auth- and worldserver cleanly and starts them again; the database keeps running.</summary>
         void RestartServer()
         {
+            if (RestartInProgress()) return;
             if (!Ui.Confirm(this, "Restart the server now? All players are saved and logged out; they can log in again once the world has loaded.")) return;
             Main.RunBusy(busy, st => { ctl.StopAll(st, false); st("Server is stopped. Starting it again ..."); },
                 err =>
@@ -410,6 +459,213 @@ namespace CoAInstaller
                     if (err != null) { busy.Text = ""; Ui.Error(this, err.Message); return; }
                     StartServer();
                 });
+        }
+
+        // ---- scheduled restart -----------------------------------------------------------------
+
+        void ShowPlanFields()
+        {
+            int mode = planMode.SelectedIndex;
+            bool on = mode != RestartPlan.Off;
+            // Greyed out rather than hidden: the row keeps its shape.
+            planValue.Enabled = planWarn.Enabled = on;
+            planUnit.ForeColor = planWarnLead.ForeColor = planWarnTail.ForeColor = on ? Ui.Text : Ui.Muted;
+            planValue.Text = mode == RestartPlan.AfterUptime ? plan.Hours.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)
+                : mode == RestartPlan.Daily ? plan.DailyText
+                : mode == RestartPlan.Memory ? plan.MemoryGb.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) : "";
+            planUnit.Text = mode == RestartPlan.AfterUptime ? "hours" : mode == RestartPlan.Daily ? "(24-hour clock)" : mode == RestartPlan.Memory ? "GB of memory" : "";
+            planWarn.Text = plan.WarnMinutes.ToString();
+            planApply.Margin = new Padding(8, 0, 0, 0);
+        }
+
+        void ApplyPlan()
+        {
+            int mode = planMode.SelectedIndex;
+            double hours = plan.Hours, gb = plan.MemoryGb; int daily = plan.DailyMinutes, warn = plan.WarnMinutes;
+            if (mode == RestartPlan.AfterUptime && !RestartPlan.ParseHours(planValue.Text, out hours))
+            { Ui.Error(this, "Enter after how many hours the server is restarted, for example 6 or 5.5 (at least half an hour)."); return; }
+            if (mode == RestartPlan.Daily && !RestartPlan.ParseTime(planValue.Text, out daily))
+            { Ui.Error(this, "Enter the time of day on the 24-hour clock, for example 05:00 or 17:30."); return; }
+            if (mode == RestartPlan.Memory && !RestartPlan.ParseGb(planValue.Text, out gb))
+            { Ui.Error(this, "Enter the memory limit in GB, for example 8 (at least 1)."); return; }
+            if (mode != RestartPlan.Off && (!int.TryParse(planWarn.Text.Trim(), out warn) || warn < 0 || warn > 60))
+            { Ui.Error(this, "Enter how many minutes before the restart players are told: 0 to 60."); return; }
+            bool announced = restartAt != null && restartTold.Count > 0;
+            plan.Mode = mode; plan.Hours = hours; plan.DailyMinutes = daily; plan.MemoryGb = gb; plan.WarnMinutes = warn;
+            try { plan.Save(inst); } catch (Exception ex) { Ui.Error(this, "The setting could not be saved:\n" + ex.Message); return; }
+            restartAt = null; restartTold.Clear(); restartSnooze = DateTime.MinValue; memoryOver = 0;
+            if (announced) Announce("The announced restart is off.", false);
+            ShowPlanFields();
+            RefreshStatus();
+        }
+
+        void PostponeRestart()
+        {
+            bool announced = restartTold.Count > 0;
+            restartAt = null; restartTold.Clear(); memoryOver = 0;
+            restartSnooze = DateTime.Now.AddHours(1);
+            if (announced) Announce("The restart has been postponed.", false);
+            RefreshStatus();
+        }
+
+        bool RestartInProgress()
+        {
+            if (!autoRestarting) return false;
+            Ui.Error(this, "The scheduled restart is running right now. Wait until the server is up again.");
+            return true;
+        }
+
+        /// <summary>Says something to everybody in the game; a server that does not answer is no reason to stop.</summary>
+        void Announce(string text, bool alsoOnScreen)
+        {
+            System.Threading.ThreadPool.QueueUserWorkItem(_ =>
+            {
+                try { AdminLink.Run(inst, "announce " + text); } catch { }
+                if (alsoOnScreen) { try { AdminLink.Run(inst, "notify " + text); } catch { } }
+            });
+        }
+
+        void RestartLog(string text)
+        {
+            try
+            {
+                Directory.CreateDirectory(inst.LogDir);
+                File.AppendAllText(Path.Combine(inst.LogDir, "scheduled-restart.log"), DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + "  " + text + "\r\n");
+            }
+            catch { }
+        }
+
+        /// <summary>Called with every status check: announces a restart that is due, and does it when its time has come.</summary>
+        void Schedule(bool worldReady, DateTime worldStart, long worldMemory)
+        {
+            if (autoRestarting) return;
+            var now = DateTime.Now;
+            if (!worldReady || worldStart == DateTime.MinValue)
+            {
+                restartAt = null; restartTold.Clear(); memoryOver = 0;
+                planPostpone.Visible = false;
+                planState.ForeColor = Ui.Muted;
+                planState.Text = lastAutoRestart;
+                return;
+            }
+
+            double gb = worldMemory / 1073741824.0;
+            bool over = plan.Mode == RestartPlan.Memory && gb > plan.MemoryGb;
+            memoryOver = over ? memoryOver + 1 : 0;
+            if (restartAt == null && plan.Mode != RestartPlan.Off && now >= restartSnooze)
+            {
+                // Over the limit for half a minute, not for one moment.
+                restartAt = plan.Due(now, worldStart, memoryOver >= 15);
+                if (restartAt != null)
+                {
+                    restartTold.Clear();
+                    RestartLog("Restart announced for " + restartAt.Value.ToString("HH:mm:ss") + " (" +
+                        (plan.Mode == RestartPlan.AfterUptime ? "the server has run for " + RestartPlan.Span(now - worldStart)
+                        : plan.Mode == RestartPlan.Daily ? "daily at " + plan.DailyText
+                        : "the worldserver uses " + gb.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " GB") + ").");
+                }
+            }
+
+            string running = "Worldserver: running for " + RestartPlan.Span(now - worldStart) +
+                (worldMemory > 0 ? ", " + gb.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " GB of memory. " : ". ");
+            if (restartAt != null)
+            {
+                var left = restartAt.Value - now;
+                if (left <= TimeSpan.Zero)
+                {
+                    // Not in the middle of something else the user started.
+                    if (Main.Enabled) DoScheduledRestart();
+                    return;
+                }
+                // The smallest step that has been reached speaks for the larger ones: one announcement at a time.
+                int reached = 0;
+                foreach (int step in plan.Steps())
+                    if (left.TotalSeconds <= step * 60 + 2) reached = step;
+                if (reached > 0 && !restartTold.Contains(reached))
+                {
+                    foreach (int step in plan.Steps()) if (step >= reached) restartTold.Add(step);
+                    int minutes = Math.Max(1, (int)Math.Round(left.TotalMinutes));
+                    Announce("The server restarts in " + minutes + (minutes == 1 ? " minute" : " minutes") + ". It is back a few minutes later.",
+                        reached <= 1 || reached == plan.WarnMinutes);
+                }
+                planPostpone.Visible = true;
+                planState.ForeColor = Ui.Warn;
+                planState.Text = running + "Restart in " + RestartPlan.Span(left) + (restartTold.Count > 0 ? " - players have been told." : ".");
+                return;
+            }
+
+            planPostpone.Visible = false;
+            planState.ForeColor = Ui.Muted;
+            string next = "";
+            if (now < restartSnooze) next = "The restart is postponed until " + restartSnooze.ToString("HH:mm") + ".";
+            else if (plan.Mode == RestartPlan.AfterUptime)
+                next = "Next restart at " + worldStart.AddHours(plan.Hours).ToString("HH:mm") + ", in " + RestartPlan.Span(worldStart.AddHours(plan.Hours) - now) + ".";
+            else if (plan.Mode == RestartPlan.Daily)
+            {
+                var due = now.Date.AddMinutes(plan.DailyMinutes);
+                if (now > due.AddHours(1) || worldStart > due.AddMinutes(-plan.WarnMinutes - 1)) due = due.AddDays(1);
+                next = "Next restart " + (due.Date == now.Date ? "today" : "tomorrow") + " at " + plan.DailyText + ".";
+            }
+            else if (plan.Mode == RestartPlan.Memory && worldMemory <= 0)
+            {
+                next = "Windows does not tell how much memory the worldserver uses, so this rule cannot work here. Choose one of the others.";
+                planState.ForeColor = Ui.Warn;
+            }
+            else if (plan.Mode == RestartPlan.Memory)
+            {
+                next = over && now - worldStart < TimeSpan.FromMinutes(20)
+                    ? "That is over the limit of " + plan.MemoryGb.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) + " GB already, shortly after the start: the limit is too low for this server and is not applied before the world has run for 20 minutes."
+                    : "Restart at " + plan.MemoryGb.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) + " GB.";
+                if (over && now - worldStart < TimeSpan.FromMinutes(20)) planState.ForeColor = Ui.Warn;
+            }
+            planState.Text = running + next;
+        }
+
+        /// <summary>
+        /// The restart itself: a clean stop of auth- and worldserver, then the same start as the button.
+        /// It runs beside the window instead of locking it, because another window (settings, the
+        /// database editor) may be open at that moment.
+        /// </summary>
+        void DoScheduledRestart()
+        {
+            autoRestarting = true;
+            restartAt = null; restartTold.Clear(); memoryOver = 0;
+            planPostpone.Visible = false;
+            planState.ForeColor = Ui.Warn;
+            planState.Text = "The scheduled restart is running ...";
+            Action<string> st = t => { try { BeginInvoke((Action)(() => busy.Text = "Scheduled restart: " + t)); } catch { } };
+            RestartLog("Restarting the server.");
+            var thread = new System.Threading.Thread(() =>
+            {
+                string problem = null;
+                try
+                {
+                    ctl.StopAll(st, false);
+                    ctl.StartDatabase(st); ctl.StartAuth(st);
+                    try { AdminLink.Prepare(inst); } catch { }
+                    Process world = ctl.StartWorld(st);
+                    st("the worldserver is loading.");
+                    var done = new System.Threading.ManualResetEvent(false);
+                    ctl.WatchWorld(world, (ready, why) => { if (!ready) problem = why; done.Set(); });
+                    done.WaitOne();
+                }
+                catch (Exception ex) { problem = ex.Message; }
+                RestartLog(problem == null ? "The server is running again." : "The restart failed: " + problem.Replace("\r", "").Replace("\n", " | "));
+                try
+                {
+                    BeginInvoke((Action)(() =>
+                    {
+                        autoRestarting = false;
+                        string when = DateTime.Now.ToString("HH:mm");
+                        lastAutoRestart = problem == null ? "" : "The scheduled restart at " + when + " failed. Details are in logs\\scheduled-restart.log.";
+                        busy.Text = problem == null ? "The server was restarted as scheduled at " + when + " and is running again."
+                            : "The scheduled restart at " + when + " failed: " + problem.Split('\n')[0];
+                        RefreshStatus();
+                    }));
+                }
+                catch { autoRestarting = false; }
+            }) { IsBackground = true, Name = "scheduled-restart" };
+            thread.Start();
         }
 
         void EnsureDatabase(Action<string> st) { if (ctl.Db == null) ctl.StartDatabase(st); }

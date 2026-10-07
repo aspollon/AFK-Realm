@@ -69,6 +69,35 @@ The top of the **Server management** shows the three parts of the server:
 - **Stop server** saves all characters and shuts everything down cleanly. Always stop the server this way.
 - **Restart server** does both in one go: it saves all characters, shuts the auth- and worldserver down cleanly and starts them again. Use it after changing settings or the database, which the worldserver only reads when it starts.
 
+### Scheduled restart
+
+A world that has run for many hours can grow slow and use more and more memory. Stopping and starting it gives the memory back. Under **Scheduled restart** AFK Realm does that on its own:
+
+![Server management with a scheduled restart](screenshots/8-server-management.png)
+
+Choose a rule, fill in its value and press **Apply**:
+
+| Rule | Value | When the server restarts |
+|---|---|---|
+| Off | – | never on its own |
+| After the server has run for | hours, for example `6` or `5.5` | that long after the worldserver was started – again and again |
+| Every day at | a time on the 24-hour clock, for example `05:00` | once a day at that time, best at an hour when nobody plays |
+| When the worldserver uses more than | GB of memory, for example `8` | when the worldserver has grown beyond that – only when it is needed |
+
+**Tell players … minutes before** is how long before the restart everybody in the game is told. They read it again at five minutes and at one minute, so they can finish what they are doing. With `0` the server restarts without a word.
+
+When the time has come, the server is stopped cleanly – all characters are saved – and started again, exactly as with **Restart server**. Players can log in again as soon as the world has loaded.
+
+The line below the fields shows how long the worldserver has been running, how much memory it uses and when the next restart is due. Once a restart has been announced, the line turns orange and **Postpone by an hour** appears: one click calls it off for an hour, and the players are told.
+
+Good to know:
+
+- AFK Realm does the restart itself. It only happens while AFK Realm is open and the server was started through it; if you close AFK Realm, the server simply keeps running.
+- A restart that falls into the time while you run an update, a backup or another task in AFK Realm waits until that is done.
+- *Every day at*: a server that was started shortly before that time is not restarted again a few minutes later, and if you open AFK Realm up to an hour late, the restart is made up for.
+- *When the worldserver uses more than*: right after its start the world is as small as it gets. A limit below that would restart the server forever, so the rule only applies once the world has run for 20 minutes, and the status line tells you if the limit is too low. To find a sensible limit, watch the memory figure for a day.
+- Every scheduled restart is noted in `logs\scheduled-restart.log`, with the reason and whether the server came back.
+
 The servers run in the background without windows of their own. **Open server consoles …** shows both in one window:
 
 ![Server consoles](screenshots/17-server-consoles.png)
