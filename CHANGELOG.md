@@ -8,6 +8,7 @@
 - "Export as ZIP …" packs the add-ons for other players, with a note on where to unpack them and which folder to delete
 - Nothing is copied while the game or its launcher runs from the chosen folder
 - The module check shows when a module brings a client add-on
+- Server settings: section titles keep "the" in lower case ("The Shape of the Journey")
 
 ## 0.6.6-preview
 

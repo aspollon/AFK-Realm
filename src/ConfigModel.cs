@@ -174,7 +174,7 @@ namespace CoAInstaller
         static string Title(string caps)
         {
             var t = CultureInfo.InvariantCulture.TextInfo.ToTitleCase(caps.ToLowerInvariant());
-            return t.Replace(" And ", " and ").Replace(" Of ", " of ").Replace(" Or ", " or ").Replace("Pvp", "PvP").Replace("Gm", "GM")
+            return t.Replace(" And ", " and ").Replace(" Of ", " of ").Replace(" The ", " the ").Replace(" Or ", " or ").Replace("Pvp", "PvP").Replace("Gm", "GM")
                     .Replace("Lfg", "LFG").Replace("Ffa", "FFA").Replace("Npc", "NPC").Replace("Ai ", "AI ");
         }
 
