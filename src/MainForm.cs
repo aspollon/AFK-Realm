@@ -18,6 +18,7 @@ namespace CoAInstaller
         readonly Button next = Ui.Primary("Next");
         readonly Button close = Ui.Secondary("Close");
         readonly List<Page> history = new List<Page>();
+        Panel footer;
 
         // Wizard state
         public Install Target;
@@ -31,8 +32,9 @@ namespace CoAInstaller
         {
             Text = Product.WindowTitle;
             Font = Ui.Base;
-            ClientSize = new Size(860, 620);
-            MinimumSize = new Size(760, 560);
+            var area = Screen.PrimaryScreen.WorkingArea;
+            ClientSize = new Size(Math.Min(1120, area.Width - 40), Math.Min(760, area.Height - 60));
+            MinimumSize = new Size(Math.Min(980, area.Width - 40), Math.Min(640, area.Height - 40));
             StartPosition = FormStartPosition.CenterScreen;
             BackColor = Color.White;
             try { Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch { }
@@ -58,10 +60,14 @@ namespace CoAInstaller
             headerTitle.SizeChanged += (s, e) => headerTagline.Left = headerTitle.Right + 10;
             headerTagline.Left = headerTitle.Right + 10;
 
-            var footer = new Panel { Dock = DockStyle.Bottom, Height = 58, BackColor = Ui.Panel };
+            footer = new Panel { Dock = DockStyle.Bottom, Height = 62, BackColor = Ui.Panel };
+
             var right = new FlowLayoutPanel { Dock = DockStyle.Right, FlowDirection = FlowDirection.RightToLeft, AutoSize = true, Padding = new Padding(0, 12, 20, 0), WrapContents = false };
             right.Controls.Add(close); right.Controls.Add(next); right.Controls.Add(back);
             footer.Controls.Add(right);
+            var line = new Panel { Dock = DockStyle.Top, Height = 1, BackColor = Ui.Line };
+            footer.Controls.Add(line);
+            footer.Controls.SetChildIndex(line, footer.Controls.Count - 1);
 
             Controls.Add(content); Controls.Add(footer); Controls.Add(header);
             back.Click += (s, e) => GoBack();
@@ -97,6 +103,7 @@ namespace CoAInstaller
             content.SuspendLayout();
             content.Controls.Clear();
             content.Controls.Add(page);
+            Restyle.Apply(page);
             content.ResumeLayout();
             RefreshButtons();
             page.OnShown();
@@ -105,6 +112,7 @@ namespace CoAInstaller
         {
             var p = Current;
             if (p == null) return;
+            footer.Visible = p.ShowsFooter;
             back.Visible = p.CanGoBack && history.Count > 1;
             next.Visible = p.NextText != null;
             if (p.NextText != null) next.Text = p.NextText;

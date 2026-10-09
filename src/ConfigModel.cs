@@ -78,6 +78,8 @@ namespace CoAInstaller
         public readonly Dictionary<string, ConfigOption> ByKey = new Dictionary<string, ConfigOption>(StringComparer.OrdinalIgnoreCase);
         public readonly Dictionary<string, string> Values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         public readonly Dictionary<string, string> Pending = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        /// <summary>Options to take out of the file on Save (options without a fixed name, such as a level set by hand for one zone).</summary>
+        public readonly HashSet<string> Removed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         // Written by AFK Realm itself; changing them by hand breaks the installation.
         static readonly Regex LockedKeys = new Regex(@"^(\w+DatabaseInfo|MySQLExecutable|DataDir|SourceDirectory|LogsDir|TempDir|BindIP|CoA\.AllowRemoteClients|Updates\.EnableDatabases)$", RegexOptions.IgnoreCase);
@@ -250,7 +252,7 @@ namespace CoAInstaller
         /// <summary>Writes all pending changes into the .conf file. A one-time backup is kept next to it.</summary>
         public void Save()
         {
-            if (Pending.Count == 0) return;
+            if (Pending.Count == 0 && Removed.Count == 0) return;
             string backup = Path + ".afk-backup";
             if (!System.IO.File.Exists(backup) && System.IO.File.Exists(Path)) System.IO.File.Copy(Path, backup);
             // A module whose .conf was never created starts from its complete template.
@@ -264,8 +266,14 @@ namespace CoAInstaller
                 else text = text.TrimEnd('\r', '\n') + "\r\n" + line + "\r\n";
                 Values[p.Key] = p.Value;
             }
+            foreach (var key in Removed)
+            {
+                if (Pending.ContainsKey(key)) continue;
+                text = new Regex(@"(?m)^[ \t]*" + Regex.Escape(key) + @"[ \t]*=[^\r\n]*(\r?\n)?").Replace(text, "");
+                Values.Remove(key);
+            }
             System.IO.File.WriteAllText(Path, text, new UTF8Encoding(false));
-            Pending.Clear();
+            Pending.Clear(); Removed.Clear();
         }
     }
 

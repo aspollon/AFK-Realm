@@ -16,6 +16,14 @@ namespace CoAInstaller
         public static readonly Color Warn = Color.FromArgb(196, 120, 20);
         public static readonly Color Bad = Color.FromArgb(200, 50, 50);
         public static readonly Color Panel = Color.FromArgb(246, 245, 250);
+        public static readonly Color Canvas = Color.FromArgb(246, 245, 250);      // behind cards
+        public static readonly Color Surface = Color.White;                         // cards, dialogs
+        public static readonly Color Line = Color.FromArgb(226, 223, 236);
+        public static readonly Color AccentSoft = Color.FromArgb(238, 233, 251);
+        public static readonly Color AccentBright = Color.FromArgb(160, 132, 240);
+        public static readonly Color Sidebar = Color.FromArgb(28, 24, 44);
+        public static readonly Color SidebarHover = Color.FromArgb(42, 36, 64);
+        public static readonly Color SidebarActive = Color.FromArgb(56, 46, 92);
 
         public static readonly Font Base = new Font("Segoe UI", 10f);
         public static readonly Font Small = new Font("Segoe UI", 9f);
@@ -40,19 +48,12 @@ namespace CoAInstaller
         {
             return new Label { Text = text, Font = Small, ForeColor = Muted, AutoSize = true, MaximumSize = new Size(width, 0), Margin = new Padding(0, 0, 0, 6) };
         }
-        public static Button Primary(string text)
-        {
-            var b = new Button { Text = text, Font = Bold, ForeColor = Color.White, BackColor = Accent, FlatStyle = FlatStyle.Flat, AutoSize = true, Padding = new Padding(14, 6, 14, 6), Cursor = Cursors.Hand };
-            b.FlatAppearance.BorderSize = 0;
-            b.FlatAppearance.MouseOverBackColor = AccentDark;
-            return b;
-        }
-        public static Button Secondary(string text)
-        {
-            var b = new Button { Text = text, Font = Base, ForeColor = Text, BackColor = Color.White, FlatStyle = FlatStyle.Flat, AutoSize = true, Padding = new Padding(12, 5, 12, 5), Cursor = Cursors.Hand };
-            b.FlatAppearance.BorderColor = Color.FromArgb(200, 198, 210);
-            return b;
-        }
+        public static Button Primary(string text) { return new FlatButton(text, ButtonKind.Primary); }
+        public static Button Secondary(string text) { return new FlatButton(text, ButtonKind.Secondary); }
+        public static Button Ghost(string text) { return new FlatButton(text, ButtonKind.Ghost); }
+        public static Button Danger(string text) { return new FlatButton(text, ButtonKind.Danger); }
+        /// <summary>A button with one of the line icons in front of its text.</summary>
+        public static Button WithIcon(Button b, string icon) { var f = b as FlatButton; if (f != null) f.Icon = icon; return b; }
         public static FlowLayoutPanel Column()
         {
             return new FlowLayoutPanel { FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, Margin = new Padding(0) };
@@ -88,18 +89,39 @@ namespace CoAInstaller
         {
             Main = main;
             Dock = DockStyle.Fill;
-            BackColor = Color.White;
+            BackColor = Ui.Canvas;
             AutoScroll = true;
+            DoubleBuffered = true;
             Padding = new Padding(36, 26, 36, 16);
             Body = Ui.Column();
             // A FlowLayoutPanel that is not docked ignores the parent's padding, so it is placed explicitly.
-            Body.Location = new Point(36, 24);
-            Body.Margin = new Padding(0, 0, 0, 24);
+            // The content sits on a white sheet with rounded corners, drawn behind it.
+            Body.Location = new Point(56, 40);
+            Body.Margin = new Padding(0, 0, 0, 40);
+            Body.BackColor = Ui.Surface;
+            Body.Padding = new Padding(8, 6, 8, 10);
             Controls.Add(Body);
+            Body.SizeChanged += (s, e) => Invalidate();
+            Body.LocationChanged += (s, e) => Invalidate();
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            base.OnPaint(e);
+            if (!Body.Visible) return;
+            var g = e.Graphics; Draw.Smooth(g);
+            var r = new RectangleF(Body.Left - 24, Body.Top - 22, Math.Max(Body.Width + 48, 660), Body.Height + 44);
+            using (var p = Draw.Round(r, 12))
+            {
+                g.FillPath(Brushes.White, p);
+                using (var pen = new Pen(Ui.Line)) g.DrawPath(pen, p);
+            }
         }
         /// <summary>Text of the right footer button; null hides it.</summary>
         public virtual string NextText { get { return "Next"; } }
         public virtual bool CanGoBack { get { return true; } }
+        /// <summary>False: the page has no use for the footer with Back / Next / Close.</summary>
+        public virtual bool ShowsFooter { get { return true; } }
         /// <summary>Validates and returns true to move on.</summary>
         public virtual bool OnNext() { return true; }
         public virtual void OnShown() { }

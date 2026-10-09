@@ -14,7 +14,7 @@ namespace CoAInstaller
     /// The server's databases: browse and edit tables, and run any SQL - what one otherwise opens
     /// HeidiSQL for. Read-only until "Allow changes" is ticked; ticking it warns and offers a backup.
     /// </summary>
-    class DatabaseDialog : Form
+    class DatabaseDialog : AfkForm
     {
         const int PageSize = 500, QueryRows = 5000;
         static readonly Color Changed = Color.FromArgb(255, 244, 200), Added = Color.FromArgb(222, 244, 226), NullColor = Color.FromArgb(150, 150, 165);

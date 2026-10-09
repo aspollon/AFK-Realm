@@ -13,7 +13,7 @@ namespace CoAInstaller
     /// Lists the server snapshots in &lt;root&gt;\Backups. The engine creates one automatically before every
     /// update; here you can make one by hand, roll the server back to one, or delete one.
     /// </summary>
-    class BackupsDialog : Form
+    class BackupsDialog : AfkForm
     {
         public bool BackUpNow { get; private set; }
         public string RestoreName { get; private set; }

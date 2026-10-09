@@ -14,7 +14,7 @@ namespace CoAInstaller
     /// Ticking a module installs it, unticking removes it; "Apply changes" hands the choice
     /// to the engine (backup, download, rebuild, record or undo the database changes).
     /// </summary>
-    class ModulesDialog : Form
+    class ModulesDialog : AfkForm
     {
         /// <summary>Git addresses to install and folder names to remove, set when the user applies.</summary>
         public readonly List<string> Add = new List<string>(), Remove = new List<string>();
@@ -447,7 +447,7 @@ namespace CoAInstaller
     }
 
     /// <summary>Read-only text in a window, optionally with a confirm button.</summary>
-    class TextDialog : Form
+    class TextDialog : AfkForm
     {
         public TextDialog(string title, string text, string confirm = null)
         {

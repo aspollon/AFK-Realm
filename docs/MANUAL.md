@@ -57,7 +57,9 @@ When the installation is finished, three things are left to do in the server man
 
 ## 3. Starting and stopping the server
 
-The top of the **Server management** shows the three parts of the server:
+The **Server management** has a side bar on the left with its parts: **Server** (scheduled restart, map data), **Settings** (server settings, server name, playing with others), **Modules** (modules, their setup pages, game client add-ons), **Game master**, **Accounts**, **Database** (database editor, backups) and **Maintenance** (updates, repair, bot reset, folders). A small mark beside *Modules* or *Maintenance* says that something waits there, for example an update or an add-on for your game.
+
+The bar at the top stays the same on every part. It shows the three parts of the server:
 
 | Part | What it does |
 |---|---|
@@ -65,13 +67,15 @@ The top of the **Server management** shows the three parts of the server:
 | Authserver | the login |
 | Worldserver | the game world |
 
+Below them are **Start server**, **Stop server**, **Restart server** and **Open server consoles …**, and on the right how long the world has been running.
+
 - **Start server** starts all three in the right order. The worldserver needs a few minutes to load; you can keep using AFK Realm meanwhile. When it says *The server is running. You can log in now.*, it is ready.
 - **Stop server** saves all characters and shuts everything down cleanly. Always stop the server this way.
 - **Restart server** does both in one go: it saves all characters, shuts the auth- and worldserver down cleanly and starts them again. Use it after changing settings or the database, which the worldserver only reads when it starts.
 
 ### Scheduled restart
 
-A world that has run for many hours can grow slow and use more and more memory. Stopping and starting it gives the memory back. Under **Scheduled restart** AFK Realm does that on its own:
+A world that has run for many hours can grow slow and use more and more memory. Stopping and starting it gives the memory back. Under **Server → Scheduled restart** AFK Realm does that on its own:
 
 ![Server management with a scheduled restart](screenshots/8-server-management.png)
 
@@ -117,7 +121,7 @@ If the worldserver closes while starting, AFK Realm shows the last lines of its 
 
 The server needs data from your game client: maps, line-of-sight data, pathfinding data and the CoA data tables (DBC).
 
-1. Click **Create map data from the game client …**
+1. Under **Server → Map data**, click **Create map data from the game client …**
 2. Choose the folder of your CoA client (the one that contains the `Data` folder).
 3. Keep the game and its launcher closed and start the extraction.
 
@@ -127,7 +131,7 @@ A separate window runs the extraction and moves the result into the server when 
 
 ## 5. Server settings
 
-**Open server settings …** edits the configuration files of the worldserver, Playerbots and every module, without opening a text file.
+**Settings → Open server settings …** edits the configuration files of the worldserver, Playerbots and every module, without opening a text file.
 
 - The list on the left chooses a file. **★ Popular settings** collects the options people change most: experience, drop and reputation rates, number and levels of bots, flight paths, cross-faction play.
 - **Search** looks through all files at once.
@@ -144,7 +148,7 @@ After a server update, new options appear automatically with their default value
 
 ## 6. Game master tools
 
-**Game master tools …** is for helping players on the running server: fixing quests, freeing a stuck character, sending gold and so on.
+**Game master → Open game master tools …** is for helping players on the running server: fixing quests, freeing a stuck character, sending gold and so on.
 
 **The connection.** The tools talk to the worldserver through its built-in remote service. AFK Realm sets that up whenever *it* starts the server. If the top line says *Stop and start the server once*, the server was started before the connection existed: stop it and start it again through AFK Realm. A green *Connected to the running server* means everything is ready.
 
@@ -237,7 +241,7 @@ The arrow keys bring back earlier commands. Commands that need you to stand in t
 
 ## 7. Database editor
 
-**Database editor …** opens the server's databases: look into any table, change values and run SQL, without installing a separate program such as HeidiSQL. The server has to be running (at least its database).
+**Database → Open the database editor …** opens the server's databases: look into any table, change values and run SQL, without installing a separate program such as HeidiSQL. The server has to be running (at least its database).
 
 > **Only for people who know what they are doing.** These tables are the server itself. A wrong value, or an `UPDATE` or `DELETE` without `WHERE`, can break quests, creatures, characters or accounts, in the worst case the whole server. If you do not know what a table is for, leave it alone. **Make a backup first** – the button for it is right in the window.
 
@@ -303,7 +307,7 @@ Whenever you change something while the worldserver is running – a save, SQL s
 
 ## 8. Modules
 
-**Manage modules …** adds and removes AzerothCore modules.
+**Modules → Manage modules …** adds and removes AzerothCore modules.
 
 ![Modules](screenshots/12-modules.png)
 
@@ -326,13 +330,39 @@ What players got *through* a module while playing (items, spells) is not tracked
 
 *mod-world-journey* (World Journey) makes the old world, Outland and Northrend one journey from 1 to 60 – the classes of CoA end at 60, and with it Outland and Northrend become playable: the old world first, Outland from about level 30, Northrend from about 40, their raids and heroics at 60. Creatures, quests, items, dungeons, the Dungeon Finder, battlegrounds and the random bots follow. It brings two changes (for the core and for Playerbots), sets a few values in other config files (for example the highest level, 60) and has an add-on for the game client (see below). Its own options are in the server settings under `mod_world_journey.conf`; the first start after installing takes about half a minute longer than usual.
 
+### Setup pages of the modules by AFK Realm
+
+When *World Journey* or the *auction house bots* are installed, **Modules** shows a card for each with **Set up …**. The page reads the module's own config file and writes back only what you change, when you press **Save**; the changes take effect at the next start of the worldserver (*Restart server*). **Reset to defaults** puts every option on the page back to the module's value, **Open the file** opens the config file itself. Whoever prefers the file can keep editing it: the page always shows what is in it.
+
+![World Journey setup](screenshots/25-world-journey.png)
+
+**World Journey** has five tabs:
+
+- **The journey**: where each part of the world begins – the picture shows the levels 1 to 60 with the old world, Outland, Northrend and the raids and heroics at the end; the sliders below move a part. Further down: the level of the raids and heroics, how much higher their bosses stand, the item levels of their rewards, and the rules of the realm (every character plays the scaled world; the realm is kept at 60).
+- **Zones and dungeons**: every zone (or dungeon and raid) with its original level and its level on the journey, worked out from the ranges. Choose one, switch on **Set this one by hand** and pull the slider to move it; its creatures and quests move with it. Switched off again, it follows the ranges.
+
+  ![Zones and dungeons](screenshots/27-world-journey-zones.png)
+
+- **Level window**: how far below and above a character the creatures of a zone stand once they are lifted to it. The bar shows it for a character of the level you choose.
+- **Difficulty**: four presets (*Relaxed, Standard, Challenging, Hard*) and the multipliers for health, damage, spell damage and armor by rank. With a part of the world chosen and **Own values for this part of the world** switched on, that part gets values of its own.
+
+  ![Difficulty](screenshots/26-world-journey-difficulty.png)
+
+- **What follows**: what the journey changes (items, consumables, gems and enchantments, riding and professions, battlegrounds) and what the add-on shows in the game.
+
+**Auction house bots** has seven tabs: *The bots* (who trades, trips to the auction house, pace, memory), *Selling* (qualities, kinds of items, deposit, vendor), *Prices*, *Buying*, *Crafting*, *Chat* (deals by chat and the bots' chatter) and *Trading Post*.
+
+![Auction house bots setup](screenshots/29-auction-setup.png)
+
 ### Add-ons for the game client
 
-Some modules bring an add-on for the game – World Journey shows its zone levels on the world map and the right values of gems and enchantments with one. **Game client add-ons …** in the server management takes care of them:
+Some modules bring an add-on for the game – World Journey shows its zone levels on the world map and the right values of gems and enchantments with one. **Modules → Game client add-ons …** takes care of them:
 
 - **Game folder**: the folder of your game, the one with the `Data` folder. AFK Realm asks once and remembers it.
 - The list shows every add-on of the installed modules and whether your game has it (*up to date*, *older version*, *not installed*). An add-on of a module you removed is listed as *will be taken out*.
-- **Install add-ons** copies them into `Interface\AddOns` and takes out the ones no longer needed. With **Clear the client's cache** ticked, the game's `Cache` folder is deleted too, so the game forgets the old levels and values of items, creatures and quests; it is ticked when a module asks for it and something changed.
+![Game client add-ons](screenshots/31-game-client.png)
+
+- **Install add-ons** copies them into `Interface\AddOns` and takes out the ones no longer needed. With **Clear the game's cache** switched on, the game's `Cache` folder is deleted too, so the game forgets the old levels and values of items, creatures and quests; it is on when a module asks for it and something changed.
 - Close the game and its launcher first. AFK Realm checks that nothing from the game folder is running.
 - After a module brought, changed or lost an add-on, the window opens by itself once. The management page says when your game is not up to date.
 - **Export as ZIP …** packs the add-ons into one file for the other players on your server. They unpack it into their game folder (a note inside says how, and which folder to delete). After a module update, send them a new ZIP.
@@ -341,7 +371,7 @@ After installing a module, read its README: some modules need a step in the game
 
 ## 9. Accounts
 
-**Create account** in the server management: name, password and access level.
+**Accounts → Create account**: name, password and access level.
 
 | Access level | Meaning |
 |---|---|
@@ -349,7 +379,7 @@ After installing a module, read its README: some modules need a step in the game
 | Moderator (GM 1), Game Master (GM 2) | may use some or most GM commands in the game |
 | Administrator (GM 3) | may use every command |
 
-**Manage player accounts …** lists the accounts of real players (the bot accounts are hidden) with their characters and last login. For the selected account you can:
+**Accounts → Manage player accounts …** lists the accounts of real players (the bot accounts are hidden) with their characters and last login. For the selected account you can:
 
 - **Delete account …** – the server must be stopped. The characters are removed for good at the next server start.
 - **New password …**
@@ -363,7 +393,7 @@ Export and import are how you move a player from one server to another, for exam
 
 ### Server name
 
-Under **Server name** in the server management you can rename the server at any time: type the new name and click **Rename**, then stop and start the server. The name can have up to 32 characters (English letters, digits, spaces, hyphen, apostrophe, dot).
+Under **Settings → Server name** you can rename the server at any time: type the new name and click **Rename**, then stop and start the server. The name can have up to 32 characters (English letters, digits, spaces, hyphen, apostrophe, dot).
 
 ![Server name](screenshots/18-server-name.png)
 
@@ -374,7 +404,7 @@ The game client stores each character's interface settings in a folder named aft
 By default only you can reach the server (`127.0.0.1`). To let others in:
 
 1. Connect the PCs through a VPN such as Radmin VPN or Hamachi, or use your LAN.
-2. In **Play with others**, enter the address the others use to reach your PC (the VPN address of your PC, or its LAN address) and click **Apply**.
+2. Under **Settings → Play with others**, enter the address the others use to reach your PC (the VPN address of your PC, or its LAN address) and click **Apply**.
 3. Stop and start the server.
 4. The other players set this address in their `realmlist.wtf`. You keep using `127.0.0.1`.
 
@@ -382,11 +412,11 @@ AFK Realm also allows the servers through the Windows Firewall.
 
 ## 11. Updates, backups and repair
 
-**Updates.** A banner at the top appears when newer server code (CoA core, Playerbots) or a newer AFK Realm is available. **Check for updates and install** downloads the newest code and rebuilds only what changed. Before it changes anything, the server is backed up.
+**Updates** (under **Maintenance**). A banner at the top appears when newer server code (CoA core, Playerbots) or a newer AFK Realm is available. **Check for updates and install** downloads the newest code and rebuilds only what changed. Before it changes anything, the server is backed up.
 
 **Updating AFK Realm itself.** When the banner says a new AFK Realm is available, click it and confirm. AFK Realm downloads the new version from GitHub, checks that the file is complete and unaltered, replaces itself and restarts; the line under the server buttons then confirms the new version. A running server keeps running. If the download fails, nothing is changed and AFK Realm offers to open the download page instead.
 
-**Backups …** lists the backups. A backup holds the server programs, the settings and all databases, together with the versions they were built from.
+**Database → Backups …** lists the backups. A backup holds the server programs, the settings and all databases, together with the versions they were built from.
 
 - One is made automatically before every update and every module change.
 - **Back up now** makes one by hand, for example before you try something risky.
@@ -395,11 +425,11 @@ AFK Realm also allows the servers through the Windows Firewall.
 
 Map data is not part of a backup; updates do not touch it.
 
-**Repair setup** sets up the database and configuration again without rebuilding the server. Characters and accounts are kept. Use it when the server does not start after something was interrupted.
+**Maintenance → Repair setup** sets up the database and configuration again without rebuilding the server. Characters and accounts are kept. Use it when the server does not start after something was interrupted.
 
 ## 12. Resetting the random bots
 
-**Reset random bots …** deletes every random bot with its characters, guilds, arena teams and mail. Your own accounts and characters are kept, including bots you created on your own accounts. New bots are created at the next server start, which then takes longer than usual.
+**Maintenance → Reset random bots …** deletes every random bot with its characters, guilds, arena teams and mail. Your own accounts and characters are kept, including bots you created on your own accounts. New bots are created at the next server start, which then takes longer than usual.
 
 Use it after changing bot settings that only apply to newly created bots (for example their level range), or when the bots have become a mess.
 
@@ -415,7 +445,7 @@ C:\CoA-Server\
   Builder\        a copy of AFK Realm (the desktop shortcut points here)
 ```
 
-- **Open folder** and **Open server logs** in the server management take you there.
+- **Open folder** and **Open server logs** under **Maintenance → Files** take you there.
 - To move the server to another PC, use a fresh installation there and move the players with account export and import.
 - To remove everything, stop the server and delete the folder.
 

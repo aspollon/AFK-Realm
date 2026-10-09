@@ -248,12 +248,12 @@ namespace CoAInstaller
     }
 
     /// <summary>The add-ons of the modules and the game client they go into.</summary>
-    class ClientDialog : Form
+    class ClientDialog : AfkForm
     {
         readonly Install inst;
         readonly TextBox folder = Ui.Input(440);
         readonly ListView list = new ListView { View = View.Details, FullRowSelect = true, HideSelection = false, MultiSelect = false, Dock = DockStyle.Fill, Font = Ui.Base, BorderStyle = BorderStyle.FixedSingle };
-        readonly CheckBox clearCache = new CheckBox { Text = "Clear the client's cache (recommended: the game then forgets the old levels and values of items, creatures and quests)", AutoSize = true, MaximumSize = new Size(760, 0), Font = Ui.Base };
+        readonly Toggle clearCache = new Toggle("Clear the game's cache (recommended: the game then forgets the old levels and values of items, creatures and quests)");
         readonly Label state = new Label { AutoSize = true, Font = Ui.Small, ForeColor = Ui.Muted, MaximumSize = new Size(780, 0), Margin = new Padding(0, 4, 0, 0) };
         readonly Button install = Ui.Primary("Install add-ons");
         readonly Button export = Ui.Secondary("Export as ZIP …");
@@ -293,6 +293,7 @@ namespace CoAInstaller
             listPanel.Controls.Add(list);
 
             var under = Ui.Column(); under.Dock = DockStyle.Bottom; under.AutoSize = true; under.Padding = new Padding(16, 0, 16, 6);
+            clearCache.Wrap(790);
             under.Controls.Add(clearCache); under.Controls.Add(state);
 
             var bottom = new FlowLayoutPanel { Dock = DockStyle.Bottom, Height = 58, Padding = new Padding(14, 10, 14, 10), FlowDirection = FlowDirection.RightToLeft, BackColor = Ui.Panel, WrapContents = false };

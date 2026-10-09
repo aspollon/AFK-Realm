@@ -8,7 +8,7 @@ using System.Windows.Forms;
 namespace CoAInstaller
 {
     /// <summary>Lists the accounts of real players (bot accounts are left out) and lets you delete them, reset passwords and change access levels.</summary>
-    class AccountsDialog : Form
+    class AccountsDialog : AfkForm
     {
         static readonly string[] Levels = { "Player", "Moderator (GM 1)", "Game Master (GM 2)", "Administrator (GM 3)" };
 
@@ -206,7 +206,7 @@ namespace CoAInstaller
         }
 
         /// <summary>Asks for a new password twice, with the same rules as account creation.</summary>
-        class PasswordPrompt : Form
+        class PasswordPrompt : AfkForm
         {
             readonly TextBox pw1 = Ui.Input(220, true), pw2 = Ui.Input(220, true);
             readonly string user;

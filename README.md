@@ -30,6 +30,7 @@ Pre-built repacks go stale quickly. Building from source keeps you on the latest
 - **Always current**: every installation builds the newest CoA core and Playerbots
 - **Clear progress**: every step, download percentages, compiled files and imported world tables, plus an optional live log
 - **Databases ready before the first start**: imports the CoA world package, creates the auth and character databases and applies all SQL updates, and repairs databases whose setup was interrupted
+- **A clean interface**: a side bar for the parts of the server, the state of the server and its main buttons always at the top, switches and sliders in AFK Realm's colours
 - **Server management**: start, stop and restart (clean shutdown that saves all characters), live status, both server consoles in one window (output of worldserver and authserver, with a command line for GM commands) instead of separate console windows, and the reason shown right away if a server closes while starting
 - **Scheduled restart**: the server restarts on its own after a number of hours, every day at a set time or when the worldserver uses too much memory – players are told in the game beforehand, and the page shows uptime, memory and when the next restart is due
 - **Server settings**: a list of popular options (XP, drop and reputation rates, flight paths, cross-faction play, Playerbots count and levels) plus every option of the worldserver and all module configs, searchable, with the description from each template and one-click reset to the default
@@ -38,6 +39,7 @@ Pre-built repacks go stale quickly. Building from source keeps you on the latest
 - **Game master tools**: a line to the running server (its SOAP service, switched on for this PC only) with a quest helper – see a character's quest log with the progress of every objective, find quests by NPC name, quest title or id, or list the new quests around a character, then give, complete, reward or remove them with one click – plus unstuck, revive, level, rename, gold and mail for a character, announcements, and a console for every other GM command
 - **Database editor**: browse and edit every table of the server and run any SQL without a separate program, import SQL files (it says what a file will do before it runs) and export tables or whole databases by ticking them – read-only until you allow changes, with a clear warning, a one-click backup of the whole server and an "Undo last change" button for edits, SQL statements and imports
 - **Modules**: modules made for this server at the top ("Modules by AFK Realm": the bots use the auction house like players; World Journey makes the old world, Outland and Northrend one journey from 1 to 60), then the AzerothCore module catalog: browse it, tick modules to install them and untick them to remove them. Before installing, each module is checked (database changes, settings, core patches, client files, age) and its README is one click away. The server is backed up and rebuilt; if a module does not compile, it is taken out again and the server stays as it was. The database changes of every module installed this way are recorded, so removing it undoes them
+- **Setup pages for the modules by AFK Realm**: World Journey and the auction house bots each get a page of their own with sliders, switches and previews (where each part of the world begins, every zone with its level, the level window, difficulty presets; trips, prices, crafting, chat and the Trading Post of the bots) – shown only when the module is installed, and writing the same .conf file you can still edit by hand
 - **Game client add-ons**: add-ons that modules bring for the game are put into your game folder (and the game's cache cleared when a module needs it), kept up to date and taken out with their module; "Export as ZIP" packs them for other players
 - **Bot reset**: one click deletes all random bots with their characters, guilds and arena teams (your own characters are kept); new bots are created at the next start
 - **Map data**: extracts maps, vmaps, mmaps and the CoA client DBC tables from your game client with one click
@@ -49,8 +51,12 @@ Pre-built repacks go stale quickly. Building from source keeps you on the latest
 
 ## Screenshots
 
-| Server settings | Player accounts |
+| World Journey setup | Auction house bots setup |
 |---|---|
+| ![World Journey](docs/screenshots/25-world-journey.png) | ![Auction house bots](docs/screenshots/29-auction-setup.png) |
+| **Modules and their setup pages** | **Game client add-ons** |
+| ![Modules](docs/screenshots/32-modules-page.png) | ![Game client](docs/screenshots/31-game-client.png) |
+| **Server settings** | **Player accounts** |
 | ![Server settings](docs/screenshots/9-server-settings.png) | ![Player accounts](docs/screenshots/10-player-accounts.png) |
 | **Backups** | **Update with automatic backup** |
 | ![Backups](docs/screenshots/11-backups.png) | ![Update](docs/screenshots/6-update-with-backup.png) |

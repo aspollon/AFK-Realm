@@ -12,7 +12,7 @@ namespace CoAInstaller
     /// actions on the right, and a console that sends any GM command and shows the server's answer.
     /// Lookups read the server's databases; actions go through <see cref="AdminLink"/>.
     /// </summary>
-    class GameMasterDialog : Form
+    class GameMasterDialog : AfkForm
     {
         readonly Install inst;
         readonly ServerControl ctl;

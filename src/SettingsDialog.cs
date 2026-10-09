@@ -10,7 +10,7 @@ namespace CoAInstaller
     /// Server settings: a hand-picked list of popular options plus every option of every
     /// config file, each with the description from its template.
     /// </summary>
-    class SettingsDialog : Form
+    class SettingsDialog : AfkForm
     {
         const string PopularName = "★  Popular settings";
 

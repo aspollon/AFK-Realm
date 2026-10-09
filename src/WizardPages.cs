@@ -17,9 +17,9 @@ namespace CoAInstaller
             Body.Controls.Add(Ui.Hint("You need: Windows 10 or 11 (64-bit), about 40 GB of free disk space, an internet connection and some patience. " +
                 "Bring your own CoA game client; it is not included."));
 
-            var install = BigChoice("Install a new server", "Set everything up from scratch.");
+            var install = new Tile("Install a new server", "Set everything up from scratch.", "server");
             install.Click += (s, e) => Main.Navigate(new FolderPage(Main));
-            var manage = BigChoice("Manage an existing server", "Start, stop, updates, accounts, map data …");
+            var manage = new Tile("Manage an existing server", "Start, stop, updates, accounts, map data …", "settings");
             manage.Click += (s, e) =>
             {
                 using (var d = new FolderBrowserDialog { Description = "Choose your server folder (the one containing \"Server\", \"DB\" and \"Dependencies\")." })
@@ -33,18 +33,6 @@ namespace CoAInstaller
             };
             Body.Controls.Add(install);
             Body.Controls.Add(manage);
-        }
-        Button BigChoice(string title, string sub)
-        {
-            var b = new Button
-            {
-                Text = title + "\n" + sub, TextAlign = ContentAlignment.MiddleLeft, Font = Ui.Bold, ForeColor = Ui.Text,
-                BackColor = Ui.Panel, FlatStyle = FlatStyle.Flat, Width = 560, Height = 70, Margin = new Padding(0, 14, 0, 0),
-                Padding = new Padding(16, 0, 0, 0), Cursor = Cursors.Hand
-            };
-            b.FlatAppearance.BorderColor = Color.FromArgb(215, 210, 235);
-            b.FlatAppearance.MouseOverBackColor = Color.FromArgb(236, 232, 250);
-            return b;
         }
         public override string NextText { get { return null; } }
     }
@@ -215,8 +203,8 @@ namespace CoAInstaller
         readonly string mode;
         readonly EngineRunner runner;
         readonly Label[] phaseLabels;
-        readonly ProgressBar overall = new ProgressBar { Width = 640, Height = 18, Maximum = 1000, Margin = new Padding(0, 10, 0, 4) };
-        readonly ProgressBar sub = new ProgressBar { Width = 640, Height = 8, Maximum = 1000, Margin = new Padding(0, 2, 0, 2) };
+        readonly ProgressBar overall = new FlatBar { Width = 640, Height = 18, Maximum = 1000, Margin = new Padding(0, 10, 0, 4) };
+        readonly ProgressBar sub = new FlatBar { Width = 640, Height = 8, Maximum = 1000, Margin = new Padding(0, 2, 0, 2) };
         readonly Label action = Ui.Hint("Starting …");
         readonly Label elapsed = Ui.Hint("");
         readonly TextBox log = new TextBox { Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Vertical, Font = Ui.Mono, Width = 640, Height = 170, BackColor = Color.FromArgb(24, 22, 32), ForeColor = Color.FromArgb(215, 215, 225), Visible = false, WordWrap = false };

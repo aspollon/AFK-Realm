@@ -11,7 +11,7 @@ namespace CoAInstaller
     /// prints (its log file, read as it grows). The worldserver's has a command line that sends GM
     /// commands through <see cref="AdminLink"/> and prints the answer; the authserver takes no commands.
     /// </summary>
-    class ConsolesDialog : Form
+    class ConsolesDialog : AfkForm
     {
         readonly Install inst;
         readonly ServerControl ctl;
