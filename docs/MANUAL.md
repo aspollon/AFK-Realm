@@ -344,7 +344,8 @@ When *World Journey* or the *auction house bots* are installed, **Modules** show
   ![Zones and dungeons](screenshots/27-world-journey-zones.png)
 
 - **Level window**: how far below and above a character the creatures of a zone stand once they are lifted to it. The bar shows it for a character of the level you choose.
-- **Difficulty**: four presets (*Relaxed, Standard, Challenging, Hard*) and the multipliers for health, damage, spell damage and armor by rank. With a part of the world chosen and **Own values for this part of the world** switched on, that part gets values of its own.
+- **Difficulty**: four presets (*Relaxed, Standard, Challenging, Hard*), **Extra hard** beside them, and the multipliers for health, damage, spell damage and armor by rank. With a part of the world chosen and **Own values for this part of the world** switched on, that part gets values of its own.
+  **Extra hard** switches CoA's own creature multipliers on (`CoA.CreatureScaling.Enable` in `coa.conf`). They come on top of whichever preset is chosen: in the open world creatures have 2.5 times their health and hit players and pets twice as hard, in dungeons 2.5 times the health (some up to 5) and 1.5 times the damage. World Journey switches them off when it is installed; the values themselves are set in `coa.conf` (*Settings*). It needs a CoA core from October 2026 or later; with an older one the button is greyed out.
 
   ![Difficulty](screenshots/26-world-journey-difficulty.png)
 

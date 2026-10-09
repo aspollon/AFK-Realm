@@ -279,6 +279,38 @@ namespace CoAInstaller
         }
     }
 
+    /// <summary>A switch drawn as a button that stays pressed: set apart from a choice, for something that comes on top of it.</summary>
+    class PillToggle : CheckBox
+    {
+        public Color OnColor = Ui.Bad;
+        bool hover;
+        public PillToggle(string text)
+        {
+            Text = text;
+            SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
+            Font = Ui.Bold; AutoSize = false; Cursor = Cursors.Hand;
+            Margin = new Padding(0, 4, 0, 6);
+            Size = new Size(TextRenderer.MeasureText(text, Ui.Bold).Width + 40, 36);
+            CheckedChanged += (s, e) => Invalidate();
+            EnabledChanged += (s, e) => Invalidate();
+            MouseEnter += (s, e) => { hover = true; Invalidate(); };
+            MouseLeave += (s, e) => { hover = false; Invalidate(); };
+        }
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            var g = e.Graphics;
+            g.Clear(Draw.Behind(this) == Color.Empty ? Ui.Surface : Draw.Behind(this));
+            Draw.Smooth(g);
+            var box = new RectangleF(0.5f, 0.5f, Width - 1.5f, Height - 1.5f);
+            Color fill = !Enabled ? Ui.Canvas : Checked ? OnColor : hover ? Draw.Mix(Ui.Canvas, OnColor, 0.12f) : Ui.Canvas;
+            Color edge = !Enabled ? Ui.Line : Checked ? OnColor : Draw.Mix(Ui.Line, OnColor, 0.45f);
+            using (var p = Draw.Round(box, 9)) { using (var b = new SolidBrush(fill)) g.FillPath(b, p); using (var pen = new Pen(edge)) g.DrawPath(pen, p); }
+            Color text = !Enabled ? Ui.Muted : Checked ? Color.White : OnColor;
+            TextRenderer.DrawText(g, Text, Font, Rectangle.Round(box), text, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+            if (Focused && ShowFocusCues) using (var p = Draw.Round(new RectangleF(2, 2, Width - 5, Height - 5), 8)) using (var pen = new Pen(Color.FromArgb(140, OnColor))) g.DrawPath(pen, p);
+        }
+    }
+
     /// <summary>A slider for a number between two limits, with its value shown beside it. One or two thumbs.</summary>
     class Slider : Control
     {

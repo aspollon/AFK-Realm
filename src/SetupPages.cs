@@ -18,6 +18,7 @@ namespace CoAInstaller
     {
         protected readonly Install inst;
         protected readonly ConfigFile conf;
+        readonly List<ConfigFile> also = new List<ConfigFile>();     // other files a page writes a few options of
         readonly Segmented tabs = new Segmented();
         readonly Panel scroller = new Panel { Dock = DockStyle.Fill, AutoScroll = true, BackColor = Ui.Canvas };
         readonly FlowLayoutPanel shown = Ui.Column();
@@ -77,7 +78,7 @@ namespace CoAInstaller
             tabs.SelectedChanged += (s, e) => ShowPage(tabs.Selected);
             FormClosing += (s, e) =>
             {
-                if (DialogResult == DialogResult.OK || (conf.Pending.Count == 0 && conf.Removed.Count == 0)) return;
+                if (DialogResult == DialogResult.OK || Unsaved() == 0) return;
                 var answer = MessageBox.Show(this, "Save your changes before closing?", Product.Name, MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question);
                 if (answer == DialogResult.Cancel) e.Cancel = true;
                 else if (answer == DialogResult.Yes && !Save()) e.Cancel = true;
@@ -129,7 +130,18 @@ namespace CoAInstaller
 
         // ---------------------------------------------------------------- values
 
-        protected string Raw(string key, string fallback)
+        /// <summary>Another config file this page writes options of; saved together with the module's.</summary>
+        protected ConfigFile AlsoEdit(string path, string name)
+        {
+            var f = ConfigFile.Load(path, name);
+            also.Add(f);
+            return f;
+        }
+
+        int Unsaved() { return new[] { conf }.Concat(also).Sum(f => f.Pending.Count + f.Removed.Count); }
+
+        protected string Raw(string key, string fallback) { return RawIn(conf, key, fallback); }
+        protected string RawIn(ConfigFile conf, string key, string fallback)
         {
             string v;
             if (conf.Pending.TryGetValue(key, out v)) return ConfigOption.Unquote(v);
@@ -153,7 +165,8 @@ namespace CoAInstaller
         protected bool Flag(string key, bool fallback) { string v = Raw(key, fallback ? "1" : "0"); return v == "1" || v.Equals("true", StringComparison.OrdinalIgnoreCase); }
         protected string DefaultOf(string key, string fallback) { ConfigOption o; return conf.ByKey.TryGetValue(key, out o) && o.DefaultRaw != null ? ConfigOption.Unquote(o.DefaultRaw) : fallback; }
 
-        protected void Set(string key, string value)
+        protected void Set(string key, string value) { SetIn(conf, key, value); }
+        protected void SetIn(ConfigFile conf, string key, string value)
         {
             if (loading > 0) return;
             ConfigOption o;
@@ -177,7 +190,7 @@ namespace CoAInstaller
 
         protected virtual void Changed()
         {
-            int n = conf.Pending.Count + conf.Removed.Count;
+            int n = Unsaved();
             changes.Text = n == 0 ? "" : n == 1 ? "1 change not saved yet" : n + " changes not saved yet";
             changes.ForeColor = n == 0 ? Ui.Muted : Ui.Warn;
             foreach (var r in refreshers) r();
@@ -203,11 +216,13 @@ namespace CoAInstaller
 
         bool Save()
         {
-            try { conf.Save(); }
+            var written = new[] { conf }.Concat(also).Where(f => f.Pending.Count + f.Removed.Count > 0).Select(f => f.Name).ToList();
+            if (written.Count == 0) written.Add(conf.Name);
+            try { conf.Save(); foreach (var f in also) f.Save(); }
             catch (Exception ex) { Ui.Error(this, "The settings could not be saved:\n" + ex.Message); return false; }
             Changed();
             DialogResult = DialogResult.OK;
-            MessageBox.Show(this, "Saved in " + conf.Name + ".\n\nThe changes take effect when the worldserver is started the next time (Restart server).", Product.Name, MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show(this, "Saved in " + string.Join(" and ", written) + ".\n\nThe changes take effect when the worldserver is started the next time (Restart server).", Product.Name, MessageBoxButtons.OK, MessageBoxIcon.Information);
             Close();
             return true;
         }
@@ -509,6 +524,9 @@ namespace CoAInstaller
         readonly Toggle partOwn = new Toggle("Own values for this part of the world");
         readonly Slider[,] diff = new Slider[5, 4];
         readonly Segmented preset = new Segmented("Relaxed", "Standard", "Challenging", "Hard");
+        readonly PillToggle extraHard = new PillToggle("Extra hard") { BackColor = Ui.Surface };
+        ConfigFile coa;
+        const string CoaSwitch = "CoA.CreatureScaling.Enable";
 
         public JourneySetup(Install i) : base(i, "mod_world_journey.conf", "World Journey", "mod-world-journey  ·  modules\\mod_world_journey.conf", "journey", "Journey.Enable", "World Journey on")
         {
@@ -572,9 +590,29 @@ namespace CoAInstaller
             // ---- difficulty
             Tab("Difficulty");
             var presets = Card("How hard", "A starting point for the multipliers below. They come on top of the creatures' base stats and of the Rate.Creature.* settings of the server.", "gamemaster");
-            presets.Add(preset);
+            var howHard = Ui.Row(); howHard.BackColor = Ui.Surface;
+            howHard.Controls.Add(preset);
+            extraHard.Margin = new Padding(28, 4, 0, 6);
+            howHard.Controls.Add(extraHard);
+            presets.Add(howHard);
             presets.Add(Small("Relaxed: a bit softer than the original. Standard: as the module comes, rares stronger. Challenging and Hard: everything hits harder and lasts longer.", presets.Inner));
+            var extraText = presets.Add(Small("", presets.Inner));
             preset.SelectedChanged += (s, e) => ApplyPreset(preset.Selected);
+            coa = AlsoEdit(inst.CoaConf, "modules\\coa.conf");
+            bool coaHasIt = coa.ByKey.ContainsKey(CoaSwitch);
+            extraHard.Enabled = coaHasIt;
+            extraHard.CheckedChanged += (s, e) => SetIn(coa, CoaSwitch, extraHard.Checked ? "1" : "0");
+            AddLoader(() => extraHard.Checked = coaHasIt && RawIn(coa, CoaSwitch, "0") == "1");
+            OnChange(() =>
+            {
+                if (!coaHasIt) { extraText.Text = "Extra hard needs a CoA core from October 2026 or later, which has creature multipliers of its own. Update the server to use it."; return; }
+                Func<string, string, string> x = (key, fallback) => "×" + RawIn(coa, "CoA.CreatureScaling." + key, fallback);
+                extraText.Text = "Extra hard adds CoA's own creature multipliers (coa.conf) on top of the level chosen here, about 2.5 times as hard: " +
+                    "in the open world creatures have " + x("World.Health", "2.5") + " health and hit players and pets " + x("World.Damage", "2.0") + " as hard, " +
+                    "in dungeons " + x("Dungeon.Health", "2.5") + " health (some up to ×5) and " + x("Dungeon.Damage", "1.5") + " damage, in raids " +
+                    x("Raid.Health", "2.2") + " health. The values themselves are set in coa.conf (Settings).";
+                extraText.ForeColor = extraHard.Checked ? Ui.Bad : Ui.Muted;
+            });
 
             var grid = Card("Multipliers by rank", null, "settings");
             grid.Add(diffPart);
@@ -807,6 +845,7 @@ namespace CoAInstaller
             foreach (var p in places) Unset(Key(p));
             for (int part = 0; part < 4; part++) for (int r = 0; r < 5; r++) for (int c = 0; c < 4; c++) Unset(DiffKey(part, r, c));
             foreach (var part in Parts) Unset("Journey.Quests.XpRate." + part);
+            if (coa != null && coa.ByKey.ContainsKey(CoaSwitch)) SetIn(coa, CoaSwitch, "0");     // the journey's own difficulty only
         }
     }
 

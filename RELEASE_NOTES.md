@@ -1,6 +1,10 @@
-# AFK Realm 0.7.2 – preview
+# AFK Realm 0.7.3 – preview
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11.
+
+## New in 0.7.3
+
+- **"Extra hard" for World Journey.** Since October 2026 CoA has creature multipliers of its own: in the open world creatures have two and a half times their health and hit twice as hard, in dungeons two and a half times the health and half again the damage. With World Journey they come on top of the journey's own difficulty, and that was far too much for us – so World Journey now switches them off. Who wants that harder world finds an *Extra hard* button on the World Journey setup page (*Modules → Set up World Journey → Difficulty*), right next to *Relaxed, Standard, Challenging, Hard*. The page shows the values CoA uses; they are set in `coa.conf`.
 
 ## New in 0.7.2
 
