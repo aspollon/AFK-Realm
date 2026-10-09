@@ -1,6 +1,10 @@
-# AFK Realm 0.7.1 – preview
+# AFK Realm 0.7.2 – preview
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11.
+
+## New in 0.7.2
+
+- **Clearer text in the World Journey setup.** The switch "Every character plays the scaled world" now explains what happens with the level scaling question at character creation: it still appears, but "off" no longer counts.
 
 ## New in 0.7.1
 

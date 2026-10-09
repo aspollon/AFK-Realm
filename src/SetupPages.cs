@@ -531,7 +531,7 @@ namespace CoAInstaller
 
             var guard = Card("The rules of the realm", null, "settings");
             AddToggle(guard, "Journey.Scaling.Forced", "Every character plays the scaled world",
-                "CoA's open world scaling is on for everyone from the creation of a character, and the Destiny Weaver no longer offers to switch it off. Off: each character chooses at the Destiny Weaver.");
+                "CoA's level scaling is on for everyone. The question at character creation still appears, but \"off\" no longer counts. Off: each character keeps the choice it made at creation.");
             AddToggle(guard, "Journey.Guard.Enable", "Keep the realm at 60",
                 "The realm runs with the highest level 60, the Dungeon Finder with the dungeons of Outland and Northrend and Wintergrasp from 60, whatever worldserver.conf says.");
 

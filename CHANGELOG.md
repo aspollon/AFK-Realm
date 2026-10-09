@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.2-preview
+
+- World Journey setup: the switch "Every character plays the scaled world" now says what it does with the question at character creation (it still appears, but "off" no longer counts) instead of pointing to the Destiny Weaver
+
 ## 0.7.1-preview
 
 - Fix: the module check said a module needs Eluna when it only brings an add-on for the game client (World Journey); Lua files next to an add-on's .toc no longer count as Eluna scripts
