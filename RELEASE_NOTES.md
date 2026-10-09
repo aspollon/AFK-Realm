@@ -1,6 +1,10 @@
-# AFK Realm 0.7.0 – preview
+# AFK Realm 0.7.1 – preview
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11.
+
+## New in 0.7.1
+
+- **No more false Eluna warning.** The module manager said World Journey needs the Eluna module. It does not: its Lua file is the add-on for the game client, not a script for the server. Modules that bring an add-on are no longer mistaken for Eluna modules.
 
 ## New in 0.7.0
 

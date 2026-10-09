@@ -328,7 +328,11 @@ namespace CoAInstaller
             var looseSql = paths.Where(p => p.EndsWith(".sql", StringComparison.OrdinalIgnoreCase) && !p.StartsWith("data/sql/", StringComparison.OrdinalIgnoreCase)).ToList();
             bool conf = paths.Any(p => Regex.IsMatch(p, @"(^|/)conf/[^/]+\.conf\.dist$", RegexOptions.IgnoreCase));
             var patches = paths.Where(p => Regex.IsMatch(p, @"\.(patch|diff)$", RegexOptions.IgnoreCase)).ToList();
-            bool lua = paths.Any(p => p.EndsWith(".lua", StringComparison.OrdinalIgnoreCase));
+            // Lua next to a .toc is an add-on for the game client, not a script for the server's Eluna.
+            var addonFolders = new HashSet<string>(paths.Where(p => p.EndsWith(".toc", StringComparison.OrdinalIgnoreCase))
+                .Select(p => p.Contains("/") ? p.Substring(0, p.LastIndexOf('/')) : ""), StringComparer.OrdinalIgnoreCase);
+            bool lua = paths.Any(p => p.EndsWith(".lua", StringComparison.OrdinalIgnoreCase) &&
+                !addonFolders.Any(f => f.Length > 0 && p.StartsWith(f + "/", StringComparison.OrdinalIgnoreCase)));
 
             if (!code && dbs.Count == 0)
                 a.Add(2, "This does not look like a server module (no source code and no SQL files).");
