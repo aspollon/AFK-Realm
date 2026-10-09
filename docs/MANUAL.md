@@ -324,6 +324,19 @@ Whenever you change something while the worldserver is running – a save, SQL s
 
 What players got *through* a module while playing (items, spells) is not tracked and may disappear or stop working when the module is removed.
 
+*mod-world-journey* (World Journey) makes the old world, Outland and Northrend one journey from 1 to 60 – the classes of CoA end at 60, and with it Outland and Northrend become playable: the old world first, Outland from about level 30, Northrend from about 40, their raids and heroics at 60. Creatures, quests, items, dungeons, the Dungeon Finder, battlegrounds and the random bots follow. It brings two changes (for the core and for Playerbots), sets a few values in other config files (for example the highest level, 60) and has an add-on for the game client (see below). Its own options are in the server settings under `mod_world_journey.conf`; the first start after installing takes about half a minute longer than usual.
+
+### Add-ons for the game client
+
+Some modules bring an add-on for the game – World Journey shows its zone levels on the world map and the right values of gems and enchantments with one. **Game client add-ons …** in the server management takes care of them:
+
+- **Game folder**: the folder of your game, the one with the `Data` folder. AFK Realm asks once and remembers it.
+- The list shows every add-on of the installed modules and whether your game has it (*up to date*, *older version*, *not installed*). An add-on of a module you removed is listed as *will be taken out*.
+- **Install add-ons** copies them into `Interface\AddOns` and takes out the ones no longer needed. With **Clear the client's cache** ticked, the game's `Cache` folder is deleted too, so the game forgets the old levels and values of items, creatures and quests; it is ticked when a module asks for it and something changed.
+- Close the game and its launcher first. AFK Realm checks that nothing from the game folder is running.
+- After a module brought, changed or lost an add-on, the window opens by itself once. The management page says when your game is not up to date.
+- **Export as ZIP …** packs the add-ons into one file for the other players on your server. They unpack it into their game folder (a note inside says how, and which folder to delete). After a module update, send them a new ZIP.
+
 After installing a module, read its README: some modules need a step in the game, for example creating a character for an auction house bot. A module's options appear in the [server settings](#5-server-settings).
 
 ## 9. Accounts
@@ -396,7 +409,7 @@ Use it after changing bot settings that only apply to newly created bots (for ex
 C:\CoA-Server\
   Server\         authserver, worldserver, configs, Data (map data), server logs
   DB\             the database and its data
-  Dependencies\   build tools, source code, build files
+  Dependencies\   build tools, source code, build files, client-addons.txt (add-ons put into the game)
   logs\           install.log, mysql-error.log
   Backups\        the newest three backups
   Builder\        a copy of AFK Realm (the desktop shortcut points here)

@@ -92,6 +92,33 @@ namespace CoAInstaller
 
         static Label State() { return new Label { AutoSize = true, Font = Ui.Bold, Margin = new Padding(0, 6, 0, 2) }; }
 
+        readonly Label clientState = Ui.Hint("");
+
+        /// <summary>Shows whether the game has every add-on of the installed modules.</summary>
+        string ShowClientState()
+        {
+            string pending = ClientAddons.Pending(inst);
+            clientState.Text = pending.Length == 0 ? "" : "Not every add-on of the installed modules is in your game yet.";
+            clientState.ForeColor = Ui.Warn;
+            return pending;
+        }
+
+        /// <summary>After a module brought, changed or lost an add-on, the game client dialog opens by itself (once for each new state).</summary>
+        void OfferClient()
+        {
+            string pending = ShowClientState();
+            // The same state is offered only once, also across starts; the line above the button keeps saying what is open.
+            string offered = Path.Combine(inst.Root, "Dependencies", "client-offered.txt");
+            try { if (pending.Length == 0 || (File.Exists(offered) && File.ReadAllText(offered).Trim() == pending)) return; File.WriteAllText(offered, pending); }
+            catch { return; }
+            BeginInvoke((Action)(() =>
+            {
+                using (var d = new ClientDialog(inst, "A module brings a new or changed add-on for the game client (or one is no longer needed)."))
+                    d.ShowDialog(this);
+                ShowClientState();
+            }));
+        }
+
         public ManagerPage(MainForm main) : base(main)
         {
             inst = main.Target; ctl = new ServerControl(inst);
@@ -196,6 +223,15 @@ namespace CoAInstaller
             modulesBtn.Click += (s, e) => ManageModules();
             Body.Controls.Add(modulesBtn);
 
+            // --- game client
+            Body.Controls.Add(Ui.Heading("Game client"));
+            Body.Controls.Add(Ui.Hint("Some modules bring an add-on for the game client (for example World Journey's map levels and tooltips). " + Product.Name +
+                " puts them into your game and clears its cache when a module asks for it; for other players it packs them into a ZIP."));
+            Body.Controls.Add(clientState);
+            var clientBtn = Ui.Secondary("Game client add-ons …");
+            clientBtn.Click += (s, e) => { using (var d = new ClientDialog(inst)) d.ShowDialog(this); ShowClientState(); };
+            Body.Controls.Add(clientBtn);
+
             // --- accounts
             Body.Controls.Add(Ui.Heading("Create account"));
             accLevel.Items.AddRange(new object[] { "Player", "Moderator (GM 1)", "Game Master (GM 2)", "Administrator (GM 3)" });
@@ -279,6 +315,7 @@ namespace CoAInstaller
             LoadRealm();
             if (SelfUpdate.JustUpdated) { SelfUpdate.JustUpdated = false; busy.Text = Product.Name + " was updated to version " + Product.Version + "."; }
             CheckForUpdates();
+            OfferClient();
         }
         protected override void Dispose(bool disposing)
         {

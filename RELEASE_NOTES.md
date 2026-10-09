@@ -1,6 +1,13 @@
-# AFK Realm 0.6.6 – preview
+# AFK Realm 0.7.0 – preview
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11.
+
+## New in 0.7.0
+
+- **World Journey** – a new module under *Modules by AFK Realm*. The classes of CoA end at 60, so Outland and Northrend were out of their reach. World Journey turns the old world, Outland and Northrend into one journey from 1 to 60: the old world first, through the Dark Portal from about 30, Northrend from about 40, and the raids and heroics of both at 60. Creatures, quests, items, dungeons, the Dungeon Finder, battlegrounds and the random bots follow, and everything can be set in its config. Tick it, apply, done – AFK Realm brings its changes to the core and Playerbots along. Brand new and not yet played on a real server: back up, try it, tell me.
+- **Add-ons for the game client.** Some modules need a small add-on in the game – World Journey uses one to show the new zone levels on the world map and the right values in tooltips. AFK Realm now takes care of that: after installing such a module it asks once for your game folder, puts the add-on into `Interface\AddOns` and clears the game's cache when the module needs it. When the module is updated, so is the add-on; when it is removed, the add-on goes too. Everything is under *Server management → Game client add-ons*.
+- **Add-ons for your friends.** *Export as ZIP …* packs the add-ons into one file for the other players on your server. They unpack it into their game folder; a note inside tells them how.
+- Good to know: close the game before installing add-ons – AFK Realm checks and asks you to.
 
 ## New in 0.6.6
 

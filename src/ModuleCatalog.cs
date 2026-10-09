@@ -58,6 +58,9 @@ namespace CoAInstaller
                 new ModuleEntry { Name = "mod-playerbots-auctions", FullName = "aspollon/mod-playerbots-auctions", Branch = "main", Own = true,
                     Url = "https://github.com/aspollon/mod-playerbots-auctions", CloneUrl = "https://github.com/aspollon/mod-playerbots-auctions.git",
                     Description = "The bots use the auction house like players: they sell their loot, buy and bid, craft and gather" },
+                new ModuleEntry { Name = "mod-world-journey", FullName = "aspollon/mod-world-journey", Branch = "main", Own = true,
+                    Url = "https://github.com/aspollon/mod-world-journey", CloneUrl = "https://github.com/aspollon/mod-world-journey.git",
+                    Description = "The whole world - old world, Outland and Northrend - as one journey from 1 to 60, for the classes of CoA" },
             };
         }
         static readonly Dictionary<string, ModuleAnalysis> analyses = new Dictionary<string, ModuleAnalysis>(StringComparer.OrdinalIgnoreCase);
@@ -351,6 +354,10 @@ namespace CoAInstaller
                 a.Add(1, "SQL files in data/sql/" + string.Join(", data/sql/", ignored) + " are not applied by the server (often old files that are no longer needed). Check the README.");
             if (looseSql.Count > 0 && dbs.Count == 0)
                 a.Add(1, "It has SQL files outside data/sql (" + looseSql.Count + "), which the server does not apply by itself. Check the README.");
+            var addons = paths.Select(p => Regex.Match(p, @"^(.+/)?([\w.\-]+)/\2\.toc$", RegexOptions.IgnoreCase)).Where(x => x.Success).Select(x => x.Groups[2].Value).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            if (manifest && addons.Count > 0)
+                a.Add(0, "It brings an add-on for the game client (" + string.Join(", ", addons) + "). " + Product.Name + " offers to put it into your game after installing, " +
+                    "and can pack it into a ZIP for other players.");
             if (conf) a.Add(0, "Its options appear in the server settings after installing.");
             if (code && dbs.Count == 0 && !conf) a.Add(0, "Source code only: nothing to set up.");
             return a;

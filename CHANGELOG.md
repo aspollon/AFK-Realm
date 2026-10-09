@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.7.0-preview
+
+- New module under "Modules by AFK Realm": mod-world-journey - the old world, Outland and Northrend as one journey from 1 to 60, for the classes of CoA
+- New: game client add-ons (Server management → Game client add-ons). A module can bring an add-on for the game client in its afk-realm.json ("client"); AFK Realm asks once for the game folder, copies the add-on into Interface\AddOns, clears the client's cache when the module asks for it, updates the add-on when the module changes and takes it out when the module is removed
+- After a module brought, changed or lost an add-on, the game client window opens by itself once; the management page says when the game is not up to date
+- "Export as ZIP …" packs the add-ons for other players, with a note on where to unpack them and which folder to delete
+- Nothing is copied while the game or its launcher runs from the chosen folder
+- The module check shows when a module brings a client add-on
+
 ## 0.6.6-preview
 
 - New: scheduled restart (Server management → Scheduled restart). The server can be restarted on its own after it has run for a number of hours, every day at a set time, or when the worldserver uses more than a set amount of memory

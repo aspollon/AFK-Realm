@@ -37,7 +37,8 @@ Pre-built repacks go stale quickly. Building from source keeps you on the latest
 - **Account transfer**: export an account with all its characters, items, mail and pets to an `.afkaccount` file and import it on another server – ids are renumbered, taken names are renamed at the next login
 - **Game master tools**: a line to the running server (its SOAP service, switched on for this PC only) with a quest helper – see a character's quest log with the progress of every objective, find quests by NPC name, quest title or id, or list the new quests around a character, then give, complete, reward or remove them with one click – plus unstuck, revive, level, rename, gold and mail for a character, announcements, and a console for every other GM command
 - **Database editor**: browse and edit every table of the server and run any SQL without a separate program, import SQL files (it says what a file will do before it runs) and export tables or whole databases by ticking them – read-only until you allow changes, with a clear warning, a one-click backup of the whole server and an "Undo last change" button for edits, SQL statements and imports
-- **Modules**: modules made for this server at the top ("Modules by AFK Realm", first of them: the bots use the auction house like players), then the AzerothCore module catalog: browse it, tick modules to install them and untick them to remove them. Before installing, each module is checked (database changes, settings, core patches, client files, age) and its README is one click away. The server is backed up and rebuilt; if a module does not compile, it is taken out again and the server stays as it was. The database changes of every module installed this way are recorded, so removing it undoes them
+- **Modules**: modules made for this server at the top ("Modules by AFK Realm": the bots use the auction house like players; World Journey makes the old world, Outland and Northrend one journey from 1 to 60), then the AzerothCore module catalog: browse it, tick modules to install them and untick them to remove them. Before installing, each module is checked (database changes, settings, core patches, client files, age) and its README is one click away. The server is backed up and rebuilt; if a module does not compile, it is taken out again and the server stays as it was. The database changes of every module installed this way are recorded, so removing it undoes them
+- **Game client add-ons**: add-ons that modules bring for the game are put into your game folder (and the game's cache cleared when a module needs it), kept up to date and taken out with their module; "Export as ZIP" packs them for other players
 - **Bot reset**: one click deletes all random bots with their characters, guilds and arena teams (your own characters are kept); new bots are created at the next start
 - **Map data**: extracts maps, vmaps, mmaps and the CoA client DBC tables from your game client with one click
 - **Server name**: choose the name shown in the realm list during installation and change it later with one click
@@ -113,11 +114,14 @@ A module can carry a file `afk-realm.json` in its folder. It names patches for t
 ```json
 {
   "patches":  [ { "name": "Bots keep their bags", "target": "mod-playerbots", "file": "patches/mod-playerbots/keep-bags-on-refresh.patch", "why": "..." } ],
-  "settings": [ { "file": "playerbots.conf", "key": "AiPlayerbot.LootDistance", "value": "40.0", "why": "..." } ]
+  "settings": [ { "file": "playerbots.conf", "key": "AiPlayerbot.LootDistance", "value": "40.0", "why": "..." } ],
+  "client":   { "addons": [ "client/AddOns/ZoneLevels" ], "clearCache": true, "why": "..." }
 }
 ```
 
 Before every build both trees are reset and the patches of all installed modules are applied with `git apply`. A patch that no longer fits is left out and reported, one whose change is already in the source is skipped silently; the build goes on either way. Settings are written once, when the module is new, together with the value that was there before (`Dependencies\module-settings.txt`); when the module is removed, a value that is still the module's goes back. `target` is `core` or `mod-playerbots`, nothing else.
+
+`client` names add-ons for the game client: folders inside the module, each with a `.toc` of the same name. AFK Realm copies them into `Interface\AddOns` of the game folder the user chose (*Game client add-ons*), deletes the game's `Cache` folder when `clearCache` is true and an add-on is new or changed, and takes an add-on out again when its module is removed (recorded in `Dependencies\client-addons.txt`). Nothing is copied while a program from the game folder runs. *Export as ZIP* packs the add-ons with a note for other players.
 
 Folder layout after installation:
 
