@@ -27,7 +27,7 @@ namespace CoAInstaller
         static string RecordFile(Install inst) { return Path.Combine(inst.Root, "Dependencies", "client-patch.txt"); }
 
         internal class FileSpec { public string Module, From, To; public Dictionary<string, object> Fill; }
-        internal class EditSpec { public string Module, File, InsertAfter, Line; public Dictionary<string, object> DropRows; }
+        internal class EditSpec { public string Module, File, InsertAfter, Line; public Dictionary<string, object> DropRows, AddRows; }
 
         public class Plan
         {
@@ -75,8 +75,9 @@ namespace CoAInstaller
                     string target = Text(e, "file");
                     if (!SafeClientPath(target)) continue;
                     var edit = new EditSpec { Module = module, File = target.Replace('/', '\\'), InsertAfter = Text(e, "insertAfter"), Line = Text(e, "line"),
-                        DropRows = e.TryGetValue("dropRows", out v) ? v as Dictionary<string, object> : null };
-                    if ((edit.Line.Length > 0 && edit.InsertAfter.Length > 0) || edit.DropRows != null) plan.Edits.Add(edit);
+                        DropRows = e.TryGetValue("dropRows", out v) ? v as Dictionary<string, object> : null,
+                        AddRows = e.TryGetValue("addRows", out v) ? v as Dictionary<string, object> : null };
+                    if ((edit.Line.Length > 0 && edit.InsertAfter.Length > 0) || edit.DropRows != null || edit.AddRows != null) plan.Edits.Add(edit);
                 }
                 if (plan.Files.Count + plan.Edits.Count > before)
                 {
@@ -174,7 +175,7 @@ namespace CoAInstaller
                     if (bytes == null) throw new InvalidOperationException("The game client has no " + group.Key + ", which module " + group.First().Module + " changes. Is this the game folder of Conquest of Azeroth?");
                 }
                 foreach (var edit in group)
-                    bytes = edit.DropRows != null ? DropRows(bytes, edit, group.Key) : InsertAfter(bytes, edit, group.Key);
+                    bytes = edit.DropRows != null ? DropRows(bytes, edit, group.Key) : edit.AddRows != null ? AddRows(bytes, edit, group.Key) : InsertAfter(bytes, edit, group.Key);
                 files[group.Key] = bytes;
                 if (notes != null) notes.Add(group.Key + " (from " + source + ")");
             }
@@ -221,6 +222,43 @@ namespace CoAInstaller
             var values = new HashSet<uint>(listed.Select(x => Convert.ToUInt32(x)));
             if (field < 0 || field >= table.Fields) throw new InvalidOperationException(file + " has no field " + field + " (module " + edit.Module + ").");
             table.Records.RemoveAll(r => table.Field(r, 0) < idBelow && values.Contains(table.Field(r, field)));
+            return table.ToBytes();
+        }
+
+        /// <summary>
+        /// Rows added to a DBC table: every combination of the value lists in "cross" (one list per field, in field order),
+        /// unless the table has that row already. The fields keep the width the table has (CharBaseInfo.dbc of the CoA
+        /// client stores a byte per field), and the rows go at the end, so the rows of the client keep their order.
+        /// </summary>
+        static byte[] AddRows(byte[] bytes, EditSpec edit, string file)
+        {
+            var table = DbcTable.Parse(bytes, file);
+            object v;
+            var lists = ((edit.AddRows.TryGetValue("cross", out v) ? v as object[] : null) ?? new object[0])
+                .Select(l => ((l as object[]) ?? new object[0]).Select(x => Convert.ToUInt32(x)).ToArray()).ToList();
+            if (lists.Count != table.Fields || lists.Any(l => l.Length == 0))
+                throw new InvalidOperationException(file + " has " + table.Fields + " fields; module " + edit.Module + " gives values for " + lists.Count + ".");
+            int width = table.Fields > 0 ? table.RecordSize / table.Fields : 0;
+            if ((width != 1 && width != 2 && width != 4) || width * table.Fields != table.RecordSize)
+                throw new InvalidOperationException(file + " has a row layout module " + edit.Module + " cannot add rows to.");
+            if (width < 4 && lists.Any(l => l.Any(x => x >= (1u << (8 * width)))))
+                throw new InvalidOperationException(file + " stores " + width + " byte(s) per field; a value of module " + edit.Module + " does not fit.");
+            var have = new HashSet<string>(table.Records.Select(r => Convert.ToBase64String(r)));
+            var combo = new uint[lists.Count];
+            Action<int> walk = null;
+            walk = i =>
+            {
+                if (i == lists.Count)
+                {
+                    var rec = new byte[table.RecordSize];
+                    for (int f = 0; f < combo.Length; f++)
+                        for (int b = 0; b < width; b++) rec[f * width + b] = (byte)(combo[f] >> (8 * b));
+                    if (have.Add(Convert.ToBase64String(rec))) table.Records.Add(rec);
+                    return;
+                }
+                foreach (var value in lists[i]) { combo[i] = value; walk(i + 1); }
+            };
+            walk(0);
             return table.ToBytes();
         }
 

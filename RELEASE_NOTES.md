@@ -1,6 +1,10 @@
-# AFK Realm 0.8.1 – preview
+# AFK Realm 0.8.2 – preview
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11.
+
+## New in 0.8.2
+
+- **Every race, every classic class.** With the newest *mod-classic-classes*, a Gnome can be a Druid and a Tauren a Mage: the module gives the server a start for every pair, and AFK Realm adds the pairs to the character creation when it builds the client patch. Install the client patch anew afterwards (*Modules → Game client*) and give the other players a new ZIP.
 
 ## New in 0.8.1
 
