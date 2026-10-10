@@ -607,9 +607,9 @@ namespace CoAInstaller
             {
                 if (!coaHasIt) { extraText.Text = "Extra hard needs a CoA core from October 2026 or later, which has creature multipliers of its own. Update the server to use it."; return; }
                 Func<string, string, string> x = (key, fallback) => "×" + RawIn(coa, "CoA.CreatureScaling." + key, fallback);
-                extraText.Text = "Extra hard adds CoA's own creature multipliers (coa.conf) on top of the level chosen here, about 2.5 times as hard: " +
+                extraText.Text = "Extra hard adds CoA's own creature multipliers (coa.conf) on top of the level chosen here: " +
                     "in the open world creatures have " + x("World.Health", "2.5") + " health and hit players and pets " + x("World.Damage", "2.0") + " as hard, " +
-                    "in dungeons " + x("Dungeon.Health", "2.5") + " health (some up to ×5) and " + x("Dungeon.Damage", "1.5") + " damage, in raids " +
+                    "in dungeons " + x("Dungeon.Health", "2.5") + " health (some maps more) and " + x("Dungeon.Damage", "1.5") + " damage, in raids " +
                     x("Raid.Health", "2.2") + " health. The values themselves are set in coa.conf (Settings).";
                 extraText.ForeColor = extraHard.Checked ? Ui.Bad : Ui.Muted;
             });
