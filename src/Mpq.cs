@@ -319,7 +319,16 @@ namespace CoAInstaller
             return t;
         }
 
-        public uint Field(byte[] record, int field) { return BitConverter.ToUInt32(record, field * 4); }
+        /// <summary>A field of a row, in the width the table stores its fields in (4 bytes; 2 or 1 in a few client
+        /// tables such as CharBaseInfo.dbc).</summary>
+        public uint Field(byte[] record, int field)
+        {
+            int width = Fields > 0 && RecordSize % Fields == 0 ? RecordSize / Fields : 4;
+            if (width == 4) return BitConverter.ToUInt32(record, field * 4);
+            if (width == 2) return BitConverter.ToUInt16(record, field * 2);
+            if (width == 1) return record[field];
+            return BitConverter.ToUInt32(record, field * 4);
+        }
 
         public byte[] ToBytes()
         {

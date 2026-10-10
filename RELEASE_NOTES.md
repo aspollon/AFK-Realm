@@ -1,6 +1,10 @@
-# AFK Realm 0.8.2 – preview
+# AFK Realm 0.8.3 – preview
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11.
+
+## New in 0.8.3
+
+- **No more crash in the character creation.** With every race allowed every classic class, each race had all 32 classes – one more than the game takes, and *Create new character* crashed. The newest *mod-classic-classes* leaves the Death Knight out of the class list (he cannot be created next to the classic classes anyway); this version of AFK Realm is needed to build that patch. Install the client patch anew afterwards (*Modules → Game client*).
 
 ## New in 0.8.2
 
