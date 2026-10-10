@@ -1,6 +1,11 @@
-# AFK Realm 0.8.0 – preview
+# AFK Realm 0.8.1 – preview
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11.
+
+## New in 0.8.1
+
+- **Updates are found again after many starts.** GitHub answers only 60 questions an hour to a program that does not sign in, and the update check used them all after a few starts of AFK Realm – then it showed nothing, although your modules had news. Now AFK Realm asks Git itself whether something is new, which has no such limit; GitHub only adds how many changes there are, and the banner says when it counts again.
+- **Update notes you can read.** They stood right of the server status and ran out of the window when several parts had news. Now they sit under the server buttons: a short line (*CoA core, Playerbots and 3 more*), with the whole list in the tooltip and in the question before the update.
 
 ## New in 0.8.0
 

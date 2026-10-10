@@ -25,6 +25,9 @@ namespace CoAInstaller
         readonly Label nameNote = Ui.Hint("");
         readonly LinkLabel serverUpdate = UpdateLink(), toolUpdate = UpdateLink();
         Panel serverBanner, toolBanner;
+        List<string> serverNews = new List<string>();                  // what the server update brings, one line per part
+        DateTime? serverNewsLimited;
+        readonly ToolTip bannerTip = new ToolTip { AutoPopDelay = 30000, InitialDelay = 300 };
         string toolUrl, toolVersion, toolDownload, toolSha256;
         static LinkLabel UpdateLink()
         {
@@ -219,15 +222,42 @@ namespace CoAInstaller
             stop.Click += (s, e) => StopServer();
             restart.Click += (s, e) => RestartServer();
             serverBanner = Banner(serverUpdate); toolBanner = Banner(toolUpdate);
-            var notes = Ui.Column(); notes.BackColor = Ui.Canvas; notes.Location = new Point(620, 16);
+            // Below the buttons: how long the server runs, then the update notes, each as wide as the window allows -
+            // a long text wraps instead of running out of the window, and the bar grows with them.
+            var notes = Ui.Column(); notes.BackColor = Ui.Canvas; notes.Location = new Point(28, 116);
             notes.Controls.Add(uptime); notes.Controls.Add(serverBanner); notes.Controls.Add(toolBanner);
             busy.Location = new Point(30, 116); busy.BackColor = Ui.Canvas; busy.MaximumSize = new Size(900, 0);
             statusBar.Controls.Add(pills); statusBar.Controls.Add(buttons); statusBar.Controls.Add(notes); statusBar.Controls.Add(busy);
             statusBar.Paint += (s, e) => { using (var pen = new Pen(Ui.Line)) e.Graphics.DrawLine(pen, 0, statusBar.Height - 1, statusBar.Width, statusBar.Height - 1); };
-            statusBar.Resize += (s, e) => notes.Left = Math.Max(pills.Right + 20, statusBar.Width - notes.Width - 24);
-            notes.SizeChanged += (s, e) => notes.Left = Math.Max(pills.Right + 20, statusBar.Width - notes.Width - 24);
-            busy.TextChanged += (s, e) => statusBar.Height = busy.Text.Length > 0 ? 142 : 122;
-            serverUpdate.LinkClicked += (s, e) => RunEngine("Update", "Install the server update now?\n\nThe current server is backed up first, then rebuilt with the newest CoA core and Playerbots, which can take a while. A running server is stopped cleanly first.");
+            bool fitting = false;
+            Action fit = () =>
+            {
+                if (fitting) return;
+                fitting = true;
+                try
+                {
+                    int room = Math.Max(240, statusBar.Width - 56 - 20);
+                    foreach (var link in new[] { serverUpdate, toolUpdate }) link.MaximumSize = new Size(room, 0);
+                    uptime.MaximumSize = new Size(room, 0);
+                    uptime.Visible = uptime.Text.Length > 0;
+                    notes.Top = busy.Text.Length > 0 ? busy.Bottom + 4 : 112;
+                    bool any = uptime.Visible || serverBanner.Visible || toolBanner.Visible;
+                    int bottom = Math.Max(busy.Text.Length > 0 ? busy.Bottom + 6 : 122, any ? notes.Top + notes.PreferredSize.Height + 12 : 0);
+                    if (statusBar.Height != bottom) statusBar.Height = bottom;
+                }
+                finally { fitting = false; }
+            };
+            fit();
+            statusBar.Resize += (s, e) => fit();
+            notes.SizeChanged += (s, e) => fit();
+            busy.TextChanged += (s, e) => fit();
+            uptime.TextChanged += (s, e) => fit();
+            serverBanner.VisibleChanged += (s, e) => fit();
+            toolBanner.VisibleChanged += (s, e) => fit();
+            serverUpdate.LinkClicked += (s, e) => RunEngine("Update", "Install the server update now?\n\n" +
+                (serverNews.Count > 0 ? "New:\n  " + string.Join("\n  ", serverNews) + "\n" +
+                    (serverNewsLimited != null ? "(GitHub counts the changes again from " + serverNewsLimited.Value.ToString("HH:mm") + ")\n" : "") + "\n" : "") +
+                "The current server is backed up first, then rebuilt with the newest code, which can take a while. A running server is stopped cleanly first.");
             toolUpdate.LinkClicked += (s, e) => UpdateTool();
 
             shown.Location = new Point(28, 24); shown.BackColor = Ui.Canvas; shown.Margin = new Padding(0, 0, 0, 30);
@@ -445,19 +475,30 @@ namespace CoAInstaller
             base.Dispose(disposing);
         }
 
-        /// <summary>Asks GitHub in the background whether newer server code or a newer AFK Realm exists.</summary>
+        /// <summary>A short line for the banner - the parts with news, without their numbers; the whole list is in the
+        /// tooltip and in the question before the update.</summary>
+        static string NewsSummary(List<string> news)
+        {
+            var parts = news.ConvertAll(n => n.Split(':')[0]);
+            if (parts.Count <= 3) return string.Join(", ", parts);
+            int modules = parts.Count - 2;
+            return parts[0] + ", " + parts[1] + " and " + modules + " more";
+        }
+
+        /// <summary>Asks in the background whether newer server code or a newer AFK Realm exists.</summary>
         void CheckForUpdates()
         {
             System.Threading.ThreadPool.QueueUserWorkItem(_ =>
             {
                 var r = UpdateCheck.Run(inst);
-                try
-                {
-                    BeginInvoke((Action)(() =>
+                Action show = () =>
                     {
                         if (r.Server.Count > 0)
                         {
-                            serverUpdate.Text = "Server update available (" + string.Join(", ", r.Server) + ")  –  click to install";
+                            serverNews = r.Server; serverNewsLimited = r.LimitedUntil;
+                            serverUpdate.Text = "Server update available: " + NewsSummary(r.Server) + "  –  click to install";
+                            bannerTip.SetToolTip(serverUpdate, string.Join("\n", r.Server) +
+                                (r.LimitedUntil != null ? "\n(GitHub counts the changes again from " + r.LimitedUntil.Value.ToString("HH:mm") + ")" : ""));
                             serverBanner.Visible = true;
                             nav["maintenance"].Badge = "new"; nav["maintenance"].Invalidate();
                         }
@@ -467,7 +508,18 @@ namespace CoAInstaller
                             toolUpdate.Text = "New: " + Product.Name + " " + r.ToolVersion + " is available  –  click to " + (toolDownload != null ? "update" : "download");
                             toolBanner.Visible = true;
                         }
-                    }));
+                    };
+                // A quick answer can come before the window exists: then it waits for the window.
+                try
+                {
+                    if (IsHandleCreated) BeginInvoke(show);
+                    else
+                    {
+                        EventHandler once = null;
+                        once = (s, e) => { HandleCreated -= once; BeginInvoke(show); };
+                        HandleCreated += once;
+                        if (IsHandleCreated) { HandleCreated -= once; BeginInvoke(show); }
+                    }
                 }
                 catch { }
             });
