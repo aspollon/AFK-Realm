@@ -97,7 +97,7 @@ namespace CoAInstaller
         string ShowClientState()
         {
             string pending = ClientAddons.Pending(inst);
-            clientState.Text = pending.Length == 0 ? "" : "Not every add-on of the installed modules is in your game yet.";
+            clientState.Text = pending.Length == 0 ? "" : "Not everything the installed modules bring for the game client is in your game yet.";
             clientState.ForeColor = Ui.Warn;
             NavItem item;
             if (nav.TryGetValue("modules", out item)) { item.Badge = pending.Length == 0 ? null : "!"; item.Invalidate(); }
@@ -110,13 +110,25 @@ namespace CoAInstaller
             string pending = ShowClientState();
             // The same state is offered only once, also across starts; the line above the button keeps saying what is open.
             string offered = Path.Combine(inst.Root, "Dependencies", "client-offered.txt");
-            try { if (pending.Length == 0 || (File.Exists(offered) && File.ReadAllText(offered).Trim() == pending)) return; File.WriteAllText(offered, pending); }
-            catch { return; }
+            bool offerClient;
+            try
+            {
+                offerClient = pending.Length > 0 && !(File.Exists(offered) && File.ReadAllText(offered).Trim() == pending);
+                if (offerClient) File.WriteAllText(offered, pending);
+                else if (pending.Length == 0 && File.Exists(offered)) File.Delete(offered);   // all done: the next change is offered again
+            }
+            catch { offerClient = false; }
+            var bots = File.Exists(inst.WorldExe) ? ModuleBots.NotOffered(inst, File.GetLastWriteTimeUtc(inst.WorldExe)) : new List<KeyValuePair<string, string>>();
+            if (!offerClient && bots.Count == 0) return;
             Action offer = () =>
             {
-                using (var d = new ClientDialog(inst, "A module brings a new or changed add-on for the game client (or one is no longer needed)."))
-                    d.ShowDialog(this);
-                ShowClientState();
+                if (offerClient)
+                {
+                    using (var d = new ClientDialog(inst, "A module brings a new or changed add-on or client patch for the game client (or one is no longer needed)."))
+                        d.ShowDialog(this);
+                    ShowClientState();
+                }
+                if (bots.Count > 0) OfferBotReset(bots);
             };
             // When AFK Realm starts, the page is shown before its window exists: the offer waits for the window.
             if (IsHandleCreated) BeginInvoke(offer);
@@ -292,10 +304,15 @@ namespace CoAInstaller
             var auctionBtn = auctionCard.Add(Ui.Primary("Set up the auction house bots …"));
             auctionBtn.Click += (s, e) => OpenSetup(new AuctionSetup(inst));
 
-            var clientCard = Section("modules", "Game client add-ons", "Some modules bring an add-on for the game client (for example World Journey's map levels and tooltips). " + Product.Name +
+            classicCard = Section("modules", "Classic classes", "Which classic classes - Warrior to Druid - can be played next to the classes of Conquest of Azeroth, by players and bots.", "gamemaster");
+            classicCard.Stripe = Ui.Accent;
+            var classicBtn = classicCard.Add(Ui.Primary("Set up the classic classes …"));
+            classicBtn.Click += (s, e) => OpenSetup(new ClassicSetup(inst));
+
+            var clientCard = Section("modules", "Game client", "Some modules bring an add-on or a patch for the game client (for example World Journey's map levels and tooltips, or the class choice of the classic classes). " + Product.Name +
                 " puts them into your game and clears its cache when a module asks for it; for other players it packs them into a ZIP.", "client");
             clientCard.Add(clientState);
-            var clientBtn = clientCard.Add(Ui.Secondary("Game client add-ons …"));
+            var clientBtn = clientCard.Add(Ui.Secondary("Game client …"));
             clientBtn.Click += (s, e) => { using (var d = new ClientDialog(inst)) d.ShowDialog(this); ShowClientState(); };
 
             // --- Game master
@@ -380,7 +397,7 @@ namespace CoAInstaller
             poll.Tick += (s, e) => RefreshStatus();
         }
 
-        Card journeyCard, auctionCard;
+        Card journeyCard, auctionCard, classicCard;
 
         /// <summary>The setup pages of the modules made for AFK Realm are only there when the module is installed.</summary>
         void ShowModuleCards()
@@ -388,12 +405,15 @@ namespace CoAInstaller
             string dir = ModuleCatalog.ModulesDir(inst);
             journeyCard.Tag = Directory.Exists(Path.Combine(dir, "mod-world-journey")) ? null : "hidden";
             auctionCard.Tag = Directory.Exists(Path.Combine(dir, "mod-playerbots-auctions")) ? null : "hidden";
+            classicCard.Tag = Directory.Exists(Path.Combine(dir, "mod-classic-classes")) ? null : "hidden";
             if (current == "modules") Show("modules");
         }
 
         void OpenSetup(Form setup)
         {
-            using (setup) setup.ShowDialog(this);
+            using (setup)
+                if (setup.ShowDialog(this) == DialogResult.OK)
+                    OfferClient();      // a setting the client patch reads may have changed
         }
 
         static FlowLayoutPanel StatusRow(string name, Label state)
@@ -549,12 +569,22 @@ namespace CoAInstaller
                     });
                 });
         }
-        void ResetBots()
+        /// <summary>A module that changes what the random bots are made of asks once, after it came, for new bots.</summary>
+        void OfferBotReset(List<KeyValuePair<string, string>> modules)
         {
-            if (!Ui.Confirm(this, "Delete all random bots and create new ones?\n\n" +
+            ModuleBots.MarkOffered(inst, modules.Select(m => m.Key));
+            if (!File.Exists(Path.Combine(inst.ConfigDir, "modules", "playerbots.conf"))) return;
+            string why = string.Join("\n", modules.Select(m => "• " + m.Key + (m.Value.Length > 0 ? ": " + m.Value : "")));
+            ResetBots("A new module changes what the random bots are made of:\n\n" + why + "\n\n");
+        }
+
+        void ResetBots(string reason = null)
+        {
+            if (!Ui.Confirm(this, (reason ?? "") + "Delete all random bots and create new ones?\n\n" +
                 "This removes every random bot account with its characters, guilds, arena teams and mail. " +
                 "Your own accounts and characters are kept, including bots you created on your own accounts.\n\n" +
-                "The server is stopped first. Deleting can take a while; the new bots are created at the next server start.")) return;
+                "The server is stopped first. Deleting can take a while; the new bots are created at the next server start." +
+                (reason != null ? "\n\nNot now? \"Reset random bots …\" under Maintenance does the same later." : ""))) return;
             Main.RunBusy(busy, st => ctl.ResetRandomBots(st),
                 err =>
                 {

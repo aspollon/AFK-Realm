@@ -61,6 +61,9 @@ namespace CoAInstaller
                 new ModuleEntry { Name = "mod-world-journey", FullName = "aspollon/mod-world-journey", Branch = "main", Own = true,
                     Url = "https://github.com/aspollon/mod-world-journey", CloneUrl = "https://github.com/aspollon/mod-world-journey.git",
                     Description = "The whole world - old world, Outland and Northrend - as one journey from 1 to 60, for the classes of CoA" },
+                new ModuleEntry { Name = "mod-classic-classes", FullName = "aspollon/mod-classic-classes", Branch = "main", Own = true,
+                    Url = "https://github.com/aspollon/mod-classic-classes", CloneUrl = "https://github.com/aspollon/mod-classic-classes.git",
+                    Description = "The classic classes - Warrior to Druid, as Warcraft Reborn plays them - next to the classes of CoA, for players and bots" },
             };
         }
         static readonly Dictionary<string, ModuleAnalysis> analyses = new Dictionary<string, ModuleAnalysis>(StringComparer.OrdinalIgnoreCase);
@@ -331,7 +334,9 @@ namespace CoAInstaller
             // Lua next to a .toc is an add-on for the game client, not a script for the server's Eluna.
             var addonFolders = new HashSet<string>(paths.Where(p => p.EndsWith(".toc", StringComparison.OrdinalIgnoreCase))
                 .Select(p => p.Contains("/") ? p.Substring(0, p.LastIndexOf('/')) : ""), StringComparer.OrdinalIgnoreCase);
-            bool lua = paths.Any(p => p.EndsWith(".lua", StringComparison.OrdinalIgnoreCase) &&
+            // So is Lua under client/, where a module made for AFK Realm keeps what goes into the game client.
+            bool clientFiles = paths.Any(p => p.StartsWith("client/", StringComparison.OrdinalIgnoreCase));
+            bool lua = paths.Any(p => p.EndsWith(".lua", StringComparison.OrdinalIgnoreCase) && !p.StartsWith("client/", StringComparison.OrdinalIgnoreCase) &&
                 !addonFolders.Any(f => f.Length > 0 && p.StartsWith(f + "/", StringComparison.OrdinalIgnoreCase)));
 
             if (!code && dbs.Count == 0)
@@ -342,7 +347,7 @@ namespace CoAInstaller
                     " applies them with every build and leaves one out when it no longer fits or is no longer needed.");
             else if (patches.Count > 0 || Regex.IsMatch(readme, @"git\s+apply|patch\s+-p\d|apply\s+(the\s+)?(core\s+)?patch|core\s+patch", RegexOptions.IgnoreCase))
                 a.Add(2, "It needs changes to the server core (a patch). " + Product.Name + " cannot apply those, so the module will most likely not work or not compile.");
-            if (Regex.IsMatch(readme, @"\.mpq\b|client[\s-]+(side\s+)?patch|patch-[a-z0-9]\.mpq|client\s+dbc|dbc\s+files?\s+(to|for|in)\s+(the\s+)?client", RegexOptions.IgnoreCase))
+            if (!(manifest && clientFiles) && Regex.IsMatch(readme, @"\.mpq\b|client[\s-]+(side\s+)?patch|patch-[a-z0-9]\.mpq|client\s+dbc|dbc\s+files?\s+(to|for|in)\s+(the\s+)?client", RegexOptions.IgnoreCase))
                 a.Add(1, "The README mentions files for the game client (MPQ/DBC patches). Every player may need them; see the README.");
             if (!m.Name.Equals("mod-eluna", StringComparison.OrdinalIgnoreCase) && (lua || Regex.IsMatch(readme, @"\beluna\b", RegexOptions.IgnoreCase)))
                 a.Add(1, "It uses Lua scripts, which need the Eluna module (mod-eluna) as well.");

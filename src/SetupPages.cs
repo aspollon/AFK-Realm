@@ -345,7 +345,7 @@ namespace CoAInstaller
         }
 
         /// <summary>A list of numbers written as "1,2,5", shown as one switch per number.</summary>
-        protected void AddFlags(Card card, string key, int[] values, string[] names, int columns = 3)
+        protected void AddFlags(Card card, string key, int[] values, string[] names, int columns = 3, char separator = ',')
         {
             var grid = new TableLayoutPanel { ColumnCount = columns, AutoSize = true, BackColor = Ui.Surface, Margin = new Padding(0, 2, 0, 8) };
             var toggles = new List<Toggle>();
@@ -361,17 +361,37 @@ namespace CoAInstaller
             card.Add(grid);
             loaders.Add(() =>
             {
-                var on = new HashSet<string>(Raw(key, "").Split(',').Select(x => x.Trim()));
+                var on = new HashSet<string>(Raw(key, "").Split(separator).Select(x => x.Trim()));
                 for (int i = 0; i < values.Length; i++) toggles[i].Checked = on.Contains(values[i].ToString());
             });
             foreach (var t in toggles)
                 t.CheckedChanged += (s, e) =>
                 {
                     var keep = new List<string>();
-                    var other = Raw(key, "").Split(',').Select(x => x.Trim()).Where(x => x.Length > 0 && !values.Select(v => v.ToString()).Contains(x));
+                    var other = Raw(key, "").Split(separator).Select(x => x.Trim()).Where(x => x.Length > 0 && !values.Select(v => v.ToString()).Contains(x));
                     for (int i = 0; i < values.Length; i++) if (toggles[i].Checked) keep.Add(values[i].ToString());
-                    Set(key, string.Join(",", keep.Concat(other).OrderBy(x => { int n; return int.TryParse(x, out n) ? n : 999; })));
+                    Set(key, string.Join(separator.ToString(), keep.Concat(other).OrderBy(x => { int n; return int.TryParse(x, out n) ? n : 999; })));
                 };
+        }
+    }
+
+    // ==================================================================================== Classic classes
+
+    class ClassicSetup : SetupDialog
+    {
+        public ClassicSetup(Install i) : base(i, "mod_classic_classes.conf", "Classic classes", "mod-classic-classes  ·  modules\\mod_classic_classes.conf", "gamemaster", "ClassicClasses.Enable", "Classic classes on")
+        {
+            Tab("Classes");
+            var classes = Card("Which classic classes can be played", "Next to the classes of Conquest of Azeroth, in the way Ascension's Warcraft Reborn realms played them: their Reborn spells, trainers, talents and summons. " +
+                "The random bots are created in the same classes.", "gamemaster");
+            AddFlags(classes, "ClassicClasses.Classes", new[] { 1, 2, 3, 4, 5, 7, 8, 9, 11 },
+                new[] { "Warrior", "Paladin", "Hunter", "Rogue", "Priest", "Shaman", "Mage", "Warlock", "Druid" }, 3, ' ');
+            classes.Add(Small("The Death Knight is left out: his spells begin at level 55, so he would skip almost the whole world.", classes.Inner));
+
+            var after = Card("After a change", null, "client");
+            after.Add(Small("The class choice of the game shows the classes of the client patch. After a change, open Modules › Game client and choose Install: " +
+                Product.Name + " builds the patch anew. The other players need the new ZIP. Bots already made keep their class; Maintenance › Reset random bots makes them anew.", after.Inner));
+            Start();
         }
     }
 

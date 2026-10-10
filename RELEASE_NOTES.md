@@ -1,6 +1,13 @@
-# AFK Realm 0.7.3 – preview
+# AFK Realm 0.8.0 – preview
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11.
+
+## New in 0.8.0
+
+- **The classic classes are back.** A new module under *Modules by AFK Realm*, *mod-classic-classes*, lets you and the bots play Warrior, Paladin, Hunter, Rogue, Priest, Shaman, Mage, Warlock and Druid next to the 21 classes of Conquest of Azeroth. CoA already knows how to play them – the way Ascension's Warcraft Reborn realms did, with their own spells, trainers and talents – but only on a realm without its own classes; the module brings both together. The Death Knight stays out: his spells begin at 55. Which classes can be created is up to you on a new setup page (*Modules → Classic classes*).
+- **Patches for the game client.** The character creation of the game only shows the CoA classes, so the module changes it a little. AFK Realm now builds such client patches itself, from *your* game client: it takes the files a module changes out of your game and changes them, so nothing of the game is handed out. The patch goes into your game folder with one click (*Modules → Game client*), is built anew when the game or a module changes, and comes along in *Export as ZIP* for the other players.
+- **New bots when a module needs them.** The bots you have keep their class. After installing the classic classes, AFK Realm offers once to make the random bots anew, so they come in the classic classes too.
+- Brand new and not yet played on a real server: the server side is built and compiled, the client patch was built from the CoA client and checked – how the class choice and the talent window look in the game still needs a test. Tell me what you see.
 
 ## New in 0.7.3
 

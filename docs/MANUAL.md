@@ -57,7 +57,7 @@ When the installation is finished, three things are left to do in the server man
 
 ## 3. Starting and stopping the server
 
-The **Server management** has a side bar on the left with its parts: **Server** (scheduled restart, map data), **Settings** (server settings, server name, playing with others), **Modules** (modules, their setup pages, game client add-ons), **Game master**, **Accounts**, **Database** (database editor, backups) and **Maintenance** (updates, repair, bot reset, folders). A small mark beside *Modules* or *Maintenance* says that something waits there, for example an update or an add-on for your game.
+The **Server management** has a side bar on the left with its parts: **Server** (scheduled restart, map data), **Settings** (server settings, server name, playing with others), **Modules** (modules, their setup pages, the game client), **Game master**, **Accounts**, **Database** (database editor, backups) and **Maintenance** (updates, repair, bot reset, folders). A small mark beside *Modules* or *Maintenance* says that something waits there, for example an update or an add-on for your game.
 
 The bar at the top stays the same on every part. It shows the three parts of the server:
 
@@ -330,9 +330,11 @@ What players got *through* a module while playing (items, spells) is not tracked
 
 *mod-world-journey* (World Journey) makes the old world, Outland and Northrend one journey from 1 to 60 – the classes of CoA end at 60, and with it Outland and Northrend become playable: the old world first, Outland from about level 30, Northrend from about 40, their raids and heroics at 60. Creatures, quests, items, dungeons, the Dungeon Finder, battlegrounds and the random bots follow. It brings two changes (for the core and for Playerbots), sets a few values in other config files (for example the highest level, 60) and has an add-on for the game client (see below). Its own options are in the server settings under `mod_world_journey.conf`; the first start after installing takes about half a minute longer than usual.
 
+*mod-classic-classes* (Classic classes) lets players and bots create the classic classes – Warrior, Paladin, Hunter, Rogue, Priest, Shaman, Mage, Warlock and Druid – next to the 21 classes of CoA. CoA itself plays them the way Ascension's Warcraft Reborn realms did (their Reborn spells, trainers, talents and summons), but only on a realm that offers nothing else; the module's two changes for the core let a CoA realm offer both. The Death Knight is left out: his spells begin at level 55. The module brings a client patch (see below) for the class choice of the character creation, and after it came, AFK Realm offers once to make the random bots anew, so that they come in the classic classes too.
+
 ### Setup pages of the modules by AFK Realm
 
-When *World Journey* or the *auction house bots* are installed, **Modules** shows a card for each with **Set up …**. The page reads the module's own config file and writes back only what you change, when you press **Save**; the changes take effect at the next start of the worldserver (*Restart server*). **Reset to defaults** puts every option on the page back to the module's value, **Open the file** opens the config file itself. Whoever prefers the file can keep editing it: the page always shows what is in it.
+When *World Journey*, the *auction house bots* or the *classic classes* are installed, **Modules** shows a card for each with **Set up …**. The page reads the module's own config file and writes back only what you change, when you press **Save**; the changes take effect at the next start of the worldserver (*Restart server*). **Reset to defaults** puts every option on the page back to the module's value, **Open the file** opens the config file itself. Whoever prefers the file can keep editing it: the page always shows what is in it.
 
 ![World Journey setup](screenshots/25-world-journey.png)
 
@@ -355,18 +357,24 @@ When *World Journey* or the *auction house bots* are installed, **Modules** show
 
 ![Auction house bots setup](screenshots/29-auction-setup.png)
 
-### Add-ons for the game client
+**Classic classes** has one page: which of the nine classic classes can be created. The random bots are created in the same ones. After a change, build the client patch anew (*Game client → Install*): the class choice of the game shows the classes the patch was built with; the server refuses the others either way.
 
-Some modules bring an add-on for the game – World Journey shows its zone levels on the world map and the right values of gems and enchantments with one. **Modules → Game client add-ons …** takes care of them:
+![Classic classes setup](screenshots/34-classic-classes.png)
+
+### The game client: add-ons and the client patch
+
+Some modules bring something for the game – World Journey an add-on that shows its zone levels on the world map and the right values of gems and enchantments, the classic classes a change to the class choice of the character creation. **Modules → Game client …** takes care of both:
 
 - **Game folder**: the folder of your game, the one with the `Data` folder. AFK Realm asks once and remembers it.
 - The list shows every add-on of the installed modules and whether your game has it (*up to date*, *older version*, *not installed*). An add-on of a module you removed is listed as *will be taken out*.
-![Game client add-ons](screenshots/31-game-client.png)
+- **Client patch (patch-Y.MPQ)**: modules that change files of the game (the class choice, a data table of the client) get one patch together, `Data\patch-Y.MPQ`. AFK Realm builds it from *your own* game client – it takes the files a module changes out of the game's archives and changes them – so it never hands out files of the game. It is built anew whenever the game client, a module or a setting it reads has changed (*to be built again*), and taken out when no module needs it any more.
 
-- **Install add-ons** copies them into `Interface\AddOns` and takes out the ones no longer needed. With **Clear the game's cache** switched on, the game's `Cache` folder is deleted too, so the game forgets the old levels and values of items, creatures and quests; it is on when a module asks for it and something changed.
+  ![Game client](screenshots/33-game-client.png)
+
+- **Install** copies the add-ons into `Interface\AddOns`, builds and puts in the client patch, and takes out what is no longer needed. With **Clear the game's cache** switched on, the game's `Cache` folder is deleted too, so the game forgets the old levels and values of items, creatures and quests; it is on when a module asks for it and something changed.
 - Close the game and its launcher first. AFK Realm checks that nothing from the game folder is running.
-- After a module brought, changed or lost an add-on, the window opens by itself once. The management page says when your game is not up to date.
-- **Export as ZIP …** packs the add-ons into one file for the other players on your server. They unpack it into their game folder (a note inside says how, and which folder to delete). After a module update, send them a new ZIP.
+- After a module brought, changed or lost an add-on or the client patch, the window opens by itself once – also after you changed a setting on a setup page that the client patch reads. The management page says when your game is not up to date.
+- **Export as ZIP …** packs the add-ons and the client patch into one file for the other players on your server. They unpack it into their game folder (a note inside says how, and which folder to delete). The client patch fits the same version of the CoA client as yours; after a module or a client update, send them a new ZIP. It contains changed files of the game: give it to the players of your server, do not publish it.
 
 After installing a module, read its README: some modules need a step in the game, for example creating a character for an auction house bot. A module's options appear in the [server settings](#5-server-settings).
 
@@ -432,7 +440,7 @@ Map data is not part of a backup; updates do not touch it.
 
 **Maintenance → Reset random bots …** deletes every random bot with its characters, guilds, arena teams and mail. Your own accounts and characters are kept, including bots you created on your own accounts. New bots are created at the next server start, which then takes longer than usual.
 
-Use it after changing bot settings that only apply to newly created bots (for example their level range), or when the bots have become a mess.
+Use it after changing bot settings that only apply to newly created bots (for example their level range), or when the bots have become a mess. A module that changes what the bots are made of (the classic classes, for example) offers it once by itself, after it came.
 
 ## 13. Where everything is stored
 
@@ -440,7 +448,7 @@ Use it after changing bot settings that only apply to newly created bots (for ex
 C:\CoA-Server\
   Server\         authserver, worldserver, configs, Data (map data), server logs
   DB\             the database and its data
-  Dependencies\   build tools, source code, build files, client-addons.txt (add-ons put into the game)
+  Dependencies\   build tools, source code, build files, client-addons.txt and client-patch.txt (what was put into the game)
   logs\           install.log, mysql-error.log
   Backups\        the newest three backups
   Builder\        a copy of AFK Realm (the desktop shortcut points here)

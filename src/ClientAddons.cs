@@ -205,24 +205,35 @@ namespace CoAInstaller
         }
 
         /// <summary>A ZIP for other players: the add-ons in Interface\AddOns, to be unpacked into the game folder, and a note on what to do.</summary>
-        public static void Export(string file, List<ClientAddon> addons)
+        public static void Export(string file, List<ClientAddon> addons, Install inst, string client, ClientPatch.Plan patch)
         {
             if (File.Exists(file)) File.Delete(file);
+            bool withPatch = patch != null && !patch.Empty && client != null;
             using (var zip = ZipFile.Open(file, ZipArchiveMode.Create))
             {
+                if (withPatch) ClientPatch.AddToZip(zip, inst, client, patch);
                 foreach (var addon in addons)
                     foreach (var path in Directory.GetFiles(addon.Source, "*", SearchOption.AllDirectories))
                         zip.CreateEntryFromFile(path, "Interface/AddOns/" + addon.Name + "/" + path.Substring(addon.Source.Length).TrimStart('\\', '/').Replace('\\', '/'), CompressionLevel.Optimal);
                 var note = new StringBuilder();
-                note.AppendLine("Add-ons for the game client, from the modules of this server (" + Product.Name + ").");
+                note.AppendLine("Files for the game client, from the modules of this server (" + Product.Name + ").");
                 note.AppendLine();
                 note.AppendLine("1. Close the game and its launcher.");
-                note.AppendLine("2. Unpack this ZIP into your game folder (the folder with the \"Data\" folder),");
-                note.AppendLine("   so that the add-ons land in Interface\\AddOns. Replace files that are already there.");
-                if (addons.Any(a => a.ClearCache))
+                note.AppendLine("2. Unpack this ZIP into your game folder (the folder with the \"Data\" folder).");
+                note.AppendLine("   Replace files that are already there." + (addons.Count > 0 ? " The add-ons land in Interface\\AddOns." : ""));
+                if (withPatch) note.AppendLine("   Data\\" + ClientPatch.ArchiveName + " is the client patch of the modules.");
+                if (addons.Any(a => a.ClearCache) || (withPatch && patch.ClearCache))
                     note.AppendLine("3. Delete the folder \"Cache\" in your game folder, so the game forgets old values of items, creatures and quests.");
                 note.AppendLine();
-                note.AppendLine("Add-ons:");
+                if (withPatch)
+                {
+                    note.AppendLine("The client patch was built from the game client of the server owner. It fits the same version of the");
+                    note.AppendLine("Conquest of Azeroth client; after the server owner updates it, get a new ZIP. It contains changed files");
+                    note.AppendLine("of the game client: it is meant for the players of this server, not for passing on.");
+                    foreach (var why in patch.Why) note.AppendLine("  " + why);
+                    note.AppendLine();
+                }
+                if (addons.Count > 0) note.AppendLine("Add-ons:");
                 foreach (var addon in addons) note.AppendLine("  " + addon.Name + "  (module " + addon.Module + ")" + (addon.Why.Length > 0 ? " - " + addon.Why : ""));
                 note.AppendLine();
                 note.AppendLine("Do the same again after the server owner updates these modules.");
@@ -241,6 +252,9 @@ namespace CoAInstaller
                 var addons = Find(inst, client);
                 var left = Leftovers(inst, addons, client);
                 var open = addons.Where(a => a.State != AddonState.Current).Select(a => a.Name + ":" + a.State).Concat(left.Select(l => l + ":left")).ToList();
+                string problem;
+                var patch = ClientPatch.StateOf(inst, client, ClientPatch.Collect(inst), out problem);
+                if (patch != PatchState.None && patch != PatchState.Current) open.Add("client-patch:" + patch);
                 return string.Join(",", open);
             }
             catch { return ""; }
@@ -259,6 +273,9 @@ namespace CoAInstaller
         readonly Button export = Ui.Secondary("Export as ZIP …");
         List<ClientAddon> addons = new List<ClientAddon>();
         List<string> leftovers = new List<string>();
+        ClientPatch.Plan patch = new ClientPatch.Plan();
+        PatchState patchState = PatchState.None;
+        string patchProblem;
 
         public ClientDialog(Install i, string reason = null)
         {
@@ -268,8 +285,9 @@ namespace CoAInstaller
 
             var top = Ui.Column(); top.Dock = DockStyle.Top; top.AutoSize = true; top.Padding = new Padding(16, 12, 16, 4);
             if (reason != null) top.Controls.Add(new Label { Text = reason, AutoSize = true, Font = Ui.Bold, ForeColor = Ui.Accent, MaximumSize = new Size(800, 0), Margin = new Padding(0, 0, 0, 6) });
-            top.Controls.Add(Ui.Para("Some modules bring an add-on for the game client. " + Product.Name + " copies them into Interface\\AddOns of your game, keeps them up to date " +
-                "and takes them out again when their module is removed. Other players can get them as a ZIP.", 800));
+            top.Controls.Add(Ui.Para("Some modules bring an add-on for the game client, or change files of the client. " + Product.Name + " copies the add-ons into Interface\\AddOns " +
+                "of your game and builds the client patch (Data\\" + ClientPatch.ArchiveName + ") from your own game client, keeps both up to date and takes them out again " +
+                "when their module is removed. Other players can get everything as a ZIP.", 800));
             var row = Ui.Row();
             row.Controls.Add(Ui.FieldLabel("Game folder", 110));
             row.Controls.Add(folder);
@@ -285,8 +303,8 @@ namespace CoAInstaller
             row.Controls.Add(browse);
             top.Controls.Add(row);
 
-            list.Columns.Add("Add-on", 170);
-            list.Columns.Add("Module", 190);
+            list.Columns.Add("Add-on or patch", 190);
+            list.Columns.Add("Module", 170);
             list.Columns.Add("In your game", 150);
             list.Columns.Add("What it does", 300);
             var listPanel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(16, 6, 16, 4) };
@@ -316,6 +334,8 @@ namespace CoAInstaller
             string client = Client;
             try { addons = ClientAddons.Find(inst, client); leftovers = ClientAddons.Leftovers(inst, addons, client); }
             catch (Exception ex) { addons = new List<ClientAddon>(); leftovers = new List<string>(); state.Text = "The modules could not be read: " + ex.Message; }
+            try { patch = ClientPatch.Collect(inst); patchState = ClientPatch.StateOf(inst, client, patch, out patchProblem); }
+            catch (Exception ex) { patch = new ClientPatch.Plan(); patchState = PatchState.None; patchProblem = ex.Message; }
             list.BeginUpdate(); list.Items.Clear();
             foreach (var a in addons)
             {
@@ -326,6 +346,16 @@ namespace CoAInstaller
                 it.ForeColor = client == null || a.State == AddonState.Current ? Ui.Text : Ui.Warn;
                 list.Items.Add(it);
             }
+            if (patchState != PatchState.None)
+            {
+                var it = new ListViewItem("Client patch (" + ClientPatch.ArchiveName + ")");
+                it.SubItems.Add(patch.Empty ? "(removed)" : string.Join(", ", patch.Modules));
+                it.SubItems.Add(client == null ? "-" : patchState == PatchState.Current ? "up to date" : patchState == PatchState.Outdated ? "to be built again" :
+                    patchState == PatchState.Leftover ? "will be taken out" : "not installed");
+                it.SubItems.Add(patchProblem ?? (patch.Empty ? "No module needs it any more." : string.Join(" ", patch.Why)));
+                it.ForeColor = client == null || patchState == PatchState.Current ? Ui.Text : Ui.Warn;
+                list.Items.Add(it);
+            }
             foreach (var name in leftovers)
             {
                 var it = new ListViewItem(name) { ForeColor = Ui.Warn };
@@ -333,16 +363,19 @@ namespace CoAInstaller
                 list.Items.Add(it);
             }
             list.EndUpdate();
-            bool due = addons.Any(a => a.State != AddonState.Current) || leftovers.Count > 0;
-            clearCache.Visible = addons.Any(a => a.ClearCache);
-            clearCache.Checked = clearCache.Visible && addons.Any(a => a.ClearCache && a.State != AddonState.Current);
-            export.Enabled = addons.Count > 0;
-            install.Enabled = client != null && (addons.Count > 0 || leftovers.Count > 0);
-            install.Text = due || addons.Count == 0 ? "Install add-ons" : "Install again";
-            if (addons.Count == 0 && leftovers.Count == 0) state.Text = "None of the installed modules brings an add-on for the game client.";
+            bool patchDue = patchState == PatchState.Missing || patchState == PatchState.Outdated || patchState == PatchState.Leftover;
+            bool due = addons.Any(a => a.State != AddonState.Current) || leftovers.Count > 0 || patchDue;
+            bool anything = addons.Count > 0 || leftovers.Count > 0 || patchState != PatchState.None;
+            clearCache.Visible = addons.Any(a => a.ClearCache) || patch.ClearCache;
+            clearCache.Checked = clearCache.Visible && (addons.Any(a => a.ClearCache && a.State != AddonState.Current) || (patch.ClearCache && patchDue));
+            export.Enabled = addons.Count > 0 || !patch.Empty;
+            install.Enabled = client != null && anything;
+            install.Text = due || !anything ? "Install" : "Install again";
+            if (!anything) state.Text = "None of the installed modules brings an add-on or a client patch for the game client.";
             else if (folder.Text.Trim().Length == 0) state.Text = "Choose your game folder, the one with the \"Data\" folder.";
             else if (client == null) state.Text = "This is not a game folder: it needs a \"Data\" folder with the game's .MPQ archives.";
-            else state.Text = due ? "Not everything is in your game yet. Close the game and its launcher, then choose \"Install add-ons\"." : "Your game has every add-on of the installed modules.";
+            else if (patchProblem != null) state.Text = "The client patch cannot be built: " + patchProblem;
+            else state.Text = due ? "Not everything is in your game yet. Close the game and its launcher, then choose \"Install\"." : "Your game has everything the installed modules bring.";
             state.ForeColor = client != null && due ? Ui.Warn : Ui.Muted;
         }
 
@@ -358,23 +391,39 @@ namespace CoAInstaller
             }
             try
             {
-                string done = ClientAddons.Install(inst, client, addons, leftovers, clearCache.Visible && clearCache.Checked);
+                bool clear = clearCache.Visible && clearCache.Checked;
+                string done = ClientAddons.Install(inst, client, addons, leftovers, false);
+                try
+                {
+                    string patched = ClientPatch.Install(inst, client, patch);
+                    if (patched.Length > 0) done = (done + "\n" + patched).Trim();
+                }
+                finally
+                {
+                    string cache = System.IO.Path.Combine(client, "Cache");
+                    if (clear && Directory.Exists(cache)) { Directory.Delete(cache, true); done += "\nthe client's cache cleared"; }
+                }
                 ClientAddons.ClientFolder = client;
                 Refresh_();
                 MessageBox.Show(this, "Done:\n\n" + done, Product.Name, MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
-            catch (Exception ex) { Ui.Error(this, "The add-ons could not be installed:\n" + ex.Message); Refresh_(); }
+            catch (Exception ex) { Ui.Error(this, "Not everything could be installed:\n" + ex.Message); Refresh_(); }
         }
 
         void Export_()
         {
-            if (addons.Count == 0) return;
-            using (var d = new SaveFileDialog { Filter = "ZIP archive (*.zip)|*.zip", FileName = "Add-ons for " + Product.Name + " server.zip", Title = "Save the add-ons as ZIP" })
+            if (addons.Count == 0 && patch.Empty) return;
+            if (!patch.Empty && Client == null)
+            {
+                Ui.Error(this, "Choose your game folder first: the client patch is built from your own game client.");
+                return;
+            }
+            using (var d = new SaveFileDialog { Filter = "ZIP archive (*.zip)|*.zip", FileName = "Game client files for " + Product.Name + " server.zip", Title = "Save the files for the game client as ZIP" })
             {
                 if (d.ShowDialog(this) != DialogResult.OK) return;
                 try
                 {
-                    ClientAddons.Export(d.FileName, addons);
+                    ClientAddons.Export(d.FileName, addons, inst, Client, patch);
                     MessageBox.Show(this, "Saved: " + d.FileName + "\n\nGive it to the other players: they unpack it into their game folder (it says how inside).",
                         Product.Name, MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
