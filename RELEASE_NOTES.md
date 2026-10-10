@@ -1,6 +1,11 @@
-# AFK Realm 0.8.3 – preview
+# AFK Realm 0.8.4 – preview
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11.
+
+## New in 0.8.4
+
+- **Every race, every classic class – now without the crash.** The game keeps the list of which race may play which class in a space of about 300 entries, and the full list was longer. The newest *mod-classic-classes* keeps it at 300 by leaving out the Death Knight and the Hero (neither can be created next to the classic classes), and gives the Orc Druid the outfit the game had none for. Tested in the game: every race can choose every classic class. Update AFK Realm first, then the module, then install the client patch anew (*Modules → Game client*) and give the other players a new ZIP.
+- **The right starting gear.** For the new pairs, CoA's data held only a showcase of high level armour – shown in the character creation, but no items, so such a character would have started without gear. They now wear and get the starting gear of their class, as a character of another race of the same faction does.
 
 ## New in 0.8.3
 

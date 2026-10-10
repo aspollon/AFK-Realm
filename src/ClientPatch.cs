@@ -27,7 +27,7 @@ namespace CoAInstaller
         static string RecordFile(Install inst) { return Path.Combine(inst.Root, "Dependencies", "client-patch.txt"); }
 
         internal class FileSpec { public string Module, From, To; public Dictionary<string, object> Fill; }
-        internal class EditSpec { public string Module, File, InsertAfter, Line; public Dictionary<string, object> DropRows, AddRows; }
+        internal class EditSpec { public string Module, File, InsertAfter, Line; public Dictionary<string, object> DropRows, AddRows, CloneRows, FillRows; }
 
         public class Plan
         {
@@ -76,8 +76,12 @@ namespace CoAInstaller
                     if (!SafeClientPath(target)) continue;
                     var edit = new EditSpec { Module = module, File = target.Replace('/', '\\'), InsertAfter = Text(e, "insertAfter"), Line = Text(e, "line"),
                         DropRows = e.TryGetValue("dropRows", out v) ? v as Dictionary<string, object> : null,
-                        AddRows = e.TryGetValue("addRows", out v) ? v as Dictionary<string, object> : null };
-                    if ((edit.Line.Length > 0 && edit.InsertAfter.Length > 0) || edit.DropRows != null || edit.AddRows != null) plan.Edits.Add(edit);
+                        AddRows = e.TryGetValue("addRows", out v) ? v as Dictionary<string, object> : null,
+                        CloneRows = e.TryGetValue("cloneRows", out v) ? v as Dictionary<string, object> : null,
+                        FillRows = e.TryGetValue("fillRows", out v) ? v as Dictionary<string, object> : null };
+                    if ((edit.Line.Length > 0 && edit.InsertAfter.Length > 0) || edit.DropRows != null || edit.AddRows != null || edit.CloneRows != null ||
+                        edit.FillRows != null)
+                        plan.Edits.Add(edit);
                 }
                 if (plan.Files.Count + plan.Edits.Count > before)
                 {
@@ -175,7 +179,9 @@ namespace CoAInstaller
                     if (bytes == null) throw new InvalidOperationException("The game client has no " + group.Key + ", which module " + group.First().Module + " changes. Is this the game folder of Conquest of Azeroth?");
                 }
                 foreach (var edit in group)
-                    bytes = edit.DropRows != null ? DropRows(bytes, edit, group.Key) : edit.AddRows != null ? AddRows(bytes, edit, group.Key) : InsertAfter(bytes, edit, group.Key);
+                    bytes = edit.DropRows != null ? DropRows(bytes, edit, group.Key) : edit.AddRows != null ? AddRows(bytes, edit, group.Key) :
+                        edit.CloneRows != null ? CloneRows(bytes, edit, group.Key) :
+                        edit.FillRows != null ? FillRows(bytes, edit, group.Key) : InsertAfter(bytes, edit, group.Key);
                 files[group.Key] = bytes;
                 if (notes != null) notes.Add(group.Key + " (from " + source + ")");
             }
@@ -227,8 +233,9 @@ namespace CoAInstaller
 
         /// <summary>
         /// Rows added to a DBC table: every combination of the value lists in "cross" (one list per field, in field order),
-        /// unless the table has that row already. The fields keep the width the table has (CharBaseInfo.dbc of the CoA
-        /// client stores a byte per field), and the rows go at the end, so the rows of the client keep their order.
+        /// unless the table has that row already (a row the table holds twice keeps only its first). The fields keep the
+        /// width the table has (CharBaseInfo.dbc of the CoA client stores a byte per field), and the rows go at the end,
+        /// so the rows of the client keep their order.
         /// </summary>
         static byte[] AddRows(byte[] bytes, EditSpec edit, string file)
         {
@@ -243,7 +250,9 @@ namespace CoAInstaller
                 throw new InvalidOperationException(file + " has a row layout module " + edit.Module + " cannot add rows to.");
             if (width < 4 && lists.Any(l => l.Any(x => x >= (1u << (8 * width)))))
                 throw new InvalidOperationException(file + " stores " + width + " byte(s) per field; a value of module " + edit.Module + " does not fit.");
-            var have = new HashSet<string>(table.Records.Select(r => Convert.ToBase64String(r)));
+            var have = new HashSet<string>();
+            // A row the table holds twice takes a place in the client's list for nothing: the second one goes.
+            table.Records.RemoveAll(r => !have.Add(Convert.ToBase64String(r)));
             var combo = new uint[lists.Count];
             Action<int> walk = null;
             walk = i =>
@@ -259,6 +268,95 @@ namespace CoAInstaller
                 foreach (var value in lists[i]) { combo[i] = value; walk(i + 1); }
             };
             walk(0);
+            // Some tables the client holds in a list of fixed size (CharBaseInfo.dbc of the CoA client: about 300 rows);
+            // more rows than that crash the game, so the module names its limit.
+            int most = edit.AddRows.TryGetValue("maxRows", out v) ? Convert.ToInt32(v) : int.MaxValue;
+            if (table.Records.Count > most)
+                throw new InvalidOperationException(file + " would have " + table.Records.Count + " rows, more than the " + most +
+                    " the game takes (module " + edit.Module + "). Another module may have added rows to it too.");
+            return table.ToBytes();
+        }
+
+        /// <summary>
+        /// Rows copied within a DBC table: every row whose bytes at the offsets in "match" hold those values is copied with
+        /// the bytes in "set" changed and a new id (the first field, after the highest id), unless a row with the copy's
+        /// bytes at the "key" offsets exists already. For tables with byte fields, such as CharStartOutfit.dbc (the start
+        /// outfit of a race, class and sex).
+        /// </summary>
+        static byte[] CloneRows(byte[] bytes, EditSpec edit, string file)
+        {
+            var table = DbcTable.Parse(bytes, file);
+            object v;
+            Func<string, Dictionary<int, byte>> offsets = name =>
+            {
+                var d = edit.CloneRows.TryGetValue(name, out v) ? v as Dictionary<string, object> : null;
+                var result = new Dictionary<int, byte>();
+                if (d != null) foreach (var kv in d) result[int.Parse(kv.Key)] = Convert.ToByte(kv.Value);
+                return result;
+            };
+            var match = offsets("match"); var set = offsets("set");
+            var key = ((edit.CloneRows.TryGetValue("key", out v) ? v as object[] : null) ?? new object[0]).Select(x => Convert.ToInt32(x)).ToArray();
+            if (match.Count == 0 || set.Count == 0 || table.RecordSize < 4 || match.Keys.Concat(set.Keys).Concat(key).Any(o => o < 4 || o >= table.RecordSize))
+                throw new InvalidOperationException("The rows module " + edit.Module + " copies in " + file + " are not described in a way it can use.");
+            Func<byte[], string> keyOf = r => string.Join(",", key.Select(o => r[o]));
+            var have = new HashSet<string>(table.Records.Select(keyOf));
+            uint next = table.Records.Count == 0 ? 1 : table.Records.Max(r => BitConverter.ToUInt32(r, 0)) + 1;
+            foreach (var row in table.Records.Where(r => match.All(m => r[m.Key] == m.Value)).ToList())
+            {
+                var copy = (byte[])row.Clone();
+                foreach (var s in set) copy[s.Key] = s.Value;
+                if (!have.Add(keyOf(copy))) continue;
+                BitConverter.GetBytes(next++).CopyTo(copy, 0);
+                table.Records.Add(copy);
+            }
+            return table.ToBytes();
+        }
+
+        /// <summary>
+        /// Rows of a DBC table filled from a sibling: a row whose bytes at a "match" offset hold one of its values and whose
+        /// 32-bit numbers in "empty" are all 0 or below gets the bytes in "copy" from a row that agrees with it at the "same"
+        /// offsets and is not empty - first from a row whose byte at "prefer.offset" is in the same list of "prefer.groups".
+        /// CharStartOutfit.dbc: an outfit of the CoA client that only shows armour, without items, takes the items of the
+        /// same class and sex of another race of the same faction.
+        /// </summary>
+        static byte[] FillRows(byte[] bytes, EditSpec edit, string file)
+        {
+            var table = DbcTable.Parse(bytes, file);
+            var spec = edit.FillRows;
+            object v;
+            Func<string, int[]> ints = name => ((spec.TryGetValue(name, out v) ? v as object[] : null) ?? new object[0]).Select(x => Convert.ToInt32(x)).ToArray();
+            var match = new Dictionary<int, HashSet<byte>>();
+            if (spec.TryGetValue("match", out v) && v is Dictionary<string, object>)
+                foreach (var kv in (Dictionary<string, object>)v)
+                    match[int.Parse(kv.Key)] = new HashSet<byte>(((kv.Value as object[]) ?? new[] { kv.Value }).Select(x => Convert.ToByte(x)));
+            int[] empty = ints("empty"), copy = ints("copy"), same = ints("same");
+            int preferAt = -1; var groups = new List<HashSet<byte>>();
+            if (spec.TryGetValue("prefer", out v) && v is Dictionary<string, object>)
+            {
+                var p = (Dictionary<string, object>)v;
+                preferAt = p.TryGetValue("offset", out v) ? Convert.ToInt32(v) : -1;
+                if (p.TryGetValue("groups", out v) && v is object[])
+                    foreach (var g in (object[])v) groups.Add(new HashSet<byte>(((g as object[]) ?? new object[0]).Select(x => Convert.ToByte(x))));
+            }
+            int size = table.RecordSize;
+            if (empty.Length != 2 || copy.Length != 2 || empty[0] < 4 || empty[1] > size || (empty[1] - empty[0]) % 4 != 0 || copy[0] < 4 || copy[1] > size ||
+                copy[0] >= copy[1] || same.Any(o => o < 4 || o >= size) || match.Keys.Any(o => o < 4 || o >= size) || preferAt >= size)
+                throw new InvalidOperationException("The rows module " + edit.Module + " fills in " + file + " are not described in a way it can use.");
+            Func<byte[], bool> isEmpty = r => { for (int o = empty[0]; o < empty[1]; o += 4) if (BitConverter.ToInt32(r, o) > 0) return false; return true; };
+            var donors = table.Records.Where(r => !isEmpty(r)).ToList();
+            foreach (var row in table.Records)
+            {
+                if (!match.All(m => m.Value.Contains(row[m.Key])) || !isEmpty(row)) continue;
+                var fitting = donors.Where(d => same.All(o => d[o] == row[o])).ToList();
+                if (preferAt >= 4)
+                {
+                    var group = groups.FirstOrDefault(g => g.Contains(row[preferAt]));
+                    var near = group == null ? null : fitting.Where(d => group.Contains(d[preferAt])).OrderBy(d => d[preferAt]).FirstOrDefault();
+                    if (near != null) fitting.Insert(0, near);
+                }
+                var donor = fitting.FirstOrDefault();
+                if (donor != null) Buffer.BlockCopy(donor, copy[0], row, copy[0], copy[1] - copy[0]);
+            }
             return table.ToBytes();
         }
 
