@@ -1680,6 +1680,14 @@
     "Name Z?A": "",
     "Newest first": "",
     "Oldest first": "",
-    "Most stars": ""
+    "Most stars": "",
+    "Price band": "",
+    "Only ask within what really sold": "",
+    "Sales before the band is its own": "",
+    "Fallback low": "",
+    "Fallback high": "",
+    "Highest price": "",
+    "Bots ask within the low, usual and high prices an item really sold for. Until there are enough sales, a band around the usual vendor-based price is used. No external price data is needed.": "",
+    "Of the usual vendor-based price. A wild sale cannot lift the band above this.": ""
   }
 }

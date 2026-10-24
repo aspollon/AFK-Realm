@@ -1,6 +1,13 @@
-# AFK Realm 1.0.38
+# AFK Realm 1.0.39
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11.
+
+## New in 1.0.39
+
+- **The auction bots use a price band.** What an item really sold for gives a low, a usual and a high price. Bots ask within it, undercut only down to its low, and cannot ask more than its cap.
+- **No external scan.** Until there are enough real sales, a band around the usual vendor-based price is used. The band is learned from the server's own bot-involved sales, so a realm with very different prices cannot poison it.
+- **On the auction page.** The Prices tab has the band's switch, minimum sales, fallback low and high, and the hard cap.
+- **Old price memory keeps working.** The two new columns are added to the existing table automatically.
 
 ## New in 1.0.38
 

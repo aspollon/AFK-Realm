@@ -1663,6 +1663,14 @@
     "Oldest first": "Plus anciens d'abord",
     "Most stars": "Plus d'étoiles",
     "Name A–Z": "Nom A–Z",
-    "Name Z–A": "Nom Z–A"
+    "Name Z–A": "Nom Z–A",
+    "Price band": "Fourchette de prix",
+    "Only ask within what really sold": "Ne demander que ce qui s'est vraiment vendu",
+    "Sales before the band is its own": "Ventes avant que la fourchette soit propre",
+    "Fallback low": "Plancher de secours",
+    "Fallback high": "Plafond de secours",
+    "Highest price": "Prix maximal",
+    "Bots ask within the low, usual and high prices an item really sold for. Until there are enough sales, a band around the usual vendor-based price is used. No external price data is needed.": "Les bots demandent dans la fourchette basse, habituelle et haute des prix réellement obtenus. Tant qu'il y a trop peu de ventes, une fourchette autour du prix habituel basé sur le vendeur s'applique. Aucune donnée de prix externe n'est nécessaire.",
+    "Of the usual vendor-based price. A wild sale cannot lift the band above this.": "Du prix habituel basé sur le vendeur. Une vente aberrante ne peut pas élever la fourchette au-dessus."
   }
 }

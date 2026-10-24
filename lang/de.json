@@ -1663,6 +1663,14 @@
     "Oldest first": "Älteste zuerst",
     "Most stars": "Meiste Sterne",
     "Name A–Z": "Name A–Z",
-    "Name Z–A": "Name Z–A"
+    "Name Z–A": "Name Z–A",
+    "Price band": "Preisband",
+    "Only ask within what really sold": "Nur innerhalb dessen fragen, was wirklich verkauft wurde",
+    "Sales before the band is its own": "Verkäufe, bis das Band eigen ist",
+    "Fallback low": "Ersatz-Untergrenze",
+    "Fallback high": "Ersatz-Obergrenze",
+    "Highest price": "Höchstpreis",
+    "Bots ask within the low, usual and high prices an item really sold for. Until there are enough sales, a band around the usual vendor-based price is used. No external price data is needed.": "Die Bots fragen innerhalb der niedrigen, üblichen und hohen Preise, die ein Gegenstand wirklich erzielt hat. Solange es zu wenige Verkäufe gibt, gilt ein Band um den üblichen händlerbasierten Preis. Es werden keine externen Preisdaten benötigt.",
+    "Of the usual vendor-based price. A wild sale cannot lift the band above this.": "Vom üblichen händlerbasierten Preis. Ein Ausreißer-Verkauf kann das Band nicht darüber heben."
   }
 }

@@ -1945,6 +1945,12 @@ namespace CoAInstaller
             AddToggle(limits, P + "Price.LearnFromSales", L.T("Prices learn from what really sold"));
             AddSlider(limits, P + "Price.MinVendorFactor", L.T("Never below the vendor value"), 1, 5, 0.1, Times);
             AddSlider(limits, P + "Price.MaxBuyoutGold", L.T("Highest buyout"), 0, 20000, 100, v => v == 0 ? L.T("no limit") : L.F("{0} g", (int)v));
+            var band = Card(L.T("Price band"), L.T("Bots ask within the low, usual and high prices an item really sold for. Until there are enough sales, a band around the usual vendor-based price is used. No external price data is needed."), "auction");
+            AddToggle(band, P + "Price.Band.Enable", L.T("Only ask within what really sold"));
+            AddSlider(band, P + "Price.Band.MinSales", L.T("Sales before the band is its own"), 1, 20, 1, Plain);
+            AddSlider(band, P + "Price.Band.FallbackLowPercent", L.T("Fallback low"), 10, 100, 5, Percent);
+            AddSlider(band, P + "Price.Band.FallbackHighPercent", L.T("Fallback high"), 100, 300, 5, Percent);
+            AddSlider(band, P + "Price.Band.MaxRegularPercent", L.T("Highest price"), 100, 1000, 25, Percent, L.T("Of the usual vendor-based price. A wild sale cannot lift the band above this."));
 
             // ---- buying
             Tab(L.T("Buying"));

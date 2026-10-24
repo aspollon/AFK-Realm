@@ -1663,6 +1663,14 @@
     "Oldest first": "Сначала старые",
     "Most stars": "Больше звёзд",
     "Name A–Z": "Имя A–Z",
-    "Name Z–A": "Имя Z–A"
+    "Name Z–A": "Имя Z–A",
+    "Price band": "Ценовой диапазон",
+    "Only ask within what really sold": "Просить только то, что реально продавалось",
+    "Sales before the band is its own": "Продаж до собственного диапазона",
+    "Fallback low": "Нижний запасной предел",
+    "Fallback high": "Верхний запасной предел",
+    "Highest price": "Максимальная цена",
+    "Bots ask within the low, usual and high prices an item really sold for. Until there are enough sales, a band around the usual vendor-based price is used. No external price data is needed.": "Боты просят в пределах низкой, обычной и высокой цены, которую предмет реально приносил. Пока продаж слишком мало, используется диапазон вокруг обычной цены от торговца. Внешние данные о ценах не нужны.",
+    "Of the usual vendor-based price. A wild sale cannot lift the band above this.": "От обычной цены от торговца. Одна абсурдная продажа не поднимет диапазон выше."
   }
 }

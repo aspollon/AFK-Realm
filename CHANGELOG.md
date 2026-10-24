@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.39
+
+- Auction house bots: prices now form a band from what items really sold for: a low, a usual and a high price. Bots ask within it, undercut only down to its low and cannot ask more than its cap.
+- Until an item has enough sales, the band is a fallback around the usual vendor-based price. No external scan or price data is needed, so realms with very different prices cannot poison it.
+- The band is stored with the existing price memory; older tables get the two new columns automatically.
+- The auction house page has the price-band settings on its Prices tab.
+
 ## 1.0.38
 
 - Immersion Life: the module's quest system is gone. Quest code, quest settings and the quest hubs are removed; the normal Playerbots do the questing. Old quest hub rows are ignored and cleaned from existing databases.
