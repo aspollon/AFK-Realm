@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.43
+
+- Races: an imported race whose model lies under `custom\...` keeps the file name of its source row in `ChrRaces.ClientFilestring` (Gnoll becomes `GnollHorde`, not the pack key `Gnoll`). This fixes the missing body textures and the white customization background.
+- Races: the character-customization camera rows of the source race are copied into the client patch, so the Customize step uses the race's own camera instead of the one left from the previous race.
+- Races: Gnoll and Saberon are male only, as in CoA Custom. The female choice is no longer offered for them; old female Gnoll characters are turned into men at login.
+- Races: the Esteria customization buttons use the labels the appearance DLL returns; Gnoll has its own fallback names (Mane, Eyes, Outfit Color and the armor/outfit choices) instead of the generic skin/hair labels.
+- Races: `race.info.json` records the source file and a male-only flag (version 5), so older race packs get the corrected values the next time the page is opened.
+- Playerbots: the two walking switches are gone from the server settings. The Immersion module no longer changes them and its walking patch is removed; walking stays off.
+- Immersion Life: Feles Noctis and Simple GeekAce are always created with the custom city activities; the obsolete "always create Feles Noctis" switch is gone.
+
 ## 1.0.42
 
 - Races: the setup page is now split into imported races at the top and the races already in the game client below. The old armour/male/untested groups are gone.

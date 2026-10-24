@@ -1,6 +1,15 @@
-# AFK Realm 1.0.42
+# AFK Realm 1.0.43
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11.
+
+## New in 1.0.43
+
+- **Gnoll and Saberon look right.** Imported races whose model lies under `custom\...` now keep the file name of their source row (`GnollHorde`) instead of the pack key (`Gnoll`). Body textures and the customization background are found again.
+- **Customize uses the race's camera.** The camera rows of the imported race are copied into the client patch, so the Customize step no longer keeps the camera of the race shown before.
+- **Gnoll and Saberon are male only** as in CoA Custom: the female option is gone, and old female Gnoll characters are turned into men at login.
+- **Correct Esteria labels.** The customization buttons use the names from the appearance DLL; Gnoll gets its own fallback names for mane, eyes, outfit and armor choices.
+- **No fake walking switches.** The two Playerbot walking settings are removed from the server settings, and the Immersion module no longer changes them. Walking stays off.
+- **Special residents are back.** Feles Noctis and Simple GeekAce are created whenever the custom city activities are on; the extra switch is gone.
 
 ## New in 1.0.42
 

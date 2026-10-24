@@ -108,7 +108,16 @@ namespace CoAInstaller
             /// <summary>The racial spells the pack carries: its id, its row of the other client's spell table (texts
             /// as text) and the texture of its icon.</summary>
             public List<Dictionary<string, object>> Spells { get { return List(Data, "spells").OfType<Dictionary<string, object>>().ToList(); } }
-            public bool MaleOnly { get { object v; return !(Info.TryGetValue("female", out v) && v is bool && (bool)v); } }
+            public bool MaleOnly
+            {
+                get
+                {
+                    string marked = Str(Info, "maleOnly");
+                    if (marked.Length > 0) return marked == "1";
+                    object v;
+                    return !(Info.TryGetValue("female", out v) && v is bool && (bool)v);
+                }
+            }
             /// <summary>The side it had in its client: 0 Alliance, 1 Horde, 2 unknown.</summary>
             public int Side { get { object v; return Info.TryGetValue("side", out v) && v != null ? Convert.ToInt32(v) : 2; } }
             public string Source
@@ -138,7 +147,14 @@ namespace CoAInstaller
         }
 
         const string InfoName = "race.info.json";
-        const int InfoVersion = 4;      // 4: sourceFile beside the model folder, for matching rows of another client
+        const int InfoVersion = 5;      // 5: the client file for custom models, and male-only races
+
+        /// <summary>Races that are male only although their source has female rows (Esteria's Gnoll and Saberon).</summary>
+        static bool KnownMaleOnly(string key)
+        {
+            return key.Equals("Gnoll", StringComparison.OrdinalIgnoreCase) ||
+                   key.Equals("Saberon", StringComparison.OrdinalIgnoreCase);
+        }
 
         /// <summary>What the page needs of a race, from its full race.json.</summary>
         static Dictionary<string, object> MakeInfo(string dir, Dictionary<string, object> data, string stamp)
@@ -146,17 +162,21 @@ namespace CoAInstaller
             var models = data.ContainsKey("models") ? data["models"] as Dictionary<string, object> : null;
             var m = models == null ? null : models.Values.OfType<Dictionary<string, object>>().FirstOrDefault();
             var parts = (m == null ? "" : Str(m, "path")).Split('\\');
+            // A model under custom\... has no Character\<file> folder. Its source row still has the file name the
+            // client looks the race up by (GnollHorde, not Gnoll); that name goes into ChrRaces.ClientFilestring.
             string file = parts.Length > 2 && parts[0].Equals("Character", StringComparison.OrdinalIgnoreCase) ? parts[1] : "";
+            if (file.Length == 0) file = Str(data, "sourceFile").Length > 0 ? Str(data, "sourceFile") : Str(data, "file");
             var source = data.ContainsKey("source") ? data["source"] as Dictionary<string, object> : null;
             var files = List(data, "files").Select(Convert.ToString).ToList();
             long bytes = files.Sum(f => { var p = Path.Combine(dir, "files", f.Replace('\\', Path.DirectorySeparatorChar)); return System.IO.File.Exists(p) ? new FileInfo(p).Length : 0; });
-            bool female = List(data, "sections").OfType<object[]>().Any(r => r.Length > 3 && Num(r[2]) == 1 && Num(r[3]) == 0);
+            bool maleOnly = data.ContainsKey("maleOnly") ? Num(data["maleOnly"]) != 0 : KnownMaleOnly(Str(data, "key"));
+            bool female = !maleOnly && List(data, "sections").OfType<object[]>().Any(r => r.Length > 3 && Num(r[2]) == 1 && Num(r[3]) == 0);
             object side; data.TryGetValue("side", out side);
             return new Dictionary<string, object>
             {
                 { "version", InfoVersion }, { "stamp", stamp }, { "key", Str(data, "key") }, { "name", Str(data, "name") }, { "prefix", Str(data, "prefix") },
                 { "file", file }, { "sourceFile", Str(data, "sourceFile").Length > 0 ? Str(data, "sourceFile") : Str(data, "file") }, { "icon", Str(data, "icon") }, { "client", source == null ? "" : Str(source, "client") }, { "race", source == null ? 0 : Num(source.ContainsKey("race") ? source["race"] : null) }, { "side", side ?? 2 },
-                { "female", female }, { "missing", List(data, "missing").Length }, { "bytes", bytes }, { "files", files },
+                { "female", female }, { "maleOnly", maleOnly ? "1" : "0" }, { "missing", List(data, "missing").Length }, { "bytes", bytes }, { "files", files },
             };
         }
 
@@ -407,6 +427,40 @@ namespace CoAInstaller
                     t.Records.Add(rec);
                 }
                 save("DBFilesClient\\HDCharacterFacialHairStyles.dbc", t.ToBytes());
+            }
+
+            // The camera rows of the race's classes: without them the customize screen keeps the camera of the
+            // class shown before, and a custom model can fill the whole view or show its background. Older race
+            // packs do not carry them; its base race's rows are the safe stand-in then.
+            var cameraRows = pack.Rows("ui_camera");
+            var cameraBytes = load("DBFilesClient\\UICameraAppearanceChrRaces.dbc");
+            if (cameraBytes != null)
+            {
+                var camera = DbcTable.Parse(cameraBytes, "UICameraAppearanceChrRaces.dbc");
+                camera.Records.RemoveAll(r => camera.Field(r, 1) == race);
+                uint cameraId = MaxId(camera) + 1;
+                if (cameraRows.Count > 0)
+                {
+                    foreach (var r in cameraRows)
+                    {
+                        var rec = new byte[camera.RecordSize];
+                        for (int k = 0; k < camera.Fields && k < r.Length; k++) camera.SetField(rec, k, Num(r[k]));
+                        camera.SetField(rec, 0, cameraId++);
+                        camera.SetField(rec, 1, (uint)race);
+                        camera.Records.Add(rec);
+                    }
+                }
+                else
+                {
+                    foreach (var donor in camera.Records.Where(r => camera.Field(r, 1) == baseRace).ToList())
+                    {
+                        var rec = (byte[])donor.Clone();
+                        camera.SetField(rec, 0, cameraId++);
+                        camera.SetField(rec, 1, (uint)race);
+                        camera.Records.Add(rec);
+                    }
+                }
+                save("DBFilesClient\\UICameraAppearanceChrRaces.dbc", camera.ToBytes());
             }
 
             // hair textures: rows of numbers only, under the race's new numbers (its hair pointed at the base

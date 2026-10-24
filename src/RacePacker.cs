@@ -408,7 +408,12 @@ namespace CoAInstaller
                     (p.SourceFile.Length > 0 && p.SourceFile.Equals(file, StringComparison.OrdinalIgnoreCase) &&
                         (p.Name.Equals(name, StringComparison.OrdinalIgnoreCase) || p.Name.Equals(displayName, StringComparison.OrdinalIgnoreCase))));
                 int femaleSkins; skins.TryGetValue(id * 2L + 1, out femaleSkins);
-                list.Add(new Candidate { Id = id, Key = key, Name = displayName, MaleOnly = femaleSkins == 0 || !hasBody(female),
+                // Esteria's Gnoll and Saberon have female rows that only reuse the male body; the runtime draws no
+                // woman for them. Their source says "male only" outside the tables, so they are named here.
+                bool maleOnly = femaleSkins == 0 || !hasBody(female) ||
+                    key.Equals("Gnoll", StringComparison.OrdinalIgnoreCase) ||
+                    key.Equals("Saberon", StringComparison.OrdinalIgnoreCase);
+                list.Add(new Candidate { Id = id, Key = key, Name = displayName, MaleOnly = maleOnly,
                     InYourClient = inClient, InRaceFolder = inFolder });
             }
             return list;
@@ -833,7 +838,9 @@ namespace CoAInstaller
                 // in the DBC, "lightforgeddraenei" in the archives); keep the DBC value separately for matching.
                 { "file", modelFolder.Length > 0 ? modelFolder : Str(cr, row, 11) },
                 { "sourceFile", Str(cr, row, 11) },
+                { "maleOnly", race.MaleOnly ? "1" : "0" },
                 { "labels", cr.Fields > 67 ? new[] { Str(cr, row, 65), Str(cr, row, 66), Str(cr, row, 67) } : new string[0] },
+                { "ui_camera", Rows(Table(source, "UICameraAppearanceChrRaces"), 1, race.Id) },
                 { "models", models },
                 { "sections", sections },
                 { "hd_sections", hdSections },
