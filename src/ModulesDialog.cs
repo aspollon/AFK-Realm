@@ -23,6 +23,7 @@ namespace CoAInstaller
         readonly TextBox search = new TextBox { Font = Ui.Base, Width = 260, Margin = new Padding(0, 3, 10, 3) };
         readonly CheckBox hideOld = new CheckBox { Text = L.T("Hide modules not changed for 2 years"), AutoSize = true, Checked = true, Font = Ui.Base, Margin = new Padding(0, 6, 10, 0) };
         readonly CheckBox onlyInstalled = new CheckBox { Text = L.T("Installed only"), AutoSize = true, Font = Ui.Base, Margin = new Padding(0, 6, 10, 0) };
+        readonly ComboBox sort = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 160, Font = Ui.Base, Margin = new Padding(0, 3, 10, 3) };
         readonly ListView list = new ListView { View = View.Details, CheckBoxes = true, FullRowSelect = true, HideSelection = false, MultiSelect = false, Dock = DockStyle.Fill, Font = Ui.Base, BorderStyle = BorderStyle.FixedSingle };
         readonly Label status = new Label { AutoSize = true, Font = Ui.Small, ForeColor = Ui.Muted, Margin = new Padding(0, 8, 0, 0) };
         readonly Label detailName = new Label { AutoSize = true, Font = Ui.H2, ForeColor = Ui.Text, MaximumSize = new Size(330, 0), Margin = new Padding(0, 0, 0, 2) };
@@ -59,6 +60,11 @@ namespace CoAInstaller
             var filter = Ui.Row();
             filter.Controls.Add(new Label { Text = L.T("Search"), AutoSize = true, Font = Ui.Base, Margin = new Padding(0, 6, 6, 0) });
             filter.Controls.Add(search); filter.Controls.Add(hideOld); filter.Controls.Add(onlyInstalled);
+            filter.Controls.Add(new Label { Text = L.T("Sort by"), AutoSize = true, Font = Ui.Base, Margin = new Padding(0, 6, 6, 0) });
+            sort.Items.AddRange(new object[] { L.T("Recommended"), L.T("Name A–Z"), L.T("Name Z–A"), L.T("Newest first"), L.T("Oldest first"), L.T("Most stars") });
+            sort.SelectedIndex = 0;
+            sort.SelectedIndexChanged += (s, e) => Fill();
+            filter.Controls.Add(sort);
             var reload = Ui.Secondary(L.T("Reload list")); reload.Click += (s, e) => { KeepToken(); LoadList(true); };
             filter.Controls.Add(reload);
             top.Controls.Add(filter);
@@ -250,9 +256,18 @@ namespace CoAInstaller
                     (!hideOld.Checked || m.Installed || ticked.Contains(m) || m.Pushed == DateTime.MinValue || m.Pushed > DateTime.UtcNow.AddYears(-2)) &&
                     (!onlyInstalled.Checked || m.Installed) &&
                     (q.Length == 0 || m.Name.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0 || m.Description.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0 || L.Outside(m.Description).IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0 ||
-                     m.FullName.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0))
-                .OrderByDescending(m => m.Installed).ThenByDescending(m => ticked.Contains(m)).ThenByDescending(m => m.Stars).ThenBy(m => m.Name);
-            foreach (var m in shown)
+                     m.FullName.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0));
+            IEnumerable<ModuleEntry> ordered;
+            switch (sort.SelectedIndex)
+            {
+                case 1: ordered = shown.OrderBy(m => m.Name, StringComparer.OrdinalIgnoreCase); break;
+                case 2: ordered = shown.OrderByDescending(m => m.Name, StringComparer.OrdinalIgnoreCase); break;
+                case 3: ordered = shown.OrderByDescending(m => m.Pushed); break;
+                case 4: ordered = shown.OrderBy(m => m.Pushed == DateTime.MinValue ? DateTime.MaxValue : m.Pushed); break;
+                case 5: ordered = shown.OrderByDescending(m => m.Stars).ThenBy(m => m.Name); break;
+                default: ordered = shown.OrderByDescending(m => m.Installed).ThenByDescending(m => ticked.Contains(m)).ThenByDescending(m => m.Stars).ThenBy(m => m.Name); break;
+            }
+            foreach (var m in ordered)
             {
                 var it = new ListViewItem(m.Name) { Tag = m, Checked = ticked.Contains(m) };
                 it.SubItems.Add(L.Outside(m.Description));

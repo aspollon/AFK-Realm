@@ -1,6 +1,11 @@
-# AFK Realm 1.0.36
+# AFK Realm 1.0.37
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11.
+
+## New in 1.0.37
+
+- **The module catalog can be sorted.** Choose Recommended, Name A-Z, Name Z-A, newest first, oldest first or most stars; the choice stays while you search and reload.
+- **The new texts speak all six languages again.** Some translations of 1.0.35 and 1.0.36 had lost their accents or non-Latin characters; they are repaired.
 
 ## New in 1.0.36
 

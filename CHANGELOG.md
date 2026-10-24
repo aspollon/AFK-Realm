@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.37
+
+- The module selection screen can sort the AzerothCore catalog: Recommended, Name A-Z, Name Z-A, newest first, oldest first and most stars. The choice stays while searching and reloading.
+- The texts added in 1.0.35 and 1.0.36 are correct in all six languages again; some had lost their accents and non-Latin characters.
+
 ## 1.0.36
 
 - Immersion Life: the chatter settings are now on the City population tab. Chat range, conversations, player reactions and the chat timings of legendary residents, beggars and buyers are together there.
