@@ -1,6 +1,13 @@
-# AFK Realm 1.0.37
+# AFK Realm 1.0.38
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11.
+
+## New in 1.0.38
+
+- **Immersion Life no longer has its own quest system.** The quest code, settings and quest hubs are gone; the normal Playerbots do the questing. Old quest hub rows are ignored and cleaned from existing databases.
+- **City levels follow World Journey.** A hub takes the `journey_zone.bot_min/bot_max` bracket of the zone it stands in, so capitals, towns, Outland and Northrend have the same levels as the journey around them.
+- **Fallback without World Journey.** Without the journey tables, or for a zone without a bracket, the hub keeps its original level range.
+- **Never above the realm's maximum.** Every hub, custom, fishing and old quest range is clamped to the server's maximum level.
 
 ## New in 1.0.37
 

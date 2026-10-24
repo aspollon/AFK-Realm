@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.38
+
+- Immersion Life: the module's quest system is gone. Quest code, quest settings and the quest hubs are removed; the normal Playerbots do the questing. Old quest hub rows are ignored and cleaned from existing databases.
+- Immersion Life: city hub levels now follow World Journey's `journey_zone.bot_min/bot_max` for the zone each hub stands in, so capitals, towns, Outland and Northrend keep the same level brackets as the journey.
+- Without World Journey, or for a hub whose zone has no journey bracket, Immersion keeps the hub's original level range as the fallback.
+- All hub, custom, fishing and old quest level ranges are clamped to the server's maximum level, so nothing asks for level 80 on a level 60 realm.
+- The setup page applies the quest-hub cleanup together with the module's other database files.
+
 ## 1.0.37
 
 - The module selection screen can sort the AzerothCore catalog: Recommended, Name A-Z, Name Z-A, newest first, oldest first and most stars. The choice stays while searching and reloading.
