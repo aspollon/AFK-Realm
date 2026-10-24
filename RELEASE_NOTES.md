@@ -1,6 +1,12 @@
-# AFK Realm 1.0.44
+# AFK Realm 1.0.45
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11.
+
+## New in 1.0.45
+
+- **Race changes keep a complete look.** Changing a stock race to an imported race no longer leaves the old race's appearance bytes behind. If the old skin or face is not part of the new race, the character gets a valid replacement and the values are saved immediately. Face and hair no longer disappear after logout; the barber is only a temporary preview.
+- **Existing characters are repaired on login.** Characters with appearance values that do not belong to their race are fixed once and written back to the database, so the character list and the world agree again.
+- **Male-only repairs also happen at login**, not only at creation. Old female Gnoll bots become men and keep a valid appearance after the next login.
 
 ## New in 1.0.44
 

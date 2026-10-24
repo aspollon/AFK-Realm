@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.45
+
+- Races: a race change from a stock race to an imported race no longer keeps the old race's appearance bytes. If the old skin or face does not exist in the new race's sections, the character gets a complete valid appearance and it is written back to the character database immediately. Character selection and the world no longer show a model without face or hair after the next logout.
+- Races: male-only characters are converted and repaired at login as well, not only when they are created. The repaired appearance is saved at once, so the character list does not show the old state again.
+- Races: existing characters with appearance values that do not belong to their race (for example after a race change) are repaired on their next login.
+
 ## 1.0.44
 
 - Races: the server now receives the appearance tables of the imported races as well (`CharSections`, hair geosets, facial hair and hair textures). Bot creation can randomize skin, face and hair for every imported race, not only for races that happened to be in the server's old DBC files.
