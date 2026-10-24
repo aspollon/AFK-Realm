@@ -1,6 +1,12 @@
-# AFK Realm 1.0.40
+# AFK Realm 1.0.41
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11.
+
+## New in 1.0.41
+
+- **City residents walk.** 85 % walk between places and 15 % hurry, chosen once per bot instead of every move. The share is on the City population tab.
+- **Beggars walk by default** instead of running through the streets.
+- **The old walking switch works.** `AiPlayerbot.RandombotsWalkingRPG` now walks anywhere, as documented; `AiPlayerbot.RandombotsWalkingRPG.InDoors` now walks only under a roof. Before, the first only worked indoors and the second was ignored.
 
 ## New in 1.0.40
 

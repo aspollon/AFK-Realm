@@ -1671,6 +1671,7 @@
     "Fallback high": "Teto de reserva",
     "Highest price": "Preço máximo",
     "Bots ask within the low, usual and high prices an item really sold for. Until there are enough sales, a band around the usual vendor-based price is used. No external price data is needed.": "Os bots pedem dentro dos preços baixo, habitual e alto que um item realmente obteve. Enquanto houver poucas vendas, usa-se uma faixa em torno do preço habitual baseado no vendedor. Não são necessários dados de preços externos.",
-    "Of the usual vendor-based price. A wild sale cannot lift the band above this.": "Do preço habitual baseado no vendedor. Uma venda absurda não pode elevar a faixa acima disso."
+    "Of the usual vendor-based price. A wild sale cannot lift the band above this.": "Do preço habitual baseado no vendedor. Uma venda absurda não pode elevar a faixa acima disso.",
+    "Residents that walk instead of running": "Moradores que caminham em vez de correr"
   }
 }

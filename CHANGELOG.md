@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.41
+
+- Immersion Life: city residents now have a stable walk chance. 85 % walk, 15 % hurry by default; the value is on the City population tab.
+- Immersion Life: beggars walk by default instead of running.
+- Playerbots: `AiPlayerbot.RandombotsWalkingRPG` now means walking anywhere, as documented. `AiPlayerbot.RandombotsWalkingRPG.InDoors` now walks only under a roof; before, it was loaded but unused, while the first switch only worked indoors.
+
 ## 1.0.40
 
 - Races: the free-number count and the assignment now use the same slots. A race no longer reports "all 21 free race numbers are taken" when most of them are free.

@@ -44,6 +44,7 @@ namespace CoAInstaller
             AddSlider(life, "CityLife.Behaviour.EmoteChancePct", L.T("Chance for an emote"), 0, 100, 5, Percent);
             AddPair(life, "CityLife.Behaviour.EmoteMinSeconds", "CityLife.Behaviour.EmoteMaxSeconds",
                 L.T("Time between two emotes"), 30, 3600, 30, Seconds);
+            AddSlider(life, "CityLife.Behaviour.WalkChancePct", L.T("Residents that walk instead of running"), 0, 100, 5, Percent);
             AddChatter();
 
             Tab(L.T("Cities and towns"));

@@ -1671,6 +1671,7 @@
     "Fallback high": "Ersatz-Obergrenze",
     "Highest price": "Höchstpreis",
     "Bots ask within the low, usual and high prices an item really sold for. Until there are enough sales, a band around the usual vendor-based price is used. No external price data is needed.": "Die Bots fragen innerhalb der niedrigen, üblichen und hohen Preise, die ein Gegenstand wirklich erzielt hat. Solange es zu wenige Verkäufe gibt, gilt ein Band um den üblichen händlerbasierten Preis. Es werden keine externen Preisdaten benötigt.",
-    "Of the usual vendor-based price. A wild sale cannot lift the band above this.": "Vom üblichen händlerbasierten Preis. Ein Ausreißer-Verkauf kann das Band nicht darüber heben."
+    "Of the usual vendor-based price. A wild sale cannot lift the band above this.": "Vom üblichen händlerbasierten Preis. Ein Ausreißer-Verkauf kann das Band nicht darüber heben.",
+    "Residents that walk instead of running": "Bewohner, die gehen statt zu rennen"
   }
 }

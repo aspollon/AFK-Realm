@@ -1671,6 +1671,7 @@
     "Fallback high": "备用上限",
     "Highest price": "最高价格",
     "Bots ask within the low, usual and high prices an item really sold for. Until there are enough sales, a band around the usual vendor-based price is used. No external price data is needed.": "机器人在物品真实成交的低价、常见价和高价范围内要价。成交太少时，使用围绕商人基准常见价格的区间。不需要外部价格数据。",
-    "Of the usual vendor-based price. A wild sale cannot lift the band above this.": "相对于商人基准常见价格。一次离谱的成交不会把区间抬得更高。"
+    "Of the usual vendor-based price. A wild sale cannot lift the band above this.": "相对于商人基准常见价格。一次离谱的成交不会把区间抬得更高。",
+    "Residents that walk instead of running": "步行而非奔跑的居民"
   }
 }
