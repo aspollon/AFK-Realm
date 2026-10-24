@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.42
+
+- Races: the setup page is now split into imported races at the top and the races already in the game client below. The old armour/male/untested groups are gone.
+- Races: one Import races button asks once for a client or repack, detects its archives, `Ascension.exe`, `dinput8.dll` and CoA Custom client files, and keeps the needed files next to the game up to date when the client patch is installed.
+- Races: a race already in the game client can be moved to a free number, so an imported race can keep its original number. Stock races and races with characters cannot be moved.
+- Races: an imported race whose number is taken now asks what to do - use a free number, move the existing client race, or cancel. Esteria races warn that moving their number can break their appearance.
+- Races: `race.info.json` now records the source file beside the model folder, so rows that only share a number are no longer mistaken for each other.
+- Races: the client patch now applies the number moves before the imported races are written.
+- Immersion Life: beggars have their walking switch on the custom city characters tab.
+- Playerbots: the walking switches are in the server settings. The Immersion module turns walking anywhere and indoor walking on when it is installed.
+
 ## 1.0.41
 
 - Immersion Life: city residents now have a stable walk chance. 85 % walk, 15 % hurry by default; the value is on the City population tab.

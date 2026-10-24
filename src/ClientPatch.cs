@@ -369,6 +369,10 @@ namespace CoAInstaller
                 return b;
             };
             Action<string, byte[]> save = (name, b) => files[name] = b;
+            // a test or an advanced user can give a client race another number before the imported races are added
+            string moves = ConfValue(inst, "mod_custom_races.conf", "CustomRaces.MoveClientRaces");
+            if (!string.IsNullOrWhiteSpace(moves))
+                RaceImport.MoveClientRaces(load, save, moves, notes == null ? null : new Action<string>(notes.Add));
             // files of the user's race folder (the icon of a race): taken as they are, when they exist
             foreach (var e in plan.Edits.Where(e => e.AddFile != null))
             {

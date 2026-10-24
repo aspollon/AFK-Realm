@@ -345,6 +345,8 @@ namespace CoAInstaller
             new[] { L.T("Playerbots"), "modules\\playerbots.conf", "AiPlayerbot.AutoDoQuests", L.T("Bots do quests on their own") },
             new[] { L.T("Playerbots"), "modules\\playerbots.conf", "AiPlayerbot.RandomBotJoinBG", L.T("Bots join battlegrounds") },
             new[] { L.T("Playerbots"), "modules\\playerbots.conf", "AiPlayerbot.RandomBotTalk", L.T("Bots chat") },
+            new[] { L.T("Playerbots"), "modules\\playerbots.conf", "AiPlayerbot.RandombotsWalkingRPG", L.T("Random bots walk instead of running") },
+            new[] { L.T("Playerbots"), "modules\\playerbots.conf", "AiPlayerbot.RandombotsWalkingRPG.InDoors", L.T("Random bots walk only indoors") },
             new[] { L.T("Playerbots"), "modules\\playerbots.conf", "AiPlayerbot.BotActiveAlone", L.T("Bots active without players nearby (%)") },
         };
 

@@ -20,7 +20,7 @@ namespace CoAInstaller
         bool busy;
         public int Made;
 
-        public RacePackDialog(string raceFolder, string yourClient, string serverDataFolder)
+        public RacePackDialog(string raceFolder, string yourClient, string serverDataFolder, string initialSource = null)
         {
             this.raceFolder = raceFolder;
             this.yourClient = yourClient;
@@ -62,6 +62,7 @@ namespace CoAInstaller
             close.Click += (s, e) => Close();
             list.ItemCheck += (s, e) => BeginInvoke((Action)(() => create.Enabled = !busy && list.CheckedItems.Count > 0));
             FormClosing += (s, e) => { if (busy) { e.Cancel = true; return; } Release(); };
+            if (!string.IsNullOrEmpty(initialSource)) Shown += (s, e) => UseSource(initialSource);
         }
 
         class Item
@@ -99,15 +100,22 @@ namespace CoAInstaller
             using (var d = new FolderBrowserDialog { Description = L.T("The game folder of the other client, or a folder with its patch archives"), SelectedPath = sourceFolder ?? "" })
             {
                 if (d.ShowDialog(this) != DialogResult.OK) return;
-                if (yourClient != null && Path.GetFullPath(d.SelectedPath).TrimEnd('\\').Equals(Path.GetFullPath(yourClient).TrimEnd('\\'), StringComparison.OrdinalIgnoreCase))
-                { Ui.Error(this, L.T("That is your own game client. Choose the folder of another client.")); return; }
-                sourceFolder = d.SelectedPath;
+                UseSource(d.SelectedPath);
             }
+        }
+
+        /// <summary>Reads a chosen client or patch folder without asking for it again (the import button already
+        /// knows the folder).</summary>
+        public void UseSource(string folder)
+        {
+            if (string.IsNullOrEmpty(folder) || !Directory.Exists(folder)) return;
+            if (yourClient != null && Path.GetFullPath(folder).TrimEnd('\\').Equals(Path.GetFullPath(yourClient).TrimEnd('\\'), StringComparison.OrdinalIgnoreCase))
+            { Ui.Error(this, L.T("That is your own game client. Choose the folder of another client.")); return; }
+            sourceFolder = folder;
             from.Text = sourceFolder;
             list.Items.Clear();
             Release();
             Busy(true, L.T("Reading the races of the other client …"));
-            string folder = sourceFolder;
             ThreadPool.QueueUserWorkItem(_ =>
             {
                 RacePacker.Archives src = null, mine = null; List<RacePacker.Candidate> races = null; string error = null;

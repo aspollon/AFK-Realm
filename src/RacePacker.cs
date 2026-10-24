@@ -595,6 +595,7 @@ namespace CoAInstaller
             var models = new Dictionary<string, object>();
             var files = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
             var roots = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);      // the race's own trees in the client
+            string modelFolder = "";                                                   // the real asset folder, often not ClientFilestring
             for (int sex = 0; sex < 2; sex++)
             {
                 uint display = cr.Field(row, 4 + sex);
@@ -619,6 +620,8 @@ namespace CoAInstaller
                 // the race's folder in the client (custom\highmountain for example) holds more than the tables and the
                 // model header name: an appearance patch of a creator loads further files itself, so its whole tree goes in
                 var parts = M2(path).Split('\\');
+                if (parts.Length >= 3 && modelFolder.Length == 0)
+                    modelFolder = parts[1];
                 if (parts.Length >= 3 && parts[0].Equals("custom", StringComparison.OrdinalIgnoreCase)) roots.Add(parts[0] + "\\" + parts[1] + "\\");
                 // the same for a folder of its own elsewhere (Character\IllidariNightElf\, Creature\WhimMurloc\): textures its
                 // model or its creator's code loads by name - as long as the player's client has nothing in that folder, so
@@ -826,7 +829,10 @@ namespace CoAInstaller
                 { "flags", cr.Field(row, 1) },
                 { "side", cr.Field(row, 13) },
                 { "prefix", Str(cr, row, 6) },
-                { "file", Str(cr, row, 11) },
+                // The real folder of the model. ChrRaces.ClientFilestring can differ (Lightforged: "Lightforged"
+                // in the DBC, "lightforgeddraenei" in the archives); keep the DBC value separately for matching.
+                { "file", modelFolder.Length > 0 ? modelFolder : Str(cr, row, 11) },
+                { "sourceFile", Str(cr, row, 11) },
                 { "labels", cr.Fields > 67 ? new[] { Str(cr, row, 65), Str(cr, row, 66), Str(cr, row, 67) } : new string[0] },
                 { "models", models },
                 { "sections", sections },

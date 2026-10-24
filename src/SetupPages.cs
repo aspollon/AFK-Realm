@@ -522,233 +522,111 @@ namespace CoAInstaller
         readonly HashSet<string> helmetPrefixes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         string folder;
         readonly Label usage = new Label { AutoSize = true, Font = Ui.Bold, ForeColor = Ui.Text, BackColor = Ui.Surface, Margin = new Padding(0, 4, 0, 8) };
+        Label importStatus;
 
         public RacesSetup(Install i) : base(i, "mod_custom_races.conf", L.T("Custom races"), L.T("mod-custom-races  ·  modules\\mod_custom_races.conf"), "accounts", "CustomRaces.Enable", L.T("Custom races on"))
         {
             ReadKnown();
             string problem = ReadClient();
+            ApplyClientMoves();
             ReadFolder();
             HealNumbers();
 
             Tab(L.T("Races"));
             int own = races.Count(r => r.OwnNumber);
             var head = Card(L.T("Which races can be played"), L.T("These are the races your game client carries a body for, read from the client itself. Switch on the ones you want: each starts like its base race - where that race starts, with its quests, stats, racial abilities and faction - and keeps its own looks.") +
-                (slots.Count > 0 ? " " + L.F("The game client knows race numbers up to 31; the 64-race patch below lets it know numbers up to 63 as well. 63 is the highest race number, not the number of races: the race table of your client itself already fills {0} of the 63 numbers, so {1} stay free below 32 - and {2} more above 31 once the patch is on. Those free numbers are the room for every race without a number of its own - your client's races above 31 and the races of the race folder alike, however many the folder holds. Together with the {3} races that have a number of their own, at most {4} races can be on at once without the patch and {5} with it.", 63 - slots.Count - moreSlots.Count, slots.Count, moreSlots.Count, own, own + slots.Count, own + slots.Count + moreSlots.Count) : ""), "accounts");
+                (slots.Count > 0 ? " " + L.F("There are {0} free race numbers below 32 and {1} more above 31; together with the {2} races that bring their own number, up to {3} races can be on at once.", slots.Count, moreSlots.Count, own, own + slots.Count + moreSlots.Count) : ""), "accounts");
             if (problem != null) head.Add(Small(problem, head.Inner));
             else head.Add(usage);
             OnChange(UpdateUsage);
 
-            var fold = Card(L.T("Races from other clients"), L.T("Races of other game clients and repacks, gathered into a race folder: one folder per race with its models, textures and rows (race.json). They are offered below like the races of your client; where your client has the same race, you choose whose looks it gets. Their files go into the game as an archive of their own for each race (Data\\patch-ZY<number>.MPQ)."), "client");
-            var where = new Label { AutoSize = true, Font = Ui.Small, ForeColor = Ui.Muted, BackColor = Ui.Surface, MaximumSize = new Size(fold.Inner - 20, 0), Margin = new Padding(0, 4, 0, 8),
-                Text = folder == null ? L.T("No race folder chosen.") : folder + "  ·  " + L.F("{0} races", races.Count(r => r.Pack != null || r.Alt != null)) };
-            fold.Add(where);
-            var choose = Ui.Secondary(L.T("Choose the race folder …"));
-            choose.Click += (s, e) =>
-            {
-                using (var d = new FolderBrowserDialog { Description = L.T("The race folder: one folder per race, each with a race.json"), SelectedPath = folder ?? "" })
-                {
-                    if (d.ShowDialog(this) != DialogResult.OK) return;
-                    string chosen = d.SelectedPath;
-                    if (Busy.Run(this, L.T("Reading the race folder …"), report => RaceImport.Read(chosen).Count) == 0) { Ui.Error(this, L.T("This folder holds no races (no subfolders with a race.json).")); return; }
-                    Set("CustomRaces.ImportFolder", "\"" + d.SelectedPath + "\"");
-                    where.Text = d.SelectedPath + "  ·  " + L.T("save, then open this page again to see its races");
-                }
-            };
-            fold.Add(choose);
-            var make = Ui.Secondary(L.T("Create race packs from a client …"));
-            make.Click += (s, e) =>
-            {
-                string target = folder ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", "AFK-Rassen");
-                string mine = ClientAddons.ClientFolder;
-                if (mine != null && !ClientAddons.IsClientFolder(mine)) mine = null;
-                using (var d = new RacePackDialog(target, mine, ""))
-                {
-                    d.ShowDialog(this);
-                    if (d.Made == 0) return;
-                    if (Raw("CustomRaces.ImportFolder", "") != target) Set("CustomRaces.ImportFolder", "\"" + target + "\"");
-                    where.Text = target + "  ·  " + L.T("save, then open this page again to see the new races");
-                }
-            };
-            fold.Add(make);
+            // One path, one button: pick the CoA Custom pack and take its files and its races in one go.
+            var importCard = Card(L.T("Import races"), L.T("Choose the game client or repack once. AFK Realm finds its races and the files it needs for your game client, takes the races from that client and keeps the required files up to date when the client patch is installed."), "client");
+            var importButton = Ui.Primary(L.T("Import races …"));
+            importButton.Margin = new Padding(0, 2, 0, 6);
+            importCard.Add(importButton);
+            importStatus = Small("", importCard.Inner - 40);
+            importCard.Add(importStatus);
+            UpdateImportStatus();
+            importButton.Click += (s, e) => ImportRaces();
 
-            // more than 31 races: the 64-race patch of the game client (a DLL of the user's own, from CoA Custom)
-            var more = Card(L.T("More than 31 races"), L.F("The game client knows race numbers up to 31. With a 64-race patch (dinput8.dll next to Ascension.exe, as CoA Custom ships it) it knows numbers up to 63. Your client's own race table already fills {0} of the 32 numbers from 32 to 63 (its own races and the HD copies of the standard races); the {1} that stay free are the room the patch opens for races without a number of their own. {2} puts the patch next to your game when you install the client patch, and into the ZIP for the other players; switched off, it takes it away again. A race above 32 does what its base race may do (it has no bit of its own in the race masks of quests and items). The server needs its core rebuilt for this once.", 32 - moreSlots.Count, moreSlots.Count, Product.Name), "client");
-            var dllNote = new Label { AutoSize = true, Font = Ui.Small, ForeColor = Ui.Muted, BackColor = Ui.Surface, MaximumSize = new Size(more.Inner - 20, 0), Margin = new Padding(0, 4, 0, 8) };
-            Func<string> dll = () =>
+            // The imported races first: these are the ones the user brought in and usually looks for.
+            var imported = races.Where(r => r.Pack != null).OrderBy(r => r.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
+            if (imported.Count > 0)
             {
-                string f = Raw("CustomRaces.MoreRacesFile", "");
-                // an older version could store the path with a second pair of quotes (see SetIn): take it as the path it is
-                if (ConfigOption.IsQuoted(f)) f = ConfigOption.Unquote(f);
-                if (f.Length == 0 && folder != null && File.Exists(Path.Combine(folder, "_Client", "dinput8.dll"))) f = Path.Combine(folder, "_Client", "dinput8.dll");
-                return f;
-            };
-            Action showDll = () =>
-            {
-                string f = dll();
-                dllNote.Text = f.Length == 0 ? L.T("No 64-race patch chosen. Making race packs from CoA Custom keeps its patch in your race folder (_Client\\dinput8.dll).") :
-                    File.Exists(f) ? L.T("Patch:") + " " + f : L.T("Patch not found:") + " " + f;
-            };
-            var moreToggle = new Toggle(L.T("Race numbers above 31 (64-race patch)")) { BackColor = Ui.Surface };
-            moreToggle.Wrap(more.Inner - 40);
-            more.Add(moreToggle);
-            more.Add(dllNote);
-            // CoA Custom's own exe knows the races it adds under their own numbers, up to 103
-            var highToggle = new Toggle(L.T("Races of CoA Custom's game keep their own numbers (up to 127)")) { BackColor = Ui.Surface, Margin = new Padding(0, 10, 0, 0) };
-            highToggle.Wrap(more.Inner - 40);
-            more.Add(highToggle);
-            more.Add(Small(L.T("For the game of CoA Custom: its own patched exe (Ascension.exe or Ascension-b.exe from its files\\client_root, which every player then starts) knows its races under the numbers CoA Custom gave them, up to 103. Switched on, those races keep their numbers instead of taking one of the free ones, and CoA Custom's EsteriaAppearance.dll gives Highmountain Tauren, Earthen, Haranir, Mechagnome, Skyborne, Vulpera and the others all their choices of looks - it knows them only by those numbers. A race already played under another number keeps it; \"Free its number\" lets it take its own. The server needs its core rebuilt once."), more.Inner - 20));
-            AddLoader(() => highToggle.Checked = High);
-            highToggle.CheckedChanged += (s, e) =>
-            {
-                if (Loading) return;
-                if (highToggle.Checked)
-                {
-                    string root = ConfigOption.Unquote(Raw("CustomRaces.ClientRootFolder", ""));
-                    if (root.Length == 0 || !Directory.Exists(root) || Directory.GetFiles(root, "Ascension*.exe").Length == 0)
-                    {
-                        Ui.Error(this, L.T("Choose the CoA Custom folder first (Files of CoA Custom next to the game, below): its own exe is what knows these race numbers."));
-                        highToggle.Checked = false;
-                        return;
-                    }
-                }
-                else
-                {
-                    var above = races.Where(r => IdOf(r) > 63 && Chosen().Any(c => c.Equals(r.Key, StringComparison.OrdinalIgnoreCase))).Select(r => r.Name).ToList();
-                    if (above.Count > 0 && !Ui.Confirm(this, L.F("{0}: race numbers above 63 stay off without CoA Custom's game; their characters play their base race until it is on again. Switch it off?", string.Join(", ", above))))
-                    {
-                        highToggle.Checked = true;
-                        return;
-                    }
-                }
-                Set("CustomRaces.HighRaces", highToggle.Checked ? "1" : "0");
-                MarkOwnNumbers();
-                Refresh();
-                UpdateUsage();
-                MessageBox.Show(this, L.T("Save the page, then open it again to see the race numbers. Build the server anew (Update server) and the client patch (Modules › Game client › Install)."), Product.Name, MessageBoxButtons.OK, MessageBoxIcon.Information);
-            };
-            AddLoader(() => { moreToggle.Checked = More; showDll(); });
-            moreToggle.CheckedChanged += (s, e) =>
-            {
-                if (Loading) return;
-                if (moreToggle.Checked)
-                {
-                    string f = dll();
-                    if (f.Length == 0 || !File.Exists(f))
-                    {
-                        Ui.Error(this, L.T("Choose the 64-race patch first (dinput8.dll of CoA Custom), or make race packs from CoA Custom: that keeps its patch in your race folder."));
-                        moreToggle.Checked = false;
-                        return;
-                    }
-                    if (Raw("CustomRaces.MoreRacesFile", "") != f) Set("CustomRaces.MoreRacesFile", f);
-                    Set("CustomRaces.MoreRaces", "1");
-                }
-                else
-                {
-                    var above = races.Where(r => IdOf(r) > 31 && Chosen().Any(c => c.Equals(r.Key, StringComparison.OrdinalIgnoreCase))).Select(r => r.Name).ToList();
-                    if (above.Count > 0 && !Ui.Confirm(this, (above.Count == 1 ? L.F("{0} has a race number above 31 and will stay off without the patch; its characters play their base race until it is on again. Switch it off?", above[0])
-                        : L.F("{0} have race numbers above 31 and will stay off without the patch; their characters play their base race until it is on again. Switch it off?", string.Join(", ", above)))))
-                    {
-                        moreToggle.Checked = true;
-                        return;
-                    }
-                    Set("CustomRaces.MoreRaces", "0");
-                }
-            };
-
-            // the files of CoA Custom that go next to the game (its files\client_root: its patched exe, the Esteria files, cursors)
-            var rootCard = Card(L.T("Files of CoA Custom next to the game"), L.F("CoA Custom brings files that belong next to Ascension.exe (its folder files\\client_root: its own patched exe Ascension.exe or Ascension-b.exe, EsteriaAppearance.dll with its .bin files, cursors). Choose the CoA Custom folder once: {0} copies all of them next to your game when you install the client patch (Modules › Game client › Install), and takes them away again when you choose to copy nothing. A file of the same name that was there before is kept as <name>.afk-backup; files that are already there, the same, stay when they are no longer wanted. They go into the ZIP for the other players as well (Modules › Game client › Export as ZIP …).", Product.Name), "client");
-            var rootNote = new Label { AutoSize = true, Font = Ui.Small, ForeColor = Ui.Muted, BackColor = Ui.Surface, MaximumSize = new Size(rootCard.Inner - 20, 0), Margin = new Padding(0, 4, 0, 8) };
-            Action showRoot = () =>
-            {
-                string f = Raw("CustomRaces.ClientRootFolder", "");
-                if (ConfigOption.IsQuoted(f)) f = ConfigOption.Unquote(f);
-                string exe = Raw("CustomRaces.ClientExe", "");
-                if (ConfigOption.IsQuoted(exe)) exe = ConfigOption.Unquote(exe);
-                // Choosing the client_root is enough: take the exe and the 64-race patch of the same pack
-                // when they are not chosen yet. The separate buttons stay for unusual folder layouts.
-                if (f.Length > 0)
-                {
-                    if (exe.Length == 0)
-                    {
-                        string foundExe = ClientPatch.GameExeOf(f);
-                        if (foundExe != null) { Set("CustomRaces.ClientExe", foundExe); exe = foundExe; }
-                    }
-                    if (Raw("CustomRaces.MoreRacesFile", "").Length == 0)
-                    {
-                        string foundPatch = ClientPatch.CoAPatchOf(f);
-                        if (foundPatch != null && RacePacker.IsRacePatch(foundPatch)) Set("CustomRaces.MoreRacesFile", foundPatch);
-                    }
-                }
-                if (f.Length == 0)
-                {
-                    rootNote.Text = exe.Length > 0
-                        ? L.F("Ascension-b.exe: {0}", Path.GetFileName(exe))
-                        : L.T("No folder chosen: nothing is copied.");
-                    return;
-                }
-                if (!Directory.Exists(f)) { rootNote.Text = L.T("Folder not found:") + " " + f; return; }
-                try
-                {
-                    var all = Directory.GetFiles(f, "*", SearchOption.AllDirectories);
-                    long bytes = all.Sum(x => new FileInfo(x).Length);
-                    rootNote.Text = L.F("{0} files ({1} MB) from {2}", all.Length, Math.Round(bytes / 1048576.0), f);
-                    bool hasExe = all.Any(x => IsGameExe(x));
-                    if (exe.Length > 0)
-                        rootNote.Text += "  ·  " + L.F("Game exe: {0}", Path.GetFileName(exe));
-                    else if (!hasExe)
-                        rootNote.Text += "  ·  " + L.T("Ascension.exe or Ascension-b.exe is not in this folder. Choose it separately if the game should start with it.");
-                }
-                catch (Exception ex) { rootNote.Text = f + "  ·  " + ex.Message; }
-            };
-            rootCard.Add(rootNote);
-            var rootButtons = Ui.Row();
-            rootButtons.BackColor = Ui.Surface;
-            var pickRoot = Ui.Secondary(L.T("Choose the CoA Custom folder …"));
-            var clearRoot = Ui.Ghost(L.T("Copy nothing"));
-            pickRoot.Click += (s, e) =>
-            {
-                using (var d = new FolderBrowserDialog { Description = L.T("The folder of CoA Custom (or its files\\client_root)") })
-                {
-                    if (d.ShowDialog(this) != DialogResult.OK) return;
-                    string found = ClientPatch.ClientRootOf(d.SelectedPath);
-                    if (found == null) { Ui.Error(this, L.T("This folder holds no files\\client_root of CoA Custom.")); return; }
-                    Set("CustomRaces.ClientRootFolder", found);
-                    // The exe and the 64-race patch of the same pack, while none is chosen: choosing the
-                    // client_root is enough, no second and third file dialog.
-                    string exe = ClientPatch.GameExeOf(found);
-                    if (exe != null) Set("CustomRaces.ClientExe", exe);
-                    string patch = ClientPatch.CoAPatchOf(found);
-                    if (patch != null && RacePacker.IsRacePatch(patch)) { Set("CustomRaces.MoreRacesFile", patch); showDll(); }
-                    showRoot();
-                }
-            };
-            clearRoot.Click += (s, e) => { Set("CustomRaces.ClientRootFolder", ""); showRoot(); };
-            rootButtons.Controls.Add(pickRoot);
-            rootButtons.Controls.Add(clearRoot);
-            rootCard.Add(rootButtons);
-            AddLoader(showRoot);
-
-            var groups = new[]
-            {
-                new { Id = "armor", Title = L.T("Show armour, male and female") },
-                new { Id = "male", Title = L.T("Male only - the game has no female model") },
-                new { Id = "noarmor", Title = L.T("Show no armour - their model has no places for it") },
-                new { Id = "untested", Title = L.T("Not tried yet") },
-                new { Id = "poor", Title = L.T("Not recommended") },
-            };
-            foreach (var g in groups)
-            {
-                var group = races.Where(r => GroupOf(r) == g.Id).ToList();
-                if (group.Count == 0) continue;
-                var card = Card(g.Title, null);
-                foreach (var r in group) AddRace(card, r);
+                var importedCard = Card(L.T("Imported races"), L.T("These races come from your race folder. They are the ones you added to the game; switch them on here."), "client");
+                foreach (var r in imported) AddRace(importedCard, r);
             }
+
+            // Then the races that were already in the game client. They stay separate on purpose: switching one on
+            // is not an import, and moving its number is the only way to free that number for an imported race.
+            var clientRaces = races.Where(r => r.Pack == null).OrderBy(r => r.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
+            if (clientRaces.Count > 0)
+            {
+                var clientCard = Card(L.T("Races already in your game client"), L.T("These races are part of your game client. You can switch them on, or move one to a free number when an imported race needs its number."), "client");
+                foreach (var r in clientRaces) AddRace(clientCard, r);
+            }
+
 
             var after = Card(L.T("After a change"), null, "client");
             after.Add(Small(L.F("The race choice of the game shows the races of the client patch. After a change, open Modules › Game client and choose Install: {0} builds the patch anew. The other players need the new ZIP. A race switched off keeps its characters as their base race until it is on again; changing the base race of a race with characters may move them to the other faction. When the game client changes with an update, open this page again: it reads the races anew.", Product.Name), after.Inner));
             Start();
             AutoDetect();
             Shown += (s, e) => Refresh();
+        }
+
+        void UpdateImportStatus()
+        {
+            if (importStatus == null) return;
+            string raceFolder = ConfigOption.Unquote(Raw("CustomRaces.ImportFolder", ""));
+            if (raceFolder.Length == 0) raceFolder = folder ?? "";
+            int packs = races.Count(r => r.Pack != null || r.Alt != null);
+            string client = ClientAddons.ClientFolder ?? L.T("no game client chosen");
+            string root = ConfigOption.Unquote(Raw("CustomRaces.ClientRootFolder", ""));
+            string files = root.Length == 0 || !Directory.Exists(root) ? L.T("no extra client files") : L.F("{0} files", Directory.GetFiles(root, "*", SearchOption.AllDirectories).Length);
+            importStatus.Text = L.F("Race folder: {0} ({1} races)  ·  Game client: {2}  ·  {3}  ·  Race numbers: automatic", raceFolder.Length == 0 ? L.T("not chosen") : raceFolder, packs, client, files);
+        }
+
+        /// <summary>The single import button: choose the game client or repack, detect its files and race archives,
+        /// then open the race selection for that pack.</summary>
+        void ImportRaces()
+        {
+            using (var d = new FolderBrowserDialog { Description = L.T("The game client or repack with the race archives"), SelectedPath = "" })
+            {
+                if (d.ShowDialog(this) != DialogResult.OK) return;
+                string picked = d.SelectedPath;
+                string root = ClientPatch.ClientRootOf(picked);
+                string source = picked;
+                if (root != null)
+                {
+                    string files = Path.GetDirectoryName(root.TrimEnd('\\', '/')) ?? "";
+                    string archives = Path.Combine(files, "client");
+                    if (Directory.Exists(archives)) source = archives;
+                    Set("CustomRaces.ClientRootFolder", "\"" + root + "\"");
+                    string exe = ClientPatch.GameExeOf(root);
+                    if (exe != null) Set("CustomRaces.ClientExe", "\"" + exe + "\"");
+                    string patch = ClientPatch.CoAPatchOf(root);
+                    if (patch != null && RacePacker.IsRacePatch(patch)) Set("CustomRaces.MoreRacesFile", "\"" + patch + "\"");
+                    Set("CustomRaces.MoreRaces", "1");
+                    Set("CustomRaces.HighRaces", "1");
+                }
+                else
+                {
+                    // a plain repack: keep its archives, but do not invent a CoA client_root it does not have
+                    try { if (RacePacker.ArchivesOf(picked).Count == 0) { Ui.Error(this, L.T("This folder has no game archives (.MPQ) and no files\\client_root.")); return; } }
+                    catch (Exception ex) { Ui.Error(this, L.T("This folder could not be read:") + " " + ex.Message); return; }
+                }
+                string target = folder ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", "AFK-Rassen");
+                using (var make = new RacePackDialog(target, ClientAddons.ClientFolder, inst.DataDir, source))
+                {
+                    make.ShowDialog(this);
+                    if (make.Made == 0) { UpdateImportStatus(); return; }
+                }
+                if (Raw("CustomRaces.ImportFolder", "") != target) Set("CustomRaces.ImportFolder", "\"" + target + "\"");
+                UpdateImportStatus();
+                MessageBox.Show(this, L.T("The races were taken from the selected client.") + "\n\n" +
+                    L.T("Close this page and open it again: the imported races are now at the top. Switch on the ones you want, save, then install the client patch under Modules > Game client."), Product.Name, MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
         }
 
         /// <summary>Fills the exe and the 64-race patch from the chosen client_root. A path that points
@@ -762,7 +640,7 @@ namespace CoAInstaller
                 string found = DefaultClientRoot();
                 if (found != null) { Set("CustomRaces.ClientRootFolder", found); root = found; changed = true; }
             }
-            if (root.Length == 0) return;
+            if (root.Length == 0) { UpdateImportStatus(); return; }
             string currentExe = ConfigOption.Unquote(Raw("CustomRaces.ClientExe", ""));
             string exe = ClientPatch.GameExeOf(root);
             if (exe != null && !SamePath(currentExe, exe) && (currentExe.Length == 0 || !IsInside(currentExe, root)))
@@ -777,7 +655,7 @@ namespace CoAInstaller
             {
                 Set("CustomRaces.MoreRacesFile", patch); changed = true;
             }
-            if (changed) Reload();
+            if (changed) Reload(); else UpdateImportStatus();
         }
 
         /// <summary>The usual place of the CoA Custom pack, so a fresh server needs no folder dialog.</summary>
@@ -889,6 +767,38 @@ namespace CoAInstaller
             if (bases.Count == 0) bases.AddRange(new[] { "Human", "Orc", "Dwarf", "NightElf", "Undead", "Tauren", "Gnome", "Troll", "BloodElf", "Draenei" });
         }
 
+        List<KeyValuePair<int, int>> ClientMoves()
+        {
+            var pairs = new List<KeyValuePair<int, int>>();
+            foreach (string word in Raw("CustomRaces.MoveClientRaces", "").Split(new[] { ' ', ',', ';' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                string[] p = word.Split(':');
+                int from, to;
+                if (p.Length == 2 && int.TryParse(p[0], out from) && int.TryParse(p[1], out to) && from != to)
+                    pairs.Add(new KeyValuePair<int, int>(from, to));
+            }
+            return pairs;
+        }
+
+        /// <summary>The races read from the client are the client before the patch: apply the moves the patch will
+        /// make, so the page sees the freed numbers and the moved races under their new ones.</summary>
+        void ApplyClientMoves()
+        {
+            foreach (var pair in ClientMoves())
+            {
+                var race = races.FirstOrDefault(r => r.Pack == null && r.Source == pair.Key);
+                if (race == null || races.Any(r => r.Pack == null && r.Source == pair.Value)) continue;
+                race.Source = pair.Value;
+                slots.Remove(pair.Value); moreSlots.Remove(pair.Value); highSlots.Remove(pair.Value);
+                if (!slots.Contains(pair.Key) && !moreSlots.Contains(pair.Key) && !highSlots.Contains(pair.Key))
+                {
+                    if (pair.Key < 32) slots.Add(pair.Key);
+                    else if (pair.Key < 64) moreSlots.Add(pair.Key);
+                    else highSlots.Add(pair.Key);
+                }
+            }
+        }
+
         /// <summary>Reads the races of the game client; a text saying why not, or null.</summary>
         string ReadClient()
         {
@@ -924,11 +834,15 @@ namespace CoAInstaller
                 // The key is the usual match. A pack can also belong to a client race under another key: an older
                 // version keyed by name only, or the client names two rows alike but this pack names one by its file
                 // (VulperaEsteria beside Vulpera). The source row (number and file) says which one it is.
+                // A source race number alone is not enough: CoA Custom's row 62 is Earthen, while the Lightforged
+                // pack came from a client whose row 62 was the Lightforged Draenei. Matching the number alone turned
+                // the pack into an alternative look of Earthen, so it never got a card of its own.
                 var same = races.FirstOrDefault(r => r.Pack == null && (
                     r.Key.Equals(p.Key, StringComparison.OrdinalIgnoreCase) ||
-                    (p.SourceRace > 0 && r.Source == p.SourceRace) ||
                     (p.SourceFile.Length > 0 && p.SourceFile.Equals(r.File, StringComparison.OrdinalIgnoreCase) &&
-                        (p.Name.Equals(r.Name, StringComparison.OrdinalIgnoreCase) || p.Name.Equals(r.Key, StringComparison.OrdinalIgnoreCase)))));
+                        (p.Name.Equals(r.Name, StringComparison.OrdinalIgnoreCase) || p.Name.Equals(r.Key, StringComparison.OrdinalIgnoreCase))) ||
+                    (p.SourceRace > 0 && r.Source == p.SourceRace && p.SourceFile.Length > 0 &&
+                        p.SourceFile.Equals(r.File, StringComparison.OrdinalIgnoreCase))));
                 if (same != null) { same.Alt = p; continue; }
                 races.Add(new ClientRace { Key = p.Key, Name = p.Name, Prefix = p.Prefix, File = p.File, MaleOnly = p.MaleOnly, Pack = p });
             }
@@ -952,13 +866,121 @@ namespace CoAInstaller
 
         RaceImport.Pack PackOf(ClientRace r) { return r.Pack ?? (UsesFolder(r) ? r.Alt : null); }
 
-        string GroupOf(ClientRace r)
+        /// <summary>A warning when the race's own number in its source client is a different race here. The pack then
+        /// takes a free number, and appearance data the other client keeps under that number cannot follow it.</summary>
+        string PackNumberConflict(ClientRace r)
         {
-            var k = KnownOf(r);
-            if (k != null && k.Rating == "poor") return "poor";
-            if (k != null && (k.Looks == "armor" || k.Looks == "male")) return r.MaleOnly ? "male" : "armor";   // the race folder may have a woman the client lacks
-            if (k != null && k.Looks.Length > 0) return k.Looks;
-            return r.MaleOnly ? "male" : "untested";
+            var pack = r.Pack;
+            if (pack == null || pack.SourceRace <= 0) return null;
+            var other = OtherAtNumber(pack.SourceRace, r);
+            if (other == null) return null;
+            return L.F("Its source race number {0} is {1} in your game client, so it gets a free number. Looks that the other client keeps under {0} cannot follow it.", pack.SourceRace, other.Name);
+        }
+
+        int PreferredNumber(ClientRace r)
+        {
+            if (r.Pack != null)
+            {
+                int id = IdOf(r);
+                return id > 0 ? id : r.Pack.SourceRace;
+            }
+            return r.Source;
+        }
+
+        ClientRace OtherAtNumber(int number, ClientRace self)
+        {
+            if (number <= 0) return null;
+            return races.FirstOrDefault(x => !ReferenceEquals(x, self) && PreferredNumber(x) == number && !SameRace(self, x));
+        }
+
+        int CharactersOf(int race)
+        {
+            try
+            {
+                var rows = MySql.Query(inst, DbLogin.FromConfig(inst), "SELECT COUNT(*) FROM acore_characters.characters WHERE race = " + race + ";");
+                int n;
+                return rows.Count > 0 && int.TryParse(rows[0], out n) ? n : -1;
+            }
+            catch { return -1; }
+        }
+
+        string EsteriaFile(ClientRace r)
+        {
+            try
+            {
+                string client = ClientAddons.ClientFolder;
+                if (client == null || !Directory.Exists(client)) return null;
+                string wanted = "Esteria" + (r.Name ?? "").Replace(" ", "");
+                foreach (var file in Directory.GetFiles(client, "Esteria*.bin", SearchOption.TopDirectoryOnly))
+                    if (Path.GetFileNameWithoutExtension(file).Equals(wanted, StringComparison.OrdinalIgnoreCase))
+                        return Path.GetFileName(file);
+            }
+            catch { }
+            return null;
+        }
+
+        int FreeHighNumber(ClientRace self)
+        {
+            var used = new HashSet<int>(races.Where(x => !ReferenceEquals(x, self)).Select(PreferredNumber));
+            foreach (int slot in highSlots.Where(s => s >= 64).Concat(moreSlots.Where(s => s >= 32)).Concat(slots.Where(s => s >= 12)))
+                if (!used.Contains(slot)) return slot;
+            return 0;
+        }
+
+        /// <summary>Moves a race of the game client to a free number. Only for a race that is not stock and has no
+        /// characters; the client patch then writes its rows under the new number.</summary>
+        bool MoveClientRace(ClientRace r, int to)
+        {
+            if (r == null || r.Pack != null || ClientRaces.Stock.Contains(r.Source) || to <= 0) return false;
+            var pairs = ClientMoves().Where(p => p.Key != r.Source && p.Value != to).ToList();
+            pairs.Add(new KeyValuePair<int, int>(r.Source, to));
+            Set("CustomRaces.MoveClientRaces", "\"" + string.Join(" ", pairs.Select(p => p.Key + ":" + p.Value)) + "\"");
+            int from = r.Source;
+            r.Source = to;
+            slots.Remove(to); moreSlots.Remove(to); highSlots.Remove(to);
+            if (from < 32) slots.Add(from);
+            else if (from < 64) moreSlots.Add(from);
+            else highSlots.Add(from);
+            return true;
+        }
+
+        /// <summary>Asks what to do when an imported race wants a number another race already has. False keeps the
+        /// race switched off.</summary>
+        bool ResolveNumberConflict(ClientRace r)
+        {
+            int wanted = r.Pack != null ? r.Pack.SourceRace : 0;
+            var other = wanted > 0 ? OtherAtNumber(wanted, r) : null;
+            if (other == null) return true;
+
+            int characters = other.Pack == null ? CharactersOf(other.Source) : 0;
+            string esteria = other.Pack == null ? EsteriaFile(other) : null;
+            bool canMove = other.Pack == null && !ClientRaces.Stock.Contains(other.Source) && characters == 0;
+            int target = canMove ? FreeHighNumber(other) : 0;
+            var lines = new List<string>();
+            lines.Add(L.F("The imported race {0} wants race number {1}.", r.Name, wanted));
+            lines.Add(L.F("That number belongs to {0} in your game client.", other.Name));
+            if (other.Pack != null)
+                lines.Add(L.T("It is another imported race. Switch it off or give this race a free number."));
+            else if (ClientRaces.Stock.Contains(other.Source))
+                lines.Add(L.T("It is one of the stock races. Its number cannot be moved."));
+            else
+            {
+                lines.Add(L.T("It is a race of your game client. Switching it off would not free its number; it has to be moved."));
+                lines.Add(characters < 0 ? L.T("Its characters could not be checked, so moving is not offered.") :
+                    characters == 0 ? L.T("It has no characters.") : L.F("It has {0} character(s); moving would change them.", characters));
+                if (esteria != null)
+                    lines.Add(L.F("It looks like an Esteria race ({0}); moving its number can break its appearance.", esteria));
+            }
+            lines.Add(L.F("With a free number for {0}, appearance data tied to {1} may be missing.", r.Name, wanted));
+            string move = canMove && target > 0 ? L.F("Move {0} to {1}", other.Name, target) : "";
+            var answer = RaceNumberDialog.Ask(this, string.Join("\n\n", lines), L.T("Use a free number"), move);
+            if (answer == RaceNumberChoice.Cancel) return false;
+            if (answer == RaceNumberChoice.MoveExisting)
+            {
+                if (!canMove || target <= 0 || !MoveClientRace(other, target)) return false;
+                Set("CustomRaces." + r.Key + ".Id", wanted.ToString());
+            }
+            return true;
         }
 
         /// <summary>The stock race a race of the client most likely leans on, by its name.</summary>
@@ -972,7 +994,7 @@ namespace CoAInstaller
         string DefaultBase(ClientRace r)
         {
             var k = KnownOf(r);
-            if (k != null && bases.Contains(k.Base)) return k.Base;
+            if (k != null && bases.Contains(k.Base)) return Side(k.Base, r);
             string n = r.Name.ToLowerInvariant() + " " + r.File.ToLowerInvariant();
             foreach (var pair in new[] { new[] { "troll", "Troll" }, new[] { "orc", "Orc" }, new[] { "dwar", "Dwarf" }, new[] { "gnom", "Gnome" },
                 new[] { "tauren", "Tauren" }, new[] { "taunka", "Tauren" }, new[] { "skelet", "Undead" }, new[] { "undead", "Undead" }, new[] { "scourge", "Undead" },
@@ -987,6 +1009,12 @@ namespace CoAInstaller
         {
             if (r.Pack == null) return guess;
             int side = r.Pack.Side;
+            if (side == 2)
+            {
+                string name = (r.Name + " " + r.File + " " + r.Key).ToLowerInvariant();
+                if (name.Contains("horde")) side = 1;
+                else if (name.Contains("alliance")) side = 0;
+            }
             var horde = new HashSet<string> { "Orc", "Undead", "Tauren", "Troll", "BloodElf" };
             if (side == 0 && horde.Contains(guess)) return guess == "BloodElf" ? "NightElf" : guess == "Troll" ? "Dwarf" : "Human";
             if (side == 1 && !horde.Contains(guess)) return guess == "Draenei" || guess == "NightElf" ? "BloodElf" : guess == "Dwarf" ? "Troll" : "Orc";
@@ -1030,8 +1058,31 @@ namespace CoAInstaller
         int CoaRaceOf(ClientRace r)
         {
             var pack = PackOf(r);
-            if (pack != null) return pack.SourceRace;
-            return r.Virtual ? 0 : r.Source;
+            if (pack == null)
+                return r.Virtual ? 0 : r.Source;
+            int source = pack.SourceRace;
+            // A race folder pack may reuse a model row of another race (the Pandaren Horde model can sit in
+            // a Human row). CoA Custom gives the racials under its own race number, so use the name the pack
+            // carries rather than the row it was copied from.
+            if (pack.Source.Equals("CoA Custom", StringComparison.OrdinalIgnoreCase))
+            {
+                string n = (pack.Name + " " + pack.File + " " + pack.Key).ToLowerInvariant();
+                if (n.Contains("pandaren")) return 18;
+                if (n.Contains("dracthyr")) return 54;
+                if (n.Contains("vulpera")) return n.Contains("esteria") ? 74 : 20;
+                if (n.Contains("drakonid")) return pack.Side == 0 ? 100 : 98;
+                if (n.Contains("darkfallen")) return pack.Side == 0 ? 80 : 81;
+                if (n.Contains("earthen")) return pack.Side == 0 ? 68 : 69;
+                if (n.Contains("haranir")) return pack.Side == 0 ? 71 : 70;
+                if (n.Contains("murloc")) return 65;
+                if (n.Contains("drakkin")) return 99;
+                if (n.Contains("highmountain")) return 66;
+                if (n.Contains("mechagnome")) return 67;
+                if (n.Contains("gnoll")) return 83;
+                if (n.Contains("sethrak")) return 82;
+                if (n.Contains("saberon")) return 97;
+            }
+            return source;
         }
 
         int IdOf(ClientRace r)
@@ -1219,12 +1270,14 @@ namespace CoAInstaller
         void UpdateUsage()
         {
             var slots = Slots;
-            int used = races.Count(r => !r.OwnNumber && slots.Contains(IdOf(r)));
+            int high = High ? highSlots.Count : 0;
+            int used = races.Count(r => !r.OwnNumber &&
+                (slots.Contains(IdOf(r)) || (High && highSlots.Contains(IdOf(r)))));
             int on = Chosen().Count(k => races.Any(r => r.Key.Equals(k, StringComparison.OrdinalIgnoreCase)));
-            usage.Text = L.F("{0} of up to {1} races on", on, races.Count(r => r.OwnNumber) + slots.Count) + "  ·  " +
+            usage.Text = L.F("{0} of up to {1} races on", on, races.Count(r => r.OwnNumber) + slots.Count + high) + "  ·  " +
                 (More ? L.T("64-race patch on") : L.T("64-race patch off")) + "  ·  " +
-                L.F("{0} of {1} free race numbers in use", used, slots.Count);
-            usage.ForeColor = used >= slots.Count ? Ui.Warn : Ui.Text;
+                L.F("{0} of {1} free race numbers in use", used, slots.Count + high);
+            usage.ForeColor = used >= slots.Count + high ? Ui.Warn : Ui.Text;
         }
 
         void AddRace(Card card, ClientRace r)
@@ -1239,13 +1292,17 @@ namespace CoAInstaller
             var number = new Label { AutoSize = false, Width = 175, Height = 30, Font = Ui.Small, ForeColor = Ui.Muted, TextAlign = ContentAlignment.MiddleLeft, BackColor = Ui.Surface };
             var free = Ui.Ghost(L.T("Free its number"));
             free.Visible = !r.OwnNumber;
+            var move = Ui.Ghost(L.T("Move to a free number"));
+            move.Visible = r.Pack == null && !r.Virtual && !ClientRaces.Stock.Contains(r.Source);
             row.Controls.Add(toggle); row.Controls.Add(new Label { Text = L.T("leans on"), Font = Ui.Small, ForeColor = Ui.Muted, AutoSize = true, Margin = new Padding(0, 9, 0, 0), BackColor = Ui.Surface });
-            row.Controls.Add(basePick); row.Controls.Add(number); row.Controls.Add(free);
+            row.Controls.Add(basePick); row.Controls.Add(number); row.Controls.Add(free); row.Controls.Add(move);
             card.Add(row);
             string about = r.Pack != null ? L.F("From your race folder ({0}, {1} MB).", r.Pack.Source.Length > 0 ? r.Pack.Source : L.T("another client"), r.Pack.Bytes / 1000000) +
                     (r.Pack.Missing > 0 ? " " + L.F("{0} of its files are missing; the choices that need them are left out.", r.Pack.Missing) : "")
                 : k != null && k.About.Length > 0 ? L.Outside(k.About) : r.Virtual ? L.T("A race of your game client.") : L.F("A race of your game client (row {0} of its race table).", r.Source);
             if (k != null && k.Note.Length > 0) about += " " + L.Outside(k.Note);
+            string conflict = PackNumberConflict(r);
+            if (conflict != null) about += " " + conflict;
             var racialSpells = ServerRacials.Spells("", r.Pack != null ? r.Pack.Name : r.Name, CoaRaceOf(r));
             var needCode = ServerRacials.NeedCode(racialSpells);
             if (needCode.Length > 0)
@@ -1297,6 +1354,7 @@ namespace CoAInstaller
                 var chosen = Chosen().Where(c => !c.Equals(r.Key, StringComparison.OrdinalIgnoreCase)).ToList();
                 if (toggle.Checked)
                 {
+                    if (!ResolveNumberConflict(r)) { toggle.Checked = false; return; }
                     int id = IdOf(r);
                     if (id == 0) id = CoaNumberOf(r);
                     if (id == 0)
@@ -1325,6 +1383,35 @@ namespace CoAInstaller
             {
                 if (!Ui.Confirm(this, L.F("Give up the race number of the {0}? Its characters stay their base race for good, and another race can take the number.", L.Outside(r.Name)))) return;
                 Set("CustomRaces." + r.Key + ".Id", "0");
+            };
+            move.Click += (s, e) =>
+            {
+                if (r.Pack != null || r.Virtual || ClientRaces.Stock.Contains(r.Source)) return;
+                int characters = CharactersOf(r.Source);
+                if (characters < 0)
+                {
+                    Ui.Error(this, L.T("The characters of this race could not be checked. Start the database and try again; moving is not offered without that check."));
+                    return;
+                }
+                if (characters > 0)
+                {
+                    Ui.Error(this, L.F("{0} still has {1} character(s). A race with characters cannot be moved.", L.Outside(r.Name), characters));
+                    return;
+                }
+                int target = FreeHighNumber(r);
+                if (target == 0)
+                {
+                    Ui.Error(this, L.T("There is no free race number left for this move."));
+                    return;
+                }
+                string esteria = EsteriaFile(r);
+                if (esteria != null && !Ui.Confirm(this, L.F("{0} looks like an Esteria race ({1}). Moving it can break its appearance. Continue?", L.Outside(r.Name), esteria))) return;
+                if (!Ui.Confirm(this, L.F("Move {0} from race number {1} to {2}? The client patch must be built again afterwards.", L.Outside(r.Name), r.Source, target))) return;
+                if (!MoveClientRace(r, target)) { Ui.Error(this, L.T("The race could not be moved.")); return; }
+                show();
+                UpdateUsage();
+                MessageBox.Show(this, L.F("{0} will use race number {1} after the next client patch.", L.Outside(r.Name), target) + "\n\n" +
+                    L.T("Save the page and build the client patch again."), Product.Name, MessageBoxButtons.OK, MessageBoxIcon.Information);
             };
         }
 

@@ -138,7 +138,7 @@ namespace CoAInstaller
         }
 
         const string InfoName = "race.info.json";
-        const int InfoVersion = 3;
+        const int InfoVersion = 4;      // 4: sourceFile beside the model folder, for matching rows of another client
 
         /// <summary>What the page needs of a race, from its full race.json.</summary>
         static Dictionary<string, object> MakeInfo(string dir, Dictionary<string, object> data, string stamp)
@@ -155,7 +155,7 @@ namespace CoAInstaller
             return new Dictionary<string, object>
             {
                 { "version", InfoVersion }, { "stamp", stamp }, { "key", Str(data, "key") }, { "name", Str(data, "name") }, { "prefix", Str(data, "prefix") },
-                { "file", file }, { "sourceFile", Str(data, "file") }, { "icon", Str(data, "icon") }, { "client", source == null ? "" : Str(source, "client") }, { "race", source == null ? 0 : Num(source.ContainsKey("race") ? source["race"] : null) }, { "side", side ?? 2 },
+                { "file", file }, { "sourceFile", Str(data, "sourceFile").Length > 0 ? Str(data, "sourceFile") : Str(data, "file") }, { "icon", Str(data, "icon") }, { "client", source == null ? "" : Str(source, "client") }, { "race", source == null ? 0 : Num(source.ContainsKey("race") ? source["race"] : null) }, { "side", side ?? 2 },
                 { "female", female }, { "missing", List(data, "missing").Length }, { "bytes", bytes }, { "files", files },
             };
         }
@@ -427,6 +427,51 @@ namespace CoAInstaller
                     ht.Records.Add(rec);
                 }
                 save("DBFilesClient\\CharHairTextures.dbc", ht.ToBytes());
+            }
+        }
+
+        /// <summary>Moves existing races of the game client to other numbers: "62:64 63:65". Used for a race of the
+        /// client that is not played and whose number an imported race needs (Earthen/Human Cultist beside the
+        /// Lightforged/Nightborne of another client). Only the client tables are changed; Stock races never.</summary>
+        public static void MoveClientRaces(Func<string, byte[]> load, Action<string, byte[]> save, string moves, Action<string> note = null)
+        {
+            var pairs = new List<KeyValuePair<int, int>>();
+            foreach (string word in (moves ?? "").Split(new[] { ' ', ',', ';' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                string[] p = word.Split(':');
+                int from, to;
+                if (p.Length != 2 || !int.TryParse(p[0], out from) || !int.TryParse(p[1], out to) ||
+                    from < 12 || from > 127 || to < 12 || to > 127 || from == to)
+                    throw new InvalidOperationException(L.F("The race number move \"{0}\" is not \"old:new\" (12 to 127).", word));
+                pairs.Add(new KeyValuePair<int, int>(from, to));
+            }
+            if (pairs.Count == 0) return;
+            var tables = new[]
+            {
+                new { Name = "ChrRaces", Field = 0 }, new { Name = "CharSections", Field = 1 },
+                new { Name = "HDCharSections", Field = 1 }, new { Name = "CharHairGeosets", Field = 1 },
+                new { Name = "HDCharHairGeosets", Field = 1 }, new { Name = "CharacterFacialHairStyles", Field = 0 },
+                new { Name = "HDCharacterFacialHairStyles", Field = 1 }, new { Name = "CharHairTextures", Field = 1 },
+                new { Name = "VocalUISounds", Field = 2 }, new { Name = "EmotesTextSound", Field = 2 },
+                new { Name = "HDEmotesTextSound", Field = 2 }, new { Name = "CharStartOutfit", Field = 0 },
+                new { Name = "UICameraAppearanceChrRaces", Field = 0 },
+            };
+            foreach (var table in tables)
+            {
+                byte[] bytes = load("DBFilesClient\\" + table.Name + ".dbc");
+                if (bytes == null) continue;
+                var t = DbcTable.Parse(bytes, table.Name + ".dbc");
+                int moved = 0;
+                foreach (var pair in pairs)
+                    foreach (var row in t.Records)
+                        if (t.Field(row, table.Field) == (uint)pair.Key)
+                        {
+                            t.SetField(row, table.Field, (uint)pair.Value);
+                            moved++;
+                        }
+                if (moved == 0) continue;
+                save("DBFilesClient\\" + table.Name + ".dbc", t.ToBytes());
+                if (note != null) note(L.F("{0}: {1} race row(s) moved", table.Name, moved));
             }
         }
 

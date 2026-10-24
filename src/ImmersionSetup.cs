@@ -57,7 +57,9 @@ namespace CoAInstaller
             AddSlider(custom, "CityLife.Custom.CreateMissing.MaxBots", L.T("At most at once"), 0, 100, 1);
             AddToggle(custom, "CityLife.Custom.Legendary.Enable", L.T("Legendary residents"));
             AddToggle(custom, "CityLife.Custom.Legendary.FixedIdentity", L.T("Fixed names and outfits"));
+            AddToggle(custom, "CityLife.Custom.Legendary.Special.Enable", L.T("Always create Feles Noctis"));
             AddToggle(custom, "CityLife.Custom.Beggar.Enable", L.T("Beggars"));
+            AddToggle(custom, "CityLife.Custom.Beggar.Wander.Walk", L.T("Beggars walk instead of running"));
             AddToggle(custom, "CityLife.Custom.Buyer.Enable", L.T("Buyers"));
             AddToggle(custom, "CityLife.Custom.TrainingDummy.Enable", L.T("Training scenes"));
             AddCustomGroups();

@@ -1,6 +1,16 @@
-# AFK Realm 1.0.41
+# AFK Realm 1.0.42
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11.
+
+## New in 1.0.42
+
+- **One import button.** Choose a game client or repack once; AFK Realm finds its race archives and the files it needs next to the game, including `Ascension.exe`, `dinput8.dll` and CoA Custom's Esteria files.
+- **Clear race page.** Imported races are at the top; the races already in your game client have their own box below. The old armour/male/untested group labels are gone.
+- **Free a client race's number.** A race that ships with the game client can be moved to a free number, so an imported race can keep its original number. Stock races and races with characters cannot be moved.
+- **No silent overwrites.** When an imported race wants a number another race has, AFK Realm asks: use a free number, move the existing client race, or cancel. Esteria races warn that moving their number can break their appearance.
+- **Client files stay current.** The files taken from the chosen client or repack are refreshed when the client patch is installed; the previous file remains as `.afk-backup`.
+- **Walking settings.** The server settings now show both Playerbot walking switches. The Immersion module turns walking anywhere and indoor walking on when installed, and beggars have their own walking switch.
+- **Race packs match by more than a number.** A pack's source file is kept beside its model folder, so two clients that use the same number for different races are no longer mixed up.
 
 ## New in 1.0.41
 
