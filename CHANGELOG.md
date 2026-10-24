@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.44
+
+- Races: the server now receives the appearance tables of the imported races as well (`CharSections`, hair geosets, facial hair and hair textures). Bot creation can randomize skin, face and hair for every imported race, not only for races that happened to be in the server's old DBC files.
+- Races: the server's original appearance tables are kept as `.afk-base`; when the last imported race is removed, they are restored. This covers the server side as well as the client patch.
+- Races: old male-only bots are repaired at login. Characters with all appearance bytes zero get valid values from their race's server sections.
+- Character window: the Hide Gear addon adds a movable button at the character frame and a `/hidegear` command. It hides all armor for everyone; weapons stay visible, and the choice is saved per character.
+- Races: Gnoll and Saberon remain male only; old female Gnoll bots are turned into men at login.
+
 ## 1.0.43
 
 - Races: an imported race whose model lies under `custom\...` keeps the file name of its source row in `ChrRaces.ClientFilestring` (Gnoll becomes `GnollHorde`, not the pack key `Gnoll`). This fixes the missing body textures and the white customization background.

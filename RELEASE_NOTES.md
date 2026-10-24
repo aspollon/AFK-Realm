@@ -1,6 +1,13 @@
-# AFK Realm 1.0.43
+# AFK Realm 1.0.44
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11.
+
+## New in 1.0.44
+
+- **Every imported race reaches the server.** The appearance tables of the race packs (`CharSections`, hair geosets, facial hair and hair textures) are now copied to the server with the client patch. Random bots of every imported race can get valid skin, face and hair instead of white defaults.
+- **Removal is clean.** The server's original tables are kept as `.afk-base`; when the last imported race is removed they are restored. Highmountain no longer depends on having been in the server's DBC by chance.
+- **Old bots are repaired.** Male-only characters with all appearance bytes zero get valid appearance values at login; old female Gnoll bots become men.
+- **Hide gear.** The character window gets a movable *Hide gear* button and `/hidegear`; it hides all armor for everyone, keeps weapons visible and remembers the choice per character.
 
 ## New in 1.0.43
 

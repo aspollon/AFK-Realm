@@ -1160,6 +1160,40 @@ namespace CoAInstaller
 
         static bool WasOurs(Install inst) { return File.Exists(RecordFile(inst)); }
 
+        /// <summary>The server gets the same appearance tables the imported races bring to the client. Its own
+        /// tables are kept as .afk-base and restored when the last imported race goes.</summary>
+        static readonly string[] ServerAppearanceTables =
+        {
+            "CharSections.dbc", "HDCharSections.dbc", "CharHairGeosets.dbc", "HDCharHairGeosets.dbc",
+            "CharacterFacialHairStyles.dbc", "HDCharacterFacialHairStyles.dbc", "CharHairTextures.dbc"
+        };
+
+        static void SyncServerAppearance(Install inst, Plan plan, SortedDictionary<string, byte[]> files)
+        {
+            string dir = Path.Combine(inst.DataDir, "dbc");
+            if (!Directory.Exists(dir)) return;
+
+            bool imported = plan.Imports.Count > 0;
+            foreach (string name in ServerAppearanceTables)
+            {
+                string target = Path.Combine(dir, name);
+                string original = target + ".afk-base";
+                try
+                {
+                    if (!File.Exists(original) && File.Exists(target)) File.Copy(target, original, false);
+                    byte[] bytes;
+                    if (imported && files != null && files.TryGetValue("DBFilesClient\\" + name, out bytes))
+                        File.WriteAllBytes(target, bytes);
+                    else if (!imported && File.Exists(original))
+                        File.Copy(original, target, true);
+                }
+                catch (IOException)
+                {
+                    // A running worldserver may hold the table; the next install/restart repeats this.
+                }
+            }
+        }
+
         /// <summary>Builds the patch and puts it into the game folder, or takes it out when no module needs it any more.</summary>
         public static string Install(Install inst, string client, Plan plan) { return Install(inst, client, plan, null); }
 
@@ -1171,6 +1205,7 @@ namespace CoAInstaller
             string installed = InstalledStamp(client);
             if (plan.Empty)
             {
+                SyncServerAppearance(inst, plan, null);
                 var gone = SyncRootFiles(inst, client, plan);
                 if (!string.IsNullOrEmpty(installed) && WasOurs(inst))
                 {
@@ -1201,6 +1236,7 @@ namespace CoAInstaller
                 throw new InvalidOperationException(L.F("Data\\{0} is in use. Close the game and its launcher first.", ArchiveName));
             }
             lock (wantedStamps) { wantedStamps.Clear(); wantedStamps[InputsKey(inst, client, plan)] = Encoding.UTF8.GetString(files[StampName]); }
+            SyncServerAppearance(inst, plan, files);
             notes.AddRange(RaceImport.Sync(client, plan.Imports, progress));
             progress(L.T("Placing the files next to the game …"), 0, 0);
             notes.AddRange(SyncRootFiles(inst, client, plan));
