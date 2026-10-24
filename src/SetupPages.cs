@@ -1089,16 +1089,22 @@ namespace CoAInstaller
 
         int FreeSlot(ClientRace r)
         {
-            var used = new HashSet<int>(races.Where(x => !x.OwnNumber).Select(IdOf));
+            var slots = Slots;
+            var used = new HashSet<int>(races.Where(x => !x.OwnNumber).Select(IdOf).Where(slots.Contains));
             // A race imported from CoA Custom already has a number of its own there: Gnoll 83,
-            // Nightborne 63, Sethrak 82, Saberon 97. If its own number is taken here, it must not
+            // Nightborne 63, Sethrak 82, Saberon 97. If its own number is taken here, it should not
             // fall back to another CoA number: 63 is Nightborne, and EsteriaAppearance.dll would
-            // load Nightborne's looks for a Gnoll under it.
+            // load Nightborne's looks for a Gnoll under it. Prefer a free number outside CoA
+            // Custom's table, but never refuse a race because every free number is in that table.
             HashSet<int> coa = High && r != null && r.Pack != null &&
                 r.Pack.Source.Equals("CoA Custom", StringComparison.OrdinalIgnoreCase)
                 ? new HashSet<int>(CoaRaceFiles().Keys) : null;
-            foreach (int s in Slots)
+            foreach (int s in slots)
                 if (!used.Contains(s) && (coa == null || !coa.Contains(s))) return s;
+            // Some clients' free numbers all appear in CoA Custom's race table. Take one of them
+            // rather than claiming that all numbers are taken.
+            foreach (int s in slots)
+                if (!used.Contains(s)) return s;
             return 0;
         }
 
@@ -1212,12 +1218,13 @@ namespace CoAInstaller
 
         void UpdateUsage()
         {
-            int used = races.Count(r => !r.OwnNumber && IdOf(r) > 0);
+            var slots = Slots;
+            int used = races.Count(r => !r.OwnNumber && slots.Contains(IdOf(r)));
             int on = Chosen().Count(k => races.Any(r => r.Key.Equals(k, StringComparison.OrdinalIgnoreCase)));
-            usage.Text = L.F("{0} of up to {1} races on", on, races.Count(r => r.OwnNumber) + Slots.Count) + "  ·  " +
+            usage.Text = L.F("{0} of up to {1} races on", on, races.Count(r => r.OwnNumber) + slots.Count) + "  ·  " +
                 (More ? L.T("64-race patch on") : L.T("64-race patch off")) + "  ·  " +
-                L.F("{0} of {1} free race numbers in use", used, Slots.Count);
-            usage.ForeColor = used >= Slots.Count ? Ui.Warn : Ui.Text;
+                L.F("{0} of {1} free race numbers in use", used, slots.Count);
+            usage.ForeColor = used >= slots.Count ? Ui.Warn : Ui.Text;
         }
 
         void AddRace(Card card, ClientRace r)

@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.40
+
+- Races: the free-number count and the assignment now use the same slots. A race no longer reports "all 21 free race numbers are taken" when most of them are free.
+- Races: a CoA Custom race whose own number is taken can still take a normal free number. The page prefers numbers outside CoA Custom's race table, but no longer refuses the race when every free slot happens to appear there.
+- Races: IDs above the free slots no longer count against the free-number limit, so the status line and the free buttons agree.
+
 ## 1.0.39
 
 - Auction house bots: prices now form a band from what items really sold for: a low, a usual and a high price. Bots ask within it, undercut only down to its low and cannot ask more than its cap.

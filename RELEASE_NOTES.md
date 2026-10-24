@@ -1,6 +1,12 @@
-# AFK Realm 1.0.39
+# AFK Realm 1.0.40
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11.
+
+## New in 1.0.40
+
+- **Race numbers work again.** The page no longer says "all 21 free race numbers are taken" while most of them are free.
+- **CoA Custom races get a fallback number.** If a race's own CoA number is taken, it can still take a normal free number; numbers outside CoA Custom's race table are preferred.
+- **The status line and the free buttons agree.** IDs above the free slots no longer count against the free-number limit.
 
 ## New in 1.0.39
 
