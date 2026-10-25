@@ -31,7 +31,7 @@ namespace CoAInstaller
         internal class RootFile { public string Module, From, To; public bool Zip = true, GameExe; }
 
         internal class FileSpec { public string Module, From, To; public List<Dictionary<string, object>> Fills; }
-        internal class EditSpec { public string Module, File, InsertAfter, Line; public Dictionary<string, object> DropRows, AddRows, CloneRows, FillRows, SetRows, CopyRows, ImportRace, SectionRules, AddFile; public long? IdShift; }
+        internal class EditSpec { public string Module, File, InsertAfter, Line, Each; public Dictionary<string, object> DropRows, AddRows, CloneRows, FillRows, SetRows, CopyRows, ImportRace, SectionRules, AddFile; public long? IdShift; }
 
         public class Plan
         {
@@ -120,6 +120,7 @@ namespace CoAInstaller
                     if (!SafeClientPath(target) || !When(inst, e)) continue;
                     foreach (var k in e.Keys.Where(k => k != "when").ToList()) e[k] = Settings(inst, e[k]);
                     var edit = new EditSpec { Module = module, File = target.Replace('/', '\\'), InsertAfter = Text(e, "insertAfter"), Line = Text(e, "line"),
+                        Each = Text(e, "__each"),
                         DropRows = e.TryGetValue("dropRows", out v) ? v as Dictionary<string, object> : null,
                         AddRows = e.TryGetValue("addRows", out v) ? v as Dictionary<string, object> : null,
                         CloneRows = e.TryGetValue("cloneRows", out v) ? v as Dictionary<string, object> : null,
@@ -209,6 +210,7 @@ namespace CoAInstaller
                 {
                     var copy = (Dictionary<string, object>)Subst(item, "{each}", word);
                     copy.Remove("forEach");
+                    copy["__each"] = word;
                     yield return copy;
                 }
             }
@@ -358,7 +360,7 @@ namespace CoAInstaller
                     bytes = edit.DropRows != null ? DropRows(bytes, edit, group.Key) : edit.AddRows != null ? AddRows(bytes, edit, group.Key) :
                         edit.CloneRows != null ? CloneRows(bytes, edit, group.Key) :
                         edit.FillRows != null ? FillRows(bytes, edit, group.Key) :
-                        edit.SetRows != null ? SetRows(bytes, edit, group.Key) :
+                        edit.SetRows != null ? SetRows(bytes, edit, group.Key, notes) :
                         edit.CopyRows != null ? CopyRows(bytes, edit, group.Key) : InsertAfter(bytes, edit, group.Key);
                 files[group.Key] = bytes;
                 if (notes != null) notes.Add(L.F("{0} (from {1})", group.Key, source));
@@ -715,7 +717,7 @@ namespace CoAInstaller
         /// gets the values in "set". The fields keep the width the table stores them in. Example: making a race of
         /// ChrRaces.dbc playable for a faction.
         /// </summary>
-        static byte[] SetRows(byte[] bytes, EditSpec edit, string file)
+        static byte[] SetRows(byte[] bytes, EditSpec edit, string file, List<string> notes = null)
         {
             var table = DbcTable.Parse(bytes, file);
             object v;
@@ -737,7 +739,19 @@ namespace CoAInstaller
                 changed++;
             }
             if (changed == 0)
+            {
+                // A race selected for an older client can survive in CustomRaces.Races after
+                // the client (or the race folder) changed. Skip that one stale race instead of
+                // stopping the whole client patch; the race page removes it on the next save.
+                if (edit.Module.Equals("mod-custom-races", StringComparison.OrdinalIgnoreCase) &&
+                    file.EndsWith("ChrRaces.dbc", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (notes != null)
+                        notes.Add(L.F("The race {0} is no longer in this game client; its row was skipped. Open Custom races and save to remove it.", edit.Each ?? "?"));
+                    return bytes;
+                }
                 throw new InvalidOperationException(L.F("{0} of the game client has no row module {1} changes. The client may have changed; update the module.", file, edit.Module));
+            }
             return table.ToBytes();
         }
 
@@ -1037,17 +1051,73 @@ namespace CoAInstaller
             return null;
         }
 
-        static void CheckRootFiles(Plan plan)
+        /// <summary>After the client patch was installed once, the 64-race DLL is next to
+        /// Ascension.exe. If the path into the CoA pack has gone away since then, use that
+        /// installed copy instead of telling the player that the DLL is missing.</summary>
+        static void UseInstalledRootFiles(Plan plan, string client)
         {
+            if (string.IsNullOrEmpty(client)) return;
+            foreach (var r in plan.RootFiles)
+            {
+                if (!r.To.Equals("dinput8.dll", StringComparison.OrdinalIgnoreCase)) continue;
+                if (!string.IsNullOrEmpty(r.From) && File.Exists(r.From)) continue;
+                string dest = Path.Combine(client, r.To);
+                if (File.Exists(dest) && RacePacker.IsRacePatch(dest)) r.From = dest;
+            }
+        }
+
+        static bool InstalledRootFilesIntact(Install inst, string client)
+        {
+            if (inst == null || string.IsNullOrEmpty(client)) return false;
+            var placed = RootPlaced(inst);
+            if (placed.Count == 0) return false;
+            foreach (var p in placed)
+            {
+                string dest = Path.Combine(client, p.Key);
+                if (!File.Exists(dest) || Hash(dest) != p.Value) return false;
+            }
+            return true;
+        }
+
+        /// <summary>When a source root folder has gone away, its files next to the game are the
+        /// only copies left. A ZIP for other players still has to contain them.</summary>
+        static void AddInstalledRootFiles(Plan plan, Install inst, string client)
+        {
+            if (inst == null || string.IsNullOrEmpty(client) || plan.MissingFolders.Count == 0) return;
+            foreach (var p in RootPlaced(inst))
+            {
+                if (plan.RootFiles.Any(r => r.To.Equals(p.Key, StringComparison.OrdinalIgnoreCase))) continue;
+                string dest = Path.Combine(client, p.Key);
+                if (File.Exists(dest) && Hash(dest) == p.Value)
+                    plan.RootFiles.Add(new RootFile { Module = L.T("the installed client"), To = p.Key, From = dest, Zip = true });
+            }
+        }
+
+        static void CheckRootFiles(Plan plan, string client = null, Install inst = null)
+        {
+            UseInstalledRootFiles(plan, client);
+            // The CoA pack may have been deleted after its files were installed. The files next
+            // to the game are what matters then; do not send the player back to a folder that no
+            // longer exists.
+            bool missingCoa = plan.MissingFolders.Any(m => m.StartsWith("mod-custom-races\t", StringComparison.OrdinalIgnoreCase));
+            bool coaInstalled = missingCoa && !string.IsNullOrEmpty(client) &&
+                (File.Exists(Path.Combine(client, "Ascension.exe")) || File.Exists(Path.Combine(client, "Ascension-b.exe"))) &&
+                File.Exists(Path.Combine(client, "EsteriaAppearance.dll"));
+            bool installed = InstalledRootFilesIntact(inst, client);
             foreach (var m in plan.MissingFolders)
             {
+                if (installed || (coaInstalled && m.StartsWith("mod-custom-races\t", StringComparison.OrdinalIgnoreCase))) continue;
                 var p = m.Split('\t');
                 throw new InvalidOperationException(L.F("{0} wants the files of {1} next to the game, but that folder is not there. Open its setup page and choose the folder again, or choose to copy nothing.", p[0], p[1]));
             }
             foreach (var r in plan.RootFiles)
                 if (string.IsNullOrEmpty(r.From) || !File.Exists(r.From))
-                    throw new InvalidOperationException(L.F("{0} wants {1} next to the game, from {2}, which is not there. Open its setup page and choose the file again, or switch that option off.",
+                {
+                    if (r.To.Equals("dinput8.dll", StringComparison.OrdinalIgnoreCase))
+                        throw new InvalidOperationException(L.F("The 64-race patch (dinput8.dll) for {0} was not found. Import the CoA Custom client again, or put dinput8.dll next to Ascension.exe.", r.Module));
+                    throw new InvalidOperationException(L.F("{0} wants {1} next to the game, from {2}, which is not there. Open its setup page and choose the file again, or clear that option.",
                         r.Module, r.To, string.IsNullOrEmpty(r.From) ? L.T("a file not chosen yet") : r.From));
+                }
         }
 
         /// <summary>The files next to the exe put there before: name -> hash. Found: those that were there already, the same,
@@ -1071,6 +1141,7 @@ namespace CoAInstaller
 
         static bool RootFilesCurrent(Install inst, string client, Plan plan)
         {
+            UseInstalledRootFiles(plan, client);
             HashSet<string> found;
             var placed = RootPlaced(inst, out found);
             foreach (var r in plan.RootFiles)
@@ -1078,6 +1149,9 @@ namespace CoAInstaller
                 string dest = Path.Combine(client, r.To);
                 if (!File.Exists(dest) || Hash(dest) != Hash(r.From)) return false;
             }
+            // A source folder that has gone away is not a request to remove its installed files;
+            // the files next to the game are still the ones the patch made.
+            if (plan.MissingFolders.Count > 0) return true;
             // one placed before and no longer wanted is still there
             foreach (var p in placed)
                 if (!found.Contains(p.Key) && !plan.RootFiles.Any(r => r.To.Equals(p.Key, StringComparison.OrdinalIgnoreCase)) && File.Exists(Path.Combine(client, p.Key)) && Hash(Path.Combine(client, p.Key)) == p.Value)
@@ -1115,17 +1189,27 @@ namespace CoAInstaller
                     now[r.To] = want;
                     put.Add(r.To);
                 }
-                foreach (var p in placed)
-                {
-                    if (now.ContainsKey(p.Key) || found.Contains(p.Key)) continue;
-                    string dest = Path.Combine(client, p.Key);
-                    if (File.Exists(dest) && Hash(dest) == p.Value)
+                if (plan.MissingFolders.Count == 0)
+                    foreach (var p in placed)
                     {
-                        File.Delete(dest);
-                        if (File.Exists(dest + ".afk-backup")) File.Move(dest + ".afk-backup", dest);
-                        gone.Add(p.Key);
+                        if (now.ContainsKey(p.Key) || found.Contains(p.Key)) continue;
+                        string dest = Path.Combine(client, p.Key);
+                        if (File.Exists(dest) && Hash(dest) == p.Value)
+                        {
+                            File.Delete(dest);
+                            if (File.Exists(dest + ".afk-backup")) File.Move(dest + ".afk-backup", dest);
+                            gone.Add(p.Key);
+                        }
                     }
-                }
+                else
+                    // The source folder is gone, not the files next to the game: keep its
+                    // installed files and keep the record for them.
+                    foreach (var p in placed)
+                        if (!now.ContainsKey(p.Key) && File.Exists(Path.Combine(client, p.Key)))
+                        {
+                            now[p.Key] = p.Value;
+                            if (found.Contains(p.Key)) keep.Add(p.Key);
+                        }
             }
             catch (IOException ex) { throw new InvalidOperationException(L.F("A file next to the game could not be changed ({0}). Close the game and its launcher first.", ex.Message)); }
             catch (UnauthorizedAccessException ex) { throw new InvalidOperationException(L.F("A file next to the game could not be changed ({0}).", ex.Message)); }
@@ -1177,6 +1261,7 @@ namespace CoAInstaller
         {
             problem = null;
             ClientBinaryPatch.Prepare(plan);
+            UseInstalledRootFiles(plan, client);
             string installed = client == null ? null : InstalledStamp(client);
             if (plan.Empty) return (!string.IsNullOrEmpty(installed) && WasOurs(inst)) || (client != null && !RootFilesCurrent(inst, client, plan)) ? PatchState.Leftover : PatchState.None;
             if (client == null) return PatchState.Missing;
@@ -1193,7 +1278,7 @@ namespace CoAInstaller
                     lock (wantedStamps) { wantedStamps.Clear(); wantedStamps[key] = wanted; }
                 }
                 if (installed == null) return PatchState.Missing;
-                CheckRootFiles(plan);
+                CheckRootFiles(plan, client, inst);
                 return installed == wanted && RaceImport.Current(client, plan.Imports) && RootFilesCurrent(inst, client, plan) ? PatchState.Current : PatchState.Outdated;
             }
             catch (Exception ex) { problem = ex.Message; return PatchState.Outdated; }
@@ -1243,6 +1328,7 @@ namespace CoAInstaller
         {
             if (progress == null) progress = (t, a, b) => { };
             ClientBinaryPatch.Prepare(plan);
+            UseInstalledRootFiles(plan, client);
             string path = Path.Combine(client, "Data", ArchiveName);
             string installed = InstalledStamp(client);
             if (plan.Empty)
@@ -1259,7 +1345,7 @@ namespace CoAInstaller
                 return string.Join(", ", gone);
             }
             if (installed == "") throw new InvalidOperationException(Foreign);
-            CheckRootFiles(plan);
+            CheckRootFiles(plan, client, inst);
             var notes = new List<string>();
             progress(L.T("Building the client patch from your game client …"), 0, 0);
             var files = Build(inst, client, plan, notes);
@@ -1294,6 +1380,11 @@ namespace CoAInstaller
         {
             if (progress == null) progress = (t, a, b) => { };
             ClientBinaryPatch.Prepare(plan);
+            UseInstalledRootFiles(plan, client);
+            AddInstalledRootFiles(plan, inst, client);
+            // Installed files added from the record may still be unpatched originals; run the
+            // binary patcher over them as well before they go into the ZIP.
+            ClientBinaryPatch.Prepare(plan);
             progress(L.T("Building the client patch from your game client …"), 0, 0);
             var files = Build(inst, client, plan, null);
             string temp = Path.GetTempFileName();
@@ -1305,7 +1396,7 @@ namespace CoAInstaller
                 zip.CreateEntryFromFile(temp, "Data/" + ArchiveName, CompressionLevel.Optimal);
             }
             finally { try { File.Delete(temp); } catch { } }
-            CheckRootFiles(plan);
+            CheckRootFiles(plan, client, inst);
             // the files next to the exe, CoA Custom's too (its Ascension.exe, EsteriaAppearance.dll, ...): a module may keep one out ("zip": false)
             foreach (var r in plan.RootFiles.Where(r => r.Zip)) zip.CreateEntryFromFile(r.From, r.To.Replace('\\', '/'), CompressionLevel.Optimal);
             int n = 0;

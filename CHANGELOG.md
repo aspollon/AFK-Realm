@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.52
+
+- Client start/race patch: if the CoA Custom pack folder was deleted after its files were installed, the client patch no longer insists on that folder. It uses the installed `dinput8.dll` next to `Ascension.exe` for state, repair and the ZIP, and keeps the other installed client-root files instead of deleting them.
+- Race setup: the 64-race patch and CoA Custom's high race numbers now have visible switches, so they can be turned off when a client has no 64-race DLL. Import still turns both on automatically.
+- Race setup: a race saved by an older client or an older race folder is removed from `CustomRaces.Races` when the page is opened or saved. If the client patch is built before that, a stale `ChrRaces.dbc` row is skipped with a note instead of stopping the whole build.
+- Config: a hand-edited `.conf` with two lines for the same option now follows the server and uses the last line. Saving replaces all copies, so appending `CustomRaces.MoreRaces = 1` can no longer be overridden by an older `= 0` above it.
+- Client patch: the missing-64-race-DLL error now says to import the CoA client again or put the DLL next to `Ascension.exe`; it no longer tells the user to switch off an option that had no switch.
+
 ## 1.0.51
 
 - Race import: choosing a CoA Custom pack now finds its `client_root` and 64-race `dinput8.dll` even when the user picks the pack root, `files`, `files\client` or `files\client_root`. The import switches `CustomRaces.MoreRaces` and `CustomRaces.HighRaces` on and fills `CustomRaces.MoreRacesFile` from the DLL in `files\client`, `client_root`, the pack root or the race folder's `_Client` copy.

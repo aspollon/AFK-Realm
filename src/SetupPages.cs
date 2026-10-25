@@ -221,8 +221,13 @@ namespace CoAInstaller
         /// <summary>Runs after the settings are written: the files that follow from them.</summary>
         protected virtual void Saved() { }
 
+        /// <summary>Runs just before the page writes its settings, for repairs that must be part
+        /// of the same save (for example a race that the current client no longer has).</summary>
+        protected virtual void BeforeSave() { }
+
         bool Save()
         {
+            BeforeSave();
             var written = new[] { conf }.Concat(also).Where(f => f.Pending.Count + f.Removed.Count > 0).Select(f => f.Name).ToList();
             if (written.Count == 0) written.Add(conf.Name);
             try { conf.Save(); foreach (var f in also) f.Save(); }
@@ -531,6 +536,7 @@ namespace CoAInstaller
             ApplyClientMoves();
             ReadFolder();
             HealNumbers();
+            PruneChosen();
 
             Tab(L.T("Races"));
             int own = races.Count(r => r.OwnNumber);
@@ -547,6 +553,11 @@ namespace CoAInstaller
             importCard.Add(importButton);
             importStatus = Small("", importCard.Inner - 40);
             importCard.Add(importStatus);
+            var moreCard = Card(L.T("Race numbers above 31"), L.T("The 64-race patch and the high race numbers of CoA Custom are switched on by the import. They stay visible here so they can be switched off if a client really has no 64-race dinput8.dll."), "client");
+            AddToggle(moreCard, "CustomRaces.MoreRaces", L.T("Use the 64-race patch (dinput8.dll)"),
+                L.T("Needed for race numbers 32 to 63. AFK Realm copies the DLL next to Ascension.exe when the client patch is installed."));
+            AddToggle(moreCard, "CustomRaces.HighRaces", L.T("Use CoA Custom's race numbers above 63"),
+                L.T("CoA Custom's own exe knows its races up to 127, including Highmountain, Earthen, Haranir and the others."));
             UpdateImportStatus();
             importButton.Click += (s, e) => ImportRaces();
 
@@ -674,20 +685,19 @@ namespace CoAInstaller
             string currentPatch = ConfigOption.Unquote(Raw("CustomRaces.MoreRacesFile", ""));
             string patch = ClientPatch.CoAPatchOf(root);
             string files = Path.GetDirectoryName(root.TrimEnd('\\', '/'));
+            bool pathMissing = string.IsNullOrEmpty(currentPatch) || !File.Exists(currentPatch);
+            bool pathFixed = false;
             if (patch != null && RacePacker.IsRacePatch(patch) && !SamePath(currentPatch, patch) &&
-                (currentPatch.Length == 0 || files == null || !IsInside(currentPatch, files)))
+                (pathMissing || files == null || !IsInside(currentPatch, files)))
             {
-                Set("CustomRaces.MoreRacesFile", patch); changed = true;
+                Set("CustomRaces.MoreRacesFile", patch); changed = true; pathFixed = true;
             }
-            // A detected CoA Custom client is the one case where the high race numbers and the
-            // 64-race patch belong on: the pack brings the exe and the DLL.
-            if (Raw("CustomRaces.HighRaces", "0") != "1")
+            // Repair an earlier import that lost the DLL path. Once a valid path is set, the
+            // toggles on the page decide; do not override a deliberate "off".
+            if (pathFixed)
             {
-                Set("CustomRaces.HighRaces", "1"); changed = true;
-            }
-            if (patch != null && RacePacker.IsRacePatch(patch) && Raw("CustomRaces.MoreRaces", "0") != "1")
-            {
-                Set("CustomRaces.MoreRaces", "1"); changed = true;
+                Set("CustomRaces.HighRaces", "1");
+                Set("CustomRaces.MoreRaces", "1");
             }
             if (changed) Reload(); else UpdateImportStatus();
         }
@@ -1056,6 +1066,20 @@ namespace CoAInstaller
         }
 
         List<string> Chosen() { return Raw("CustomRaces.Races", "").Split(new[] { ' ', ',' }, StringSplitOptions.RemoveEmptyEntries).ToList(); }
+
+        /// <summary>A race key saved by an older client or an older race folder can survive after
+        /// the client changed. Its DBC row no longer exists, so the client patch would stop with
+        /// "no row module mod-custom-races changes". Drop such keys on the page and before saving.</summary>
+        void PruneChosen()
+        {
+            if (races.Count == 0) return;
+            var chosen = Chosen();
+            var valid = chosen.Where(k => races.Any(r => r.Key.Equals(k, StringComparison.OrdinalIgnoreCase)))
+                .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            if (valid.Count != chosen.Count) Set("CustomRaces.Races", string.Join(" ", valid));
+        }
+
+        protected override void BeforeSave() { PruneChosen(); }
 
         /// <summary>After the settings: the racial rows of every race that is on are written for the server.</summary>
         protected override void Saved()

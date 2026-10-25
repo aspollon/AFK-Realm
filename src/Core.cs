@@ -23,7 +23,7 @@ namespace CoAInstaller
         public const string Name = "AFK Realm";                   // window titles, dialogs
         public const string ShortName = "AFK Realm";              // desktop shortcut, firewall rules
         public const string FileStem = "AFK-Realm";                // exe name, settings folder
-        public const string Version = "1.0.51";                    // a release; "-preview" marks a pre-release
+        public const string Version = "1.0.52";                    // a release; "-preview" marks a pre-release
         public const string Tagline = "build, run and tweak your own server the lazy way";
         public const string BuildsFor = "Conquest of AzerothCore";
         public const string WindowTitle = Name;
@@ -83,16 +83,19 @@ namespace CoAInstaller
         public static string Get(string file, string key)
         {
             if (!File.Exists(file)) return null;
-            var m = Regex.Match(File.ReadAllText(file), @"(?m)^[ \t]*" + Regex.Escape(key) + @"[ \t]*=[ \t]*(.*?)[ \t\r]*$");
-            if (!m.Success) return null;
-            return m.Groups[1].Value.Trim().Trim('"');
+            // A config edited by hand can contain an old and a new line. The server reads the
+            // lines in order, so the last one wins; do the same instead of keeping the first.
+            var matches = Regex.Matches(File.ReadAllText(file), @"(?m)^[ \t]*" + Regex.Escape(key) + @"[ \t]*=[ \t]*(.*?)[ \t\r]*$");
+            if (matches.Count == 0) return null;
+            return matches[matches.Count - 1].Groups[1].Value.Trim().Trim('"');
         }
         public static void Set(string file, string key, string rawValue)
         {
             string text = File.ReadAllText(file);
             string line = key + " = " + rawValue;
             var rx = new Regex(@"(?m)^[ \t]*" + Regex.Escape(key) + @"[ \t]*=[^\r\n]*");
-            if (rx.IsMatch(text)) text = rx.Replace(text, line.Replace("$", "$$"), 1);
+            // Replace every copy: a stale duplicate above the edited line must not keep winning.
+            if (rx.IsMatch(text)) text = rx.Replace(text, line.Replace("$", "$$"));
             else text = text.TrimEnd('\r', '\n') + "\r\n" + line + "\r\n";
             File.WriteAllText(file, text, new UTF8Encoding(false));
         }

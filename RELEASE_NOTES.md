@@ -1,8 +1,15 @@
-# AFK Realm 1.0.51
+# AFK Realm 1.0.52
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11.
 
-## New in 1.0.51
+## New in 1.0.52
+
+- **A deleted CoA pack no longer blocks the client patch.** If `dinput8.dll` is already next to `Ascension.exe`, AFK Realm uses that installed copy when the CoA source folder has gone away. It also keeps the other installed client-root files and includes them in a new ZIP instead of deleting or forgetting them.
+- **Visible 64-race switches.** The 64-race patch and CoA Custom's high race numbers can now be switched off on the race page instead of hiding only in the config. Import still switches both on automatically.
+- **Stale races are handled.** A race selected for an older client or an older race folder is removed from the selection when the page is opened or saved. If the patch is built first, the stale `ChrRaces.dbc` row is skipped with a note rather than stopping the whole build.
+- **Hand-edited configs follow the server.** If an option appears twice, the last line wins as it does on the server, and saving updates every copy. An appended `CustomRaces.MoreRaces = 1` can no longer be overridden by an old `= 0` above it.
+
+## 1.0.51
 
 - **CoA Custom imports now enable the 64-race support themselves.** The import accepts the pack root, `files`, `files\client` or `files\client_root` and finds both the CoA `client_root` and its `dinput8.dll`. It fills `CustomRaces.MoreRacesFile`, turns `CustomRaces.MoreRaces` and `CustomRaces.HighRaces` on, and keeps the DLL in the client patch/ZIP.
 - **Earlier imports are repaired.** Opening the race setup for an already chosen CoA client now fills a missing or stale patch path and switches the high race numbers on.

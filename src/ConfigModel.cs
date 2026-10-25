@@ -115,7 +115,9 @@ namespace CoAInstaller
                 foreach (var line in System.IO.File.ReadAllLines(confPath))
                 {
                     var m = OptionLine.Match(line);
-                    if (!m.Success || file.Values.ContainsKey(m.Groups[1].Value)) continue;
+                    if (!m.Success) continue;
+                    // The last line wins, as it does for the server; a hand-edited file may
+                    // still contain the old default line above the new one.
                     file.Values[m.Groups[1].Value] = m.Groups[2].Value;
                     if (!file.ByKey.ContainsKey(m.Groups[1].Value))
                         file.Add(new ConfigOption { Key = m.Groups[1].Value, Section = L.T("Other (not in the template)"), DefaultRaw = null,
@@ -284,7 +286,7 @@ namespace CoAInstaller
             {
                 string line = p.Key + " = " + p.Value;
                 var rx = new Regex(@"(?m)^[ \t]*" + Regex.Escape(p.Key) + @"[ \t]*=[^\r\n]*");
-                if (rx.IsMatch(text)) text = rx.Replace(text, line.Replace("$", "$$"), 1);
+                if (rx.IsMatch(text)) text = rx.Replace(text, line.Replace("$", "$$"));
                 else text = text.TrimEnd('\r', '\n') + "\r\n" + line + "\r\n";
                 Values[p.Key] = p.Value;
             }
