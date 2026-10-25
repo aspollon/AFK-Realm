@@ -1,4 +1,13 @@
-# AFK Realm 1.0.47
+# AFK Realm 1.0.48
+
+Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11.
+
+## New in 1.0.48
+
+- **New races keep their fitted armor.** CoA Custom stores the equipment-fitting maps in `client_root\Data\Retail\Assets\EquipmentFitting\*.bin`. The client-root allowlist treated every `Data\...` path as the game's own folder and silently dropped them. They are now copied to the game's `Data` folder and into the ZIP for other players.
+- **The importer still builds race packs, not a client overwrite.** `files\client` remains the source the race packer reads for models, textures and DBC rows; `files\server\dbc` remains the server source. The player's own client archives are not replaced.
+
+## 1.0.47
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11.
 

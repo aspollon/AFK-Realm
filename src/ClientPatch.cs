@@ -110,7 +110,7 @@ namespace CoAInstaller
                             (Path.GetFileName(to).Equals("Ascension.exe", StringComparison.OrdinalIgnoreCase) ||
                              Path.GetFileName(to).Equals("Ascension-b.exe", StringComparison.OrdinalIgnoreCase)))
                             continue;
-                        if (!SafeRootPath(to, true) || plan.RootFiles.Any(r => r.To.Equals(to, StringComparison.OrdinalIgnoreCase))) continue;
+                        if ((!IsClientDataPath(to) && !SafeRootPath(to, true)) || plan.RootFiles.Any(r => r.To.Equals(to, StringComparison.OrdinalIgnoreCase))) continue;
                         plan.RootFiles.Add(new RootFile { Module = module, From = one, To = to, Zip = zip });
                     }
                 }
@@ -939,6 +939,17 @@ namespace CoAInstaller
                 h = BitConverter.ToString(sha.ComputeHash(f)).Replace("-", "");
             lock (hashes) hashes[key] = h;
             return h;
+        }
+
+        /// <summary>CoA Custom's equipment-fitting tables live in client_root\Data\Retail\Assets\EquipmentFitting.
+        /// They are data files, not an overwrite of the game's Data folder, so this one subtree may be copied.</summary>
+        static bool IsClientDataPath(string to)
+        {
+            const string prefix = @"Data\Retail\Assets\EquipmentFitting\";
+            if (!to.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) return false;
+            if (to.IndexOfAny(Path.GetInvalidPathChars()) >= 0) return false;
+            return to.EndsWith(".bin", StringComparison.OrdinalIgnoreCase)
+                && to.Split('\\').All(p => p.Length > 0 && p != "." && p != "..");
         }
 
         /// <summary>A file next to the exe, or in a folder of its own there - never in the game's own folders, never the realm list,

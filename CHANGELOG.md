@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.48
+
+- Client patch: CoA Custom keeps the armor-fitting tables for the imported races in `client_root\Data\Retail\Assets\EquipmentFitting\*.bin`. The client-root allowlist treated every `Data\...` path as the game's own folder and silently dropped this subtree. It is now copied to the game's `Data` folder and included in the ZIP for other players, so the new races keep their fitted armor models.
+- Client patch: the rest of `files\client` remains a source for the race packer, not a wholesale client overwrite; `files\server\dbc` remains the server source. Importing the CoA package therefore still builds race-specific `patch-ZY<race>.MPQ` files instead of replacing the player's client archives.
+
 ## 1.0.47
 
 - Races: customizing an existing Esteria race now keeps the sixth appearance value. The client patch adds the value from the same `HighmountainFields` the preview uses (one byte for Highmountain/Earthen, eight bytes plus `HRC1` for Haranir), and `patches/core-customize-extra.patch` stores it in `characters.extraAppearance`.
