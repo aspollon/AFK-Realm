@@ -509,8 +509,10 @@ namespace CoAInstaller
             string file;
             // the same race of CoA Custom's table: by the file name of its row there (DrakonidHorde, DrakkinAlliance), or
             // by the file name the race folder gives it (HighmountainTauren)
+            string packFile = r.Pack.File ?? r.Pack.Key ?? "";
             return n >= 32 && n < 128 && CoaRaceFiles().TryGetValue(n, out file) &&
-                (file.Equals(r.Pack.SourceFile, StringComparison.OrdinalIgnoreCase) || file.Equals(r.Pack.File.Length > 0 ? r.Pack.File : r.Pack.Key, StringComparison.OrdinalIgnoreCase));
+                (string.Equals(file, r.Pack.SourceFile, StringComparison.OrdinalIgnoreCase) ||
+                 string.Equals(file, packFile, StringComparison.OrdinalIgnoreCase));
         }
 
         /// <summary>With CoA Custom's game: the number CoA Custom gave a race of the race folder, while it is free here (no
@@ -526,8 +528,14 @@ namespace CoAInstaller
             // own source number and the known CoA mapping are all that is left; use them
             // instead of assigning a random free number such as 14 to Gnoll.
             if (CoaRaceFiles().Count > 0 && !IsCoaNumber(r) && r.Pack.SourceRace != n) return 0;
-            bool free = n < 64 ? moreSlots.Contains(n) : highSlots.Contains(n);
-            if (!free || races.Any(o => o != r && IdOf(o) == n)) return 0;
+            bool slotFree = n < 64 ? moreSlots.Contains(n) : highSlots.Contains(n);
+            bool sameVisible = races.Any(o => o != r && o.Source == n && SameRace(o, r));
+            bool otherVisible = races.Any(o => o != r && !SameRace(o, r) && (o.Source == n || IdOf(o) == n));
+            // A deleted or non-playable client row can still occupy n in ChrRaces without
+            // appearing in the race list. The imported race brings its own row and model, so
+            // the number is usable when no visible, different race has it. This is the Gnoll
+            // case: an old/stale row at 83 must not push it to 14.
+            if (otherVisible || (!slotFree && !sameVisible && races.Any(o => o.Source == n))) return 0;
             return n;
         }
         List<int> Slots { get { return More ? slots.Concat(moreSlots).ToList() : slots; } }
@@ -1197,8 +1205,25 @@ namespace CoAInstaller
 
         /// <summary>Gives a race whose saved number belongs to another race a free number, before the page or the
         /// server uses it. The common case is an older Gnoll import that was saved under 63 (Nightborne).</summary>
+        /// <summary>Numbers of races that were deleted from the race folder but whose
+        /// CustomRaces.&lt;key&gt;.Id lines are still in the config can block a number without
+        /// any visible race using it. Remove those orphan numbers before assigning numbers.</summary>
+        void ClearOrphanNumbers()
+        {
+            foreach (var o in conf.Options.Where(o =>
+                o.Key.StartsWith("CustomRaces.", StringComparison.OrdinalIgnoreCase) &&
+                o.Key.EndsWith(".Id", StringComparison.OrdinalIgnoreCase)).ToList())
+            {
+                string key = o.Key.Substring("CustomRaces.".Length, o.Key.Length - "CustomRaces.".Length - ".Id".Length);
+                if (races.Any(r => r.Key.Equals(key, StringComparison.OrdinalIgnoreCase))) continue;
+                int id;
+                if (int.TryParse(RawIn(conf, o.Key, ""), out id) && id > 0) Unset(o.Key);
+            }
+        }
+
         void HealNumbers()
         {
+            ClearOrphanNumbers();
             MarkOwnNumbers();
             // A race of the client that has its own CoA number must not stay on an old copied
             // number (a Gnoll saved as 14 instead of 83). Only move it when no character uses

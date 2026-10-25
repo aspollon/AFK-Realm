@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.55
+
+- Races: an imported CoA race can keep its source number (Gnoll 83) when the client still has a hidden or non-playable `ChrRaces.dbc` row at that number. It is no longer pushed to a low free number such as 14 just because no visible race uses 83.
+- Races: orphan `CustomRaces.<race>.Id` lines from a race deleted out of the race folder are cleared before numbers are assigned, so they cannot block 83 invisibly.
+- Races: a client race with its own CoA number is restored from an old copied number when no character uses the copy, and an imported race is matched to the same client race even if a client update renamed its model file.
+
 ## 1.0.54
 
 - Races: the automatic number assignment now includes CoA Custom's free numbers 64 to 127 when the high race numbers are on. A client with many free high numbers no longer reports "All 23 free race numbers are taken" while the page shows 23 of 85 free numbers in use; an imported race such as the Hozen can take a free high number.

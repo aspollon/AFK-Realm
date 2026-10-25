@@ -1,8 +1,14 @@
-# AFK Realm 1.0.54
+# AFK Realm 1.0.55
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11.
 
-## New in 1.0.54
+## New in 1.0.55
+
+- **Gnoll 83 even with a hidden client row.** A hidden or non-playable `ChrRaces.dbc` row at 83 no longer pushes an imported Gnoll to 14; the imported race brings its own row and model.
+- **Orphan numbers are cleared.** An old `CustomRaces.<race>.Id` from a deleted race folder is removed before assignment, so it cannot block 83 invisibly.
+- **Old copied numbers are repaired.** A client race with its own CoA number is put back when no character uses the old number; renamed model files still match the same client race.
+
+## 1.0.54
 
 - **Enough race numbers with CoA's high range.** When the high race numbers are on, AFK Realm now also assigns free numbers 64 to 127. A client showing 23 of 85 free numbers in use no longer gets "All 23 free race numbers are taken"; a race such as the Hozen can take a free high number.
 
