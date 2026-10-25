@@ -1003,13 +1003,38 @@ namespace CoAInstaller
             return null;
         }
 
-        /// <summary>The 64-race patch of the same CoA Custom (files\client\dinput8.dll), or null.</summary>
+        /// <summary>The 64-race patch of the same CoA Custom (normally files\client\dinput8.dll), or null.
+        /// Some repacks keep it in client_root or the pack root instead, so the exact path is checked first
+        /// and then the pack folder.</summary>
         public static string CoAPatchOf(string clientRoot)
         {
             if (string.IsNullOrEmpty(clientRoot)) return null;
-            string files = Path.GetDirectoryName(clientRoot.TrimEnd('\\', '/'));
-            string dll = files == null ? null : Path.Combine(files, "client", "dinput8.dll");
-            return dll != null && File.Exists(dll) ? dll : null;
+            string root = clientRoot.TrimEnd('\\', '/');
+            string files = Path.GetDirectoryName(root);
+            string exact = files == null ? null : Path.Combine(files, "client", "dinput8.dll");
+            if (exact != null && File.Exists(exact) && RacePacker.IsRacePatch(exact)) return exact;
+            foreach (string start in new[] { files, root, files == null ? null : Path.GetDirectoryName(files) })
+            {
+                if (string.IsNullOrEmpty(start) || !Directory.Exists(start)) continue;
+                string found = RacePacker.FindRacePatch(start);
+                if (found != null) return found;
+            }
+            return null;
+        }
+
+        /// <summary>Finds a CoA Custom client_root from the pack folder, its files folder, client or client_root.
+        /// The import dialog may be given any of them; the parent folders are checked as well.</summary>
+        public static string ClientRootNear(string picked)
+        {
+            if (string.IsNullOrEmpty(picked)) return null;
+            string dir = picked.TrimEnd('\\', '/');
+            for (int depth = 0; depth < 3 && !string.IsNullOrEmpty(dir); ++depth)
+            {
+                string root = ClientRootOf(dir);
+                if (root != null) return root;
+                dir = Path.GetDirectoryName(dir);
+            }
+            return null;
         }
 
         static void CheckRootFiles(Plan plan)

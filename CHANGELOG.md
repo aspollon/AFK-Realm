@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.51
+
+- Race import: choosing a CoA Custom pack now finds its `client_root` and 64-race `dinput8.dll` even when the user picks the pack root, `files`, `files\client` or `files\client_root`. The import switches `CustomRaces.MoreRaces` and `CustomRaces.HighRaces` on and fills `CustomRaces.MoreRacesFile` from the DLL in `files\client`, `client_root`, the pack root or the race folder's `_Client` copy.
+- Race setup: an already chosen CoA Custom client now fills a missing or stale `MoreRacesFile` and turns `MoreRaces`/`HighRaces` on when the page opens, so an earlier import that left the DLL disabled is corrected.
+- Race import: if the pack's DLL is only kept by the race packer in `_Client\dinput8.dll`, that copy is used. A plain repack with a 64-race DLL is configured as well; it still does not invent a CoA `client_root`.
+
 ## 1.0.50
 
 - Client patch: AFK Realm now applies both client binary fixes itself when it builds, installs or exports the client patch from a recognised CoA Custom 1.9 `client_root`. The `Ascension.exe` customize/character-select thunks and the `EsteriaAppearance.dll` two-second worker delay are written to temporary copies; the source pack is not modified. Both the installed files and the ZIP use the patched copies, so players no longer run the Python tools by hand.

@@ -595,8 +595,11 @@ namespace CoAInstaller
             {
                 if (d.ShowDialog(this) != DialogResult.OK) return;
                 string picked = d.SelectedPath;
-                string root = ClientPatch.ClientRootOf(picked);
+                // The user may choose the pack root, files, files\client or files\client_root.
+                // Find the CoA client_root in the folder itself or in its parents.
+                string root = ClientPatch.ClientRootNear(picked);
                 string source = picked;
+                string patch = root != null ? ClientPatch.CoAPatchOf(root) : RacePacker.FindRacePatch(picked);
                 if (root != null)
                 {
                     string files = Path.GetDirectoryName(root.TrimEnd('\\', '/')) ?? "";
@@ -605,14 +608,24 @@ namespace CoAInstaller
                     Set("CustomRaces.ClientRootFolder", "\"" + root + "\"");
                     string exe = ClientPatch.GameExeOf(root);
                     if (exe != null) Set("CustomRaces.ClientExe", "\"" + exe + "\"");
-                    string patch = ClientPatch.CoAPatchOf(root);
-                    if (patch != null && RacePacker.IsRacePatch(patch)) Set("CustomRaces.MoreRacesFile", "\"" + patch + "\"");
-                    Set("CustomRaces.MoreRaces", "1");
+                    // A CoA Custom game uses its own race numbers up to 127, and its 64-race
+                    // patch supplies the numbers above 31. Switch both on with the import.
                     Set("CustomRaces.HighRaces", "1");
+                    if (patch != null && RacePacker.IsRacePatch(patch))
+                    {
+                        Set("CustomRaces.MoreRacesFile", "\"" + patch + "\"");
+                        Set("CustomRaces.MoreRaces", "1");
+                    }
                 }
                 else
                 {
-                    // a plain repack: keep its archives, but do not invent a CoA client_root it does not have
+                    // A plain repack can still bring the 64-race patch; keep it usable even when
+                    // there is no CoA client_root with Esteria files.
+                    if (patch != null && RacePacker.IsRacePatch(patch))
+                    {
+                        Set("CustomRaces.MoreRacesFile", "\"" + patch + "\"");
+                        Set("CustomRaces.MoreRaces", "1");
+                    }
                     try { if (RacePacker.ArchivesOf(picked).Count == 0) { Ui.Error(this, L.T("This folder has no game archives (.MPQ) and no files\\client_root.")); return; } }
                     catch (Exception ex) { Ui.Error(this, L.T("This folder could not be read:") + " " + ex.Message); return; }
                 }
@@ -621,6 +634,17 @@ namespace CoAInstaller
                 {
                     make.ShowDialog(this);
                     if (make.Made == 0) { UpdateImportStatus(); return; }
+                }
+                // The race dialog keeps the source's 64-race patch in _Client. If the pack kept
+                // it somewhere this page does not know, use that kept copy.
+                if (Raw("CustomRaces.MoreRacesFile", "").Length == 0)
+                {
+                    string kept = Path.Combine(target, "_Client", "dinput8.dll");
+                    if (File.Exists(kept) && RacePacker.IsRacePatch(kept))
+                    {
+                        Set("CustomRaces.MoreRacesFile", "\"" + kept + "\"");
+                        Set("CustomRaces.MoreRaces", "1");
+                    }
                 }
                 if (Raw("CustomRaces.ImportFolder", "") != target) Set("CustomRaces.ImportFolder", "\"" + target + "\"");
                 UpdateImportStatus();
@@ -654,6 +678,16 @@ namespace CoAInstaller
                 (currentPatch.Length == 0 || files == null || !IsInside(currentPatch, files)))
             {
                 Set("CustomRaces.MoreRacesFile", patch); changed = true;
+            }
+            // A detected CoA Custom client is the one case where the high race numbers and the
+            // 64-race patch belong on: the pack brings the exe and the DLL.
+            if (Raw("CustomRaces.HighRaces", "0") != "1")
+            {
+                Set("CustomRaces.HighRaces", "1"); changed = true;
+            }
+            if (patch != null && RacePacker.IsRacePatch(patch) && Raw("CustomRaces.MoreRaces", "0") != "1")
+            {
+                Set("CustomRaces.MoreRaces", "1"); changed = true;
             }
             if (changed) Reload(); else UpdateImportStatus();
         }

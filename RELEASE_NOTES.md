@@ -1,8 +1,14 @@
-# AFK Realm 1.0.50
+# AFK Realm 1.0.51
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11.
 
-## New in 1.0.50
+## New in 1.0.51
+
+- **CoA Custom imports now enable the 64-race support themselves.** The import accepts the pack root, `files`, `files\client` or `files\client_root` and finds both the CoA `client_root` and its `dinput8.dll`. It fills `CustomRaces.MoreRacesFile`, turns `CustomRaces.MoreRaces` and `CustomRaces.HighRaces` on, and keeps the DLL in the client patch/ZIP.
+- **Earlier imports are repaired.** Opening the race setup for an already chosen CoA client now fills a missing or stale patch path and switches the high race numbers on.
+- **No DLL left behind.** If the pack's 64-race DLL was only kept by the race packer in `_Client\dinput8.dll`, that copy is used. A plain repack with the DLL is configured too, without inventing CoA Esteria files it does not have.
+
+## 1.0.50
 
 - **No more manual client patching.** For a recognised CoA Custom 1.9 client root, AFK Realm now adds the customize/character-select thunks to `Ascension.exe` and the two-second texture-worker delay to `EsteriaAppearance.dll` itself. It patches temporary copies, so the source pack stays untouched. The installed client and the exported ZIP both receive the patched binaries.
 - **Players only install the client patch.** They still need the full client-pack ZIP (patched binaries, `dxvk.conf`, DXVK 2.7.1 `d3d9.dll` and the equipment-fitting files); no Python or hex editing.
