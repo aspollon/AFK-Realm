@@ -1,8 +1,17 @@
-# AFK Realm 1.0.46
+# AFK Realm 1.0.47
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11.
 
-## New in 1.0.46
+## New in 1.0.47
+
+- **Customize keeps Esteria looks.** The sixth appearance value is now sent with `CMSG_CHAR_CUSTOMIZE` and stored by the server: one byte for Highmountain/Earthen, eight bytes plus `HRC1` for Haranir.
+- **Cold starts keep the look too.** `EsteriaAppearanceContext` is set before character selection, so face, hair, beard and tail use the same Esteria sections as the preview. The unit hooks stay untouched because they also run for NPCs and bots and crashed world entry with a non-character pointer.
+- **No random look on customize.** Opening a paid customization keeps the existing Highmountain look; only a new character starts from the creator's random/first-choice look.
+- **Client start crash fixed.** `dxvk.conf` must not enable `dxvk.enableGraphicsPipelineLibrary`/`dxvk.trackPipelineLifetime`; those settings crashed the Esteria texture loader on a cold start. DXVK 2.7.1 `d3d9.dll` is supplied beside it.
+- **Client patch tool.** `mod-custom-races/tools/customize_extra_patch.py` builds the patched CoA `Ascension.exe`; the matching server change is `patches/core-customize-extra.patch`.
+- **Module patches survive moved context.** If a module patch still matches the code but its surrounding lines moved, the engine retries it with a three-way merge instead of building without it. Real conflicts are still reported.
+
+## 1.0.46
 
 - **Reverted the 1.0.45 login appearance repair.** It treated valid Esteria/Highmountain values as invalid and reset the look at every login. A customized look is no longer changed on login.
 - **Male-only conversion stays at login.** Old female Gnoll/Saberon characters are still turned into men; other races are left alone.

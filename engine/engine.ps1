@@ -1736,6 +1736,10 @@ function Invoke-ModulePatches([string]$Git, [switch]$Quiet) {
                     Write-Log "$label - applied to $targetName." Green
                 } elseif ((Invoke-Program $Git ($apply + @('--reverse', '--check', $tempPatch)) -AllowFailure) -eq 0) {
                     Write-Log "$label - already part of $targetName, not needed any more."
+                } elseif ((Invoke-Program $Git ($apply + @('--3way', '--check', $tempPatch)) -AllowFailure) -eq 0 -and (Invoke-Program $Git ($apply + @('--3way', $tempPatch)) -AllowFailure) -eq 0) {
+                    # The code still matches, but the surrounding lines moved (for example after a module update).
+                    # A three-way merge uses the blobs Git already knows and keeps the change instead of dropping it.
+                    Write-Log "$label - applied to $targetName with a three-way merge." Green
                 } else {
                     Write-Log "$label - does not fit the current $targetName any more; the server is built without it." Yellow
                     if (-not $Quiet) { Send-Event 'NOTE' $(if ($why) { Tr '{0} could not be applied: the code it changes has changed. The server is built without it. ({1})' (Tr $label) (Tr $why) } else { Tr '{0} could not be applied: the code it changes has changed. The server is built without it.' (Tr $label) }) }

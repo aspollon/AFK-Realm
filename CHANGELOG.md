@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.47
+
+- Races: customizing an existing Esteria race now keeps the sixth appearance value. The client patch adds the value from the same `HighmountainFields` the preview uses (one byte for Highmountain/Earthen, eight bytes plus `HRC1` for Haranir), and `patches/core-customize-extra.patch` stores it in `characters.extraAppearance`.
+- Races: a cold start now sets `EsteriaAppearanceContext` before the character-select hook, so face, hair, beard and tail use the same Esteria sections as the preview. The unit hooks stay untouched; they also run for NPCs and bots, and a non-character pointer there crashed the world entry.
+- Races: opening a paid customization no longer randomizes an existing Highmountain look; only a new character starts from the creator's random/first-choice look. A single option can therefore be changed and saved.
+- Client start: the client root must use a `dxvk.conf` without `dxvk.enableGraphicsPipelineLibrary` and `dxvk.trackPipelineLifetime`, and the supplied DXVK 2.7.1 `d3d9.dll`. The old settings crashed the Esteria texture loader on a cold start; running another GPU program only hid the timing race.
+- Client patch: the patched CoA `Ascension.exe` is built by `mod-custom-races/tools/customize_extra_patch.py`; the server core change is `patches/core-customize-extra.patch`. Characters keep their appearance across logout and a full client restart.
+- Module patches: if a patch's code still matches but its context moved (for example after a module update), the engine retries it with a three-way merge instead of silently building without the change. Patches that really conflict are still reported and left out.
+
 ## 1.0.46
 
 - Races: the login appearance repair added in 1.0.45 was removed. Esteria races such as Highmountain use appearance values that do not match the stock `CharSections` ranges; the repair treated those values as invalid and reset the look at every login. This release keeps male-only conversion at login, but no longer rewrites a valid look.
