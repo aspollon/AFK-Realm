@@ -1,10 +1,13 @@
 # Changelog
 
-## 1.0.45
+## 1.0.46
 
-- Races: a race change from a stock race to an imported race no longer keeps the old race's appearance bytes. If the old skin or face does not exist in the new race's sections, the character gets a complete valid appearance and it is written back to the character database immediately. Character selection and the world no longer show a model without face or hair after the next logout.
-- Races: male-only characters are converted and repaired at login as well, not only when they are created. The repaired appearance is saved at once, so the character list does not show the old state again.
-- Races: existing characters with appearance values that do not belong to their race (for example after a race change) are repaired on their next login.
+- Races: the login appearance repair added in 1.0.45 was removed. Esteria races such as Highmountain use appearance values that do not match the stock `CharSections` ranges; the repair treated those values as invalid and reset the look at every login. This release keeps male-only conversion at login, but no longer rewrites a valid look.
+- Races: a race-changed character needs one visit to the character customization. Its old race's appearance cannot be mapped to the new race automatically.
+
+## 1.0.45 (withdrawn)
+
+- This release's automatic appearance repair reset valid Highmountain/Esteria looks on login. Use 1.0.46.
 
 ## 1.0.44
 

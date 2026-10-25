@@ -1,12 +1,16 @@
-# AFK Realm 1.0.45
+# AFK Realm 1.0.46
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11.
 
-## New in 1.0.45
+## New in 1.0.46
 
-- **Race changes keep a complete look.** Changing a stock race to an imported race no longer leaves the old race's appearance bytes behind. If the old skin or face is not part of the new race, the character gets a valid replacement and the values are saved immediately. Face and hair no longer disappear after logout; the barber is only a temporary preview.
-- **Existing characters are repaired on login.** Characters with appearance values that do not belong to their race are fixed once and written back to the database, so the character list and the world agree again.
-- **Male-only repairs also happen at login**, not only at creation. Old female Gnoll bots become men and keep a valid appearance after the next login.
+- **Reverted the 1.0.45 login appearance repair.** It treated valid Esteria/Highmountain values as invalid and reset the look at every login. A customized look is no longer changed on login.
+- **Male-only conversion stays at login.** Old female Gnoll/Saberon characters are still turned into men; other races are left alone.
+- **Race-changed characters need one customization.** The old race's appearance values cannot be mapped automatically to the new race. Use *Customize appearance* once; afterwards the look is kept.
+
+## 1.0.45 (withdrawn)
+
+- The automatic appearance repair in this release reset valid Highmountain/Esteria looks on login. Use 1.0.46.
 
 ## New in 1.0.44
 
