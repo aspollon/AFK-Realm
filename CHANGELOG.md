@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.49
+
+- Client start: CoA Custom 1.9's `EsteriaAppearance.dll` starts its texture worker before the D3D9 device and its first texture objects are ready. That timing race made cold starts crash before the login screen; another GPU-heavy program only hid it. The client pack now carries a version-checked DLL patch that waits two seconds at the worker start. `mod-custom-races/tools/esteria_start_delay.py` reproduces it; the proper upstream fix is a ready signal from the renderer.
+- Client start: the preceding `dxvk.conf`/DXVK 2.7.1 changes remain, but they were not sufficient on their own. The worker delay is the part that removes the crash.
+
 ## 1.0.48
 
 - Client patch: CoA Custom keeps the armor-fitting tables for the imported races in `client_root\Data\Retail\Assets\EquipmentFitting\*.bin`. The client-root allowlist treated every `Data\...` path as the game's own folder and silently dropped this subtree. It is now copied to the game's `Data` folder and included in the ZIP for other players, so the new races keep their fitted armor models.
