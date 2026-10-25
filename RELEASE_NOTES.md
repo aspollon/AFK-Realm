@@ -1,8 +1,12 @@
-# AFK Realm 1.0.53
+# AFK Realm 1.0.54
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11.
 
-## New in 1.0.53
+## New in 1.0.54
+
+- **Enough race numbers with CoA's high range.** When the high race numbers are on, AFK Realm now also assigns free numbers 64 to 127. A client showing 23 of 85 free numbers in use no longer gets "All 23 free race numbers are taken"; a race such as the Hozen can take a free high number.
+
+## 1.0.53
 
 - **Gnoll stays at 83.** An imported CoA race keeps its CoA number even when the CoA pack folder is gone; AFK Realm no longer falls back to a free number such as 14. Old copies are corrected when no character uses them.
 - **Renamed client models still match.** If a CoA client update renames a model file, the imported race pack is matched by its source number and name instead of becoming a second race competing for the same number.

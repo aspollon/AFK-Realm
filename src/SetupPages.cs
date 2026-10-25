@@ -1244,6 +1244,10 @@ namespace CoAInstaller
         int FreeSlot(ClientRace r)
         {
             var slots = Slots;
+            // With CoA Custom's game the numbers 64 to 127 are free too. The page already
+            // counts them (for example 23 of 85 free numbers in use), so a new race must be
+            // allowed to take one of them instead of claiming every free number is taken.
+            if (High) slots = slots.Concat(highSlots).ToList();
             var used = new HashSet<int>(races.Where(x => !x.OwnNumber).Select(IdOf).Where(slots.Contains));
             // A race imported from CoA Custom already has a number of its own there: Gnoll 83,
             // Nightborne 63, Sethrak 82, Saberon 97. If its own number is taken here, it should not

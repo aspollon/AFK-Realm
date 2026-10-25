@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.54
+
+- Races: the automatic number assignment now includes CoA Custom's free numbers 64 to 127 when the high race numbers are on. A client with many free high numbers no longer reports "All 23 free race numbers are taken" while the page shows 23 of 85 free numbers in use; an imported race such as the Hozen can take a free high number.
+
 ## 1.0.53
 
 - Races: an imported CoA race keeps its CoA number even when the CoA pack folder is gone. The fallback uses the race pack's source number and the known CoA mapping (Gnoll 83, Sethrak 82, Saberon 97, and so on) instead of assigning a free number such as 14.
