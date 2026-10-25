@@ -1,8 +1,15 @@
-# AFK Realm 1.0.52
+# AFK Realm 1.0.53
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11.
 
-## New in 1.0.52
+## New in 1.0.53
+
+- **Gnoll stays at 83.** An imported CoA race keeps its CoA number even when the CoA pack folder is gone; AFK Realm no longer falls back to a free number such as 14. Old copies are corrected when no character uses them.
+- **Renamed client models still match.** If a CoA client update renames a model file, the imported race pack is matched by its source number and name instead of becoming a second race competing for the same number.
+- **High numbers are visible.** Gnoll 83 needs the high race numbers switch on; with it off only numbers below 32 are available. The switch is on the race page.
+- **No silent character moves.** A copied number is only changed back when the database says no character uses it.
+
+## 1.0.52
 
 - **A deleted CoA pack no longer blocks the client patch.** If `dinput8.dll` is already next to `Ascension.exe`, AFK Realm uses that installed copy when the CoA source folder has gone away. It also keeps the other installed client-root files and includes them in a new ZIP instead of deleting or forgetting them.
 - **Visible 64-race switches.** The 64-race patch and CoA Custom's high race numbers can now be switched off on the race page instead of hiding only in the config. Import still switches both on automatically.

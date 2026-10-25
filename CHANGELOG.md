@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.53
+
+- Races: an imported CoA race keeps its CoA number even when the CoA pack folder is gone. The fallback uses the race pack's source number and the known CoA mapping (Gnoll 83, Sethrak 82, Saberon 97, and so on) instead of assigning a free number such as 14.
+- Races: a race that belongs to the client under its own CoA number (for example Gnoll 83) is put back from an old copied number when no character uses the copied number. Characters are never moved silently.
+- Races: a race pack whose model file was renamed by a CoA client update is matched to the client's race by its source number and name, so it does not become a second race competing for the same number.
+- Races: the high race numbers switch on the page must be on for 83; with it off, only numbers below 32 are available. The page now shows this directly.
+
 ## 1.0.52
 
 - Client start/race patch: if the CoA Custom pack folder was deleted after its files were installed, the client patch no longer insists on that folder. It uses the installed `dinput8.dll` next to `Ascension.exe` for state, repair and the ZIP, and keeps the other installed client-root files instead of deleting them.

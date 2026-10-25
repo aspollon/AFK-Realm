@@ -517,8 +517,15 @@ namespace CoAInstaller
         /// row of this client and no other race has it); 0 otherwise.</summary>
         int CoaNumberOf(ClientRace r)
         {
-            if (!High || !IsCoaNumber(r)) return 0;
-            int n = r.Pack.SourceRace;
+            if (!High || r == null || r.Pack == null ||
+                !r.Pack.Source.Equals("CoA Custom", StringComparison.OrdinalIgnoreCase)) return 0;
+            int n = CoaRaceOf(r);
+            if (n < 32 || n >= 128) return 0;
+            // When the CoA pack is still there, its ChrRaces table can confirm that the
+            // number belongs to the same race. If the pack folder was deleted, the pack's
+            // own source number and the known CoA mapping are all that is left; use them
+            // instead of assigning a random free number such as 14 to Gnoll.
+            if (CoaRaceFiles().Count > 0 && !IsCoaNumber(r) && r.Pack.SourceRace != n) return 0;
             bool free = n < 64 ? moreSlots.Contains(n) : highSlots.Contains(n);
             if (!free || races.Any(o => o != r && IdOf(o) == n)) return 0;
             return n;
@@ -886,7 +893,12 @@ namespace CoAInstaller
                     (p.SourceFile.Length > 0 && p.SourceFile.Equals(r.File, StringComparison.OrdinalIgnoreCase) &&
                         (p.Name.Equals(r.Name, StringComparison.OrdinalIgnoreCase) || p.Name.Equals(r.Key, StringComparison.OrdinalIgnoreCase))) ||
                     (p.SourceRace > 0 && r.Source == p.SourceRace && p.SourceFile.Length > 0 &&
-                        p.SourceFile.Equals(r.File, StringComparison.OrdinalIgnoreCase))));
+                        p.SourceFile.Equals(r.File, StringComparison.OrdinalIgnoreCase)) ||
+                    // A client update may rename the model file while the row and the race
+                    // name stay the same. That is still the same race, not a second Gnoll
+                    // that gets pushed to a free number such as 14.
+                    (p.SourceRace > 0 && r.Source == p.SourceRace &&
+                        (p.Name.Equals(r.Name, StringComparison.OrdinalIgnoreCase) || p.Key.Equals(r.Key, StringComparison.OrdinalIgnoreCase)))));
                 if (same != null) { same.Alt = p; continue; }
                 races.Add(new ClientRace { Key = p.Key, Name = p.Name, Prefix = p.Prefix, File = p.File, MaleOnly = p.MaleOnly, Pack = p });
             }
@@ -1079,7 +1091,7 @@ namespace CoAInstaller
             if (valid.Count != chosen.Count) Set("CustomRaces.Races", string.Join(" ", valid));
         }
 
-        protected override void BeforeSave() { PruneChosen(); }
+        protected override void BeforeSave() { HealNumbers(); PruneChosen(); }
 
         /// <summary>After the settings: the racial rows of every race that is on are written for the server.</summary>
         protected override void Saved()
@@ -1171,6 +1183,14 @@ namespace CoAInstaller
             string bf = b.Pack != null ? b.Pack.SourceFile : b.File;
             string an = a.Pack != null ? a.Pack.Name : a.Name;
             string bn = b.Pack != null ? b.Pack.Name : b.Name;
+            if (a.Pack != null && b.Pack == null && a.Pack.SourceRace > 0 && b.Source == a.Pack.SourceRace &&
+                ((an.Length > 0 && an.Equals(bn, StringComparison.OrdinalIgnoreCase)) ||
+                 (a.Pack.SourceFile.Length > 0 && a.Pack.SourceFile.Equals(b.File, StringComparison.OrdinalIgnoreCase))))
+                return true;
+            if (b.Pack != null && a.Pack == null && b.Pack.SourceRace > 0 && a.Source == b.Pack.SourceRace &&
+                ((bn.Length > 0 && bn.Equals(an, StringComparison.OrdinalIgnoreCase)) ||
+                 (b.Pack.SourceFile.Length > 0 && b.Pack.SourceFile.Equals(a.File, StringComparison.OrdinalIgnoreCase))))
+                return true;
             return (af.Length > 0 && af.Equals(bf, StringComparison.OrdinalIgnoreCase)) ||
                 (an.Length > 0 && an.Equals(bn, StringComparison.OrdinalIgnoreCase));
         }
@@ -1179,6 +1199,18 @@ namespace CoAInstaller
         /// server uses it. The common case is an older Gnoll import that was saved under 63 (Nightborne).</summary>
         void HealNumbers()
         {
+            MarkOwnNumbers();
+            // A race of the client that has its own CoA number must not stay on an old copied
+            // number (a Gnoll saved as 14 instead of 83). Only move it when no character uses
+            // the old number; characters are never moved silently.
+            foreach (var r in races)
+            {
+                if (!r.OwnNumber) continue;
+                int id = IdOf(r);
+                if (id <= 0 || id == r.Source) continue;
+                if (CharactersOf(id) != 0) continue;
+                Set("CustomRaces." + r.Key + ".Id", "0");
+            }
             var moved = new List<ClientRace>();
             foreach (var r in races)
             {
@@ -1193,6 +1225,19 @@ namespace CoAInstaller
                 int id = CoaNumberOf(r);
                 if (id == 0) id = FreeSlot(r);
                 if (id > 0) Set("CustomRaces." + r.Key + ".Id", id.ToString());
+            }
+            // A Gnoll imported while the CoA pack was unavailable (or while the high numbers
+            // were off) may have got a free number such as 14. When its real CoA number is free
+            // and no character uses the copied number, give it back.
+            foreach (var r in races)
+            {
+                if (r.OwnNumber || r.Pack == null || !High ||
+                    !r.Pack.Source.Equals("CoA Custom", StringComparison.OrdinalIgnoreCase)) continue;
+                int id = IdOf(r);
+                int own = CoaNumberOf(r);
+                if (id <= 0 || id == own || own == 0 || !Slots.Contains(id)) continue;
+                if (CharactersOf(id) != 0) continue;
+                Set("CustomRaces." + r.Key + ".Id", own.ToString());
             }
         }
 
