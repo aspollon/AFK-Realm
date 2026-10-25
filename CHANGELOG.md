@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.50
+
+- Client patch: AFK Realm now applies both client binary fixes itself when it builds, installs or exports the client patch from a recognised CoA Custom 1.9 `client_root`. The `Ascension.exe` customize/character-select thunks and the `EsteriaAppearance.dll` two-second worker delay are written to temporary copies; the source pack is not modified. Both the installed files and the ZIP use the patched copies, so players no longer run the Python tools by hand.
+- Client patch: the patchers are fingerprint-checked. An already patched or unknown client is left unchanged; `mod-custom-races/tools/customize_extra_patch.py` and `esteria_start_delay.py` remain for verification, manual preparation or a different CoA build. The client root still supplies `dxvk.conf`, DXVK 2.7.1 `d3d9.dll` and `Data\Retail\Assets\EquipmentFitting\*.bin`.
+
 ## 1.0.49
 
 - Client start: CoA Custom 1.9's `EsteriaAppearance.dll` starts its texture worker before the D3D9 device and its first texture objects are ready. That timing race made cold starts crash before the login screen; another GPU-heavy program only hid it. The client pack now carries a version-checked DLL patch that waits two seconds at the worker start. `mod-custom-races/tools/esteria_start_delay.py` reproduces it; the proper upstream fix is a ready signal from the renderer.

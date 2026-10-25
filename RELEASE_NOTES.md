@@ -1,8 +1,14 @@
-# AFK Realm 1.0.49
+# AFK Realm 1.0.50
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11.
 
-## New in 1.0.49
+## New in 1.0.50
+
+- **No more manual client patching.** For a recognised CoA Custom 1.9 client root, AFK Realm now adds the customize/character-select thunks to `Ascension.exe` and the two-second texture-worker delay to `EsteriaAppearance.dll` itself. It patches temporary copies, so the source pack stays untouched. The installed client and the exported ZIP both receive the patched binaries.
+- **Players only install the client patch.** They still need the full client-pack ZIP (patched binaries, `dxvk.conf`, DXVK 2.7.1 `d3d9.dll` and the equipment-fitting files); no Python or hex editing.
+- **Safe on unknown builds.** The patchers check fingerprints and leave an already patched or unknown CoA client unchanged. The reproducible tools in `mod-custom-races/tools/` remain for manual use or when CoA Custom updates the binaries.
+
+## 1.0.49
 
 - **Cold-start crash fixed.** CoA Custom 1.9's `EsteriaAppearance.dll` starts its texture worker before the D3D9 device and first texture objects are ready. The client pack now carries a version-checked DLL patch that waits two seconds at the worker start; no background GPU program is needed. `mod-custom-races/tools/esteria_start_delay.py` reproduces the patch. The proper upstream fix is a ready signal from the renderer.
 - **The earlier DXVK changes remain.** The stable `dxvk.conf` and DXVK 2.7.1 `d3d9.dll` stay in the client root, but the worker delay is what removes the crash.

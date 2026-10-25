@@ -150,6 +150,10 @@ namespace CoAInstaller
                     plan.ClearCache |= clientPart.TryGetValue("clearCache", out v) && v is bool && (bool)v;
                 }
             }
+            // The client pack may still carry stock CoA binaries. Patch them to temporary copies so
+            // both the installed files and the ZIP get the customize/start fixes without asking
+            // the player to run a Python script. Unknown versions are left untouched.
+            ClientBinaryPatch.Prepare(plan);
             return plan;
         }
 
@@ -1147,6 +1151,7 @@ namespace CoAInstaller
         public static PatchState StateOf(Install inst, string client, Plan plan, out string problem)
         {
             problem = null;
+            ClientBinaryPatch.Prepare(plan);
             string installed = client == null ? null : InstalledStamp(client);
             if (plan.Empty) return (!string.IsNullOrEmpty(installed) && WasOurs(inst)) || (client != null && !RootFilesCurrent(inst, client, plan)) ? PatchState.Leftover : PatchState.None;
             if (client == null) return PatchState.Missing;
@@ -1212,6 +1217,7 @@ namespace CoAInstaller
         public static string Install(Install inst, string client, Plan plan, Action<string, int, int> progress)
         {
             if (progress == null) progress = (t, a, b) => { };
+            ClientBinaryPatch.Prepare(plan);
             string path = Path.Combine(client, "Data", ArchiveName);
             string installed = InstalledStamp(client);
             if (plan.Empty)
@@ -1262,6 +1268,7 @@ namespace CoAInstaller
         public static void AddToZip(ZipArchive zip, Install inst, string client, Plan plan, Action<string, int, int> progress)
         {
             if (progress == null) progress = (t, a, b) => { };
+            ClientBinaryPatch.Prepare(plan);
             progress(L.T("Building the client patch from your game client …"), 0, 0);
             var files = Build(inst, client, plan, null);
             string temp = Path.GetTempFileName();
