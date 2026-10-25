@@ -12,7 +12,7 @@ namespace CoAInstaller
     /// <summary>
     /// Races brought in from other game clients, through a race folder: one folder per race with its race.json (its rows
     /// of the client tables, texts as text) and files\ (its models and textures). The rows go into the client patch
-    /// (patch-Y.MPQ) with new numbers; the files go into an archive of their own for each race (patch-ZY&lt;race&gt;.MPQ),
+    /// (patch-ZZZZZ.MPQ) with new numbers; the files go into an archive of their own for each race (patch-ZY&lt;race&gt;.MPQ),
     /// built once and kept while the race is chosen.
     ///
     /// Also the rules the character creation of the Ascension client needs for the sections (skins, faces, hair,

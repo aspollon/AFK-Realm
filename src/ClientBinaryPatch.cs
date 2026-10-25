@@ -8,7 +8,7 @@ using System.Text;
 namespace CoAInstaller
 {
     /// <summary>
-    /// The two client-side fixes that cannot live in patch-Y.MPQ:
+    /// The two client-side fixes that cannot live in patch-ZZZZZ.MPQ:
     /// * CoA Custom's Ascension.exe gets a customize thunk and the character-select context thunk;
     /// * its EsteriaAppearance.dll gets a two-second delay in the texture worker that otherwise
     ///   starts before the D3D9 device is ready.

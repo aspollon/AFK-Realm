@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.56
+
+- Client: AFK Realm's loading-screen branding is now a base client patch, not a module feature. It uses CoA Custom's Ilusixn loading screen for every map, adds a `powered by AFK Realm` badge in the lower left, and is present even when no module or race is installed.
+- Client: the AFK client patch is now `Data\patch-ZZZZZ.MPQ`, after CoA Custom's `patch-ZZZD.MPQ`; a `patch-Y` archive would be overridden by CoA's loading-screen archive. The old `patch-Y.MPQ` is removed when it carries AFK Realm's own stamp.
+- Races: character creation no longer doubles the Esteria appearance rows on CoA 1.9 clients. Those clients draw the rows themselves (`COA_EsteriaRefresh`); the module skips its old second set.
+- Races: a race with a native CoA icon now keeps it instead of being replaced by the generic round atlas, so many-race buttons no longer all show the same picture.
+
 ## 1.0.55
 
 - Races: an imported CoA race can keep its source number (Gnoll 83) when the client still has a hidden or non-playable `ChrRaces.dbc` row at that number. It is no longer pushed to a low free number such as 14 just because no visible race uses 83.

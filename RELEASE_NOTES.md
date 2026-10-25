@@ -1,8 +1,15 @@
-# AFK Realm 1.0.55
+# AFK Realm 1.0.56
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11.
 
-## New in 1.0.55
+## New in 1.0.56
+
+- **AFK Realm loading screens everywhere.** AFK Realm now brings CoA Custom's Ilusixn loading screen for every map with a small `powered by AFK Realm` badge in the lower left. It is a base client patch, so it is there even when no module or race is installed.
+- **It loads after CoA Custom.** The client patch is now `Data\patch-ZZZZZ.MPQ`, later than CoA Custom's `patch-ZZZD.MPQ`; the old AFK `patch-Y.MPQ` is removed when it is ours. The late archive is what makes the AFK badge visible instead of being overwritten by CoA's own loading-screen files.
+- **No doubled Esteria options.** CoA 1.9 clients draw the Esteria appearance rows themselves; the race module now skips its old second set.
+- **Race portraits keep their icons.** Native CoA race icons are no longer replaced by the generic round atlas, and races without a native icon fall back to their base race's portrait instead of showing the same atlas on every button.
+
+## 1.0.55
 
 - **Gnoll 83 even with a hidden client row.** A hidden or non-playable `ChrRaces.dbc` row at 83 no longer pushes an imported Gnoll to 14; the imported race brings its own row and model.
 - **Orphan numbers are cleared.** An old `CustomRaces.<race>.Id` from a deleted race folder is removed before assignment, so it cannot block 83 invisibly.

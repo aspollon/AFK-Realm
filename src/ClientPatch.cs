@@ -13,15 +13,18 @@ namespace CoAInstaller
     enum PatchState { None, Current, Missing, Outdated, Leftover }
 
     /// <summary>
-    /// The client patch of the modules: an archive (Data\patch-Y.MPQ) that changes files of the game client - the
+    /// The client patch of the modules: an archive (Data\patch-ZZZZZ.MPQ) that changes files of the game client - the
     /// "client": {"patch": ...} part of a module's afk-realm.json. A module brings files of its own ("files") and asks
     /// for changes to files of the client ("edits"); AFK Realm takes those files from the player's own game client,
     /// so it never hands out files of the game, and builds the archive anew whenever the client, a module or a setting
     /// it reads has changed. The archive goes into the game folder, and into the ZIP for the other players.
+    /// The late letter matters: CoA Custom carries its loading screens in patch-ZZZD.MPQ, so a patch-Y archive
+    /// would be overridden by it.
     /// </summary>
     static class ClientPatch
     {
-        public const string ArchiveName = "patch-Y.MPQ";
+        public const string ArchiveName = "patch-ZZZZZ.MPQ";
+        const string LegacyArchiveName = "patch-Y.MPQ";
         const string StampName = "AFK-Realm\\client-patch.txt";
 
         static string RecordFile(Install inst) { return Path.Combine(inst.Root, "Dependencies", "client-patch.txt"); }
@@ -48,10 +51,54 @@ namespace CoAInstaller
             public bool Empty { get { return Files.Count == 0 && Edits.Count == 0; } }
         }
 
+        /// <summary>The loading screens are AFK Realm's own base patch, not a module's: they stay on every
+        /// client, even when no module or race is installed. The files are embedded in AFK-Realm.exe.</summary>
+        static void AddBaseClientFiles(Plan plan)
+        {
+            string dbc = BaseFile("CoAInstaller.loading.LoadingScreens.dbc", "LoadingScreens.dbc");
+            string blp = BaseFile("CoAInstaller.loading.CoALoading.blp", "CoALoading.blp");
+            if (dbc != null)
+                plan.Files.Add(new FileSpec { Module = Product.Name, From = dbc, To = "DBFilesClient\\LoadingScreens.dbc", Fills = new List<Dictionary<string, object>>() });
+            if (blp != null)
+            {
+                plan.Files.Add(new FileSpec { Module = Product.Name, From = blp, To = "Interface\\Glues\\LoadingScreens\\CoALoading.blp", Fills = new List<Dictionary<string, object>>() });
+                plan.Files.Add(new FileSpec { Module = Product.Name, From = blp, To = "Interface\\Glues\\LoadingScreens\\CoALoadingWide.blp", Fills = new List<Dictionary<string, object>>() });
+            }
+            if (dbc == null && blp == null) return;
+            plan.Modules.Add(Product.Name);
+            plan.Why.Add(Product.Name + ": " + L.T("CoA Custom's loading screens with the AFK Realm badge"));
+            plan.WhyEnglish.Add(Product.Name + ": CoA Custom's loading screens with the AFK Realm badge");
+            plan.ClearCache = true;
+        }
+
+        static string BaseFile(string resource, string name)
+        {
+            try
+            {
+                using (var stream = typeof(ClientPatch).Assembly.GetManifestResourceStream(resource))
+                {
+                    if (stream == null) return null;
+                    using (var memory = new MemoryStream())
+                    {
+                        stream.CopyTo(memory);
+                        byte[] bytes = memory.ToArray();
+                        string dir = Path.Combine(Path.GetTempPath(), "afk-realm-base");
+                        Directory.CreateDirectory(dir);
+                        string path = Path.Combine(dir, name);
+                        if (!File.Exists(path) || !File.ReadAllBytes(path).SequenceEqual(bytes))
+                            File.WriteAllBytes(path, bytes);
+                        return path;
+                    }
+                }
+            }
+            catch { return null; }
+        }
+
         /// <summary>What the installed modules want changed in the client.</summary>
         public static Plan Collect(Install inst)
         {
             var plan = new Plan();
+            AddBaseClientFiles(plan);
             string modules = ModuleCatalog.ModulesDir(inst);
             if (!Directory.Exists(modules)) return plan;
             var json = new JavaScriptSerializer();
@@ -286,7 +333,7 @@ namespace CoAInstaller
         internal static List<string> ClientArchives(string client) { return ClientArchives(client, false); }
 
         /// <summary>The archives of a game client in the order the game reads them. other: a client AFK Realm did not
-        /// patch (its patch-Y is its own).</summary>
+        /// patch (the old patch-Y and the current patch are its own).</summary>
         internal static List<string> ClientArchives(string client, bool other)
         {
             string data = Path.Combine(client, "Data");
@@ -305,7 +352,10 @@ namespace CoAInstaller
             all.AddRange(archives(data));
             foreach (var sub in Directory.GetDirectories(data))
                 if (Regex.IsMatch(Path.GetFileName(sub), @"^[a-z]{2}[A-Z]{2}$")) all.AddRange(archives(sub));
-            return all.Where(p => other || (!Path.GetFileName(p).Equals(ArchiveName, StringComparison.OrdinalIgnoreCase) && !RaceImport.IsOurArchive(Path.GetFileName(p))))
+            return all.Where(p => other || (
+                    !Path.GetFileName(p).Equals(ArchiveName, StringComparison.OrdinalIgnoreCase) &&
+                    !Path.GetFileName(p).Equals(LegacyArchiveName, StringComparison.OrdinalIgnoreCase) &&
+                    !RaceImport.IsOurArchive(Path.GetFileName(p))))
                 .OrderBy(rank).ThenBy(p => Path.GetFileName(p), StringComparer.OrdinalIgnoreCase).ToList();
         }
 
@@ -938,6 +988,25 @@ namespace CoAInstaller
             catch { return ""; }
         }
 
+        /// <summary>Removes the old patch-Y of versions before the loading-screen archive moved after CoA's
+        /// patch-ZZZD. Only a file that carries AFK Realm's own stamp is touched.</summary>
+        static void RemoveLegacyPatch(string client)
+        {
+            if (string.IsNullOrEmpty(client)) return;
+            string old = Path.Combine(client, "Data", LegacyArchiveName);
+            if (!File.Exists(old)) return;
+            try
+            {
+                using (var mpq = new MpqArchive(old))
+                {
+                    var b = mpq.Read(StampName);
+                    if (b != null && Encoding.UTF8.GetString(b).StartsWith("Made by " + Product.Name))
+                        File.Delete(old);
+                }
+            }
+            catch { }
+        }
+
         static string Foreign { get { return L.F("Data\\{0} in the game folder was not made by {1}. Rename or remove it, then install again.", ArchiveName, Product.Name); } }
 
         // ---------------------------------------------------------------------------- files next to the exe
@@ -1329,6 +1398,7 @@ namespace CoAInstaller
             if (progress == null) progress = (t, a, b) => { };
             ClientBinaryPatch.Prepare(plan);
             UseInstalledRootFiles(plan, client);
+            RemoveLegacyPatch(client);
             string path = Path.Combine(client, "Data", ArchiveName);
             string installed = InstalledStamp(client);
             if (plan.Empty)
@@ -1373,7 +1443,7 @@ namespace CoAInstaller
             return L.F("the client patch Data\\{0} built for {1}", ArchiveName, string.Join(", ", plan.Modules)) + (notes.Count > 0 ? " " + L.F("(changes {0})", string.Join(", ", notes)) : "");
         }
 
-        /// <summary>Puts the patch into a ZIP for other players, as Data\patch-Y.MPQ.</summary>
+        /// <summary>Puts the patch into a ZIP for other players, as Data\patch-ZZZZZ.MPQ.</summary>
         public static void AddToZip(ZipArchive zip, Install inst, string client, Plan plan) { AddToZip(zip, inst, client, plan, null); }
 
         public static void AddToZip(ZipArchive zip, Install inst, string client, Plan plan, Action<string, int, int> progress)

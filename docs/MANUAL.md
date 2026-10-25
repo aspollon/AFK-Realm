@@ -390,7 +390,7 @@ Some modules bring something for the game – World Journey an add-on that shows
 
 - **Game folder**: the folder of your game, the one with the `Data` folder. AFK Realm asks once and remembers it.
 - The list shows every add-on of the installed modules and whether your game has it (*up to date*, *older version*, *not installed*). An add-on of a module you removed is listed as *will be taken out*.
-- **Client patch (patch-Y.MPQ)**: modules that change files of the game (the class choice, a data table of the client) get one patch together, `Data\patch-Y.MPQ`. AFK Realm builds it from *your own* game client – it takes the files a module changes out of the game's archives and changes them – so it never hands out files of the game. It is built anew whenever the game client, a module or a setting it reads has changed (*to be built again*), and taken out when no module needs it any more.
+- **Client patch (patch-ZZZZZ.MPQ)**: modules that change files of the game (the class choice, a data table of the client) get one patch together, `Data\patch-ZZZZZ.MPQ`, built from *your own* game client – it takes the files a module changes out of the game's archives and changes them – so it never hands out files of the game. It is built anew whenever the game client, a module or a setting it reads has changed (*to be built again*), and taken out when no module needs it any more. AFK Realm's loading-screen branding is part of this patch even without modules; the late archive name lets it load after CoA Custom's own `patch-ZZZD.MPQ`.
 
   ![Game client](screenshots/33-game-client.png)
 
