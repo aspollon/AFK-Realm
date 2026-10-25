@@ -51,54 +51,10 @@ namespace CoAInstaller
             public bool Empty { get { return Files.Count == 0 && Edits.Count == 0; } }
         }
 
-        /// <summary>The loading screens are AFK Realm's own base patch, not a module's: they stay on every
-        /// client, even when no module or race is installed. The files are embedded in AFK-Realm.exe.</summary>
-        static void AddBaseClientFiles(Plan plan)
-        {
-            string dbc = BaseFile("CoAInstaller.loading.LoadingScreens.dbc", "LoadingScreens.dbc");
-            string blp = BaseFile("CoAInstaller.loading.CoALoading.blp", "CoALoading.blp");
-            if (dbc != null)
-                plan.Files.Add(new FileSpec { Module = Product.Name, From = dbc, To = "DBFilesClient\\LoadingScreens.dbc", Fills = new List<Dictionary<string, object>>() });
-            if (blp != null)
-            {
-                plan.Files.Add(new FileSpec { Module = Product.Name, From = blp, To = "Interface\\Glues\\LoadingScreens\\CoALoading.blp", Fills = new List<Dictionary<string, object>>() });
-                plan.Files.Add(new FileSpec { Module = Product.Name, From = blp, To = "Interface\\Glues\\LoadingScreens\\CoALoadingWide.blp", Fills = new List<Dictionary<string, object>>() });
-            }
-            if (dbc == null && blp == null) return;
-            plan.Modules.Add(Product.Name);
-            plan.Why.Add(Product.Name + ": " + L.T("CoA Custom's loading screens with the AFK Realm badge"));
-            plan.WhyEnglish.Add(Product.Name + ": CoA Custom's loading screens with the AFK Realm badge");
-            plan.ClearCache = true;
-        }
-
-        static string BaseFile(string resource, string name)
-        {
-            try
-            {
-                using (var stream = typeof(ClientPatch).Assembly.GetManifestResourceStream(resource))
-                {
-                    if (stream == null) return null;
-                    using (var memory = new MemoryStream())
-                    {
-                        stream.CopyTo(memory);
-                        byte[] bytes = memory.ToArray();
-                        string dir = Path.Combine(Path.GetTempPath(), "afk-realm-base");
-                        Directory.CreateDirectory(dir);
-                        string path = Path.Combine(dir, name);
-                        if (!File.Exists(path) || !File.ReadAllBytes(path).SequenceEqual(bytes))
-                            File.WriteAllBytes(path, bytes);
-                        return path;
-                    }
-                }
-            }
-            catch { return null; }
-        }
-
         /// <summary>What the installed modules want changed in the client.</summary>
         public static Plan Collect(Install inst)
         {
             var plan = new Plan();
-            AddBaseClientFiles(plan);
             string modules = ModuleCatalog.ModulesDir(inst);
             if (!Directory.Exists(modules)) return plan;
             var json = new JavaScriptSerializer();

@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.57
+
+- Client: CoA Custom's loading screens now come only with a CoA Custom client, not on every server. A stock client keeps the original WoW loading screens.
+- Client: the late `patch-ZZZZZ.MPQ` and the AFK badge remain on the CoA loading screens. Stock loading screens are not replaced by AFK Realm at the moment; putting the badge on every stock screen needs a separate pack of modified stock BLPs, because the loading screen is drawn by the engine and is not an add-on frame.
+- Races: the character-creation fixes from 1.0.56 remain (native CoA options/icons, no doubled Esteria rows, base-race portrait fallback). The affected user needs the updated module as well as AFK Realm.
+
 ## 1.0.56
 
 - Client: AFK Realm's loading-screen branding is now a base client patch, not a module feature. It uses CoA Custom's Ilusixn loading screen for every map, adds a `powered by AFK Realm` badge in the lower left, and is present even when no module or race is installed.

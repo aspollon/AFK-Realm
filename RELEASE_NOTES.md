@@ -1,8 +1,15 @@
-# AFK Realm 1.0.56
+# AFK Realm 1.0.57
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11.
 
-## New in 1.0.56
+## New in 1.0.57
+
+- **CoA loading screens only with CoA.** The Ilusixn loading screens come from the race module when a CoA Custom client/race setup is active. A stock client keeps the original WoW loading screens.
+- **The AFK badge stays on the CoA screens.** The late `patch-ZZZZZ.MPQ` still loads after CoA's `patch-ZZZD.MPQ`.
+- **Honest limitation:** the loading screen is drawn by the game engine, not an add-on frame. A badge on every stock loading screen would mean shipping or generating modified copies of all 152 stock BLP textures; that is a separate, large asset pack.
+- **Character-creation fixes included.** Native CoA options and icons are respected, the duplicated Esteria rows are gone, and races without a native icon use their base race's portrait instead of the full round atlas.
+
+## 1.0.56
 
 - **AFK Realm loading screens everywhere.** AFK Realm now brings CoA Custom's Ilusixn loading screen for every map with a small `powered by AFK Realm` badge in the lower left. It is a base client patch, so it is there even when no module or race is installed.
 - **It loads after CoA Custom.** The client patch is now `Data\patch-ZZZZZ.MPQ`, later than CoA Custom's `patch-ZZZD.MPQ`; the old AFK `patch-Y.MPQ` is removed when it is ours. The late archive is what makes the AFK badge visible instead of being overwritten by CoA's own loading-screen files.

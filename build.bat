@@ -9,7 +9,7 @@ set LANGRES=
 for %%f in (lang\*.json) do call set LANGRES=%%LANGRES%% /resource:lang\%%~nxf,CoAInstaller.lang.%%~nxf
 "%CSC%" /nologo /target:winexe /optimize+ /out:AFK-Realm.exe ^
   /r:System.Windows.Forms.dll /r:System.Drawing.dll /r:System.Numerics.dll /r:System.Core.dll /r:System.Security.dll /r:System.IO.Compression.dll /r:System.IO.Compression.FileSystem.dll /r:System.Web.Extensions.dll ^
-  /win32icon:assets\afk-realm.ico /resource:engine\engine.ps1,CoAInstaller.engine.ps1 /resource:engine\account-transfer.sql,CoAInstaller.account-transfer.sql /resource:engine\module-journal.sql,CoAInstaller.module-journal.sql /resource:assets\afk-realm-header.png,CoAInstaller.logo.png /resource:assets\loading\LoadingScreens.dbc,CoAInstaller.loading.LoadingScreens.dbc /resource:assets\loading\CoALoading.blp,CoAInstaller.loading.CoALoading.blp %LANGRES% src\*.cs
+  /win32icon:assets\afk-realm.ico /resource:engine\engine.ps1,CoAInstaller.engine.ps1 /resource:engine\account-transfer.sql,CoAInstaller.account-transfer.sql /resource:engine\module-journal.sql,CoAInstaller.module-journal.sql /resource:assets\afk-realm-header.png,CoAInstaller.logo.png %LANGRES% src\*.cs
 if errorlevel 1 (
   echo BUILD FAILED
   if /i not "%~1"=="nopause" pause
