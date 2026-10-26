@@ -345,6 +345,8 @@ namespace CoAInstaller
         /// <summary>The contents of the archive as it should be now: name -> bytes. Throws when the client lacks a file a module edits.</summary>
         public static SortedDictionary<string, byte[]> Build(Install inst, string client, Plan plan, List<string> notes)
         {
+            // ZIP export and state checks use Build without Install; remove the old AFK patch-Y here as well.
+            RemoveLegacyPatch(client);
             var files = new SortedDictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
             foreach (var f in plan.Files)
             {
@@ -949,18 +951,22 @@ namespace CoAInstaller
         static void RemoveLegacyPatch(string client)
         {
             if (string.IsNullOrEmpty(client)) return;
-            string old = Path.Combine(client, "Data", LegacyArchiveName);
-            if (!File.Exists(old)) return;
-            try
+            string data = Path.Combine(client, "Data");
+            if (!Directory.Exists(data)) return;
+            foreach (string old in Directory.GetFiles(data, LegacyArchiveName, SearchOption.AllDirectories))
             {
-                using (var mpq = new MpqArchive(old))
+                try
                 {
-                    var b = mpq.Read(StampName);
-                    if (b != null && Encoding.UTF8.GetString(b).StartsWith("Made by " + Product.Name))
-                        File.Delete(old);
+                    bool ours = false;
+                    using (var mpq = new MpqArchive(old))
+                    {
+                        var b = mpq.Read(StampName);
+                        ours = b != null && Encoding.UTF8.GetString(b).StartsWith("Made by " + Product.Name);
+                    }
+                    if (ours) File.Delete(old);
                 }
+                catch { }
             }
-            catch { }
         }
 
         static string Foreign { get { return L.F("Data\\{0} in the game folder was not made by {1}. Rename or remove it, then install again.", ArchiveName, Product.Name); } }

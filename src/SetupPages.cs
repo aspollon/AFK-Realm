@@ -447,6 +447,8 @@ namespace CoAInstaller
         readonly List<int> slots = new List<int>();
         readonly List<int> moreSlots = new List<int>();          // 32 to 63, with the 64-race patch of the client
         readonly List<int> highSlots = new List<int>();          // 64 to 127, free in the client (CoA Custom's game)
+        readonly HashSet<int> reservedNumbers = new HashSet<int>();   // every row of the client's ChrRaces.dbc
+        readonly HashSet<int> stockCopyNumbers = new HashSet<int>();  // stock-named duplicate rows (NightElf2 at 54 ...)
         bool More { get { return Raw("CustomRaces.MoreRaces", "0") == "1"; } }
         /// <summary>The game of CoA Custom (its own exe): its races keep the numbers CoA Custom gave them, up to 127.</summary>
         bool High { get { return Raw("CustomRaces.HighRaces", "0") == "1"; } }
@@ -535,7 +537,16 @@ namespace CoAInstaller
             // appearing in the race list. The imported race brings its own row and model, so
             // the number is usable when no visible, different race has it. This is the Gnoll
             // case: an old/stale row at 83 must not push it to 14.
-            if (otherVisible || (!slotFree && !sameVisible && races.Any(o => o.Source == n))) return 0;
+            //
+            // A stock copy (NightElf2 at 54, Gnome2 at 57, ...) is different: a CoA Custom or
+            // Esteria race is made to replace that row, and moving the custom race would break
+            // EsteriaAppearance and its saved characters. Keep the custom race's intended
+            // number; RaceImport replaces the stock copy on the client.
+            bool ownStockCopy = stockCopyNumbers.Contains(n) && r.Pack != null &&
+                (r.Pack.SourceRace == n || CoaRaceOf(r) == n);
+            if (otherVisible || (reservedNumbers.Contains(n) && !sameVisible && !ownStockCopy) ||
+                (!slotFree && !sameVisible && races.Any(o => o.Source == n)))
+                return 0;
             return n;
         }
         List<int> Slots { get { return More ? slots.Concat(moreSlots).ToList() : slots; } }
@@ -867,6 +878,8 @@ namespace CoAInstaller
             try
             {
                 var scan = ClientRaces.Read(client, virtuals);
+                reservedNumbers.Clear(); reservedNumbers.UnionWith(scan.Reserved);
+                stockCopyNumbers.Clear(); stockCopyNumbers.UnionWith(scan.StockCopies);
                 races.AddRange(scan.Races);
                 MarkOwnNumbers();
                 slots.AddRange(scan.FreeNumbers);
@@ -1191,6 +1204,15 @@ namespace CoAInstaller
             {
                 if (ReferenceEquals(o, r) || IdOf(o) != id || SameRace(r, o)) continue;
                 return true;
+            }
+            if (reservedNumbers.Contains(id))
+            {
+                // The row is there but is not an offered race. A stock copy is exactly what an
+                // Esteria/custom race with this source number replaces; all other hidden rows
+                // (NPC rows, unplayable rows) stay reserved.
+                bool ownStockCopy = stockCopyNumbers.Contains(id) && r.Pack != null &&
+                    (r.Pack.SourceRace == id || CoaRaceOf(r) == id);
+                if (!ownStockCopy) return true;
             }
             return false;
         }

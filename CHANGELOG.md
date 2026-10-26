@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.60
+
+- Races: the client's stock-copy rows are recognized as placeholders, not as separate races. This is the 51–61 block: Human2 at 51, NightElf2 at 54, Undead2 at 55, Tauren2 at 56, Gnome2 at 57, Troll2 at 58, BloodElf2 at 60 and Draenei2 at 61, plus the Orc2/Dwarf2 rows. A custom race whose intended number is one of these now keeps that number and replaces the copy, instead of being pushed to a free number. This fixes Alpha Goblin 57, Dracthyr 54/58, Eradar 55, Harpy 56, Illidari 60/61, Ogre 53 and Undead Gnome 51, and preserves Esteria appearance/race IDs.
+- Client: the old AFK `patch-Y.MPQ` is now removed on patch build/export as well as install, including in locale folders, but only when it carries AFK Realm's own stamp. Previously a ZIP export could leave it behind.
+- Portraits: update mod-custom-races; its stock-copy handling and direct icon portraits are needed together with this build.
+
 ## 1.0.59
 
 - Core: the CoA core moved to `Conquest-of-AzerothCore/azerothcore-wotlk-coa`. AFK Realm builds from the new address; an existing source folder is switched over on the next build, and the revision recorded under the old address still counts.

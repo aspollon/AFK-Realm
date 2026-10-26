@@ -39,6 +39,13 @@ namespace CoAInstaller
             public List<int> FreeNumbers = new List<int>();      // race numbers below 32 no row has
             public List<int> MoreNumbers = new List<int>();      // race numbers 32 to 63 no row has (with the 64-race patch)
             public List<int> HighNumbers = new List<int>();      // race numbers 64 to 127 no row has (CoA Custom's game)
+            /// <summary>Every race number the client's ChrRaces.dbc has a row for, including stock copies and
+            /// NPC rows that do not appear in Races. An imported race must not take one of these.</summary>
+            public HashSet<int> Reserved = new HashSet<int>();
+            /// <summary>Rows whose name is that of a stock race but whose row is not the stock one (NightElf2
+            /// at 54, Gnome2 at 57, Troll2 at 58 in the CoA client). They are not offered as races, but a custom
+            /// race with that intended number may replace the copy.</summary>
+            public HashSet<int> StockCopies = new HashSet<int>();
             public bool ModelsChecked;
             public HashSet<string> HelmetPrefixes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         }
@@ -158,6 +165,7 @@ namespace CoAInstaller
             return new Scan { Races = s.Races.Select(r => new ClientRace { Source = r.Source, Key = r.Key, Name = r.Name, Prefix = r.Prefix, File = r.File,
                 MaleDisplay = r.MaleDisplay, FemaleDisplay = r.FemaleDisplay, MaleOnly = r.MaleOnly, Virtual = r.Virtual, HasHelmets = r.HasHelmets }).ToList(),
                 FreeNumbers = s.FreeNumbers.ToList(), MoreNumbers = s.MoreNumbers.ToList(), HighNumbers = s.HighNumbers.ToList(), ModelsChecked = s.ModelsChecked,
+                Reserved = new HashSet<int>(s.Reserved), StockCopies = new HashSet<int>(s.StockCopies),
                 HelmetPrefixes = new HashSet<string>(s.HelmetPrefixes, StringComparer.OrdinalIgnoreCase) };
         }
 
@@ -226,6 +234,10 @@ namespace CoAInstaller
                 Func<int, int, int> skinsOf = (race, sex) => { int c; return skins.TryGetValue(race * 2 + sex, out c) ? c : 0; };
 
                 var stockNames = new HashSet<string>(Stock.Where(rows.ContainsKey).Select(id => Str(races, rows[id], 14)), StringComparer.OrdinalIgnoreCase);
+                scan.Reserved = new HashSet<int>(rows.Keys);
+                foreach (int id in rows.Keys)
+                    if (!Stock.Contains(id) && stockNames.Contains(Str(races, rows[id], 14).Split('|')[0].Trim()))
+                        scan.StockCopies.Add(id);
                 Func<int, string, string, ClientRace> make = (id, key, name) =>
                 {
                     var row = rows[id];

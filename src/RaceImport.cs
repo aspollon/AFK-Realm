@@ -260,11 +260,28 @@ namespace CoAInstaller
                 (pack.Name.Length > 0 && name.Equals(pack.Name, StringComparison.OrdinalIgnoreCase));
         }
 
+        /// <summary>A duplicate row of a stock race (NightElf2 at 54, Gnome2 at 57, Troll2 at 58). CoA Custom's
+        /// Esteria races have their intended numbers there; the copy is replaced by the race, not the race moved
+        /// away from its appearance row.</summary>
+        static bool StockCopy(DbcTable cr, byte[] row)
+        {
+            string name = Str(cr, row, 14).Split('|')[0].Trim();
+            if (name.Length == 0) return false;
+            foreach (int id in ClientRaces.Stock)
+            {
+                byte[] stock = cr.Records.FirstOrDefault(r => cr.Field(r, 0) == (uint)id);
+                if (stock != null && name.Equals(Str(cr, stock, 14).Split('|')[0].Trim(), StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+            return false;
+        }
+
         public static void AddRace(Func<string, byte[]> load, Action<string, byte[]> save, Pack pack, int race, int baseRace, string name, Action<string> note = null, string helmetPrefix = null)
         {
             var cr = DbcTable.Parse(load("DBFilesClient\\ChrRaces.dbc"), "ChrRaces.dbc");
             var occupied = cr.Records.FirstOrDefault(r => cr.Field(r, 0) == race);
-            if (occupied != null && !SameRace(pack, cr, occupied))
+            bool replaceStockCopy = occupied != null && !ClientRaces.Stock.Contains(race) && StockCopy(cr, occupied);
+            if (occupied != null && !SameRace(pack, cr, occupied) && !replaceStockCopy)
                 throw new InvalidOperationException(L.F("Race number {0} is already {1} in this client; the {2} needs another number.",
                     race, Str(cr, occupied, 14).Split('|')[0].Trim(), name));
             var di = DbcTable.Parse(load("DBFilesClient\\CreatureDisplayInfo.dbc"), "CreatureDisplayInfo.dbc");

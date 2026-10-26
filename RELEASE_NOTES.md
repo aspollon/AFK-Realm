@@ -1,6 +1,12 @@
-# AFK Realm 1.0.59
+# AFK Realm 1.0.60
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11.
+
+## New in 1.0.60
+
+- **Custom races keep their intended race number.** The client's stock-copy rows (51–61: Human2, Orc2, Dwarf2, NightElf2, Undead2, Tauren2, Gnome2, Troll2, BloodElf2, Draenei2) are placeholders. A custom race whose source number is one of them now replaces that copy instead of being moved to a free number. This fixes Alpha Goblin (57/Gnome), Dracthyr Alliance (54/Night Elf), Dracthyr Horde (58/Troll), Eradar (55/Undead), Harpy (56/Tauren), Illidari Night Elf (61/Draenei), Illidari Blood Elf (60/Blood Elf), Ogre (53/Dwarf) and Undead Gnome (51/Human), and keeps Esteria appearance IDs intact.
+- **Old AFK patch-Y removed.** A `patch-Y.MPQ` that carries AFK Realm's stamp is deleted when the patch is built or exported, not only on install. Locale folders are checked too.
+- **Portraits with many races.** Update mod-custom-races as well: the direct icon portraits and stock-copy handling are needed together with this build. If an old client still shows the portrait sheet or a broken stock model, update the module, reinstall the client patch and clear the client cache.
 
 ## New in 1.0.59
 
