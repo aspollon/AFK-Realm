@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Windows.Forms;
 
 namespace CoAInstaller
@@ -26,7 +27,7 @@ namespace CoAInstaller
         readonly LinkLabel serverUpdate = UpdateLink(), toolUpdate = UpdateLink();
         readonly LinkLabel clientNews = UpdateLink(), coaNews = UpdateLink();
         Button clientButton, racesButton;
-        Panel serverBanner, toolBanner;
+        Panel serverBanner, toolBanner, clientBanner, coaBanner;
         List<string> patchWarnings = new List<string>();
         List<string> serverNews = new List<string>();                  // what the server update brings, one line per part
         DateTime? serverNewsLimited;
@@ -173,6 +174,9 @@ namespace CoAInstaller
         readonly Dictionary<string, NavItem> nav = new Dictionary<string, NavItem>();
         readonly StatusPill dbPill = new StatusPill(L.T("Database")), authPill = new StatusPill(L.T("Login (authserver)")), worldPill = new StatusPill(L.T("Game world (worldserver)"));
         readonly Label uptime = new Label { AutoSize = true, Font = Ui.Small, ForeColor = Ui.Muted, Margin = new Padding(4, 2, 0, 0), BackColor = Ui.Canvas };
+        string tickText;                         // last "server info" update time, if the SOAP line is open
+        DateTime tickAsked = DateTime.MinValue;
+        bool tickBusy;
         string current;
         const int CardWidth = 780;
 
@@ -248,10 +252,13 @@ namespace CoAInstaller
             stop.Click += (s, e) => StopServer();
             restart.Click += (s, e) => RestartServer();
             serverBanner = Banner(serverUpdate); toolBanner = Banner(toolUpdate);
+            clientBanner = Banner(clientNews); coaBanner = Banner(coaNews);
             // Below the buttons: how long the server runs, then the update notes, each as wide as the window allows -
-            // a long text wraps instead of running out of the window, and the bar grows with them.
+            // a long text wraps instead of running out of the window, and the bar grows with them. The client and
+            // CoA Custom notices belong here too, so all updates are in the same place.
             var notes = Ui.Column(); notes.BackColor = Ui.Canvas; notes.Location = new Point(28, 116);
             notes.Controls.Add(uptime); notes.Controls.Add(serverBanner); notes.Controls.Add(toolBanner);
+            notes.Controls.Add(clientBanner); notes.Controls.Add(coaBanner);
             busy.Location = new Point(30, 116); busy.BackColor = Ui.Canvas; busy.MaximumSize = new Size(900, 0);
             statusBar.Controls.Add(pills); statusBar.Controls.Add(buttons); statusBar.Controls.Add(notes); statusBar.Controls.Add(busy);
             statusBar.Paint += (s, e) => { using (var pen = new Pen(Ui.Line)) e.Graphics.DrawLine(pen, 0, statusBar.Height - 1, statusBar.Width, statusBar.Height - 1); };
@@ -263,11 +270,11 @@ namespace CoAInstaller
                 try
                 {
                     int room = Math.Max(240, statusBar.Width - 56 - 20);
-                    foreach (var link in new[] { serverUpdate, toolUpdate }) link.MaximumSize = new Size(room, 0);
+                    foreach (var link in new[] { serverUpdate, toolUpdate, clientNews, coaNews }) link.MaximumSize = new Size(room, 0);
                     uptime.MaximumSize = new Size(room, 0);
                     uptime.Visible = uptime.Text.Length > 0;
                     notes.Top = busy.Text.Length > 0 ? busy.Bottom + 4 : 112;
-                    bool any = uptime.Visible || serverBanner.Visible || toolBanner.Visible;
+                    bool any = uptime.Visible || serverBanner.Visible || toolBanner.Visible || clientBanner.Visible || coaBanner.Visible;
                     int bottom = Math.Max(busy.Text.Length > 0 ? busy.Bottom + 6 : 122, any ? notes.Top + notes.PreferredSize.Height + 12 : 0);
                     if (statusBar.Height != bottom) statusBar.Height = bottom;
                 }
@@ -280,6 +287,8 @@ namespace CoAInstaller
             uptime.TextChanged += (s, e) => fit();
             serverBanner.VisibleChanged += (s, e) => fit();
             toolBanner.VisibleChanged += (s, e) => fit();
+            clientBanner.VisibleChanged += (s, e) => fit();
+            coaBanner.VisibleChanged += (s, e) => fit();
             serverUpdate.LinkClicked += (s, e) => RunEngine("Update", L.T("Install the server update now?") + "\n\n" +
                 (patchWarnings.Count > 0 ? "⚠ " + (patchWarnings.Count == 1 ? L.T("Checked beforehand: a patch of a module does not fit the new code:") : L.T("Checked beforehand: some patches of modules do not fit the new code:")) +
                     "\n  " + string.Join("\n  ", patchWarnings) + "\n" +
@@ -364,9 +373,8 @@ namespace CoAInstaller
 
             racesCard = Section("modules", L.T("Custom races"), L.T("Which races of the game client - Goblin, Worgen, Pandaren, Vrykul and more - can be played, and the stock race each leans on: where it starts, its quests, racial abilities and faction."), "accounts");
             racesCard.Stripe = Ui.Accent;
-            coaNews.Visible = false; coaNews.Margin = new Padding(0, 2, 0, 6);
+            coaNews.Visible = false;
             coaNews.LinkClicked += (s, e) => OpenRaces();
-            racesCard.Add(coaNews);
             racesButton = racesCard.Add(Ui.Primary(L.T("Set up the races …")));
             racesButton.Click += (s, e) => OpenRaces();
 
@@ -382,9 +390,8 @@ namespace CoAInstaller
 
             var clientCard = Section("modules", L.T("Game client"), L.F("Some modules bring an add-on or a patch for the game client (for example World Journey's map levels and tooltips, or the class choice of the classic classes). {0} puts them into your game and clears its cache when a module asks for it; for other players it packs them into a ZIP.", Product.Name), "client");
             clientCard.Add(clientState);
-            clientNews.Visible = false; clientNews.Margin = new Padding(0, 2, 0, 6);
+            clientNews.Visible = false;
             clientNews.LinkClicked += (s, e) => OpenClient();
-            clientCard.Add(clientNews);
             clientButton = clientCard.Add(Ui.Secondary(L.T("Game client …")));
             clientButton.Click += (s, e) => OpenClient();
 
@@ -572,8 +579,9 @@ namespace CoAInstaller
                 Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", "AFK-Rassen");
         }
 
-        /// <summary>Background notices for the game client and the CoA Custom package, next to their cards and on
-        /// their buttons. They only say that something is newer; the actual download still asks first.</summary>
+        /// <summary>Background notices for the game client and the CoA Custom package, in the same top area as the
+        /// core and module updates and on their buttons. They only say that something is newer; the actual
+        /// download still asks first.</summary>
         void CheckDownloadUpdates()
         {
             System.Threading.ThreadPool.QueueUserWorkItem(_ =>
@@ -611,14 +619,16 @@ namespace CoAInstaller
                     if (IsDisposed) return;
                     clientNews.Text = clientNewsText ?? "";
                     clientNews.Visible = clientNewsText != null;
+                    clientBanner.Visible = clientNewsText != null;
                     coaNews.Text = coaNewsText ?? "";
                     coaNews.Visible = coaNewsText != null;
+                    coaBanner.Visible = coaNewsText != null;
                     clientButton.Text = installedClient == null
                         ? L.T("Download / update game client …")
                         : installedClient != clientVersion ? L.F("Update game client to {0} …", clientVersion)
                         : L.T("Game client …");
-                    racesButton.Text = installedCoa == null
-                        ? L.F("Download CoA Custom {0} …", coaVersion ?? "")
+                    racesButton.Text = coaVersion == null ? L.T("Set up the races …")
+                        : installedCoa == null ? L.F("Download CoA Custom {0} …", coaVersion)
                         : installedCoa != coaVersion ? L.F("Update custom races to {0} …", coaVersion)
                         : L.T("Set up the races …");
                 };
@@ -743,6 +753,53 @@ namespace CoAInstaller
                 });
         }
 
+        /// <summary>Hours:minutes:seconds for the top line, so a long-running world stays readable.</summary>
+        static string Clock(TimeSpan span)
+        {
+            if (span < TimeSpan.Zero) span = TimeSpan.Zero;
+            long seconds = (long)span.TotalSeconds;
+            return string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0:00}:{1:00}:{2:00}",
+                seconds / 3600, (seconds / 60) % 60, seconds % 60);
+        }
+
+        /// <summary>
+        /// The worldserver logs its update time (the "server tick") in .server info. It is fetched over the
+        /// same local SOAP line the game master tools use, at most every ten seconds, in the background.
+        /// </summary>
+        void RefreshTick()
+        {
+            if (tickBusy) return;
+            if (tickAsked != DateTime.MinValue && DateTime.Now - tickAsked < TimeSpan.FromSeconds(10)) return;
+            try { if (AdminLink.Problem(inst, ctl) != null) return; }
+            catch { return; }
+            tickBusy = true;
+            DateTime asked = DateTime.Now;
+            System.Threading.ThreadPool.QueueUserWorkItem(_ =>
+            {
+                string text = null;
+                try
+                {
+                    string answer = AdminLink.Run(inst, "server info");
+                    var last = Regex.Match(answer ?? "", @"Update time diff:\s*(\d+)\s*ms", RegexOptions.IgnoreCase);
+                    if (last.Success)
+                    {
+                        var mean = Regex.Match(answer, @"Mean:\s*(\d+)\s*ms", RegexOptions.IgnoreCase);
+                        text = mean.Success
+                            ? L.F("{0} ms tick (mean {1} ms)", last.Groups[1].Value, mean.Groups[1].Value)
+                            : L.F("{0} ms tick", last.Groups[1].Value);
+                    }
+                }
+                catch { }
+                Action apply = () => { tickBusy = false; tickAsked = asked; tickText = text; };
+                try
+                {
+                    if (IsHandleCreated) BeginInvoke(apply);
+                    else apply();
+                }
+                catch { tickBusy = false; }
+            });
+        }
+
         bool polling;
         /// <summary>Process and file checks run in the background so the window never waits for them.</summary>
         void RefreshStatus()
@@ -769,7 +826,11 @@ namespace CoAInstaller
                     {
                         polling = false;
                         ShowState(dbPill, db, true); ShowState(authPill, auth, true); ShowState(worldPill, world, worldReady);
-                        uptime.Text = worldReady && worldStart != DateTime.MinValue ? L.F("Running for {0}", RestartPlan.Span(DateTime.Now - worldStart)) + (worldMemory > 0 ? "  ·  " + L.F("{0} GB of memory", (worldMemory / 1073741824.0).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)) : "") : "";
+                        if (!worldReady) { tickText = null; tickAsked = DateTime.MinValue; }
+                        string memory = worldMemory > 0 ? "  ·  " + L.F("{0} GB of memory", (worldMemory / 1073741824.0).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)) : "";
+                        string tick = tickText != null ? "  ·  " + tickText : "";
+                        uptime.Text = worldReady && worldStart != DateTime.MinValue
+                            ? L.F("Running for {0}", Clock(DateTime.Now - worldStart)) + memory + tick : "";
                         start.Enabled = !(auth && world);
                         stop.Enabled = db || auth || world;
                         restart.Enabled = auth || world;
@@ -781,6 +842,7 @@ namespace CoAInstaller
                     }));
                 }
                 catch { polling = false; }
+                try { if (worldReady) RefreshTick(); } catch { }
             });
         }
         static void ShowState(StatusPill p, bool running, bool ready)

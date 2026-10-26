@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.63
+
+- The game-client and CoA Custom update notices now sit in the same top strip as the core and module update notices, instead of inside their cards. Their card buttons still change to “Update game client …”, “Update custom races …” or “Download …”.
+- The server line shows uptime as hours:minutes:seconds and adds the worldserver's last update time from `server info` (“5 ms tick”, with the mean) next to the memory usage. The value is fetched over the local SOAP line at most every ten seconds.
+- Custom race portraits use the stock round portrait mask again. The round texture is remembered per button so repeated layouts and scrolling do not create a new texture every time; custom race icons stay round without exhausting the client's textures. (Needs the updated mod-custom-races client file.)
+
 ## 1.0.62
 
 - Client and CoA Custom update notices: the main page now shows when a newer game-client manifest or a newer `coa-custom` release exists, in the Game client and Custom races cards. The buttons say “Update game client …”, “Update custom races …” or “Download …” and open the relevant window. The Game client dialog also checks the manifest and labels its download button with the available version.

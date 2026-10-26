@@ -1,6 +1,12 @@
-# AFK Realm 1.0.62
+# AFK Realm 1.0.63
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11.
+
+## New in 1.0.63
+
+- **All update notices in one place.** The game-client and CoA Custom notices now sit in the same top strip as the core and module update notices, not inside their cards. Their card buttons still say “Update game client …”, “Update custom races …” or “Download …” and open the right window.
+- **Readable uptime and server tick.** The server line shows `hours:minutes:seconds`, and next to the memory usage the last `server info` update time, for example “5 ms tick (mean 6 ms)”. The value is read over the local SOAP line at most every ten seconds.
+- **Round custom race portraits.** The race icons are rounded with the stock portrait mask again, and the result is cached per button so repeated layouts and scrolling no longer use up the client's texture slots. This needs the updated `mod-custom-races` client file; update that module too.
 
 ## New in 1.0.62
 

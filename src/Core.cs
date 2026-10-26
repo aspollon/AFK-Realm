@@ -23,7 +23,7 @@ namespace CoAInstaller
         public const string Name = "AFK Realm";                   // window titles, dialogs
         public const string ShortName = "AFK Realm";              // desktop shortcut, firewall rules
         public const string FileStem = "AFK-Realm";                // exe name, settings folder
-        public const string Version = "1.0.62";                    // a release; "-preview" marks a pre-release
+        public const string Version = "1.0.63";                    // a release; "-preview" marks a pre-release
         public const string Tagline = "build, run and tweak your own server the lazy way";
         public const string BuildsFor = "Conquest of AzerothCore";
         public const string WindowTitle = Name;
