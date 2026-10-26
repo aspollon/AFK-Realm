@@ -24,6 +24,8 @@ namespace CoAInstaller
         readonly TextBox realmName = Ui.Input(200);
         readonly Label nameNote = Ui.Hint("");
         readonly LinkLabel serverUpdate = UpdateLink(), toolUpdate = UpdateLink();
+        readonly LinkLabel clientNews = UpdateLink(), coaNews = UpdateLink();
+        Button clientButton, racesButton;
         Panel serverBanner, toolBanner;
         List<string> patchWarnings = new List<string>();
         List<string> serverNews = new List<string>();                  // what the server update brings, one line per part
@@ -362,14 +364,11 @@ namespace CoAInstaller
 
             racesCard = Section("modules", L.T("Custom races"), L.T("Which races of the game client - Goblin, Worgen, Pandaren, Vrykul and more - can be played, and the stock race each leans on: where it starts, its quests, racial abilities and faction."), "accounts");
             racesCard.Stripe = Ui.Accent;
-            var racesBtn = racesCard.Add(Ui.Primary(L.T("Set up the races …")));
-            racesBtn.Click += (s, e) =>
-            {
-                Busy.Run(this, L.T("Reading the races of your game client and your race folder …"), report => RacesSetup.Preload(inst));
-                var before = PlayableCustomRaces();
-                OpenSetup(new RacesSetup(inst));
-                OfferBotsForRaces(before);
-            };
+            coaNews.Visible = false; coaNews.Margin = new Padding(0, 2, 0, 6);
+            coaNews.LinkClicked += (s, e) => OpenRaces();
+            racesCard.Add(coaNews);
+            racesButton = racesCard.Add(Ui.Primary(L.T("Set up the races …")));
+            racesButton.Click += (s, e) => OpenRaces();
 
             flyingCard = Section("modules", L.T("Azeroth flying"), L.T("Optional flying mounts in Eastern Kingdoms and Kalimdor: off by default, with a configurable no-fly list for the old capitals. Old Azeroth was not built for flying; use it at your own risk."), "journey");
             flyingCard.Stripe = Ui.Accent;
@@ -383,8 +382,11 @@ namespace CoAInstaller
 
             var clientCard = Section("modules", L.T("Game client"), L.F("Some modules bring an add-on or a patch for the game client (for example World Journey's map levels and tooltips, or the class choice of the classic classes). {0} puts them into your game and clears its cache when a module asks for it; for other players it packs them into a ZIP.", Product.Name), "client");
             clientCard.Add(clientState);
-            var clientBtn = clientCard.Add(Ui.Secondary(L.T("Game client …")));
-            clientBtn.Click += (s, e) => { using (var d = new ClientDialog(inst)) d.ShowDialog(this); ShowClientState(); };
+            clientNews.Visible = false; clientNews.Margin = new Padding(0, 2, 0, 6);
+            clientNews.LinkClicked += (s, e) => OpenClient();
+            clientCard.Add(clientNews);
+            clientButton = clientCard.Add(Ui.Secondary(L.T("Game client …")));
+            clientButton.Click += (s, e) => OpenClient();
 
             // --- Game master
             BuildBotsSection();
@@ -539,12 +541,90 @@ namespace CoAInstaller
             if (current == "modules") Show("modules");
         }
 
+        void OpenClient()
+        {
+            using (var d = new ClientDialog(inst)) d.ShowDialog(this);
+            ShowClientState();
+            CheckDownloadUpdates();
+        }
+
+        void OpenRaces()
+        {
+            Busy.Run(this, L.T("Reading the races of your game client and your race folder …"), report => RacesSetup.Preload(inst));
+            var before = PlayableCustomRaces();
+            OpenSetup(new RacesSetup(inst));
+            OfferBotsForRaces(before);
+            CheckDownloadUpdates();
+        }
+
         void OpenSetup(Form setup)
         {
             bool races = setup is RacesSetup;
             using (setup)
                 if (setup.ShowDialog(this) == DialogResult.OK)
                     ShowClientState(pending => AfterSetup(pending, races));
+        }
+
+        string RaceFolderForUpdate()
+        {
+            string configured = ConfigOption.Unquote(ClientPatch.ConfValue(inst, "mod_custom_races.conf", "CustomRaces.ImportFolder") ?? "");
+            return configured.Length > 0 ? configured :
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", "AFK-Rassen");
+        }
+
+        /// <summary>Background notices for the game client and the CoA Custom package, next to their cards and on
+        /// their buttons. They only say that something is newer; the actual download still asks first.</summary>
+        void CheckDownloadUpdates()
+        {
+            System.Threading.ThreadPool.QueueUserWorkItem(_ =>
+            {
+                string clientNewsText = null, coaNewsText = null;
+                string clientVersion = null, installedClient = null, coaVersion = null, installedCoa = null;
+                try
+                {
+                    string client = ClientAddons.ClientFolder;
+                    if (client != null && ClientAddons.IsClientFolder(client))
+                    {
+                        var manifest = ClientDownload.Latest();
+                        clientVersion = manifest.Version;
+                        installedClient = ClientDownload.InstalledVersion(client);
+                        if (installedClient != clientVersion)
+                            clientNewsText = installedClient == null
+                                ? L.F("Game client update available: {0} — click to update or repair", clientVersion)
+                                : L.F("Game client update available: {0} (installed {1}) — click to update", clientVersion, installedClient);
+                    }
+                }
+                catch { }
+                try
+                {
+                    var release = CoaCustom.Latest();
+                    coaVersion = release.Version;
+                    installedCoa = CoaCustom.Installed(RaceFolderForUpdate());
+                    if (installedCoa != coaVersion)
+                        coaNewsText = installedCoa == null
+                            ? L.F("CoA Custom {0} can be downloaded — click to open", coaVersion)
+                            : L.F("CoA Custom update available: {0} (installed {1}) — click to update", coaVersion, installedCoa);
+                }
+                catch { }
+                Action show = () =>
+                {
+                    if (IsDisposed) return;
+                    clientNews.Text = clientNewsText ?? "";
+                    clientNews.Visible = clientNewsText != null;
+                    coaNews.Text = coaNewsText ?? "";
+                    coaNews.Visible = coaNewsText != null;
+                    clientButton.Text = installedClient == null
+                        ? L.T("Download / update game client …")
+                        : installedClient != clientVersion ? L.F("Update game client to {0} …", clientVersion)
+                        : L.T("Game client …");
+                    racesButton.Text = installedCoa == null
+                        ? L.F("Download CoA Custom {0} …", coaVersion ?? "")
+                        : installedCoa != coaVersion ? L.F("Update custom races to {0} …", coaVersion)
+                        : L.T("Set up the races …");
+                };
+                try { BeginInvoke(show); }
+                catch { try { show(); } catch { } }
+            });
         }
 
         /// <summary>
@@ -583,6 +663,7 @@ namespace CoAInstaller
             LoadRealm();
             if (SelfUpdate.JustUpdated) { SelfUpdate.JustUpdated = false; busy.Text = L.F("{0} was updated to version {1}.", Product.Name, Product.Version); }
             CheckForUpdates();
+            CheckDownloadUpdates();
             OfferClient();
         }
         protected override void Dispose(bool disposing)

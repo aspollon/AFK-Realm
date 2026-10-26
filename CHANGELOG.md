@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.62
+
+- Client and CoA Custom update notices: the main page now shows when a newer game-client manifest or a newer `coa-custom` release exists, in the Game client and Custom races cards. The buttons say “Update game client …”, “Update custom races …” or “Download …” and open the relevant window. The Game client dialog also checks the manifest and labels its download button with the available version.
+
 ## 1.0.61
 
 - Game client: AFK Realm can download and update the complete client from the public CoA development launcher. The launcher's manifest and content-addressed object store are used directly: every file is checked against its size and SHA-256, interrupted downloads resume from `.part` files, and a state file makes later updates skip unchanged files. WTF, Cache, add-ons, logs and realmlist are never written; DXVK/graphics wrappers and changed game files are kept or backed up. A real Cancel button is available for the 43 GB first download.

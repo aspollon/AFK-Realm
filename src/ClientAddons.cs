@@ -8,6 +8,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Web.Script.Serialization;
 using System.Windows.Forms;
 
@@ -339,7 +340,7 @@ namespace CoAInstaller
         readonly Label state = new Label { AutoSize = true, Font = Ui.Small, ForeColor = Ui.Muted, MaximumSize = new Size(780, 0), Margin = new Padding(0, 4, 0, 0) };
         readonly Button install = Ui.Primary(L.T("Install add-ons"));
         readonly Button export = Ui.Secondary(L.T("Export as ZIP …"));
-        readonly Button download = Ui.Secondary(L.T("Download client …"));
+        readonly Button download = Ui.Secondary(L.T("Download / update client …"));
         List<ClientAddon> addons = new List<ClientAddon>();
         List<string> leftovers = new List<string>();
         ClientPatch.Plan patch = new ClientPatch.Plan();
@@ -396,7 +397,30 @@ namespace CoAInstaller
             install.Click += (s, e) => Install_();
             export.Click += (s, e) => Export_();
             download.Click += (s, e) => Download_();
-            Shown += (s, e) => Refresh_();
+            Shown += (s, e) => { Refresh_(); CheckDownloadUpdate(); };
+        }
+
+        /// <summary>The button says when a new client manifest version is available. The client itself is not
+        /// changed here; Download_ plans and copies only the files that differ.</summary>
+        void CheckDownloadUpdate()
+        {
+            string client = Client;
+            ThreadPool.QueueUserWorkItem(_ =>
+            {
+                try
+                {
+                    var manifest = ClientDownload.Latest();
+                    string installed = client == null ? null : ClientDownload.InstalledVersion(client);
+                    BeginInvoke((Action)(() =>
+                    {
+                        if (IsDisposed) return;
+                        download.Text = installed != null && installed != manifest.Version
+                            ? L.F("Update client to {0} …", manifest.Version)
+                            : client != null ? L.T("Update / repair client …") : L.F("Download client {0} …", manifest.Version);
+                    }));
+                }
+                catch { }
+            });
         }
 
         string checkedFolder;

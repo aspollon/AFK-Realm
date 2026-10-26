@@ -1,6 +1,12 @@
-# AFK Realm 1.0.61
+# AFK Realm 1.0.62
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11.
+
+## New in 1.0.62
+
+- **Update notices for the game client and CoA Custom.** The main page shows when a newer client manifest or a newer `coa-custom` release exists, next to the Game client and Custom races cards. Their buttons change to “Update game client …”, “Update custom races …” or “Download …” and open the right window.
+- **The Game client dialog checks too.** Its download button shows the available client version and says “Update client to …” when the chosen client is behind the public manifest.
+- The Custom races page already checks the CoA Custom release in the background; it now agrees with the main-page notice.
 
 ## New in 1.0.61
 
