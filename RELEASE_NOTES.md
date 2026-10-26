@@ -1,8 +1,14 @@
-# AFK Realm 1.0.57
+# AFK Realm 1.0.58
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11.
 
-## New in 1.0.57
+## New in 1.0.58
+
+- **Dracthyr numbers fixed.** Dracthyr Alliance and Horde use their own CoA rows 54 and 58 now; a fresh 1.9.1 import no longer makes both ask for 54 or reports that 54 is Night Elf. Packs are matched to their source row before falling back to name/file matching.
+- **Correct racial sets.** Pandaren now uses CoA race 20, both Vulpera variants use 74, and Darkfallen uses its source row 80/81. This fixes Pandaren (Draenei/Tauren), Vulpera (Troll/Pandaren) and Darkfallen (both Night Elf) racials being taken from the wrong CoA race.
+- **No regression to the loading-screen choice.** CoA loading screens still come only with a CoA client; a stock client keeps the original WoW screens.
+
+## 1.0.57
 
 - **CoA loading screens only with CoA.** The Ilusixn loading screens come from the race module when a CoA Custom client/race setup is active. A stock client keeps the original WoW loading screens.
 - **The AFK badge stays on the CoA screens.** The late `patch-ZZZZZ.MPQ` still loads after CoA's `patch-ZZZD.MPQ`.

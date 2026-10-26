@@ -896,17 +896,25 @@ namespace CoAInstaller
                 // A source race number alone is not enough: CoA Custom's row 62 is Earthen, while the Lightforged
                 // pack came from a client whose row 62 was the Lightforged Draenei. Matching the number alone turned
                 // the pack into an alternative look of Earthen, so it never got a card of its own.
-                var same = races.FirstOrDefault(r => r.Pack == null && (
-                    r.Key.Equals(p.Key, StringComparison.OrdinalIgnoreCase) ||
-                    (p.SourceFile.Length > 0 && p.SourceFile.Equals(r.File, StringComparison.OrdinalIgnoreCase) &&
-                        (p.Name.Equals(r.Name, StringComparison.OrdinalIgnoreCase) || p.Name.Equals(r.Key, StringComparison.OrdinalIgnoreCase))) ||
-                    (p.SourceRace > 0 && r.Source == p.SourceRace && p.SourceFile.Length > 0 &&
-                        p.SourceFile.Equals(r.File, StringComparison.OrdinalIgnoreCase)) ||
-                    // A client update may rename the model file while the row and the race
-                    // name stay the same. That is still the same race, not a second Gnoll
-                    // that gets pushed to a free number such as 14.
-                    (p.SourceRace > 0 && r.Source == p.SourceRace &&
-                        (p.Name.Equals(r.Name, StringComparison.OrdinalIgnoreCase) || p.Key.Equals(r.Key, StringComparison.OrdinalIgnoreCase)))));
+                // Match the row the pack came from first. Dracthyr Alliance and Horde share the
+                // name and model file but have rows 54 and 58; matching by name alone attached both
+                // to the first row and made both ask for the same number.
+                var bySource = p.SourceRace > 0 ? races.FirstOrDefault(r => r.Pack == null && r.Source == p.SourceRace) : null;
+                var same = bySource != null
+                    ? ((p.SourceFile.Length > 0 && p.SourceFile.Equals(bySource.File, StringComparison.OrdinalIgnoreCase)) ||
+                       (p.Name.Length > 0 && (p.Name.Equals(bySource.Name, StringComparison.OrdinalIgnoreCase) ||
+                                              p.Name.Equals(bySource.Key, StringComparison.OrdinalIgnoreCase))) ? bySource : null)
+                    : races.FirstOrDefault(r => r.Pack == null && (
+                        r.Key.Equals(p.Key, StringComparison.OrdinalIgnoreCase) ||
+                        (p.SourceFile.Length > 0 && p.SourceFile.Equals(r.File, StringComparison.OrdinalIgnoreCase) &&
+                            (p.Name.Equals(r.Name, StringComparison.OrdinalIgnoreCase) || p.Name.Equals(r.Key, StringComparison.OrdinalIgnoreCase))) ||
+                        (p.SourceRace > 0 && r.Source == p.SourceRace && p.SourceFile.Length > 0 &&
+                            p.SourceFile.Equals(r.File, StringComparison.OrdinalIgnoreCase)) ||
+                        // A client update may rename the model file while the row and the race
+                        // name stay the same. That is still the same race, not a second Gnoll
+                        // that gets pushed to a free number such as 14.
+                        (p.SourceRace > 0 && r.Source == p.SourceRace &&
+                            (p.Name.Equals(r.Name, StringComparison.OrdinalIgnoreCase) || p.Key.Equals(r.Key, StringComparison.OrdinalIgnoreCase)))));
                 if (same != null) { same.Alt = p; continue; }
                 races.Add(new ClientRace { Key = p.Key, Name = p.Name, Prefix = p.Prefix, File = p.File, MaleOnly = p.MaleOnly, Pack = p });
             }
@@ -1145,11 +1153,13 @@ namespace CoAInstaller
             if (pack.Source.Equals("CoA Custom", StringComparison.OrdinalIgnoreCase))
             {
                 string n = (pack.Name + " " + pack.File + " " + pack.Key).ToLowerInvariant();
-                if (n.Contains("pandaren")) return 18;
-                if (n.Contains("dracthyr")) return 54;
-                if (n.Contains("vulpera")) return n.Contains("esteria") ? 74 : 20;
+                if (n.Contains("pandaren")) return 20;
+                if (n.Contains("dracthyr"))
+                    return source == 54 || source == 58 ? source : (pack.Side == 0 ? 54 : 58);
+                if (n.Contains("vulpera")) return 74;
                 if (n.Contains("drakonid")) return pack.Side == 0 ? 100 : 98;
-                if (n.Contains("darkfallen")) return pack.Side == 0 ? 80 : 81;
+                if (n.Contains("darkfallen"))
+                    return source == 80 || source == 81 ? source : (pack.Side == 0 ? 80 : 81);
                 if (n.Contains("earthen")) return pack.Side == 0 ? 68 : 69;
                 if (n.Contains("haranir")) return pack.Side == 0 ? 71 : 70;
                 if (n.Contains("murloc")) return 65;
@@ -1187,6 +1197,9 @@ namespace CoAInstaller
 
         static bool SameRace(ClientRace a, ClientRace b)
         {
+            // Dracthyr Alliance and Horde share a name and model file but are different races; they must
+            // not be treated as the same when assigning numbers.
+            if (a.Pack != null && b.Pack != null && a.Pack.Side != b.Pack.Side) return false;
             string af = a.Pack != null ? a.Pack.SourceFile : a.File;
             string bf = b.Pack != null ? b.Pack.SourceFile : b.File;
             string an = a.Pack != null ? a.Pack.Name : a.Name;

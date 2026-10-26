@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.58
+
+- Races: Dracthyr Alliance and Horde now use their own CoA source rows (54 and 58) and are no longer treated as the same race when numbers are assigned. This fixes the fresh 1.9.1 import where both asked for 54 and the client reported that 54 was already Night Elf.
+- Races: race-folder packs are matched to the client row they came from before falling back to name/file matching, so two variants that share a model file do not both attach to the first row.
+- Races: the CoA racial mapping is corrected: Pandaren uses CoA race 20 (not 18/Vrykul), both Vulpera variants use 74 (not Pandaren 20), and Darkfallen uses its source row 80/81. This fixes the wrong Pandaren, Vulpera and Darkfallen racial sets.
+
 ## 1.0.57
 
 - Client: CoA Custom's loading screens now come only with a CoA Custom client, not on every server. A stock client keeps the original WoW loading screens.
