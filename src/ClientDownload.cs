@@ -102,6 +102,41 @@ namespace CoAInstaller
             }
         }
 
+        static Manifest cachedManifest;
+        static DateTime cachedManifestAt;
+
+        /// <summary>The current client manifest, cached for an hour so the page buttons do not ask GitHub/CoA on
+        /// every redraw.</summary>
+        public static Manifest Latest(bool refresh = false)
+        {
+            lock (typeof(ClientDownload))
+            {
+                if (!refresh && cachedManifest != null && DateTime.UtcNow - cachedManifestAt < TimeSpan.FromHours(1))
+                    return cachedManifest;
+            }
+            var manifest = FetchManifest();
+            lock (typeof(ClientDownload)) { cachedManifest = manifest; cachedManifestAt = DateTime.UtcNow; }
+            return manifest;
+        }
+
+        /// <summary>The manifest version a managed folder was brought to, or null.</summary>
+        public static string InstalledVersion(string client)
+        {
+            try
+            {
+                string file = StatePath(client);
+                if (!File.Exists(file)) return null;
+                foreach (var line in File.ReadAllLines(file))
+                    if (line.StartsWith("# version\t", StringComparison.OrdinalIgnoreCase))
+                    {
+                        string version = line.Substring("# version\t".Length).Trim();
+                        return version.Length > 0 ? version : null;
+                    }
+            }
+            catch { }
+            return null;
+        }
+
         public static Manifest FetchManifest()
         {
             string text = GetText(ManifestUrl, MaxManifestBytes);
