@@ -1,6 +1,12 @@
-# AFK Realm 1.0.60
+# AFK Realm 1.0.61
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11.
+
+## New in 1.0.61
+
+- **Game client download and update.** The Game client dialog can now download the complete client from the public CoA development launcher (about 43 GB, resumable). Every file is checked against its size and SHA-256, an interrupted download continues from its `.part` file, and later updates only fetch what changed. WTF, Cache, add-ons, logs and realmlist are never overwritten; DXVK/graphics wrappers and changed game files are kept or backed up. The download has a Cancel button and the Game client dialog shows the progress.
+- **Downloaded client is ready for AFK.** Choose the folder once, then use the normal “Install” step for the add-ons and client patch.
+- **CoA Custom package downloader.** On Custom races there is now “Download CoA Custom …”. It downloads **all ZIP files** of the newest `coa-custom-*` release (client and server), verifies the GitHub assets, extracts all of them into the same race folder and opens the race selection. A background check shows a newer CoA Custom version and changes the button to an update.
 
 ## New in 1.0.60
 

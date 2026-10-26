@@ -5,6 +5,7 @@ using System.Drawing;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Windows.Forms;
 
 namespace CoAInstaller
@@ -554,6 +555,9 @@ namespace CoAInstaller
         string folder;
         readonly Label usage = new Label { AutoSize = true, Font = Ui.Bold, ForeColor = Ui.Text, BackColor = Ui.Surface, Margin = new Padding(0, 4, 0, 8) };
         Label importStatus;
+        Button coaDownload;
+        Button raceIds;
+        string coaNote;
 
         public RacesSetup(Install i) : base(i, "mod_custom_races.conf", L.T("Custom races"), L.T("mod-custom-races  ·  modules\\mod_custom_races.conf"), "accounts", "CustomRaces.Enable", L.T("Custom races on"))
         {
@@ -577,6 +581,13 @@ namespace CoAInstaller
             var importButton = Ui.Primary(L.T("Import races …"));
             importButton.Margin = new Padding(0, 2, 0, 6);
             importCard.Add(importButton);
+            coaDownload = Ui.Secondary(L.T("Download CoA Custom …"));
+            coaDownload.Margin = new Padding(0, 2, 0, 6);
+            importCard.Add(coaDownload);
+            raceIds = Ui.Secondary(L.T("Show race IDs …"));
+            raceIds.Margin = new Padding(0, 2, 0, 6);
+            importCard.Add(raceIds);
+            importCard.Add(Small(L.T("A custom race keeps the race number its client and Esteria appearance use. Stock-copy rows 51-61 (NightElf2, Gnome2, ...) are placeholders and are replaced, not moved. “Show race IDs” lists the actual mapping of your client."), importCard.Inner - 40));
             importStatus = Small("", importCard.Inner - 40);
             importCard.Add(importStatus);
             var moreCard = Card(L.T("Race numbers above 31"), L.T("The 64-race patch and the high race numbers of CoA Custom are switched on by the import. They stay visible here so they can be switched off if a client really has no 64-race dinput8.dll."), "client");
@@ -586,6 +597,8 @@ namespace CoAInstaller
                 L.T("CoA Custom's own exe knows its races up to 127, including Highmountain, Earthen, Haranir and the others."));
             UpdateImportStatus();
             importButton.Click += (s, e) => ImportRaces();
+            coaDownload.Click += (s, e) => DownloadCoaCustom();
+            raceIds.Click += (s, e) => ShowRaceIds();
 
             // The imported races first: these are the ones the user brought in and usually looks for.
             var imported = races.Where(r => r.Pack != null).OrderBy(r => r.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
@@ -609,7 +622,7 @@ namespace CoAInstaller
             after.Add(Small(L.F("The race choice of the game shows the races of the client patch. After a change, open Modules › Game client and choose Install: {0} builds the patch anew. The other players need the new ZIP. A race switched off keeps its characters as their base race until it is on again; changing the base race of a race with characters may move them to the other faction. When the game client changes with an update, open this page again: it reads the races anew.", Product.Name), after.Inner));
             Start();
             AutoDetect();
-            Shown += (s, e) => Refresh();
+            Shown += (s, e) => { Refresh(); CheckCoaUpdate(); };
         }
 
         void UpdateImportStatus()
@@ -621,18 +634,112 @@ namespace CoAInstaller
             string client = ClientAddons.ClientFolder ?? L.T("no game client chosen");
             string root = ConfigOption.Unquote(Raw("CustomRaces.ClientRootFolder", ""));
             string files = root.Length == 0 || !Directory.Exists(root) ? L.T("no extra client files") : L.F("{0} files", Directory.GetFiles(root, "*", SearchOption.AllDirectories).Length);
-            importStatus.Text = L.F("Race folder: {0} ({1} races)  ·  Game client: {2}  ·  {3}  ·  Race numbers: automatic", raceFolder.Length == 0 ? L.T("not chosen") : raceFolder, packs, client, files);
+            importStatus.Text = L.F("Race folder: {0} ({1} races)  ·  Game client: {2}  ·  {3}  ·  Race numbers: automatic", raceFolder.Length == 0 ? L.T("not chosen") : raceFolder, packs, client, files) +
+                (string.IsNullOrEmpty(coaNote) ? "" : "  ·  " + coaNote);
+        }
+
+        string RaceFolder()
+        {
+            string configured = ConfigOption.Unquote(Raw("CustomRaces.ImportFolder", ""));
+            return !string.IsNullOrEmpty(folder) ? folder : configured.Length > 0 ? configured :
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", "AFK-Rassen");
+        }
+
+        /// <summary>The actual race number table of this client and this realm, for support and for sharing.</summary>
+        void ShowRaceIds()
+        {
+            var text = new System.Text.StringBuilder();
+            text.AppendLine(L.T("Race IDs of this realm"));
+            text.AppendLine();
+            text.AppendLine(L.T("Source row = the row in the client's ChrRaces.dbc. Race number = the number the realm gives it (CustomRaces.<race>.Id)."));
+            text.AppendLine(L.T("A custom/Esteria race is tied to its source row; the importer keeps it and replaces a stock-copy row (51-61) instead of moving the race."));
+            text.AppendLine();
+            text.AppendLine("ID\tSource\tRace\tBase\tKind");
+            foreach (var r in races.OrderBy(r => IdOf(r) <= 0 ? int.MaxValue : IdOf(r)).ThenBy(r => r.Name, StringComparer.CurrentCultureIgnoreCase))
+            {
+                int id = IdOf(r);
+                int source = r.Pack != null ? r.Pack.SourceRace : r.Source;
+                string baseRace = Raw("CustomRaces." + r.Key + ".Base", DefaultBase(r));
+                string kind = r.Pack != null ? L.T("imported") : r.Virtual ? L.T("virtual") : L.T("client");
+                text.AppendLine((id > 0 ? id.ToString() : "-") + "\t" + (source > 0 ? source.ToString() : "-") + "\t" +
+                    r.Name + "\t" + baseRace + "\t" + kind);
+            }
+            using (var d = new RaceIdDialog(text.ToString())) d.ShowDialog(this);
+        }
+
+        /// <summary>Downloads every ZIP of the newest CoA Custom release into the race folder and opens the race
+        /// selection for it. The zips are extracted into the same folder, as CoA Custom's own install guide says.</summary>
+        void DownloadCoaCustom()
+        {
+            CoaCustom.Release release;
+            try { release = Busy.Run(this, L.T("Checking the CoA Custom package ..."), report => CoaCustom.Latest(true)); }
+            catch (Exception ex) { Ui.Error(this, L.T("The CoA Custom package could not be checked:") + "\n" + ex.Message); return; }
+            string target = RaceFolder();
+            string installed = CoaCustom.Installed(target);
+            string action = installed != null && installed != release.Version ? L.T("Update") : L.T("Download");
+            long free = 0;
+            try { free = new DriveInfo(Path.GetPathRoot(Path.GetFullPath(target))).AvailableFreeSpace; } catch { }
+            string text = L.F("{0} CoA Custom {1}?\n\nIt downloads all {2} ZIP files of the release (client and server), about {3}, and extracts them into:\n{4}\n\nExisting files are overwritten. After that the race selection opens.",
+                action, release.Version, release.Assets.Count, ClientDownload.FormatBytes(release.Assets.Sum(a => a.Size)), target);
+            if (free > 0 && free < release.Assets.Sum(a => a.Size) + 512L * 1024 * 1024)
+                text += "\n\n" + L.F("Only {0} is free on that drive.", ClientDownload.FormatBytes(free));
+            if (!Ui.Confirm(this, text)) return;
+            try
+            {
+                string version = Busy.Run(this, L.F("{0} CoA Custom {1} ...", action, release.Version), report =>
+                    CoaCustom.DownloadAndExtract(target, (s, a, b) => report(s, a, b)));
+                coaNote = L.F("CoA Custom {0} installed", version);
+                UpdateImportStatus();
+                ImportRaces(CoaCustom.PackageRoot(target) ?? Path.Combine(target, "CoA-Custom"));
+            }
+            catch (Exception ex) { Ui.Error(this, L.T("The CoA Custom package could not be installed:") + "\n" + ex.Message); }
+        }
+
+        /// <summary>Cheap background check: the button says when GitHub has a newer coa-custom release.</summary>
+        void CheckCoaUpdate()
+        {
+            ThreadPool.QueueUserWorkItem(_ =>
+            {
+                try
+                {
+                    var release = CoaCustom.Latest();
+                    string target = RaceFolder();
+                    string installed = CoaCustom.Installed(target);
+                    string note = installed == null
+                        ? L.F("CoA Custom {0} can be downloaded here", release.Version)
+                        : installed == release.Version
+                            ? L.F("CoA Custom {0} is installed", installed)
+                            : L.F("CoA Custom update {0} available (installed {1})", release.Version, installed);
+                    BeginInvoke((Action)(() =>
+                    {
+                        if (IsDisposed) return;
+                        coaNote = note;
+                        if (coaDownload != null)
+                            coaDownload.Text = installed == null
+                                ? L.F("Download CoA Custom {0} …", release.Version)
+                                : installed != release.Version
+                                    ? L.F("Update CoA Custom to {0} …", release.Version)
+                                    : L.F("Reinstall CoA Custom {0} …", installed);
+                        UpdateImportStatus();
+                    }));
+                }
+                catch { }
+            });
         }
 
         /// <summary>The single import button: choose the game client or repack, detect its files and race archives,
         /// then open the race selection for that pack.</summary>
-        void ImportRaces()
+        void ImportRaces(string picked = null)
         {
-            using (var d = new FolderBrowserDialog { Description = L.T("The game client or repack with the race archives"), SelectedPath = "" })
+            if (picked == null)
             {
-                if (d.ShowDialog(this) != DialogResult.OK) return;
-                string picked = d.SelectedPath;
-                // The user may choose the pack root, files, files\client or files\client_root.
+                using (var d = new FolderBrowserDialog { Description = L.T("The game client or repack with the race archives"), SelectedPath = "" })
+                {
+                    if (d.ShowDialog(this) != DialogResult.OK) return;
+                    picked = d.SelectedPath;
+                }
+            }
+            // The user may choose the pack root, files, files\client or files\client_root.
                 // Find the CoA client_root in the folder itself or in its parents.
                 string root = ClientPatch.ClientRootNear(picked);
                 string source = picked;
@@ -687,7 +794,6 @@ namespace CoAInstaller
                 UpdateImportStatus();
                 MessageBox.Show(this, L.T("The races were taken from the selected client.") + "\n\n" +
                     L.T("Close this page and open it again: the imported races are now at the top. Switch on the ones you want, save, then install the client patch under Modules > Game client."), Product.Name, MessageBoxButtons.OK, MessageBoxIcon.Information);
-            }
         }
 
         /// <summary>Fills the exe and the 64-race patch from the chosen client_root. A path that points

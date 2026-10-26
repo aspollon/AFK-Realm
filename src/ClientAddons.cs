@@ -339,6 +339,7 @@ namespace CoAInstaller
         readonly Label state = new Label { AutoSize = true, Font = Ui.Small, ForeColor = Ui.Muted, MaximumSize = new Size(780, 0), Margin = new Padding(0, 4, 0, 0) };
         readonly Button install = Ui.Primary(L.T("Install add-ons"));
         readonly Button export = Ui.Secondary(L.T("Export as ZIP …"));
+        readonly Button download = Ui.Secondary(L.T("Download client …"));
         List<ClientAddon> addons = new List<ClientAddon>();
         List<string> leftovers = new List<string>();
         ClientPatch.Plan patch = new ClientPatch.Plan();
@@ -370,6 +371,8 @@ namespace CoAInstaller
                 }
             };
             row.Controls.Add(browse);
+            download.Margin = new Padding(6, 0, 0, 0);
+            row.Controls.Add(download);
             top.Controls.Add(row);
 
             list.Columns.Add(L.T("Add-on or patch"), 190);
@@ -392,6 +395,7 @@ namespace CoAInstaller
             folder.Leave += (s, e) => { if (folder.Text.Trim() != checkedFolder && Visible) Refresh_(); };
             install.Click += (s, e) => Install_();
             export.Click += (s, e) => Export_();
+            download.Click += (s, e) => Download_();
             Shown += (s, e) => Refresh_();
         }
 
@@ -461,6 +465,68 @@ namespace CoAInstaller
                 : null;
             if (longPath != null) state.Text = longPath + " " + state.Text;
             state.ForeColor = client != null && (due || longPath != null) ? Ui.Warn : Ui.Muted;
+        }
+
+        void Download_()
+        {
+            string target = Client;
+            if (target == null && folder.Text.Trim().Length > 0 && Directory.Exists(folder.Text.Trim()))
+                target = folder.Text.Trim();
+            if (target == null)
+            {
+                string fallback = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", "CoA Client");
+                try { Directory.CreateDirectory(fallback); } catch { fallback = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile); }
+                using (var d = new FolderBrowserDialog { Description = L.T("Choose the folder for the game client. It can be empty; about 43 GB will be downloaded into it."), SelectedPath = fallback })
+                {
+                    if (d.ShowDialog(this) != DialogResult.OK) return;
+                    target = ClientAddons.GameRoot(d.SelectedPath) ?? d.SelectedPath;
+                }
+                bool hasFiles = Directory.Exists(target) && Directory.EnumerateFileSystemEntries(target).Any();
+                if (hasFiles && !ClientAddons.IsClientFolder(target) &&
+                    !Ui.Confirm(this, L.F("The folder {0} already contains files and is not a game folder. Download the client into it anyway?", target))) return;
+            }
+
+            if (ClientAddons.ClientRunning(target))
+            {
+                Ui.Error(this, L.T("The game or its launcher is running from this folder. Close it before downloading or updating the client."));
+                return;
+            }
+
+            ClientDownload.Manifest manifest;
+            try { manifest = Busy.Run(this, L.T("Reading the client list ..."), report => ClientDownload.FetchManifest()); }
+            catch (Exception ex) { Ui.Error(this, L.T("The client list could not be read:") + "\n" + ex.Message); return; }
+
+            long free = ClientDownload.FreeSpace(target);
+            if (free > 0 && free < manifest.TotalBytes + 1024L * 1024 * 1024 && !ClientAddons.IsClientFolder(target))
+            {
+                Ui.Error(this, L.F("The game client needs {0}. The drive only has {1} free.", ClientDownload.FormatBytes(manifest.TotalBytes), ClientDownload.FormatBytes(free)));
+                return;
+            }
+
+            string text = L.F("Download or update the game client?\n\nVersion: {0}\nFiles: {1}\nFull size: {2}\n\n" +
+                "The files come from the public CoA development launcher. The client data belongs to its owners; only use it as allowed. " +
+                "Your WTF, Cache, add-ons and realmlist are kept, and game files you changed are backed up as .afk-backup.",
+                manifest.Version, manifest.Files.Count, ClientDownload.FormatBytes(manifest.TotalBytes));
+            if (!Ui.Confirm(this, text)) return;
+
+            using (var d = new ClientDownloadDialog(inst, target, manifest))
+            {
+                var answer = d.ShowDialog(this);
+                if (answer == DialogResult.OK && d.Result != null)
+                {
+                    ClientAddons.ClientFolder = target;
+                    folder.Text = target;
+                    Refresh_();
+                    MessageBox.Show(this, L.F("The game client {0} is ready.\n\n{1} files downloaded, {2} already present, {3} kept as yours.\n\nInstall the add-ons and the client patch next.",
+                        d.Result.Version, d.Result.Downloaded, d.Result.AlreadyPresent, d.Result.Kept),
+                        Product.Name, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                else if (answer == DialogResult.Cancel)
+                {
+                    Ui.Error(this, L.T("The download was stopped. Everything already downloaded is kept; run it again to continue."));
+                }
+                else if (d.Failure != null) Ui.Error(this, L.T("The client download failed:") + "\n" + d.Failure);
+            }
         }
 
         void Install_()

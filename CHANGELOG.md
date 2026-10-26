@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.61
+
+- Game client: AFK Realm can download and update the complete client from the public CoA development launcher. The launcher's manifest and content-addressed object store are used directly: every file is checked against its size and SHA-256, interrupted downloads resume from `.part` files, and a state file makes later updates skip unchanged files. WTF, Cache, add-ons, logs and realmlist are never written; DXVK/graphics wrappers and changed game files are kept or backed up. A real Cancel button is available for the 43 GB first download.
+- The Game client dialog now has a “Download client …” button; after the download AFK Realm can install the module add-ons and client patch as before.
+- Races: Custom races has a “Download CoA Custom …” button. It downloads all ZIP files of the newest `coa-custom-*` release (client and server), verifies every GitHub asset, extracts all of them into the same race folder and opens the race selection. A background check shows when a newer CoA Custom version is available.
+
 ## 1.0.60
 
 - Races: the client's stock-copy rows are recognized as placeholders, not as separate races. This is the 51–61 block: Human2 at 51, NightElf2 at 54, Undead2 at 55, Tauren2 at 56, Gnome2 at 57, Troll2 at 58, BloodElf2 at 60 and Draenei2 at 61, plus the Orc2/Dwarf2 rows. A custom race whose intended number is one of these now keeps that number and replaces the copy, instead of being pushed to a free number. This fixes Alpha Goblin 57, Dracthyr 54/58, Eradar 55, Harpy 56, Illidari 60/61, Ogre 53 and Undead Gnome 51, and preserves Esteria appearance/race IDs.
