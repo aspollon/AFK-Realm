@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.59
+
+- Core: the CoA core moved to `Conquest-of-AzerothCore/azerothcore-wotlk-coa`. AFK Realm builds from the new address; an existing source folder is switched over on the next build, and the revision recorded under the old address still counts.
+- Modules: a module patch whose three-way merge leaves conflict markers is undone completely (files and index) and reported as not applied, instead of leaving a half-patched core that fails to compile (`<<<<<<<` in Player.cpp).
+- Races: the updated race module draws icon portraits without `SetPortraitToTexture`; with many custom races the client ran out of portrait textures and every button showed the whole portrait sheet.
+- Classic classes: the updated module's core patch no longer depends on the include list of Player.cpp.
+
 ## 1.0.58
 
 - Races: Dracthyr Alliance and Horde now use their own CoA source rows (54 and 58) and are no longer treated as the same race when numbers are assigned. This fixes the fresh 1.9.1 import where both asked for 54 and the client reported that 54 was already Night Elf.

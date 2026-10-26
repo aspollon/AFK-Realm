@@ -58,7 +58,9 @@ $Project = @{
     # Every build uses the newest commit of these branches. Revision is filled in at
     # run time and recorded in Dependencies\revisions.txt, so the log and later
     # repairs know exactly which code was built.
-    Core       = @{ Repo = 'https://github.com/jealous-sound/azerothcore-wotlk-coa.git'; Branch = 'main'; Revision = '' }
+    # Moved = earlier addresses of the same repository; a revision recorded under one of them still counts.
+    Core       = @{ Repo = 'https://github.com/Conquest-of-AzerothCore/azerothcore-wotlk-coa.git'; Branch = 'main'; Revision = ''
+                    Moved = @('https://github.com/jealous-sound/azerothcore-wotlk-coa.git') }
     Playerbots = @{ Repo = 'https://github.com/Zyth45/mod-playerbots.git'; Branch = 'coa'; Revision = ''; Folder = 'mod-playerbots' }
     # The CoA fork ships its world content as a versioned package with its own importer.
     WorldImporter = 'apps\coa-world\world_data.py'
@@ -849,7 +851,7 @@ function Read-Revisions {
         $f = $line.Split('|')
         if ($f.Count -ne 4 -or $f[3] -notmatch '^[0-9a-f]{40}$') { continue }
         foreach ($part in @(@{ Key = 'core'; Item = $Project.Core }, @{ Key = 'module'; Item = $Project.Playerbots })) {
-            if ($f[0] -eq $part.Key -and $f[1] -eq $part.Item.Repo -and $f[2] -eq $part.Item.Branch) { $part.Item.Revision = $f[3] }
+            if ($f[0] -eq $part.Key -and ($f[1] -eq $part.Item.Repo -or @($part.Item.Moved) -contains $f[1]) -and $f[2] -eq $part.Item.Branch) { $part.Item.Revision = $f[3] }
         }
     }
 }
@@ -1708,6 +1710,31 @@ function Restore-PatchedTimes([string]$Git) {
     if ($kept -gt 0) { Write-Log "$kept patched source file(s) are unchanged and keep their time, so they are not compiled again." }
 }
 
+# A patch by three-way merge. git apply --3way --check passes even when the merge ends in conflicts, and the merge
+# itself then leaves conflict markers (<<<<<<<) and half of the patch in the files - which the compiler stops on, while
+# the log says the server is built without the patch. So the files the patch touches are kept beforehand and put back,
+# new ones taken away, when the merge does not go through cleanly.
+function Invoke-ThreeWayPatch([string]$Git, [string]$Target, [object[]]$Apply, [string]$TempPatch, [string]$Text) {
+    $paths = @([regex]::Matches($Text, '(?m)^diff --git a/(\S+) b/(\S+)') | ForEach-Object { $_.Groups[2].Value } | Select-Object -Unique)
+    $kept = @{}
+    foreach ($p in $paths) {
+        $full = Join-Path $Target $p.Replace('/', '\')
+        $kept[$p] = $(if (Test-Path -LiteralPath $full) { [IO.File]::ReadAllBytes($full) } else { $null })
+    }
+    if ((Invoke-Program $Git ($Apply + @('--3way', '--check', $TempPatch)) -AllowFailure) -eq 0 -and (Invoke-Program $Git ($Apply + @('--3way', $TempPatch)) -AllowFailure) -eq 0) {
+        $markers = @($paths | Where-Object { $f = Join-Path $Target $_.Replace('/', '\'); (Test-Path -LiteralPath $f) -and (Select-String -LiteralPath $f -Pattern '^(<<<<<<<|>>>>>>>) ' -Quiet) })
+        if ($markers.Count -eq 0) { return $true }
+    }
+    foreach ($p in $paths) {
+        $full = Join-Path $Target $p.Replace('/', '\')
+        if ($null -eq $kept[$p]) { if (Test-Path -LiteralPath $full) { Remove-Item -LiteralPath $full -Force } }
+        else { [IO.File]::WriteAllBytes($full, $kept[$p]) }
+    }
+    # the merge leaves the files unmerged in the index as well
+    if ($paths.Count -gt 0) { [void](Invoke-Program $Git (@('-C', $Target, 'reset', '--quiet', '--') + $paths) -AllowFailure) }
+    return $false
+}
+
 function Invoke-ModulePatches([string]$Git, [switch]$Quiet) {
     Reset-PatchedSources $Git
     foreach ($manifest in @(Get-ModuleManifests)) {
@@ -1736,7 +1763,7 @@ function Invoke-ModulePatches([string]$Git, [switch]$Quiet) {
                     Write-Log "$label - applied to $targetName." Green
                 } elseif ((Invoke-Program $Git ($apply + @('--reverse', '--check', $tempPatch)) -AllowFailure) -eq 0) {
                     Write-Log "$label - already part of $targetName, not needed any more."
-                } elseif ((Invoke-Program $Git ($apply + @('--3way', '--check', $tempPatch)) -AllowFailure) -eq 0 -and (Invoke-Program $Git ($apply + @('--3way', $tempPatch)) -AllowFailure) -eq 0) {
+                } elseif (Invoke-ThreeWayPatch $Git $target $apply $tempPatch $text) {
                     # The code still matches, but the surrounding lines moved (for example after a module update).
                     # A three-way merge uses the blobs Git already knows and keeps the change instead of dropping it.
                     Write-Log "$label - applied to $targetName with a three-way merge." Green

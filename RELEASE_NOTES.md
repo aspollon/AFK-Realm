@@ -1,8 +1,15 @@
-# AFK Realm 1.0.58
+# AFK Realm 1.0.59
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11.
 
-## New in 1.0.58
+## New in 1.0.59
+
+- **New core address.** The CoA core now lives at `Conquest-of-AzerothCore/azerothcore-wotlk-coa`. Existing installs switch over by themselves on the next build.
+- **No more half-patched core.** When a module patch can't be merged cleanly, AFK Realm puts the touched files back and tells you, instead of leaving conflict markers that break the build.
+- **Portraits with many races.** Update mod-custom-races too: with lots of custom races every button used to show the whole portrait sheet. Icons are now drawn directly (edges trimmed), so this can't happen any more.
+- **Classic classes builds again** on the current core (update mod-classic-classes).
+
+## 1.0.58
 
 - **Dracthyr numbers fixed.** Dracthyr Alliance and Horde use their own CoA rows 54 and 58 now; a fresh 1.9.1 import no longer makes both ask for 54 or reports that 54 is Night Elf. Packs are matched to their source row before falling back to name/file matching.
 - **Correct racial sets.** Pandaren now uses CoA race 20, both Vulpera variants use 74, and Darkfallen uses its source row 80/81. This fixes Pandaren (Draenei/Tauren), Vulpera (Troll/Pandaren) and Darkfallen (both Night Elf) racials being taken from the wrong CoA race.
