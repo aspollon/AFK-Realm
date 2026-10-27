@@ -29,6 +29,12 @@ namespace CoAInstaller
     static class RaceImport
     {
         public const string ArchivePrefix = "patch-ZY";
+        // Several races share one archive: one archive per race kept the client loading dozens of MPQ files and
+        // made a client with many active races fail to find its WotLK data. Groups keep the count small without
+        // building one >2 GB archive.
+        const string GroupPrefix = "patch-ZYG";
+        const int GroupMaxRaces = 4;
+        const long GroupMaxBytes = 1500000000;
         const string StampName = "AFK-Realm\\race.txt";
         public const int DisplayBase = 980000;          // display and model ids of imported races: 980000 + race * 2 + sex
 
@@ -42,9 +48,13 @@ namespace CoAInstaller
 
         public static string ArchiveName(int race) { return ArchivePrefix + race.ToString("00") + ".MPQ"; }
 
+        /// <summary>The archive of a group of races. The name keeps the race prefix so the client patch never
+        /// reads it as a source archive and the old per-race archives can be found and removed.</summary>
+        public static string GroupName(int group) { return GroupPrefix + group.ToString("00") + ".MPQ"; }
+
         public static bool IsOurArchive(string fileName)
         {
-            return Regex.IsMatch(fileName ?? "", "^" + ArchivePrefix + @"\d{2,3}\.mpq$", RegexOptions.IgnoreCase);
+            return Regex.IsMatch(fileName ?? "", "^" + ArchivePrefix + @"(?:G\d{2}|\d{2,3})\.mpq$", RegexOptions.IgnoreCase);
         }
 
         /// <summary>
@@ -890,6 +900,40 @@ namespace CoAInstaller
 
         public class Wanted { public int Race; public Pack Pack; }
 
+        static long PackBytes(Wanted w)
+        {
+            long bytes = 0;
+            foreach (var f in w.Pack.FilesOnDisk())
+            {
+                string p = Path.Combine(w.Pack.Dir, "files", f.Replace('\\', Path.DirectorySeparatorChar));
+                try { if (File.Exists(p)) bytes += new FileInfo(p).Length; } catch { }
+            }
+            return bytes;
+        }
+
+        /// <summary>Groups the races into a few archives, four races or about 1.5 GB each. A client with many
+        /// active races otherwise loads one MPQ per race and can lose the base WotLK archives.</summary>
+        public static List<List<Wanted>> Groups(IEnumerable<Wanted> wanted)
+        {
+            var groups = new List<List<Wanted>>();
+            var current = new List<Wanted>();
+            long bytes = 0;
+            foreach (var w in (wanted ?? Enumerable.Empty<Wanted>()).OrderBy(w => w.Race))
+            {
+                long size = PackBytes(w);
+                if (current.Count > 0 && (current.Count >= GroupMaxRaces || bytes + size > GroupMaxBytes))
+                {
+                    groups.Add(current);
+                    current = new List<Wanted>();
+                    bytes = 0;
+                }
+                current.Add(w);
+                bytes += size;
+            }
+            if (current.Count > 0) groups.Add(current);
+            return groups;
+        }
+
         /// <summary>A stamp of what an archive of a race holds: its race number and its files with their sizes and times.</summary>
         static string Stamp(Wanted w)
         {
@@ -913,13 +957,25 @@ namespace CoAInstaller
             catch { return ""; }
         }
 
+        /// <summary>The stamp of a group: the stamps of all races in it, in order.</summary>
+        static string GroupStamp(List<Wanted> group)
+        {
+            var sb = new StringBuilder();
+            foreach (var w in group) sb.Append(Stamp(w));
+            using (var sha = SHA256.Create())
+                return "Made by " + Product.Name + " for race group " +
+                    string.Join(",", group.Select(w => w.Race)) + ".\r\nContents " +
+                    BitConverter.ToString(sha.ComputeHash(Encoding.UTF8.GetBytes(sb.ToString()))).Replace("-", "").Substring(0, 16) + "\r\n";
+        }
+
         /// <summary>Whether the archives of the imported races in the game folder are as they should be.</summary>
         public static bool Current(string client, List<Wanted> wanted)
         {
             string data = Path.Combine(client, "Data");
-            foreach (var w in wanted)
-                if (InstalledStamp(Path.Combine(data, ArchiveName(w.Race))) != Stamp(w)) return false;
-            var names = new HashSet<string>(wanted.Select(w => ArchiveName(w.Race)), StringComparer.OrdinalIgnoreCase);
+            var groups = Groups(wanted);
+            for (int i = 0; i < groups.Count; i++)
+                if (InstalledStamp(Path.Combine(data, GroupName(i))) != GroupStamp(groups[i])) return false;
+            var names = new HashSet<string>(groups.Select((g, i) => GroupName(i)), StringComparer.OrdinalIgnoreCase);
             return !Directory.Exists(data) || !Directory.GetFiles(data).Select(Path.GetFileName).Any(n => IsOurArchive(n) && !names.Contains(n) && InstalledStamp(Path.Combine(data, n)) != "");
         }
 
@@ -931,20 +987,25 @@ namespace CoAInstaller
         {
             var notes = new List<string>();
             string data = Path.Combine(client, "Data");
-            foreach (var w in wanted)
+            Directory.CreateDirectory(data);
+            var groups = Groups(wanted);
+            for (int gi = 0; gi < groups.Count; gi++)
             {
-                string path = Path.Combine(data, ArchiveName(w.Race));
-                string stamp = Stamp(w);
+                var group = groups[gi];
+                string name = GroupName(gi);
+                string path = Path.Combine(data, name);
+                string stamp = GroupStamp(group);
                 if (InstalledStamp(path) == stamp) continue;
-                if (InstalledStamp(path) == "") throw new InvalidOperationException(L.F("Data\\{0} in the game folder was not made by {1}. Rename or remove it, then install again.", ArchiveName(w.Race), Product.Name));
+                if (InstalledStamp(path) == "") throw new InvalidOperationException(L.F("Data\\{0} in the game folder was not made by {1}. Rename or remove it, then install again.", name, Product.Name));
                 var files = new SortedDictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                foreach (var f in w.Pack.FilesOnDisk())
-                {
-                    var p = Path.Combine(w.Pack.Dir, "files", f.Replace('\\', Path.DirectorySeparatorChar));
-                    if (File.Exists(p)) files[f] = p;
-                }
+                foreach (var w in group)
+                    foreach (var f in w.Pack.FilesOnDisk())
+                    {
+                        var p = Path.Combine(w.Pack.Dir, "files", f.Replace('\\', Path.DirectorySeparatorChar));
+                        if (File.Exists(p)) files[f] = p;
+                    }
                 string temp = path + ".new";
-                string what = L.F("Writing the files of the {0} (Data\\{1})", w.Pack.Name, ArchiveName(w.Race));
+                string what = L.F("Writing the files of {0} races (Data\\{1})", group.Count, name);
                 if (progress != null) progress(what + " …", 0, files.Count + 2);
                 MpqArchive.WriteFromFiles(temp, files, new Dictionary<string, byte[]> { { StampName, Encoding.UTF8.GetBytes(stamp) } },
                     progress == null ? null : (Action<int, int>)((done, all) => progress(what + ": " + done + " of " + all + " files", done, all)));
@@ -955,11 +1016,11 @@ namespace CoAInstaller
                 catch (IOException)
                 {
                     try { File.Delete(temp); } catch { }
-                    throw new InvalidOperationException(L.F("Data\\{0} is in use. Close the game and its launcher first.", ArchiveName(w.Race)));
+                    throw new InvalidOperationException(L.F("Data\\{0} is in use. Close the game and its launcher first.", name));
                 }
-                notes.Add(ArchiveName(w.Race) + " (" + w.Pack.Name + ")");
+                notes.Add(name + " (" + string.Join(", ", group.Select(w => w.Pack.Name)) + ")");
             }
-            var names = new HashSet<string>(wanted.Select(w => ArchiveName(w.Race)), StringComparer.OrdinalIgnoreCase);
+            var names = new HashSet<string>(groups.Select((g, i) => GroupName(i)), StringComparer.OrdinalIgnoreCase);
             if (Directory.Exists(data))
                 foreach (var path in Directory.GetFiles(data).Where(p => IsOurArchive(Path.GetFileName(p)) && !names.Contains(Path.GetFileName(p))))
                     if (!string.IsNullOrEmpty(InstalledStamp(path)))
@@ -968,16 +1029,20 @@ namespace CoAInstaller
         }
 
         /// <summary>The archive of a race, for the ZIP of the other players.</summary>
-        public static string BuildTemp(Wanted w)
+        public static string BuildTemp(Wanted w) { return BuildGroupTemp(new List<Wanted> { w }); }
+
+        /// <summary>The archive of a group of races, for the ZIP of the other players.</summary>
+        public static string BuildGroupTemp(List<Wanted> group)
         {
             var files = new SortedDictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var f in w.Pack.FilesOnDisk())
-            {
-                var p = Path.Combine(w.Pack.Dir, "files", f.Replace('\\', Path.DirectorySeparatorChar));
-                if (File.Exists(p)) files[f] = p;
-            }
+            foreach (var w in group)
+                foreach (var f in w.Pack.FilesOnDisk())
+                {
+                    var p = Path.Combine(w.Pack.Dir, "files", f.Replace('\\', Path.DirectorySeparatorChar));
+                    if (File.Exists(p)) files[f] = p;
+                }
             string temp = Path.GetTempFileName();
-            MpqArchive.WriteFromFiles(temp, files, new Dictionary<string, byte[]> { { StampName, Encoding.UTF8.GetBytes(Stamp(w)) } });
+            MpqArchive.WriteFromFiles(temp, files, new Dictionary<string, byte[]> { { StampName, Encoding.UTF8.GetBytes(GroupStamp(group)) } });
             return temp;
         }
     }

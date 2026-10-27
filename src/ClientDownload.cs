@@ -27,6 +27,7 @@ namespace CoAInstaller
         const string PartsDir = ".afk-client-parts";
         const long MaxManifestBytes = 16L * 1024 * 1024;
         const long MaxFileBytes = 16L * 1024 * 1024 * 1024;
+        const string EmptySha256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
 
         public sealed class FileEntry
         {
@@ -353,6 +354,16 @@ namespace CoAInstaller
             string part = Path.Combine(parts, file.Sha256 + ".part");
             Directory.CreateDirectory(Path.GetDirectoryName(target));
 
+            // A few manifest entries are empty files (the TransmogrificationItemData.json is one). There is no
+            // object to download and no .part to move, so write the empty file directly.
+            if (file.Size == 0)
+            {
+                if (!string.Equals(file.Sha256, EmptySha256, StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidOperationException(L.F("The client list says {0} is empty, but its checksum is not that of an empty file.", file.Path));
+                PlaceEmpty(target);
+                return;
+            }
+
             for (int attempt = 0; attempt < 3; attempt++)
             {
                 if (cancelled != null && cancelled()) throw new OperationCanceledException();
@@ -481,6 +492,25 @@ namespace CoAInstaller
                     File.Delete(target);
                 }
                 File.Move(part, target);
+            }
+            catch (Exception ex)
+            {
+                throw new IOException(L.F("Could not put {0} into the game folder: {1}", target, ex.Message), ex);
+            }
+        }
+
+        /// <summary>An empty manifest file has no object and no .part; write it in place, keeping the old file as a backup.</summary>
+        static void PlaceEmpty(string target)
+        {
+            try
+            {
+                if (File.Exists(target))
+                {
+                    string backup = target + ".afk-backup";
+                    try { File.Copy(target, backup, true); } catch { }
+                    File.Delete(target);
+                }
+                File.WriteAllBytes(target, new byte[0]);
             }
             catch (Exception ex)
             {

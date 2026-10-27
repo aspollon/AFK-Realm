@@ -1363,10 +1363,14 @@ namespace CoAInstaller
             RemoveLegacyPatch(client);
             string path = Path.Combine(client, "Data", ArchiveName);
             string installed = InstalledStamp(client);
+            // Race archives are independent of the client patch: even when no module changes a client file,
+            // the races must be written (and old per-race archives removed).
+            var raceNotes = RaceImport.Sync(client, plan.Imports, progress);
             if (plan.Empty)
             {
                 SyncServerAppearance(inst, plan, null);
                 var gone = SyncRootFiles(inst, client, plan);
+                gone.AddRange(raceNotes);
                 if (!string.IsNullOrEmpty(installed) && WasOurs(inst))
                 {
                     try { File.Delete(path); }
@@ -1397,7 +1401,7 @@ namespace CoAInstaller
             }
             lock (wantedStamps) { wantedStamps.Clear(); wantedStamps[InputsKey(inst, client, plan)] = Encoding.UTF8.GetString(files[StampName]); }
             SyncServerAppearance(inst, plan, files);
-            notes.AddRange(RaceImport.Sync(client, plan.Imports, progress));
+            notes.AddRange(raceNotes);
             progress(L.T("Placing the files next to the game …"), 0, 0);
             notes.AddRange(SyncRootFiles(inst, client, plan));
             Directory.CreateDirectory(Path.GetDirectoryName(RecordFile(inst)));
@@ -1431,12 +1435,12 @@ namespace CoAInstaller
             CheckRootFiles(plan, client, inst);
             // the files next to the exe, CoA Custom's too (its Ascension.exe, EsteriaAppearance.dll, ...): a module may keep one out ("zip": false)
             foreach (var r in plan.RootFiles.Where(r => r.Zip)) zip.CreateEntryFromFile(r.From, r.To.Replace('\\', '/'), CompressionLevel.Optimal);
-            int n = 0;
-            foreach (var w in plan.Imports)
+            var groups = RaceImport.Groups(plan.Imports);
+            for (int i = 0; i < groups.Count; i++)
             {
-                progress(L.F("Packing the files of the {0} into the ZIP …", w.Pack.Name), n++, plan.Imports.Count);
-                string race = RaceImport.BuildTemp(w);
-                try { zip.CreateEntryFromFile(race, "Data/" + RaceImport.ArchiveName(w.Race), CompressionLevel.Fastest); }
+                progress(L.F("Packing the files of {0} races into the ZIP …", groups[i].Count), i, groups.Count);
+                string race = RaceImport.BuildGroupTemp(groups[i]);
+                try { zip.CreateEntryFromFile(race, "Data/" + RaceImport.GroupName(i), CompressionLevel.Fastest); }
                 finally { try { File.Delete(race); } catch { } }
             }
         }

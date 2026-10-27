@@ -182,7 +182,7 @@ function Plain([string]$Text) {
 function Write-Log {
     param([string]$Text, [ConsoleColor]$Color = [ConsoleColor]::Gray)
     $Text = Plain $Text
-    try { [IO.File]::AppendAllText($Paths.Log, ('{0:yyyy-MM-dd HH:mm:ss} {1}{2}' -f (Get-Date), $Text, [Environment]::NewLine), (New-Object Text.UTF8Encoding($false))) } catch { }
+    try { [IO.File]::AppendAllText($script:Paths.Log, ('{0:yyyy-MM-dd HH:mm:ss} {1}{2}' -f (Get-Date), $Text, [Environment]::NewLine), (New-Object Text.UTF8Encoding($false))) } catch { }
     Write-Host $Text -ForegroundColor $Color
 }
 function Write-Section([string]$Text) { Write-Log ''; Write-Log "=== $Text ===" Cyan }
@@ -202,7 +202,7 @@ function Invoke-Program {
     Write-Log ('> {0} {1}' -f $Path, ($Arguments -join ' ')) DarkGray
     $previousLocation = Get-Location
     $previousPreference = $ErrorActionPreference
-    $writer = New-Object IO.StreamWriter($Paths.Log, $true, (New-Object Text.UTF8Encoding($false)))
+    $writer = New-Object IO.StreamWriter($script:Paths.Log, $true, (New-Object Text.UTF8Encoding($false)))
     try {
         if ($WorkingDirectory) { Set-Location $WorkingDirectory }
         $ErrorActionPreference = 'Continue'
@@ -1715,23 +1715,25 @@ function Restore-PatchedTimes([string]$Git) {
 # the log says the server is built without the patch. So the files the patch touches are kept beforehand and put back,
 # new ones taken away, when the merge does not go through cleanly.
 function Invoke-ThreeWayPatch([string]$Git, [string]$Target, [object[]]$Apply, [string]$TempPatch, [string]$Text) {
-    $paths = @([regex]::Matches($Text, '(?m)^diff --git a/(\S+) b/(\S+)') | ForEach-Object { $_.Groups[2].Value } | Select-Object -Unique)
+    # Not $paths: PowerShell names are case-insensitive, and a local $paths would hide the global $Paths
+    # (and with it $Paths.Log) from Invoke-Program and Write-Log while this patch is applied.
+    $patchPaths = @([regex]::Matches($Text, '(?m)^diff --git a/(\S+) b/(\S+)') | ForEach-Object { $_.Groups[2].Value } | Select-Object -Unique)
     $kept = @{}
-    foreach ($p in $paths) {
+    foreach ($p in $patchPaths) {
         $full = Join-Path $Target $p.Replace('/', '\')
         $kept[$p] = $(if (Test-Path -LiteralPath $full) { [IO.File]::ReadAllBytes($full) } else { $null })
     }
     if ((Invoke-Program $Git ($Apply + @('--3way', '--check', $TempPatch)) -AllowFailure) -eq 0 -and (Invoke-Program $Git ($Apply + @('--3way', $TempPatch)) -AllowFailure) -eq 0) {
-        $markers = @($paths | Where-Object { $f = Join-Path $Target $_.Replace('/', '\'); (Test-Path -LiteralPath $f) -and (Select-String -LiteralPath $f -Pattern '^(<<<<<<<|>>>>>>>) ' -Quiet) })
+        $markers = @($patchPaths | Where-Object { $f = Join-Path $Target $_.Replace('/', '\'); (Test-Path -LiteralPath $f) -and (Select-String -LiteralPath $f -Pattern '^(<<<<<<<|>>>>>>>) ' -Quiet) })
         if ($markers.Count -eq 0) { return $true }
     }
-    foreach ($p in $paths) {
+    foreach ($p in $patchPaths) {
         $full = Join-Path $Target $p.Replace('/', '\')
         if ($null -eq $kept[$p]) { if (Test-Path -LiteralPath $full) { Remove-Item -LiteralPath $full -Force } }
         else { [IO.File]::WriteAllBytes($full, $kept[$p]) }
     }
     # the merge leaves the files unmerged in the index as well
-    if ($paths.Count -gt 0) { [void](Invoke-Program $Git (@('-C', $Target, 'reset', '--quiet', '--') + $paths) -AllowFailure) }
+    if ($patchPaths.Count -gt 0) { [void](Invoke-Program $Git (@('-C', $Target, 'reset', '--quiet', '--') + $patchPaths) -AllowFailure) }
     return $false
 }
 
@@ -1761,7 +1763,7 @@ function Invoke-ModulePatches([string]$Git, [switch]$Quiet) {
                 $apply = @('-C', $target, 'apply', '--ignore-whitespace', '--whitespace=nowarn')
                 if ((Invoke-Program $Git ($apply + @('--check', $tempPatch)) -AllowFailure) -eq 0 -and (Invoke-Program $Git ($apply + @($tempPatch)) -AllowFailure) -eq 0) {
                     Write-Log "$label - applied to $targetName." Green
-                } elseif ((Invoke-Program $Git ($apply + @('--reverse', '--check', $tempPatch)) -AllowFailure) -eq 0) {
+                } elseif ((Invoke-Program $Git ($apply + @('--reverse', '--check', '--quiet', $tempPatch)) -AllowFailure) -eq 0) {
                     Write-Log "$label - already part of $targetName, not needed any more."
                 } elseif (Invoke-ThreeWayPatch $Git $target $apply $tempPatch $text) {
                     # The code still matches, but the surrounding lines moved (for example after a module update).
@@ -2308,7 +2310,7 @@ try {
 } catch {
     $exitCode = 1
     Write-Log ('ERROR: ' + $_.Exception.Message) Red
-    Write-Log "Full log: $($Paths.Log)"
+    Write-Log "Full log: $($script:Paths.Log)"
     Send-Event 'FAIL' $_.Exception.Message
 } finally {
     $password = $null

@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.64
+
+- Client download: empty files in the public manifest (`Data\Content\Transmogrification*.json`, `HD_Patches_Description.txt`) are written as empty files instead of looking for a `.part` object that cannot exist. This fixes “Could not put …TransmogrificationItemData.json into the game folder: …\.part not found”.
+- Server updates: a PowerShell variable-name collision (`$paths` in the three-way patch helper vs. the global `$Paths`) no longer aborts patch application with “The property 'Log' cannot be found”. Module patches that need a three-way merge can now be applied; failed reverse checks are quiet.
+- Client startup: the Esteria appearance texture worker waits ten seconds instead of two before using the D3D9 device, and an already patched two-second DLL is re-patched. This targets the ACCESS_VIOLATION in `EsteriaAppearance.dll` that some female Haranir/Dracthyr characters hit on a cold client start.
+- Update notices: the game-client and CoA Custom notices only appear when the package is already installed and newer. A missing client or CoA Custom package is no longer advertised as a download at the top of the main page.
+- Race archives: the races now share grouped `patch-ZYG##.MPQ` archives (at most four races or about 1.5 GB each), and the old one-per-race archives are removed. With many active races the client no longer has to load dozens of extra MPQs, which is the suspected cause of the missing-WotLK-data report.
+
 ## 1.0.63
 
 - The game-client and CoA Custom update notices now sit in the same top strip as the core and module update notices, instead of inside their cards. Their card buttons still change to “Update game client …”, “Update custom races …” or “Download …”.

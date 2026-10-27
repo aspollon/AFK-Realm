@@ -10,7 +10,7 @@ namespace CoAInstaller
     /// <summary>
     /// The two client-side fixes that cannot live in patch-ZZZZZ.MPQ:
     /// * CoA Custom's Ascension.exe gets a customize thunk and the character-select context thunk;
-    /// * its EsteriaAppearance.dll gets a two-second delay in the texture worker that otherwise
+    /// * its EsteriaAppearance.dll gets a ten-second delay in the texture worker that otherwise
     ///   starts before the D3D9 device is ready.
     ///
     /// Both are version-checked. An unknown or already patched file is left alone. The patched
@@ -42,6 +42,9 @@ namespace CoAInstaller
 
         static readonly byte[] DllWorkerBefore = FromHex("6a0c6828160610");
         static readonly byte[] DllWorkerThunk = FromHex(
+            "e800000000582d654505006810270000ff9088500500616a0c8d882816060051e979d9feff");
+        // The 2-second version AFK Realm wrote before 1.0.64; replaced in place when the source DLL is already patched.
+        static readonly byte[] DllWorkerThunkOld = FromHex(
             "e800000000582d654505006068d0070000ff9088500500616a0c8d882816060051e979d9feff");
 
         struct Section
@@ -148,12 +151,22 @@ namespace CoAInstaller
             uint siteVa = imageBase + DllWorkerRva;
             int site = FileOffset(sections, siteVa, imageBase);
             if (site < 0) return null;
-            if (data[site] == 0xE9) return null;                         // already patched
-            if (!Same(data, site, DllWorkerBefore)) return null;
 
             uint thunkVa = imageBase + DllThunkRva;
             int thunk = FileOffset(sections, thunkVa, imageBase);
             if (thunk < 0 || thunk + DllWorkerThunk.Length > data.Length) return null;
+
+            if (data[site] == 0xE9)
+            {
+                // A DLL AFK Realm patched before: replace the old two-second sleep with the longer one.
+                if (Same(data, thunk, DllWorkerThunkOld))
+                {
+                    Buffer.BlockCopy(DllWorkerThunk, 0, data, thunk, DllWorkerThunk.Length);
+                    return data;
+                }
+                return null;
+            }
+            if (!Same(data, site, DllWorkerBefore)) return null;
             for (int i = 0; i < DllWorkerThunk.Length; i++)
                 if (data[thunk + i] != 0) return null;
 

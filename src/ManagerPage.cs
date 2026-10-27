@@ -596,10 +596,9 @@ namespace CoAInstaller
                         var manifest = ClientDownload.Latest();
                         clientVersion = manifest.Version;
                         installedClient = ClientDownload.InstalledVersion(client);
-                        if (installedClient != clientVersion)
-                            clientNewsText = installedClient == null
-                                ? L.F("Game client update available: {0} — click to update or repair", clientVersion)
-                                : L.F("Game client update available: {0} (installed {1}) — click to update", clientVersion, installedClient);
+                        // A notice is for an existing managed client, not an advertisement to download one.
+                        if (installedClient != null && installedClient != clientVersion)
+                            clientNewsText = L.F("Game client update available: {0} (installed {1}) — click to update", clientVersion, installedClient);
                     }
                 }
                 catch { }
@@ -608,10 +607,10 @@ namespace CoAInstaller
                     var release = CoaCustom.Latest();
                     coaVersion = release.Version;
                     installedCoa = CoaCustom.Installed(RaceFolderForUpdate());
-                    if (installedCoa != coaVersion)
-                        coaNewsText = installedCoa == null
-                            ? L.F("CoA Custom {0} can be downloaded — click to open", coaVersion)
-                            : L.F("CoA Custom update available: {0} (installed {1}) — click to update", coaVersion, installedCoa);
+                    // Only an existing CoA Custom installation gets an update notice. Without one this is not a
+                    // "download it now" prompt; the Races page still offers the download when the user opens it.
+                    if (installedCoa != null && installedCoa != coaVersion)
+                        coaNewsText = L.F("CoA Custom update available: {0} (installed {1}) — click to update", coaVersion, installedCoa);
                 }
                 catch { }
                 Action show = () =>
@@ -623,13 +622,11 @@ namespace CoAInstaller
                     coaNews.Text = coaNewsText ?? "";
                     coaNews.Visible = coaNewsText != null;
                     coaBanner.Visible = coaNewsText != null;
-                    clientButton.Text = installedClient == null
-                        ? L.T("Download / update game client …")
-                        : installedClient != clientVersion ? L.F("Update game client to {0} …", clientVersion)
+                    clientButton.Text = installedClient != null && installedClient != clientVersion
+                        ? L.F("Update game client to {0} …", clientVersion)
                         : L.T("Game client …");
-                    racesButton.Text = coaVersion == null ? L.T("Set up the races …")
-                        : installedCoa == null ? L.F("Download CoA Custom {0} …", coaVersion)
-                        : installedCoa != coaVersion ? L.F("Update custom races to {0} …", coaVersion)
+                    racesButton.Text = installedCoa != null && installedCoa != coaVersion
+                        ? L.F("Update custom races to {0} …", coaVersion)
                         : L.T("Set up the races …");
                 };
                 try { BeginInvoke(show); }

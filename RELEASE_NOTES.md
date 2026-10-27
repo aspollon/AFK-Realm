@@ -1,6 +1,15 @@
-# AFK Realm 1.0.63
+# AFK Realm 1.0.64
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11.
+
+## New in 1.0.64
+
+- **Client download of empty files fixed.** The public client list has a few zero-byte files (`Data\Content\TransmogrificationItemData.json`, `TransmogrificationItemDisplayData.json`, `TransmogrificationItemSetData.json`, `HD_Patches_Description.txt`). AFK Realm now writes them directly instead of looking for a missing `.part` file. The “Could not put … into the game folder: … .part not found” error is gone.
+- **Server patch application no longer aborts.** A local `$paths` variable in the three-way patch helper hid the global `$Paths` (PowerShell names are case-insensitive), so `Write-Log` and Git output failed with “The property 'Log' cannot be found”. That collision is fixed, and the reverse check of an already-applied patch is quiet. Module patches that need a three-way merge can be applied again.
+- **Female Haranir/Dracthyr client crash.** The Esteria appearance texture worker now waits ten seconds before using the D3D9 device (instead of two), and a DLL already patched with the old two-second delay is re-patched. Reinstall the client patch after this update (**Game client → Install**) so the new DLL reaches the game folder.
+- **The top notices are update notices again.** They are only shown for a client or CoA Custom package that is already installed and has a newer version. A missing package is no longer advertised at the top; the Races page still offers its download when the user opens it.
+- **Fewer race archives.** The imported races now share grouped `patch-ZYG##.MPQ` archives (at most four races or about 1.5 GB each) instead of one archive per race. Old `patch-ZY<race>.MPQ` files are removed on the next client install. This keeps a client with many active races from loading dozens of extra MPQs, which is the suspected cause of the “WotLK data missing” report.
+- If the client still crashes with `EsteriaAppearance.dll`, send the newest `Errors\…Crash.txt` from the game folder; it names the module and the last loaded model/texture.
 
 ## New in 1.0.63
 
