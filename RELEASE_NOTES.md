@@ -1,6 +1,12 @@
-# AFK Realm 1.0.64
+# AFK Realm 1.0.65
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11.
+
+## New in 1.0.65
+
+- **Female race assets are complete.** Race packs used to copy the whole race folder only when the player's client had no file in it. For races whose male files were already present (Dracthyr, Haranir, …), that skipped female-only meshes and textures. The packer now adds every source file the client lacks and leaves existing files alone. **Re-import/re-pack the races after updating**, then install the client patch again.
+- **Larger race groups.** Up to 16 races or about 1.5 GB share one `patch-ZYG##.MPQ` (was four races). A 50 MB race no longer gets an archive of its own, so many active races use far fewer MPQs.
+- The 1.0.64 fixes (empty client files, server patch logging, Esteria delay, top update notices) are included.
 
 ## New in 1.0.64
 

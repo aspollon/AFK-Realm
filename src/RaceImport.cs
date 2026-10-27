@@ -33,7 +33,7 @@ namespace CoAInstaller
         // made a client with many active races fail to find its WotLK data. Groups keep the count small without
         // building one >2 GB archive.
         const string GroupPrefix = "patch-ZYG";
-        const int GroupMaxRaces = 4;
+        const int GroupMaxRaces = 16;                 // small races share an archive; the byte limit splits large ones
         const long GroupMaxBytes = 1500000000;
         const string StampName = "AFK-Realm\\race.txt";
         public const int DisplayBase = 980000;          // display and model ids of imported races: 980000 + race * 2 + sex

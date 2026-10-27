@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.65
+
+- Custom race packs now include files in folders the player's client already partly has. Before, a race whose male files were already in the client (Dracthyr, Haranir and others) only got the model files for the female side; her textures and meshes outside the model header were skipped. The packer now adds every source file the client lacks without replacing existing files. Re-import/re-pack the races after updating.
+- Race archives group up to 16 races or about 1.5 GB per `patch-ZYG##.MPQ` (was four). Small races share archives, so many active races no longer mean dozens of MPQs.
+
 ## 1.0.64
 
 - Client download: empty files in the public manifest (`Data\Content\Transmogrification*.json`, `HD_Patches_Description.txt`) are written as empty files instead of looking for a `.part` object that cannot exist. This fixes “Could not put …TransmogrificationItemData.json into the game folder: …\.part not found”.

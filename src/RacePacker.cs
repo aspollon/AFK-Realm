@@ -600,6 +600,7 @@ namespace CoAInstaller
             var models = new Dictionary<string, object>();
             var files = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
             var roots = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);      // the race's own trees in the client
+            var partial = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);     // trees the player's client already partly has
             string modelFolder = "";                                                   // the real asset folder, often not ClientFilestring
             for (int sex = 0; sex < 2; sex++)
             {
@@ -628,13 +629,15 @@ namespace CoAInstaller
                 if (parts.Length >= 3 && modelFolder.Length == 0)
                     modelFolder = parts[1];
                 if (parts.Length >= 3 && parts[0].Equals("custom", StringComparison.OrdinalIgnoreCase)) roots.Add(parts[0] + "\\" + parts[1] + "\\");
-                // the same for a folder of its own elsewhere (Character\IllidariNightElf\, Creature\WhimMurloc\): textures its
-                // model or its creator's code loads by name - as long as the player's client has nothing in that folder, so
-                // that no file of a stock race is ever replaced
+                // The same for a folder of its own elsewhere (Character\IllidariNightElf\, Creature\WhimMurloc\):
+                // textures its model or its creator's code loads by name. A client that has some of the folder
+                // (often the male files) must still get the files it lacks - the female textures and meshes.
+                // Existing files of the player's client are not replaced.
                 else if (parts.Length >= 3)
                 {
                     string root = parts[0] + "\\" + parts[1] + "\\";
                     if (yours == null || yours.Under(root).Count == 0) roots.Add(root);
+                    else partial.Add(root);
                 }
             }
             if (models.Count == 0) throw new InvalidOperationException(L.F("The {0} has no model in these archives.", race.Name));
@@ -658,6 +661,11 @@ namespace CoAInstaller
             // everything else the race's own folder in the client holds
             foreach (var root in roots)
                 foreach (var f in source.Under(root)) files.Add(f);
+            // A folder the player's client already has in part: add the source files it does not have, without
+            // replacing its own. This is where the female-only meshes and textures of a race went missing.
+            foreach (var root in partial)
+                foreach (var f in source.Under(root))
+                    if (!yours.Has(f)) files.Add(f);
 
             // the items fitted to the race: the game finds a helmet (and any other item part made per race) by the prefix
             // of the race - Item\ObjectComponents\Head\<helmet>_<prefix><M|F>.m2, its skins, textures named so; without
