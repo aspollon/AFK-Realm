@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.66
+
+- The two faction rows of a race are separate entries on the Custom races page (Pandaren Horde/Pandaren Alliance, Dracthyr Horde/Dracthyr Alliance, Darkfallen and so on). Changing the Alliance entry does not change the Horde one; the page now gives a new Horde entry a Horde default instead of Human. Existing saved bases are kept, so set the Horde row as well.
+- The default Horde Vulpera no longer takes VulperaEsteria's racials. `CoaRaceOf` mapped every pack with “vulpera” in its name to CoA Custom row 74; it now uses row 19 for the default Vulpera and row 74 only for VulperaEsteria/Esteria. Stale `Racials` entries are removed when the page is saved.
+
 ## 1.0.65
 
 - Custom race packs now include files in folders the player's client already partly has. Before, a race whose male files were already in the client (Dracthyr, Haranir and others) only got the model files for the female side; her textures and meshes outside the model header were skipped. The packer now adds every source file the client lacks without replacing existing files. Re-import/re-pack the races after updating.

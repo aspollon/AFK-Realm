@@ -11,6 +11,7 @@ namespace CoAInstaller
     class ClientRace
     {
         public int Source;                  // its row in ChrRaces.dbc
+        public int Side;                    // 0 Alliance, 1 Horde, 2 unknown (ChrRaces field 13)
         public string Key, Name, Prefix, File;
         public uint MaleDisplay, FemaleDisplay;
         public bool MaleOnly;
@@ -162,7 +163,7 @@ namespace CoAInstaller
         /// <summary>A copy the setup page may change (it adds races of the race folder to its list).</summary>
         static Scan Copy(Scan s)
         {
-            return new Scan { Races = s.Races.Select(r => new ClientRace { Source = r.Source, Key = r.Key, Name = r.Name, Prefix = r.Prefix, File = r.File,
+            return new Scan { Races = s.Races.Select(r => new ClientRace { Source = r.Source, Side = r.Side, Key = r.Key, Name = r.Name, Prefix = r.Prefix, File = r.File,
                 MaleDisplay = r.MaleDisplay, FemaleDisplay = r.FemaleDisplay, MaleOnly = r.MaleOnly, Virtual = r.Virtual, HasHelmets = r.HasHelmets }).ToList(),
                 FreeNumbers = s.FreeNumbers.ToList(), MoreNumbers = s.MoreNumbers.ToList(), HighNumbers = s.HighNumbers.ToList(), ModelsChecked = s.ModelsChecked,
                 Reserved = new HashSet<int>(s.Reserved), StockCopies = new HashSet<int>(s.StockCopies),
@@ -241,7 +242,7 @@ namespace CoAInstaller
                 Func<int, string, string, ClientRace> make = (id, key, name) =>
                 {
                     var row = rows[id];
-                    var r = new ClientRace { Source = id, Key = key, Name = name, Prefix = Str(races, row, 6), File = Str(races, row, 11),
+                    var r = new ClientRace { Source = id, Side = (int)races.Field(row, 13), Key = key, Name = name, Prefix = Str(races, row, 6), File = Str(races, row, 11),
                         MaleDisplay = races.Field(row, 4), FemaleDisplay = races.Field(row, 5) };
                     r.HasHelmets = scan.HelmetPrefixes.Contains(r.Prefix);
                     // a race with a female body and at least one female section has a woman: some custom races

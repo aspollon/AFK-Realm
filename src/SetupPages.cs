@@ -1198,8 +1198,7 @@ namespace CoAInstaller
         /// leans on a Horde race).</summary>
         string Side(string guess, ClientRace r)
         {
-            if (r.Pack == null) return guess;
-            int side = r.Pack.Side;
+            int side = r.Pack != null ? r.Pack.Side : r.Alt != null ? r.Alt.Side : r.Side;
             if (side == 2)
             {
                 string name = (r.Name + " " + r.File + " " + r.Key).ToLowerInvariant();
@@ -1275,7 +1274,10 @@ namespace CoAInstaller
                 if (n.Contains("pandaren")) return 20;
                 if (n.Contains("dracthyr"))
                     return source == 54 || source == 58 ? source : (pack.Side == 0 ? 54 : 58);
-                if (n.Contains("vulpera")) return 74;
+                // The default Horde Vulpera is row 19; only VulperaEsteria (row 74) has Esteria's racials.
+                // Matching every "vulpera" to 74 gave the default Vulpera Esteria's racials.
+                if (n.Contains("vulperaesteria") || n.Contains("esteria")) return 74;
+                if (n.Contains("vulpera")) return source > 0 ? source : 19;
                 if (n.Contains("drakonid")) return pack.Side == 0 ? 100 : 98;
                 if (n.Contains("darkfallen"))
                     return source == 80 || source == 81 ? source : (pack.Side == 0 ? 80 : 81);
@@ -1513,6 +1515,7 @@ namespace CoAInstaller
             // its racials: the set the server pack gives it (its rows travel to the server data folder as well)
             var racials = ServerRacials.Spells("", pack != null ? pack.Name : r.Name, CoaRaceOf(r));
             if (racials.Length > 0) putText("Racials", string.Join(" ", racials));
+            else Unset("CustomRaces." + r.Key + ".Racials");       // no stale Esteria spells on the default Vulpera
             // its icon: from its folder, or from the icons of the race folder (_Icons)
             string icon = null;
             if (pack != null)

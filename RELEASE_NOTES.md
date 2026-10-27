@@ -1,6 +1,12 @@
-# AFK Realm 1.0.65
+# AFK Realm 1.0.66
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11.
+
+## New in 1.0.66
+
+- **Dual-faction races have two entries.** Pandaren, Dracthyr, Darkfallen, Haranir and Vulpera exist once per faction row. “Pandaren Alliance → Dwarf” does not change “Pandaren Horde”; both must be set. New Horde entries now default to a Horde base (Orc/Troll) instead of Human. Existing saved bases stay as they are, so set the Horde entry explicitly.
+- **Default Vulpera no longer gets Esteria racials.** Every pack with “vulpera” in its name was mapped to CoA Custom row 74 (VulperaEsteria). The default Horde Vulpera now uses row 19; only VulperaEsteria uses 74. Stale `Racials` values are cleared when the Custom races page is saved.
+- The 1.0.65 female asset and race-archive fixes are included.
 
 ## New in 1.0.65
 
