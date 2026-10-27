@@ -9,7 +9,7 @@
 > [!WARNING]
 > **Work in progress and highly experimental.** AFK Realm is unfinished and changes all the time. Every release and every new function has to be seen as experimental. New features are often tested on only one PC before they are published, so it is very likely that one thing or another does not work properly yet. Keep backups of anything you care about (AFK Realm makes one before every update and module change), and if something breaks, please report it with `logs\install.log` attached.
 
-Build, run and tweak your own **Conquest of Azeroth** server (an AzerothCore fork with Playerbots) on Windows 10/11, compiled straight from source, all through a point-and-click interface.
+Build, run and tweak your own **Conquest of Azeroth** server (an AzerothCore fork with Playerbots) on Windows 10/11 or Linux, compiled straight from source, all through a point-and-click interface.
 
 ![Server management](docs/screenshots/8-server-management.png)
 
@@ -88,6 +88,8 @@ The short version is below; the [user guide](docs/MANUAL.md) explains every step
    2. *Create account*
    3. *Start server*
 4. Point your client's `realmlist.wtf` to `set realmlist 127.0.0.1` and log in.
+
+**On Linux:** download `AFK-Realm-linux-x64` (`AFK-Realm-linux-arm64` for ARM) from the [Releases](../../releases) page, run `chmod +x AFK-Realm-linux-x64` once and start it with `./AFK-Realm-linux-x64`. It opens in an app window or your browser and works like the Windows version; if build tools are missing, it shows the one command that installs them. Choose a folder in your home folder without spaces, e.g. `~/CoA-Server`.
 
 You need the CoA game client yourself, or let **Game client → Download client …** fetch the public CoA client for you. The client data is not part of this project; its own terms apply.
 
@@ -175,6 +177,7 @@ The texts of AFK Realm are written in English in the code (`L.T("…")`) and tra
 
 - Windows: run `build.bat`. It uses the C# compiler that ships with Windows.
 - Linux: run `build.sh` (needs `mono-devel`).
+- The cross-platform version (Windows and Linux, web interface) is in `app/`: `dotnet publish app/AfkRealm.csproj -c Release -r linux-x64 --self-contained true -p:PublishSingleFile=true` (needs the .NET 8 SDK).
 
 ## Disclaimer
 

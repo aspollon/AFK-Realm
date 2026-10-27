@@ -48,7 +48,7 @@ namespace CoAInstaller.Web
                 else if (a == "--password") Opts.Password = next();
                 else if (a == "--no-window" || a == "--headless") Opts.NoWindow = true;
                 else if (a == "--server") Opts.Server = next();
-                else if (a == "--restart" || a == "--updated") { Opts.Restarted = true; if (a == "--updated") SelfUpdateWeb.JustUpdated = true; }
+                else if (a == "--restart" || a == "--updated" || a == "--after-update") { Opts.Restarted = true; if (a != "--restart") SelfUpdateWeb.JustUpdated = true; }
                 else if (a == "--web-root") Opts.WebRoot = next();
                 else if (a == "--help" || a == "-h") { PrintHelp(); return 0; }
             }

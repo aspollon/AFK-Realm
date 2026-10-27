@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.IO;
 using System.Net;
@@ -76,7 +76,14 @@ namespace CoAInstaller
             }
             string own = Assembly.GetExecutingAssembly().GetName().Name, other;
             try { other = AssemblyName.GetAssemblyName(file).Name; }
-            catch { throw new InvalidOperationException(L.T("The downloaded file is not a valid program. Nothing was changed.")); }
+            catch
+            {
+                // The cross-platform build is a single file whose program sits inside; its file version says what it is.
+                string product = null;
+                try { product = System.Diagnostics.FileVersionInfo.GetVersionInfo(file).ProductName; } catch { }
+                if (product != Product.Name) throw new InvalidOperationException(L.T("The downloaded file is not a valid program. Nothing was changed."));
+                other = own;
+            }
             if (!string.Equals(own, other, StringComparison.OrdinalIgnoreCase))
                 throw new InvalidOperationException(L.F("The downloaded file is not {0}. Nothing was changed.", Product.Name));
         }

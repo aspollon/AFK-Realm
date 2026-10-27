@@ -1,6 +1,13 @@
-# AFK Realm 1.0.67
+# AFK Realm 1.1.0
 
-Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11.
+Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11 and now also on Linux.
+
+## New in 1.1.0
+
+- **AFK Realm runs on Linux.** Download `AFK-Realm-linux-x64` (or `AFK-Realm-linux-arm64`), make it executable (`chmod +x AFK-Realm-linux-x64`) and start it. It opens in an app window of Chrome/Chromium/Edge or in your browser and does everything the Windows version does: install and build the server, start and stop it, settings, accounts, modules, backups, database editor, game master tools and the module setup pages. Missing build tools are installed with one command that AFK Realm shows (apt, dnf, pacman or zypper). Needs a 64-bit Linux, about 40 GB of disk space and your own CoA game client.
+- **New Windows version to try: `AFK-Realm-web.exe`.** The same new interface as on Linux, for Windows. It is a preview: `AFK-Realm.exe` stays the regular Windows version and keeps updating itself as before.
+- Headless servers: `./AFK-Realm-linux-x64 --listen 0.0.0.0 --password <password>` manages the server from another computer's browser; `./AFK-Realm-linux-x64 cli status|start|stop|update|backup …` from the command line.
+- Experimental: the Linux version has been tested on one Linux system so far. Please report problems with `logs/install.log`.
 
 ## New in 1.0.67
 

@@ -9,7 +9,7 @@
 > [!WARNING]
 > **In Arbeit und sehr experimentell.** AFK Realm ist unfertig und ändert sich ständig. Jede Version und jede neue Funktion ist als experimentell zu sehen. Halte Sicherungen von allem, was dir wichtig ist (AFK Realm macht vor jedem Update und jeder Moduländerung eine), und melde Probleme bitte mit `logs\install.log`.
 
-Bau, betreib und tune deinen eigenen **Conquest-of-Azeroth**-Server (ein AzerothCore-Fork mit Playerbots) unter Windows 10/11 – direkt aus dem Quellcode kompiliert, alles per Mausklick.
+Bau, betreib und tune deinen eigenen **Conquest-of-Azeroth**-Server (ein AzerothCore-Fork mit Playerbots) unter Windows 10/11 oder Linux – direkt aus dem Quellcode kompiliert, alles per Mausklick.
 
 ![](docs/screenshots/8-server-management.png)
 
@@ -32,6 +32,8 @@ Dies ist eine Kurzfassung. Die ausführliche Beschreibung steht im [englischen R
 2. **Einen neuen Server installieren** → Ordner wählen, z. B. `C:\CoA-Server` → Datenbank-Passwort festlegen → **Installieren**. Das kann lange dauern und braucht etwa 40 GB Speicherplatz.
 3. In der Serververwaltung: *Kartendaten aus dem Spielclient erstellen* (einmalig), *Account erstellen*, *Server starten*.
 4. In der `realmlist.wtf` deines Clients `set realmlist 127.0.0.1` eintragen und einloggen.
+
+**Unter Linux:** `AFK-Realm-linux-x64` (für ARM `AFK-Realm-linux-arm64`) von der [Releases](../../releases)-Seite laden, einmal `chmod +x AFK-Realm-linux-x64` und mit `./AFK-Realm-linux-x64` starten. Es öffnet sich als App-Fenster oder im Browser und funktioniert wie die Windows-Version; fehlen Build-Werkzeuge, zeigt es den einen Befehl, der sie installiert.
 
 Den CoA-Spielclient brauchst du selbst; er ist nicht Teil dieses Projekts.
 

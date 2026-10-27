@@ -8,6 +8,8 @@
     <TargetFramework>net8.0</TargetFramework>
     <OutputType>Exe</OutputType>
     <AssemblyName>AFK-Realm</AssemblyName>
+    <Product>AFK Realm</Product>
+    <Version>1.1.0</Version>
     <RootNamespace>CoAInstaller</RootNamespace>
     <Nullable>disable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
