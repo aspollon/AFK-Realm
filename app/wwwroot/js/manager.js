@@ -248,6 +248,7 @@ export function manager() {
         h('div.row', {},
           secondary(T('Repair setup'), () => engine('Setup', T('Set up the database and configuration again (without recompiling)?\n\nCharacters and accounts are kept.'))),
           secondary(T('Reset random bots …'), () => resetBots()))),
+      meta.remote ? null : (() => { const box = h('div'); import('./remote.js').then(m => replace(box, m.remoteCard())); return box; })(),
       card(T('Files'), T('The server\'s folder and its logs, or another server.'), 'server',
         h('div.row', {},
           meta.remote ? null : secondary(T('Open folder'), () => post('/api/open', { what: 'folder' }).then(r => { if (!r.ok) alert(r.path); })),

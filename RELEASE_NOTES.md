@@ -1,6 +1,10 @@
-# AFK Realm 1.1.1
+# AFK Realm 1.1.2
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11 and now also on Linux.
+
+## New in 1.1.2
+
+- **Manage your server from the laptop.** In the new version (`AFK-Realm-web.exe` on Windows, the Linux version) go to **Maintenance › Access from other computers**, switch it on and choose a password. AFK Realm shows the addresses to open in the browser of the other computer, opens the Windows firewall for your own networks (home network and VPN, not the internet) and switches the access on again at every start. While it is on, AFK Realm keeps running in the background when its window is closed.
 
 ## New in 1.1.1
 

@@ -26,6 +26,8 @@ namespace CoAInstaller.Web
     static class WebHost
     {
         public static string Token;
+        /// <summary>True while a request of another computer is answered.</summary>
+        public static readonly System.Threading.AsyncLocal<bool> RequestRemote = new System.Threading.AsyncLocal<bool>();
         public static int Port;
         static WebApplication app;
         static readonly ConcurrentDictionary<string, DateTime> sessions = new ConcurrentDictionary<string, DateTime>();
@@ -37,51 +39,11 @@ namespace CoAInstaller.Web
             bool remote = Program.Opts.Listen != null;
             Port = Program.Opts.Port > 0 ? Program.Opts.Port : FreePort(remote ? 47800 : 47810);
 
-            var builder = WebApplication.CreateSlimBuilder(new WebApplicationOptions { Args = new string[0], ContentRootPath = Paths.ExeDir });
-            builder.Logging.ClearProviders();
-            builder.WebHost.ConfigureKestrel(k =>
+            app = Build(k =>
             {
-                k.Limits.MaxRequestBodySize = 2L * 1024 * 1024 * 1024;     // account files, SQL imports, race packs
                 if (remote) k.Listen(IPAddress.Parse(Program.Opts.Listen == "*" ? "0.0.0.0" : Program.Opts.Listen), Port);
                 else k.Listen(IPAddress.Loopback, Port);
-            });
-            builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(o =>
-            {
-                o.SerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
-                o.SerializerOptions.DictionaryKeyPolicy = null;
-            });
-            app = builder.Build();
-
-            app.Use(async (context, next) =>
-            {
-                var path = context.Request.Path.Value ?? "/";
-                if (path == "/ping") { await context.Response.WriteAsync("AFK Realm"); return; }
-                if (!remote && !LocalHost(context.Request.Host.Host))
-                {
-                    // A page of another site that made its name point here (DNS rebinding) gets nothing.
-                    context.Response.StatusCode = 403; return;
-                }
-                if (path == "/login") { await Login(context, remote); return; }
-                if (!Authorized(context))
-                {
-                    if (path.StartsWith("/api/")) { context.Response.StatusCode = 401; return; }
-                    if (remote) { context.Response.Redirect("/login"); return; }
-                    context.Response.StatusCode = 401;
-                    context.Response.ContentType = "text/html; charset=utf-8";
-                    await context.Response.WriteAsync("<!doctype html><meta charset=utf-8><title>AFK Realm</title><body style=\"font-family:sans-serif;padding:40px\">" +
-                        WebUtility.HtmlEncode(L.F("Open {0} from its own window (start the program again).", Product.Name)) + "</body>");
-                    return;
-                }
-                if (path.StartsWith("/api/") && context.Request.Method != "GET" && context.Request.Method != "HEAD")
-                {
-                    // Changes only from the page itself: a form on another site cannot set this header.
-                    if (context.Request.Headers["X-AFK"] != "1") { context.Response.StatusCode = 403; return; }
-                }
-                await next();
-            });
-
-            Api.Map(app);
-            app.MapFallback("{**path}", ServeStatic);
+            }, remote);
 
             var instance = new Instance { Pid = Environment.ProcessId, Port = Port, Token = Token, Host = remote ? null : "127.0.0.1" };
             instance.Save();
@@ -90,6 +52,7 @@ namespace CoAInstaller.Web
 
             app.Lifetime.ApplicationStopping.Register(Shutdown);     // SIGTERM, Ctrl+C
             app.StartAsync().Wait();
+            RemoteAccess.StartIfEnabled();
 
             // The last server opened, or the one asked for.
             try
@@ -114,9 +77,61 @@ namespace CoAInstaller.Web
             else AppWindow.Open(localUrl, true);
 
             Watch(remote);
+            RemoteAccess.Stop();
             try { app.StopAsync().Wait(5000); } catch { }
             Instance.Remove();
             return 0;
+        }
+
+        /// <summary>A web server with the page and its interface: the local one of the window, or (remote) the one for other computers.</summary>
+        public static WebApplication Build(Action<Microsoft.AspNetCore.Server.Kestrel.Core.KestrelServerOptions> listen, bool remote)
+        {
+            var builder = WebApplication.CreateSlimBuilder(new WebApplicationOptions { Args = new string[0], ContentRootPath = Paths.ExeDir });
+            builder.Logging.ClearProviders();
+            builder.WebHost.ConfigureKestrel(k =>
+            {
+                k.Limits.MaxRequestBodySize = 2L * 1024 * 1024 * 1024;     // account files, SQL imports, race packs
+                listen(k);
+            });
+            builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(o =>
+            {
+                o.SerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+                o.SerializerOptions.DictionaryKeyPolicy = null;
+            });
+            var app = builder.Build();
+
+            app.Use(async (context, next) =>
+            {
+                var path = context.Request.Path.Value ?? "/";
+                RequestRemote.Value = remote;
+                if (path == "/ping") { await context.Response.WriteAsync("AFK Realm"); return; }
+                if (!remote && !LocalHost(context.Request.Host.Host))
+                {
+                    // A page of another site that made its name point here (DNS rebinding) gets nothing.
+                    context.Response.StatusCode = 403; return;
+                }
+                if (path == "/login") { await Login(context, remote); return; }
+                if (!Authorized(context, remote))
+                {
+                    if (path.StartsWith("/api/")) { context.Response.StatusCode = 401; return; }
+                    if (remote) { context.Response.Redirect("/login"); return; }
+                    context.Response.StatusCode = 401;
+                    context.Response.ContentType = "text/html; charset=utf-8";
+                    await context.Response.WriteAsync("<!doctype html><meta charset=utf-8><title>AFK Realm</title><body style=\"font-family:sans-serif;padding:40px\">" +
+                        WebUtility.HtmlEncode(L.F("Open {0} from its own window (start the program again).", Product.Name)) + "</body>");
+                    return;
+                }
+                if (path.StartsWith("/api/") && context.Request.Method != "GET" && context.Request.Method != "HEAD")
+                {
+                    // Changes only from the page itself: a form on another site cannot set this header.
+                    if (context.Request.Headers["X-AFK"] != "1") { context.Response.StatusCode = 403; return; }
+                }
+                await next();
+            });
+
+            Api.Map(app);
+            app.MapFallback("{**path}", ServeStatic);
+            return app;
         }
 
         /// <summary>
@@ -131,7 +146,7 @@ namespace CoAInstaller.Web
             {
                 Stopping.Token.WaitHandle.WaitOne(2000);
                 if (Stopping.IsCancellationRequested) break;
-                if (remote || Program.Opts.NoWindow) continue;
+                if (remote || Program.Opts.NoWindow || RemoteAccess.Running) continue;     // others may still come
                 if (Jobs.Busy || Manager.AutoRestarting) continue;
                 if (tracked)
                 {
@@ -151,11 +166,11 @@ namespace CoAInstaller.Web
             return host == "127.0.0.1" || host == "localhost" || host == "[::1]";
         }
 
-        static bool Authorized(HttpContext context)
+        static bool Authorized(HttpContext context, bool remote)
         {
             string cookie = context.Request.Cookies["afk"];
             if (cookie == null) return false;
-            if (Program.Opts.Listen == null) return FixedEquals(cookie, Token);
+            if (!remote) return FixedEquals(cookie, Token);
             DateTime until;
             return sessions.TryGetValue(cookie, out until) && until > DateTime.UtcNow;
         }
@@ -190,7 +205,7 @@ namespace CoAInstaller.Web
                 failures.TryGetValue(ip, out failed);
                 if (failed >= 10) { await Task.Delay(3000); }
                 var form = await context.Request.ReadFormAsync();
-                if (FixedEquals(form["password"], Program.Opts.Password))
+                if (Program.Opts.Password != null ? FixedEquals(form["password"], Program.Opts.Password) : RemoteAccess.Verify(form["password"]))
                 {
                     string session = Convert.ToHexString(RandomNumberGenerator.GetBytes(24)).ToLowerInvariant();
                     sessions[session] = DateTime.UtcNow.AddDays(14);

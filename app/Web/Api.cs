@@ -94,6 +94,7 @@ namespace CoAInstaller.Web
             MapSetups(app);
             MapBots(app);
             MapFiles(app);
+            MapRemote(app);
         }
 
         // ---- helpers ----
@@ -220,7 +221,7 @@ namespace CoAInstaller.Web
             {
                 product = Product.Name, version = Product.Version, tagline = L.T(Product.Tagline), buildsFor = Product.BuildsFor,
                 windows = Os.Windows, os = Os.Windows ? "windows" : "linux",
-                remote = Program.Opts.Listen != null,
+                remote = Program.Opts.Listen != null || WebHost.RequestRemote.Value,
                 language = L.Code, languageChoice = L.Choice, font = L.Font,
                 languages = L.Languages().Select(l => new { code = l.Code, name = l.Name, english = l.English, builtIn = l.BuiltIn }).ToArray(),
                 theme, strings = L.All(),
