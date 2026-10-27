@@ -1,6 +1,10 @@
-# AFK Realm 1.0.66
+# AFK Realm 1.0.67
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11.
+
+## New in 1.0.67
+
+- **CoA Custom 1.9 clients start again.** The Esteria delay patch (1.0.64-1.0.66) had a broken instruction and crashed the client before the login screen. It also left a relocation inside its jump, so the DLL broke whenever Windows loaded it at another address. Both are fixed; rebuild the client patch once.
 
 ## New in 1.0.66
 

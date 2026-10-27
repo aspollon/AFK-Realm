@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.67
+
+- Client: the Esteria texture-worker delay crashed the client before the login screen. The ten-second thunk of 1.0.64-1.0.66 had lost its `pushad`; its `popad` took 32 bytes off the stack that were never put there. The thunk is whole again, and a DLL that already carries the broken thunk is repaired.
+- Client: the base relocation of the replaced `push` at the worker site is removed. `EsteriaAppearance.dll` is built for ASLR; loaded at another address, Windows added the difference inside the new jump. This affected every delay version since 1.0.50.
+
 ## 1.0.66
 
 - The two faction rows of a race are separate entries on the Custom races page (Pandaren Horde/Pandaren Alliance, Dracthyr Horde/Dracthyr Alliance, Darkfallen and so on). Changing the Alliance entry does not change the Horde one; the page now gives a new Horde entry a Horde default instead of Human. Existing saved bases are kept, so set the Horde row as well.

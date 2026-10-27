@@ -29,6 +29,10 @@ namespace CoAInstaller
 
         const uint DllWorkerRva = 0x00041EF8;
         const uint DllThunkRva = 0x00054560;
+        // The base relocation of the stock "push 10061628h" at the worker site. The DLL is built for ASLR, so
+        // Windows usually loads it elsewhere and adds the difference there - inside the jump that replaces the
+        // push. The thunk works out the address itself; the relocation has to go.
+        const uint DllWorkerReloc = 0x00041EFB;
 
         static readonly byte[] CustomizeBefore = FromHex("8d55e852895dfc");
         static readonly byte[] CustomizeThunk = FromHex(
@@ -41,11 +45,17 @@ namespace CoAInstaller
         static readonly byte[] Hrc1 = Encoding.ASCII.GetBytes("HRC1");
 
         static readonly byte[] DllWorkerBefore = FromHex("6a0c6828160610");
+        // call $+5 / pop eax / sub eax,0x54565 (DLL base) / pushad / push 10000 / call [Sleep] / popad /
+        // push 0Ch / lea ecx,[eax+61628h] / push ecx / jmp back behind the two stock pushes.
         static readonly byte[] DllWorkerThunk = FromHex(
-            "e800000000582d654505006810270000ff9088500500616a0c8d882816060051e979d9feff");
-        // The 2-second version AFK Realm wrote before 1.0.64; replaced in place when the source DLL is already patched.
+            "e800000000582d65450500606810270000ff9088500500616a0c8d882816060051e979d9feff");
+        // Earlier thunks, replaced in place when the source DLL already carries one: the 2-second version
+        // written before 1.0.64, and the 10-second version of 1.0.64 to 1.0.66, which lost its pushad - its
+        // popad took 32 bytes off the stack that were never put there and crashed the client before login.
         static readonly byte[] DllWorkerThunkOld = FromHex(
             "e800000000582d654505006068d0070000ff9088500500616a0c8d882816060051e979d9feff");
+        static readonly byte[] DllWorkerThunkBroken = FromHex(
+            "e800000000582d654505006810270000ff9088500500616a0c8d882816060051e979d9feff");
 
         struct Section
         {
@@ -158,13 +168,17 @@ namespace CoAInstaller
 
             if (data[site] == 0xE9)
             {
-                // A DLL AFK Realm patched before: replace the old two-second sleep with the longer one.
-                if (Same(data, thunk, DllWorkerThunkOld))
+                // A DLL AFK Realm patched before: put the current thunk in place of an earlier one. The broken
+                // thunk is one byte shorter; the byte after the current one is zero padding either way.
+                bool changed = false;
+                if (Same(data, thunk, DllWorkerThunkOld) || Same(data, thunk, DllWorkerThunkBroken))
                 {
                     Buffer.BlockCopy(DllWorkerThunk, 0, data, thunk, DllWorkerThunk.Length);
-                    return data;
+                    changed = true;
                 }
-                return null;
+                else if (!Same(data, thunk, DllWorkerThunk)) return null;
+                if (DropRelocation(data, optional, sections, imageBase, DllWorkerReloc)) changed = true;
+                return changed ? data : null;
             }
             if (!Same(data, site, DllWorkerBefore)) return null;
             for (int i = 0; i < DllWorkerThunk.Length; i++)
@@ -175,7 +189,38 @@ namespace CoAInstaller
             // The jump is five bytes; the two stock bytes after it are never reached.
             data[site + 5] = 0x90;
             data[site + 6] = 0x90;
+            DropRelocation(data, optional, sections, imageBase, DllWorkerReloc);
             return data;
+        }
+
+        /// Turns the base relocation of one address into a padding entry (type 0), which Windows skips.
+        /// True when there was one.
+        static bool DropRelocation(byte[] data, int optional, Dictionary<string, Section> sections, uint imageBase, uint rva)
+        {
+            uint dirRva = U32(data, optional + 96 + 5 * 8);
+            uint dirSize = U32(data, optional + 96 + 5 * 8 + 4);
+            if (dirRva == 0 || dirSize == 0) return false;
+            int start = FileOffset(sections, imageBase + dirRva, imageBase);
+            if (start < 0) return false;
+            int end = Math.Min(data.Length, start + (int)dirSize);
+            for (int block = start; block + 8 <= end; )
+            {
+                uint page = U32(data, block);
+                int size = (int)U32(data, block + 4);
+                if (size < 8) break;
+                for (int entry = block + 8; entry + 2 <= block + size && entry + 2 <= end; entry += 2)
+                {
+                    ushort value = U16(data, entry);
+                    if (value >> 12 != 0 && page + (uint)(value & 0xFFF) == rva)
+                    {
+                        data[entry] = 0;
+                        data[entry + 1] = 0;
+                        return true;
+                    }
+                }
+                block += size;
+            }
+            return false;
         }
 
         static Dictionary<string, Section> ReadSections(byte[] data, int table, int count)
