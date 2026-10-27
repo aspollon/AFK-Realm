@@ -9,7 +9,7 @@
     <OutputType>Exe</OutputType>
     <AssemblyName>AFK-Realm</AssemblyName>
     <Product>AFK Realm</Product>
-    <Version>1.1.2</Version>
+    <Version>1.1.3</Version>
     <RootNamespace>CoAInstaller</RootNamespace>
     <Nullable>disable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>

@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.3
+
+- Custom races with two faction rows use a base of their own side. A saved Alliance base is not reused for the Horde row: Pandaren Horde falls back to Orc, Dracthyr Horde to Orc, Darkfallen Horde to Blood Elf, and an old wrong base is corrected when the page is saved. The web and Windows pages agree.
+- Every known male-only race is now marked as such even when the client tables still carry a female display or a reused female row: Fel Orc, Broken, Vrykul, Tuskarr, Taunka, Forest Troll, Ice Troll, Skeleton, Northrend Skeleton, Troglodyte, Thin Human, Gnoll and Saberon. The client script also carries this list, so older race folders cannot offer the female button.
+- Race pack files: decoration texture repair checks `.mdx` models too (Dracthyr female), not only `.m2` (Highmountain Tauren and the other female models). Re-pack the affected races.
+- The 1.1.0-1.1.2 web/Linux interface is the current base.
+
 ## 1.0.67
 
 - Client: the Esteria texture-worker delay crashed the client before the login screen. The ten-second thunk of 1.0.64-1.0.66 had lost its `pushad`; its `popad` took 32 bytes off the stack that were never put there. The thunk is whole again, and a DLL that already carries the broken thunk is repaired.

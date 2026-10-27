@@ -1187,6 +1187,7 @@ namespace CoAInstaller
             var k = KnownOf(r);
             if (k != null && bases.Contains(k.Base)) return Side(k.Base, r);
             string n = r.Name.ToLowerInvariant() + " " + r.File.ToLowerInvariant();
+            if (n.Contains("darkfallen")) return Side("NightElf", r);
             foreach (var pair in new[] { new[] { "troll", "Troll" }, new[] { "orc", "Orc" }, new[] { "dwar", "Dwarf" }, new[] { "gnom", "Gnome" },
                 new[] { "tauren", "Tauren" }, new[] { "taunka", "Tauren" }, new[] { "skelet", "Undead" }, new[] { "undead", "Undead" }, new[] { "scourge", "Undead" },
                 new[] { "night", "NightElf" }, new[] { "blood", "BloodElf" }, new[] { "elf", "BloodElf" }, new[] { "draenei", "Draenei" } })
@@ -1494,7 +1495,9 @@ namespace CoAInstaller
                 put("MaleOnly", r.MaleOnly ? "1" : "0");
                 put("OwnHelmets", r.HasHelmets ? "1" : "0");
             }
-            if (Raw("CustomRaces." + r.Key + ".Base", "").Length == 0) putText("Base", DefaultBase(r));
+            string currentBase = Raw("CustomRaces." + r.Key + ".Base", "");
+            if (currentBase.Length == 0 || !ClientRaces.BaseFitsSide(ClientRaces.SideOf(r), currentBase))
+                putText("Base", DefaultBase(r));
             // a race without helmet models of its own wears those of its base race, as CoA Custom does it (its races take
             // the helmet prefix of the closest stock race): the client finds helmets by the prefix of the race
             // (Item\ObjectComponents\Head\<helmet>_<prefix><M|F>.m2), and without any every helmet is a checkered box
@@ -1619,7 +1622,9 @@ namespace CoAInstaller
             AddLoader(() =>
             {
                 toggle.Checked = Chosen().Any(c => c.Equals(r.Key, StringComparison.OrdinalIgnoreCase));
-                int at = bases.FindIndex(b => b.Equals(Raw("CustomRaces." + r.Key + ".Base", DefaultBase(r)), StringComparison.OrdinalIgnoreCase));
+                string currentBase = Raw("CustomRaces." + r.Key + ".Base", DefaultBase(r));
+                if (!ClientRaces.BaseFitsSide(ClientRaces.SideOf(r), currentBase)) currentBase = DefaultBase(r);
+                int at = bases.FindIndex(b => b.Equals(currentBase, StringComparison.OrdinalIgnoreCase));
                 basePick.SelectedIndex = at < 0 ? Math.Max(0, bases.IndexOf(DefaultBase(r))) : at;
                 show();
             });

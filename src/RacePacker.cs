@@ -410,9 +410,7 @@ namespace CoAInstaller
                 int femaleSkins; skins.TryGetValue(id * 2L + 1, out femaleSkins);
                 // Esteria's Gnoll and Saberon have female rows that only reuse the male body; the runtime draws no
                 // woman for them. Their source says "male only" outside the tables, so they are named here.
-                bool maleOnly = femaleSkins == 0 || !hasBody(female) ||
-                    key.Equals("Gnoll", StringComparison.OrdinalIgnoreCase) ||
-                    key.Equals("Saberon", StringComparison.OrdinalIgnoreCase);
+                bool maleOnly = femaleSkins == 0 || !hasBody(female) || RaceImport.KnownMaleOnly(key);
                 list.Add(new Candidate { Id = id, Key = key, Name = displayName, MaleOnly = maleOnly,
                     InYourClient = inClient, InRaceFolder = inFolder });
             }
@@ -881,13 +879,15 @@ namespace CoAInstaller
         /// (the female Highmountain Tauren: her jewelry texture is in the race folder, but her model names neutral.blp
         /// in the slot the male model names the jewelry in). When the race folder holds a jewelry/decor/accessory
         /// texture named after the model, the model is given that path. The path is appended to the model and the
-        /// texture record points at it, so no other block of the model moves.
+        /// texture record points at it, so no other block of the model moves. Both .m2 and .mdx models are
+        /// checked (Dracthyr uses .mdx).
         /// </summary>
         static void RepairDecorationTextures(string filesDir, IEnumerable<string> files)
         {
             var list = files.ToList();
             var decorations = list.Where(f => f.EndsWith(".blp", StringComparison.OrdinalIgnoreCase)).ToList();
-            foreach (var path in list.Where(f => f.EndsWith(".m2", StringComparison.OrdinalIgnoreCase)))
+            foreach (var path in list.Where(f => f.EndsWith(".m2", StringComparison.OrdinalIgnoreCase) ||
+                                                   f.EndsWith(".mdx", StringComparison.OrdinalIgnoreCase)))
             {
                 string file = Path.Combine(filesDir, path.Replace('\\', Path.DirectorySeparatorChar));
                 if (!File.Exists(file)) continue;

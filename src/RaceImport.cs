@@ -159,11 +159,20 @@ namespace CoAInstaller
         const string InfoName = "race.info.json";
         const int InfoVersion = 5;      // 5: the client file for custom models, and male-only races
 
-        /// <summary>Races that are male only although their source has female rows (Esteria's Gnoll and Saberon).</summary>
-        static bool KnownMaleOnly(string key)
+        /// <summary>Races whose client tables still carry a female row or display although the game has no
+        /// female model. The race overview in the module README lists them as "male only": the client must
+        /// not offer the female button for them.</summary>
+        public static bool KnownMaleOnly(string key)
         {
-            return key.Equals("Gnoll", StringComparison.OrdinalIgnoreCase) ||
-                   key.Equals("Saberon", StringComparison.OrdinalIgnoreCase);
+            switch (ClientRaces.KeyOf(key).ToLowerInvariant())
+            {
+                case "felorc": case "broken": case "vrykul": case "tuskarr": case "taunka":
+                case "foresttroll": case "icetroll": case "skeleton": case "northrendskeleton":
+                case "troglodyte": case "thinhuman": case "gnoll": case "saberon":
+                    return true;
+                default:
+                    return false;
+            }
         }
 
         /// <summary>What the page needs of a race, from its full race.json.</summary>

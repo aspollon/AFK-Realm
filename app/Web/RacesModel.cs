@@ -444,6 +444,9 @@ namespace CoAInstaller.Web
             var k = KnownOf(r);
             if (k != null && bases.Contains(k.Base)) return Side(k.Base, r);
             string n = r.Name.ToLowerInvariant() + " " + r.File.ToLowerInvariant();
+            // Darkfallen is an undead elf: night elf for the Alliance, blood elf for the Horde. Without this
+            // the generic Horde fallback would make the Horde row an orc.
+            if (n.Contains("darkfallen")) return Side("NightElf", r);
             foreach (var pair in new[] { new[] { "troll", "Troll" }, new[] { "orc", "Orc" }, new[] { "dwar", "Dwarf" }, new[] { "gnom", "Gnome" },
                 new[] { "tauren", "Tauren" }, new[] { "taunka", "Tauren" }, new[] { "skelet", "Undead" }, new[] { "undead", "Undead" }, new[] { "scourge", "Undead" },
                 new[] { "night", "NightElf" }, new[] { "blood", "BloodElf" }, new[] { "elf", "BloodElf" }, new[] { "draenei", "Draenei" } })
@@ -544,7 +547,9 @@ namespace CoAInstaller.Web
                 put("MaleDisplay", r.MaleDisplay.ToString()); put("FemaleDisplay", r.FemaleDisplay.ToString());
                 put("MaleOnly", r.MaleOnly ? "1" : "0"); put("OwnHelmets", r.HasHelmets ? "1" : "0");
             }
-            if (Raw("CustomRaces." + r.Key + ".Base", "").Length == 0) putText("Base", DefaultBase(r));
+            string currentBase = Raw("CustomRaces." + r.Key + ".Base", "");
+            if (currentBase.Length == 0 || !ClientRaces.BaseFitsSide(ClientRaces.SideOf(r), currentBase))
+                putText("Base", DefaultBase(r));
             string borrowed;
             if (ownHelmetPrefix.Length > 0) { putText("HelmetPrefix", ownHelmetPrefix); put("OwnHelmets", "1"); }
             else if (Raw("CustomRaces." + r.Key + ".OwnHelmets", "1") == "0" && BasePrefixes.TryGetValue(Raw("CustomRaces." + r.Key + ".Base", ""), out borrowed))
@@ -665,6 +670,7 @@ namespace CoAInstaller.Web
                 var needCode = ServerRacials.NeedCode(racialSpells);
                 if (needCode.Length > 0) about += " " + L.F("{0} of its {1} racial abilities need code of CoA Custom's server and do nothing here yet.", needCode.Length, racialSpells.Length);
                 string b = Raw("CustomRaces." + r.Key + ".Base", DefaultBase(r));
+                if (!ClientRaces.BaseFitsSide(ClientRaces.SideOf(r), b)) b = DefaultBase(r);
                 int at = bases.FindIndex(x => x.Equals(b, StringComparison.OrdinalIgnoreCase));
                 return new
                 {
@@ -698,7 +704,9 @@ namespace CoAInstaller.Web
             {
                 int id = IdOf(r), source = r.Pack != null ? r.Pack.SourceRace : r.Source;
                 string kind = r.Pack != null ? L.T("imported") : r.Virtual ? L.T("virtual") : L.T("client");
-                text.AppendLine((id > 0 ? id.ToString() : "-") + "\t" + (source > 0 ? source.ToString() : "-") + "\t" + r.Name + "\t" + Raw("CustomRaces." + r.Key + ".Base", DefaultBase(r)) + "\t" + kind);
+                string b = Raw("CustomRaces." + r.Key + ".Base", DefaultBase(r));
+                if (!ClientRaces.BaseFitsSide(ClientRaces.SideOf(r), b)) b = DefaultBase(r);
+                text.AppendLine((id > 0 ? id.ToString() : "-") + "\t" + (source > 0 ? source.ToString() : "-") + "\t" + r.Name + "\t" + b + "\t" + kind);
             }
             return text.ToString();
         }
@@ -789,6 +797,7 @@ namespace CoAInstaller.Web
         {
             var r = Find(key);
             if (!bases.Contains(value)) throw new UserError("Unknown base race.");
+            if (!ClientRaces.BaseFitsSide(ClientRaces.SideOf(r), value)) value = DefaultBase(r);
             Set("CustomRaces." + r.Key + ".Base", "\"" + value + "\"");
             if (Raw("CustomRaces." + r.Key + ".Source", "").Length > 0) Describe(r, IdOf(r));
         }

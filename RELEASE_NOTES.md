@@ -1,6 +1,13 @@
-# AFK Realm 1.1.2
+# AFK Realm 1.1.3
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11 and now also on Linux.
+
+## New in 1.1.3
+
+- **Dual-faction races get the base of their own side.** Pandaren Horde, Dracthyr Horde and Darkfallen Horde no longer reuse the Alliance base (Dwarf/Draenei/Night Elf). New Horde entries default to Orc; Darkfallen Horde defaults to Blood Elf; old wrong bases are corrected when the Custom races page is saved. Set both rows explicitly if you want another base.
+- **Male-only races stay male-only.** Fel Orc, Broken, Vrykul, Tuskarr, Taunka, Forest Troll, Ice Troll, Skeleton, Northrend Skeleton, Troglodyte, Thin Human, Gnoll and Saberon no longer offer the female button, even when their old race pack or client table still carries a female row. The client script carries the list as well.
+- **Female decoration textures:** race-pack repair now handles `.mdx` models too, not only `.m2`. This is the Dracthyr female counterpart of the Highmountain Tauren jewelry fix. **Re-pack the affected races** after updating.
+- The client startup fix from 1.0.67 (valid DLL thunk and removed relocation) is included; install the client patch again after updating.
 
 ## New in 1.1.2
 

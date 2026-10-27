@@ -92,6 +92,27 @@ namespace CoAInstaller
 
         public static string KeyOf(string name) { return Regex.Replace(name ?? "", "[^A-Za-z0-9]", ""); }
 
+        static readonly HashSet<string> HordeBases = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        { "Orc", "Undead", "Tauren", "Troll", "BloodElf" };
+
+        /// <summary>The faction of a race (0 Alliance, 1 Horde, 2 unknown), from its pack or its client row.</summary>
+        public static int SideOf(ClientRace r)
+        {
+            if (r == null) return 2;
+            if (r.Pack != null) return r.Pack.Side;
+            if (r.Alt != null) return r.Alt.Side;
+            return r.Side;
+        }
+
+        /// <summary>Whether a base race belongs to the race's faction. A dual-faction race must not keep the
+        /// Alliance base chosen for its other row.</summary>
+        public static bool BaseFitsSide(int side, string baseRace)
+        {
+            if (side != 0 && side != 1) return true;
+            bool horde = HordeBases.Contains(baseRace ?? "");
+            return side == 1 ? horde : !horde;
+        }
+
         /// <summary>
         /// The key of a race row: the name, except when another row of the same client has that name already. Then the
         /// row's file name keeps them apart (Vulpera and VulperaEsteria). A file name that is itself the name of another
@@ -247,7 +268,8 @@ namespace CoAInstaller
                     r.HasHelmets = scan.HelmetPrefixes.Contains(r.Prefix);
                     // a race with a female body and at least one female section has a woman: some custom races
                     // bring only one plain row per section (the Esteria looks), not the ten rows of a stock race
-                    r.MaleOnly = r.FemaleDisplay == r.MaleDisplay || r.FemaleDisplay == 0 || !hasModel(r.FemaleDisplay) || skinsOf(id, 1) == 0;
+                    r.MaleOnly = r.FemaleDisplay == r.MaleDisplay || r.FemaleDisplay == 0 || !hasModel(r.FemaleDisplay) ||
+                        skinsOf(id, 1) == 0 || RaceImport.KnownMaleOnly(key);
                     return r;
                 };
                 // The player's client can carry NPC rows too, and a race the module made playable may have any flags;
