@@ -391,7 +391,7 @@ namespace CoAInstaller
         static BigInteger ParseHexBigEndian(string hex)
         {
             var be = Enumerable.Range(0, hex.Length / 2).Select(i => Convert.ToByte(hex.Substring(i * 2, 2), 16)).ToArray();
-            return FromLittleEndian(be.Reverse().ToArray());
+            return FromLittleEndian(Enumerable.Reverse(be).ToArray());
         }
         static BigInteger FromLittleEndian(byte[] le)
         {

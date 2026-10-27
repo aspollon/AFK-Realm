@@ -11,7 +11,7 @@
     <RootNamespace>CoAInstaller</RootNamespace>
     <Nullable>disable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
-    <LangVersion>latest</LangVersion>
+    <LangVersion>12</LangVersion>
     <InvariantGlobalization>false</InvariantGlobalization>
     <DefineConstants>$(DefineConstants);AFK_WEB</DefineConstants>
     <NoWarn>$(NoWarn);CA1416;SYSLIB0014;SYSLIB0021;SYSLIB0023;SYSLIB0001;CS0618;CS0168;CS0219;CS0649;CS0414;CS8632</NoWarn>

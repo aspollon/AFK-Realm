@@ -37,7 +37,7 @@ namespace CoAInstaller
 
             public Archives(IEnumerable<string> inLoadOrder)
             {
-                foreach (var path in inLoadOrder.Reverse())
+                foreach (var path in Enumerable.Reverse(inLoadOrder))
                     try { list.Add(new MpqArchive(path)); } catch { Unreadable.Add(Path.GetFileName(path)); }
             }
             public void AddRaw(Loose files)
