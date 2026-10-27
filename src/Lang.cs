@@ -56,7 +56,11 @@ namespace CoAInstaller
         static string UserDir { get { return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), Product.FileStem, "lang"); } }
         static string ExeDir
         {
+#if AFK_WEB
+            get { try { return Path.Combine(AppContext.BaseDirectory, "lang"); } catch { return null; } }
+#else
             get { try { return Path.Combine(Path.GetDirectoryName(Path.GetFullPath(System.Windows.Forms.Application.ExecutablePath)), "lang"); } catch { return null; } }
+#endif
         }
         static string ChoiceFile { get { return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), Product.FileStem, "language.txt"); } }
 
@@ -345,5 +349,13 @@ namespace CoAInstaller
         }
 
         public static string UserFolder { get { return UserDir; } }
+
+        /// <summary>Every text of the language shown with its translation, the modules' included (for the page of the web version).</summary>
+        public static Dictionary<string, string> All()
+        {
+            var all = new Dictionary<string, string>(moduleStrings, StringComparer.Ordinal);
+            foreach (var kv in strings) all[kv.Key] = kv.Value;
+            return all;
+        }
     }
 }

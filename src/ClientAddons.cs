@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+#if !AFK_WEB
 using System.Drawing;
+#endif
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -10,7 +12,9 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Web.Script.Serialization;
+#if !AFK_WEB
 using System.Windows.Forms;
+#endif
 
 namespace CoAInstaller
 {
@@ -193,10 +197,10 @@ namespace CoAInstaller
         /// <summary>True while a program from the client folder runs (the game or its launcher).</summary>
         public static bool ClientRunning(string client)
         {
-            string root = Path.GetFullPath(client).TrimEnd('\\') + "\\";
+            string root = Path.GetFullPath(client).TrimEnd('\\', '/') + Path.DirectorySeparatorChar;
             foreach (var p in Process.GetProcesses())
             {
-                try { if (p.MainModule.FileName.StartsWith(root, StringComparison.OrdinalIgnoreCase)) return true; }
+                try { var mm = p.MainModule; if (mm != null && mm.FileName != null && mm.FileName.StartsWith(root, StringComparison.OrdinalIgnoreCase)) return true; }
                 catch { }
                 finally { p.Dispose(); }
             }
@@ -330,6 +334,7 @@ namespace CoAInstaller
         }
     }
 
+#if !AFK_WEB
     /// <summary>The add-ons of the modules and the game client they go into.</summary>
     class ClientDialog : AfkForm
     {
@@ -611,4 +616,5 @@ namespace CoAInstaller
             }
         }
     }
+#endif
 }

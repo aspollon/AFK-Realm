@@ -6,3 +6,7 @@ tools/__pycache__/
 # editors
 .vs/
 .vscode/
+
+# the cross-platform build
+app/bin/
+app/obj/

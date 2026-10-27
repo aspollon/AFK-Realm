@@ -32,12 +32,41 @@ namespace CoAInstaller
         public const string GitHubRepo = "aspollon/AFK-Realm";        // releases are checked for newer versions
     }
 
+    /// <summary>The system AFK Realm runs on: Windows, or Linux (the web version).</summary>
+    static class Os
+    {
+        public static readonly bool Windows = Path.DirectorySeparatorChar == '\\';
+        /// <summary>The file name of a program: worldserver.exe on Windows, worldserver elsewhere.</summary>
+        public static string Exe(string name) { return Windows ? name + ".exe" : name; }
+
+        [DllImport("libc", EntryPoint = "kill", SetLastError = true)] static extern int SysKill(int pid, int signal);
+        [DllImport("libc", EntryPoint = "chmod", SetLastError = true)] static extern int SysChmod(string path, int mode);
+
+        /// <summary>Linux: sends a signal (2 = SIGINT, 15 = SIGTERM) to a process.</summary>
+        public static bool Signal(int pid, int signal) { try { return SysKill(pid, signal) == 0; } catch { return false; } }
+        /// <summary>Linux: lets only the owner read and write a file (it holds a password).</summary>
+        public static void Private(string file) { if (!Windows) { try { SysChmod(file, 384); } catch { } } }   // 0600
+
+        /// <summary>
+        /// Linux: starts a program in a session of its own, without input or output (its logs are files): it keeps
+        /// running when AFK Realm ends, and a Ctrl+C in the terminal AFK Realm was started from does not reach it.
+        /// </summary>
+        public static void StartDetached(string program, string arguments, string workingDirectory)
+        {
+            var psi = new ProcessStartInfo("setsid", "-f sh -c \"exec \\\"$0\\\" \\\"$@\\\" </dev/null >/dev/null 2>&1\" " + MySql.Arg(program) + " " + arguments)
+            { UseShellExecute = false, CreateNoWindow = true, WorkingDirectory = workingDirectory };
+            using (var p = Process.Start(psi)) p.WaitForExit(10000);
+        }
+    }
+
     /// <summary>All paths of one installation, derived from its root folder.</summary>
     class Install
     {
         public readonly string Root;
-        public Install(string root) { Root = Path.GetFullPath(root.Trim().TrimEnd('\\')); }
+        public Install(string root) { Root = Path.GetFullPath(root.Trim().TrimEnd('\\', '/')); if (Root.Length == 0) Root = "/"; }
         public string ServerDir { get { return Path.Combine(Root, "Server"); } }
+        /// <summary>Where the server programs are: the Server folder on Windows, Server/bin on Linux (as AzerothCore installs them there).</summary>
+        public string BinDir { get { return Os.Windows ? ServerDir : Path.Combine(ServerDir, "bin"); } }
         public string ConfigDir { get { return Path.Combine(ServerDir, "configs"); } }
         public string DataDir { get { return Path.Combine(ServerDir, "Data"); } }
         public string DbDir { get { return Path.Combine(Root, "DB"); } }
@@ -46,20 +75,20 @@ namespace CoAInstaller
         public string LogDir { get { return Path.Combine(Root, "logs"); } }
         public string InstallLog { get { return Path.Combine(LogDir, "install.log"); } }
         public string SourceDir { get { return Path.Combine(Root, "Dependencies", "Source"); } }
-        public string PythonExe { get { return Path.Combine(Root, "Dependencies", "Python", "python.exe"); } }
-        public string MpqCliExe { get { return Path.Combine(Root, "Dependencies", "Tools", "mpqcli.exe"); } }
+        public string PythonExe { get { return Os.Windows ? Path.Combine(Root, "Dependencies", "Python", "python.exe") : "python3"; } }
+        public string MpqCliExe { get { return Path.Combine(Root, "Dependencies", "Tools", Os.Exe("mpqcli")); } }
         public string DbcScript { get { return Path.Combine(SourceDir, "apps", "coa-dbc", "client_dbc.py"); } }
         /// <summary>True when this core needs the CoA client's own DBC set (extracted with client_dbc.py).</summary>
         public bool NeedsClientDbc { get { return File.Exists(DbcScript); } }
-        public string WorldExe { get { return Path.Combine(ServerDir, "worldserver.exe"); } }
-        public string AuthExe { get { return Path.Combine(ServerDir, "authserver.exe"); } }
+        public string WorldExe { get { return Path.Combine(BinDir, Os.Exe("worldserver")); } }
+        public string AuthExe { get { return Path.Combine(BinDir, Os.Exe("authserver")); } }
         public string WorldConf { get { return Path.Combine(ConfigDir, "worldserver.conf"); } }
         public string AuthConf { get { return Path.Combine(ConfigDir, "authserver.conf"); } }
         public string CoaConf { get { return Path.Combine(ConfigDir, "modules", "coa.conf"); } }
 
         public bool IsInstalled
         {
-            get { return File.Exists(WorldExe) && File.Exists(AuthExe) && File.Exists(Path.Combine(MySqlBin, "mysqld.exe")) && File.Exists(WorldConf); }
+            get { return File.Exists(WorldExe) && File.Exists(AuthExe) && File.Exists(Path.Combine(MySqlBin, Os.Exe("mysqld"))) && File.Exists(WorldConf); }
         }
         /// <summary>False when the CoA core would refuse the DBC tables (only the stock extractor's set is there).</summary>
         public bool HasClientDbc
@@ -138,6 +167,7 @@ namespace CoAInstaller
             string f = Path.Combine(Path.GetTempPath(), "afk-realm-" + Guid.NewGuid().ToString("N") + ".cnf");
             File.WriteAllText(f, "[client]\r\nuser=" + login.User + "\r\npassword=\"" + login.Password + "\"\r\nhost=" + login.Host +
                 "\r\nport=" + login.Port + "\r\nprotocol=tcp\r\ndefault-character-set=utf8mb4\r\n", new UTF8Encoding(false));
+            Os.Private(f);
             return f;
         }
         /// <summary>Executes SQL, returns tab-separated result lines. Throws with the MySQL message on failure.</summary>
@@ -146,7 +176,7 @@ namespace CoAInstaller
             string opt = WriteOptions(login);
             try
             {
-                var psi = new ProcessStartInfo(Path.Combine(inst.MySqlBin, "mysql.exe"),
+                var psi = new ProcessStartInfo(Path.Combine(inst.MySqlBin, Os.Exe("mysql")),
                     "--defaults-extra-file=\"" + opt + "\" --batch --skip-column-names")
                 {
                     UseShellExecute = false, CreateNoWindow = true,
@@ -181,7 +211,7 @@ namespace CoAInstaller
             string opt = WriteOptions(login);
             try
             {
-                var psi = new ProcessStartInfo(Path.Combine(inst.MySqlBin, "mysql.exe"),
+                var psi = new ProcessStartInfo(Path.Combine(inst.MySqlBin, Os.Exe("mysql")),
                     "--defaults-extra-file=\"" + opt + "\" --xml --binary-as-hex")
                 {
                     UseShellExecute = false, CreateNoWindow = true,
@@ -260,7 +290,7 @@ namespace CoAInstaller
             string opt = WriteOptions(root);
             try
             {
-                var psi = new ProcessStartInfo(Path.Combine(inst.MySqlBin, "mysqladmin.exe"), "--defaults-extra-file=\"" + opt + "\" shutdown")
+                var psi = new ProcessStartInfo(Path.Combine(inst.MySqlBin, Os.Exe("mysqladmin")), "--defaults-extra-file=\"" + opt + "\" shutdown")
                 { UseShellExecute = false, CreateNoWindow = true, RedirectStandardError = true, RedirectStandardOutput = true };
                 using (var p = Process.Start(psi)) { p.WaitForExit(60000); return p.HasExited && p.ExitCode == 0; }
             }
@@ -272,7 +302,7 @@ namespace CoAInstaller
             string opt = WriteOptions(login);
             try
             {
-                var psi = new ProcessStartInfo(Path.Combine(inst.MySqlBin, "mysql.exe"),
+                var psi = new ProcessStartInfo(Path.Combine(inst.MySqlBin, Os.Exe("mysql")),
                     "--defaults-extra-file=\"" + opt + "\" --database=" + database)
                 { UseShellExecute = false, CreateNoWindow = true, RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true };
                 using (var p = Process.Start(psi))
@@ -294,7 +324,7 @@ namespace CoAInstaller
             string opt = WriteOptions(login);
             try
             {
-                var psi = new ProcessStartInfo(Path.Combine(inst.MySqlBin, "mysqldump.exe"),
+                var psi = new ProcessStartInfo(Path.Combine(inst.MySqlBin, Os.Exe("mysqldump")),
                     "--defaults-extra-file=\"" + opt + "\" --single-transaction --skip-comments --hex-blob --no-tablespaces --skip-add-locks --skip-triggers --set-gtid-purged=OFF --default-character-set=utf8mb4 " + database)
                 { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true };
                 using (var p = Process.Start(psi))
@@ -332,7 +362,7 @@ namespace CoAInstaller
             string opt = WriteOptions(login);
             try
             {
-                var psi = new ProcessStartInfo(Path.Combine(inst.MySqlBin, "mysqldump.exe"),
+                var psi = new ProcessStartInfo(Path.Combine(inst.MySqlBin, Os.Exe("mysqldump")),
                     "--defaults-extra-file=\"" + opt + "\" --single-transaction --skip-comments --hex-blob --no-tablespaces --skip-add-locks --skip-triggers --set-gtid-purged=OFF --default-character-set=utf8mb4 " +
                     Arg(database) + (tables == null ? "" : " " + string.Join(" ", tables.Select(Arg))))
                 { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true };
@@ -433,9 +463,9 @@ namespace CoAInstaller
             }
             return null;
         }
-        public Process Db { get { return Find("mysqld.exe", Path.Combine(inst.DbDir, "mysql")); } }
-        public Process Auth { get { return Find("authserver.exe", inst.ServerDir); } }
-        public Process World { get { return Find("worldserver.exe", inst.ServerDir); } }
+        public Process Db { get { return Find(Os.Exe("mysqld"), Path.Combine(inst.DbDir, "mysql")); } }
+        public Process Auth { get { return Find(Os.Exe("authserver"), inst.ServerDir); } }
+        public Process World { get { return Find(Os.Exe("worldserver"), inst.ServerDir); } }
 
         public void StartDatabase(Action<string> status)
         {
@@ -443,6 +473,13 @@ namespace CoAInstaller
             if (Net.PortOpen(DbPort))
                 throw new InvalidOperationException(L.F("Port {0} is already in use. Is another database (for example another repack) still running? Stop it first.", DbPort));
             status(L.T("Starting the database ..."));
+            if (!Os.Windows)
+            {
+                // DB/mysqld.sh (written by the engine) gives the database the libraries it needs.
+                Os.StartDetached(Path.Combine(inst.DbDir, "mysqld.sh"), "--defaults-file=" + MySql.Arg(inst.MyIni), inst.DbDir);
+                WaitPort(DbPort, 90, L.T("The database did not start. Details are in logs\\mysql-error.log."));
+                return;
+            }
             var psi = new ProcessStartInfo(Path.Combine(inst.MySqlBin, "mysqld.exe"), "--defaults-file=\"" + inst.MyIni + "\"")
             { UseShellExecute = false, CreateNoWindow = true, WorkingDirectory = inst.DbDir };
             Process.Start(psi);
@@ -520,6 +557,21 @@ namespace CoAInstaller
 
         Process StartConsole(string exe, string conf)
         {
+            if (!Os.Windows)
+            {
+                // Linux: in the background, in a session of its own. The worldserver would stop at the end of its
+                // (empty) input, so its console is off; commands go through AdminLink like everywhere else.
+                if (exe == inst.WorldExe && Conf.Get(conf, "Console.Enable") != "0") Conf.Set(conf, "Console.Enable", "0");
+                var before = Find(Os.Exe(Path.GetFileNameWithoutExtension(exe)), inst.ServerDir);
+                Os.StartDetached(exe, "--config " + MySql.Arg(conf), inst.ServerDir);
+                for (int i = 0; i < 50; i++)
+                {
+                    var started = Find(Os.Exe(Path.GetFileNameWithoutExtension(exe)), inst.ServerDir);
+                    if (started != null && (before == null || started.Id != before.Id)) return started;
+                    Thread.Sleep(100);
+                }
+                return null;
+            }
             // Each server gets a console of its own, which stays hidden unless the user asks for the
             // windows: the log is shown in AFK Realm (LogView) and commands go through AdminLink.
             // The console itself is still needed - the worldserver stops when it has none to read
@@ -644,6 +696,8 @@ namespace CoAInstaller
         /// <summary>Sends Ctrl+C to a console process: AzerothCore then saves all players and shuts down cleanly.</summary>
         static bool SendCtrlC(Process p)
         {
+            // Linux: SIGINT, on which AzerothCore saves the players and shuts down cleanly as on Ctrl+C.
+            if (!Os.Windows) return Os.Signal(p.Id, 2);
             lock (typeof(ServerControl))
             {
                 FreeConsole();
@@ -823,7 +877,7 @@ namespace CoAInstaller
             if (File.Exists(inst.CoaConf)) Conf.Set(inst.CoaConf, "CoA.AllowRemoteClients", remote ? "1" : "0");
             foreach (var f in new[] { inst.AuthConf, inst.WorldConf })
                 if (Conf.Get(f, "BindIP") != null) Conf.Set(f, "BindIP", "\"0.0.0.0\"");
-            if (remote) AddFirewallRules(inst);
+            if (remote && Os.Windows) AddFirewallRules(inst);
         }
         public static void AddFirewallRules(Install inst)
         {

@@ -26,8 +26,8 @@ namespace CoAInstaller
         static readonly Phase[] InstallPhases =
         {
             new Phase("tools",     L.T("Check tools (Git, CMake)"), 3),
-            new Phase("vs",        L.T("Visual Studio C++ Build Tools"), 15),
-            new Phase("libs",      L.T("Libraries (OpenSSL, Boost)"), 7),
+            Os.Windows ? new Phase("vs", L.T("Visual Studio C++ Build Tools"), 15) : new Phase("vs", L.T("Compiler and libraries"), 2),
+            new Phase("libs",      L.T("Libraries (OpenSSL, Boost)"), Os.Windows ? 7 : 0),
             new Phase("mysql",     L.T("Portable MySQL database"), 4),
             new Phase("source",    L.T("Download the server source code"), 5),
             new Phase("configure", L.T("Prepare the build (CMake)"), 3),
@@ -49,8 +49,8 @@ namespace CoAInstaller
                 {
                     new Phase("tools",     L.T("Check tools (Git, CMake)"), 2),
                     new Phase("backup",    L.T("Back up the current server"), 6),
-                    new Phase("vs",        L.T("Visual Studio C++ Build Tools"), 3),
-                    new Phase("libs",      L.T("Libraries (OpenSSL, Boost)"), 2),
+                    Os.Windows ? new Phase("vs", L.T("Visual Studio C++ Build Tools"), 3) : new Phase("vs", L.T("Compiler and libraries"), 1),
+                    new Phase("libs",      L.T("Libraries (OpenSSL, Boost)"), Os.Windows ? 2 : 0),
                     new Phase("mysql",     L.T("Portable MySQL database"), 1),
                     new Phase("modules",   L.T("Download and remove modules"), 4),
                     new Phase("configure", L.T("Prepare the build (CMake)"), 4),
@@ -88,6 +88,12 @@ namespace CoAInstaller
         static readonly Regex DownloadRx = new Regex(@"^Downloading .+?: (\d+)%", RegexOptions.Compiled);
         static readonly Regex CompiledRx = new Regex(@"^\s{2}([\w\-.+]+\.(cpp|cc|c))\s*$", RegexOptions.Compiled);
         static readonly Regex WorldRx = new Regex(@"Imported (\d+)/(\d+) world tables", RegexOptions.Compiled);
+        // Linux builds with Ninja ("[12/1534] Building CXX object ...") or make ("[ 12%] Building CXX object ...").
+        static readonly Regex NinjaRx = new Regex(@"^\[(\d+)/(\d+)\] ", RegexOptions.Compiled);
+        static readonly Regex MakeRx = new Regex(@"^\[\s*(\d+)%\] ", RegexOptions.Compiled);
+
+        /// <summary>The PowerShell that runs the engine: Windows PowerShell on Windows, PowerShell 7 (pwsh) elsewhere.</summary>
+        public static string Shell;
 
         public int CurrentPhase { get { return phaseIndex; } }
         /// <summary>A module was installed in this run (the result page points to the READMEs).</summary>
@@ -120,7 +126,7 @@ namespace CoAInstaller
         {
             Directory.CreateDirectory(inst.Root);
             string engine = ExtractEngine(inst);
-            var psi = new ProcessStartInfo("powershell.exe",
+            var psi = new ProcessStartInfo(Shell ?? (Os.Windows ? "powershell.exe" : "pwsh"),
                 "-NoLogo -NoProfile -ExecutionPolicy Bypass -File \"" + engine + "\" -InstallRoot \"" + inst.Root + "\" -DatabasePort " + dbPort +
                 " -NonInteractive -Mode " + mode + (string.IsNullOrEmpty(extraArgs) ? "" : " " + extraArgs))
             {
@@ -192,6 +198,19 @@ namespace CoAInstaller
             }
             if (phaseIndex >= 0 && Phases[phaseIndex].Id == "compile")
             {
+                m = NinjaRx.Match(line);
+                if (m.Success)
+                {
+                    int done = int.Parse(m.Groups[1].Value), all = Math.Max(1, int.Parse(m.Groups[2].Value));
+                    SubProgress(Math.Min(0.99, (double)done / all), L.F("{0} files compiled (of about {1})", done, all));
+                    return;
+                }
+                m = MakeRx.Match(line);
+                if (m.Success)
+                {
+                    SubProgress(Math.Min(0.99, int.Parse(m.Groups[1].Value) / 100.0), L.F("Compiling: {0} %", m.Groups[1].Value));
+                    return;
+                }
                 m = CompiledRx.Match(line);
                 if (m.Success && seenCompiled.Add(m.Groups[1].Value))
                 {
@@ -214,7 +233,15 @@ namespace CoAInstaller
         {
             try
             {
-                if (proc != null && !proc.HasExited)
+                if (proc != null && !proc.HasExited && !Os.Windows)
+                {
+#if AFK_WEB
+                    proc.Kill(true);                // with git, cmake and the compilers it started
+#else
+                    proc.Kill();
+#endif
+                }
+                else if (proc != null && !proc.HasExited)
                 {
                     // Ends the engine together with the tools it started (git, cmake, compiler, installers).
                     var k = Process.Start(new ProcessStartInfo("taskkill", "/PID " + proc.Id + " /T /F") { UseShellExecute = false, CreateNoWindow = true });

@@ -1,8 +1,8 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 <#
 .SYNOPSIS
     Builds, updates and configures a Conquest of Azeroth (AzerothCore + Playerbots)
-    server on Windows 10/11 from source.
+    server from source, on Windows 10/11 (Windows PowerShell 5.1) or on Linux (PowerShell 7).
 
 .DESCRIPTION
     This is the engine behind the AFK Realm app. It can also run on its own:
@@ -50,6 +50,11 @@ if ($NonInteractive) { try { [Console]::OutputEncoding = New-Object Text.UTF8Enc
 # Text piped into mysql.exe (Invoke-Sql) is sent as UTF-8; Windows PowerShell 5.1 would send ASCII.
 $OutputEncoding = New-Object Text.UTF8Encoding($false)
 
+# Windows or Linux. Windows PowerShell 5.1 has no $IsWindows, so the path separator decides.
+$OnWindows = [IO.Path]::DirectorySeparatorChar -eq '\'
+# The name of a program file: worldserver.exe on Windows, worldserver on Linux.
+function Exe([string]$Name) { if ($OnWindows) { return "$Name.exe" } else { return $Name } }
+
 # =============================================================================
 #  Server profile - everything specific to the Conquest of Azeroth project
 # =============================================================================
@@ -84,6 +89,13 @@ $Downloads = @{
     MpqCli  = @{ Version = '0.9.9'; MinBytes = 500KB
                  Url = 'https://github.com/thegraydot/mpqcli/releases/download/v0.9.9/mpqcli-windows-amd64.exe'
                  Sha256 = 'c4b1d04ad84f18c90157389c1bfa69a85e45dc153c2f390d32e814c713d5350d' }
+    # Linux: the official MySQL build for any glibc 2.28 system (no AppArmor rules, nothing installed system-wide).
+    MySqlLinux = @{ Version = '8.4.9'; MinBytes = 40MB
+                 Url = 'https://cdn.mysql.com/archives/mysql-8.4/mysql-8.4.9-linux-glibc2.28-x86_64-minimal.tar.xz'
+                 Sha256 = '' }
+    MpqCliLinux = @{ Version = '0.9.9'; MinBytes = 500KB
+                 Url = 'https://github.com/thegraydot/mpqcli/releases/download/v0.9.9/mpqcli-linux-amd64-musl'
+                 Sha256 = '12755a0a12b4b6a60baaf88e9d568b2ca99ebed5414d51e9ff689ee37387c4fe' }
     VsBootstrapper = 'https://aka.ms/vs/17/release/vs_BuildTools.exe'
     MinimumCMake = [version]'3.27.0'
 }
@@ -92,7 +104,8 @@ $Downloads = @{
 #  Paths
 # =============================================================================
 if (-not $InstallRoot) { $InstallRoot = $PSScriptRoot }
-$InstallRoot = [IO.Path]::GetFullPath($InstallRoot).TrimEnd('\')
+$InstallRoot = [IO.Path]::GetFullPath($InstallRoot).TrimEnd('\', '/')
+if (-not $InstallRoot) { $InstallRoot = '/' }
 $Paths = @{
     Root        = $InstallRoot
     Deps        = Join-Path $InstallRoot 'Dependencies'
@@ -100,6 +113,7 @@ $Paths = @{
     Source      = Join-Path $InstallRoot 'Dependencies\Source'
     Build       = Join-Path $InstallRoot 'Dependencies\Build'
     Server      = Join-Path $InstallRoot 'Server'
+    ServerBin   = $(if ($OnWindows) { Join-Path $InstallRoot 'Server' } else { Join-Path $InstallRoot 'Server/bin' })
     Configs     = Join-Path $InstallRoot 'Server\configs'
     Data        = Join-Path $InstallRoot 'Server\Data'
     Db          = Join-Path $InstallRoot 'DB'
@@ -122,6 +136,7 @@ $Paths.Playerbots = Join-Path $Paths.Modules $Project.Playerbots.Folder
 # junction, <drive>\afk\<8 characters>, that leads to its Dependencies folder - the files stay where they are, only the
 # paths the tools see are short. A server that has already been built at its long path keeps it.
 function Use-ShortDependencies {
+    if (-not $OnWindows) { return }                         # no 260-character limit on Linux
     $real = $Paths.Deps
     $marker = Join-Path $real 'short-path.txt'
     $short = $null
@@ -271,7 +286,8 @@ function Save-Download {
     }
     $partial = "$target.part"
     $failures = @()
-    foreach ($method in 'HTTP', 'BITS', 'curl') {
+    $methods = if ($OnWindows) { @('HTTP', 'BITS', 'curl') } else { @('HTTP', 'curl') }
+    foreach ($method in $methods) {
         Remove-Item $partial -Force -ErrorAction SilentlyContinue
         Write-Log "Downloading $FileName ($method)"
         try {
@@ -279,8 +295,8 @@ function Save-Download {
                 'HTTP' { Receive-HttpFile $Url $partial $FileName }
                 'BITS' { Start-BitsTransfer -Source $Url -Destination $partial -ErrorAction Stop }
                 'curl' {
-                    $curl = Join-Path $env:SystemRoot 'System32\curl.exe'
-                    if (-not (Test-Path $curl)) { throw (Tr 'curl.exe is not available.') }
+                    $curl = if ($OnWindows) { Join-Path $env:SystemRoot 'System32\curl.exe' } else { Find-Program 'curl' }
+                    if (-not $curl -or -not (Test-Path $curl)) { throw (Tr 'curl.exe is not available.') }
                     [void](Invoke-Program $curl @('-L', '--fail', '--retry', '3', '-o', $partial, $Url))
                 }
             }
@@ -327,6 +343,11 @@ function Receive-HttpFile([string]$Url, [string]$Destination, [string]$Label) {
 function Expand-Download([string]$Zip, [string]$Destination) {
     Remove-Item $Destination -Recurse -Force -ErrorAction SilentlyContinue
     New-Item -ItemType Directory -Force -Path $Destination | Out-Null
+    if ($Zip -match '\.(tar\.gz|tgz|tar\.xz|tar)$') {
+        # tar keeps the file modes (programs stay executable), which Expand-Archive would not.
+        [void](Invoke-Program 'tar' @('-xf', $Zip, '-C', $Destination))
+        return
+    }
     Expand-Archive -Path $Zip -DestinationPath $Destination -Force
 }
 
@@ -360,13 +381,19 @@ function Get-LatestReleaseAsset([string]$Repository, [string]$Pattern) {
 # programs it starts, and Invoke-Configure also passes the path explicitly.
 function Use-Git([string]$Git) {
     $folder = Split-Path $Git -Parent
-    if (-not (@($env:PATH -split ';') -contains $folder)) { $env:PATH = "$folder;$env:PATH" }
+    $separator = [IO.Path]::PathSeparator
+    if (-not (@($env:PATH -split [regex]::Escape([string]$separator)) -contains $folder)) { $env:PATH = "$folder$separator$env:PATH" }
     $script:GitExe = $Git
     Write-Log "Git: $Git"
     return $Git
 }
 
 function Resolve-Git {
+    if (-not $OnWindows) {
+        $git = Find-Program 'git'
+        if (-not $git) { throw (Tr '{0} is not installed. {1}' 'git' (Get-LinuxPackageHint)) }
+        return Use-Git $git
+    }
     $git = Find-Program 'git.exe' @("$env:ProgramFiles\Git\cmd\git.exe", "${env:ProgramFiles(x86)}\Git\cmd\git.exe", "$env:LOCALAPPDATA\Programs\Git\cmd\git.exe")
     if ($git) { return Use-Git $git }
     $portable = Join-Path $Paths.Deps 'Git\cmd\git.exe'
@@ -381,17 +408,22 @@ function Resolve-Git {
 }
 
 function Resolve-CMake {
-    $cmake = Find-Program 'cmake.exe' @("$env:ProgramFiles\CMake\bin\cmake.exe")
+    $cmake = if ($OnWindows) { Find-Program 'cmake.exe' @("$env:ProgramFiles\CMake\bin\cmake.exe") } else { Find-Program 'cmake' }
     if ($cmake) {
         $versionText = Get-ProgramOutput $cmake @('--version')
         if ($versionText -match '(\d+\.\d+\.\d+)' -and [version]$Matches[1] -ge $Downloads.MinimumCMake) { Write-Log "CMake: $cmake"; return $cmake }
         Write-Log "The installed CMake is older than $($Downloads.MinimumCMake); a portable copy is used instead."
     }
     $folder = Join-Path $Paths.Deps 'CMake'
-    $portable = Join-Path $folder 'bin\cmake.exe'
+    $portable = Join-Path $folder ('bin\' + (Exe 'cmake'))
     if (-not (Test-Path $portable)) {
-        $asset = Get-LatestReleaseAsset 'Kitware/CMake' 'windows-x86_64\.zip$'
-        $zip = Save-Download $asset.browser_download_url 'cmake-windows-x86_64.zip' '' 20MB
+        if ($OnWindows) {
+            $asset = Get-LatestReleaseAsset 'Kitware/CMake' 'windows-x86_64\.zip$'
+            $zip = Save-Download $asset.browser_download_url 'cmake-windows-x86_64.zip' '' 20MB
+        } else {
+            $asset = Get-LatestReleaseAsset 'Kitware/CMake' 'linux-x86_64\.tar\.gz$'
+            $zip = Save-Download $asset.browser_download_url 'cmake-linux-x86_64.tar.gz' '' 20MB
+        }
         $temp = Join-Path $Paths.Deps '_cmake'
         Expand-Download $zip $temp
         Remove-Item $folder -Recurse -Force -ErrorAction SilentlyContinue
@@ -517,6 +549,67 @@ function Resolve-VisualStudio {
 }
 
 # =============================================================================
+#  Linux: compiler and libraries of the distribution
+# =============================================================================
+# On Linux the build uses the compiler and the libraries the distribution brings. Installing them needs root once;
+# AFK Realm itself never runs as root. What is missing is named together with the one command that installs it.
+$LinuxPackages = [ordered]@{
+    apt    = 'git cmake make ninja-build g++ clang libssl-dev libbz2-dev libreadline-dev libncurses-dev libboost-all-dev default-libmysqlclient-dev libjemalloc-dev python3 curl xz-utils libaio-dev libnuma1'
+    dnf    = 'git cmake make ninja-build gcc-c++ clang openssl-devel bzip2-devel readline-devel ncurses-devel boost-devel community-mysql-devel jemalloc-devel python3 curl xz libaio numactl-libs'
+    pacman = 'git cmake make ninja gcc clang openssl bzip2 readline ncurses boost mariadb-libs jemalloc python curl xz libaio numactl'
+    zypper = 'git cmake make ninja gcc-c++ clang libopenssl-devel libbz2-devel readline-devel ncurses-devel boost-devel libmysqlclient-devel jemalloc-devel python3 curl xz libaio1 libnuma1'
+}
+
+function Get-LinuxPackageManager {
+    foreach ($pm in $LinuxPackages.Keys) { if (Find-Program $pm) { return $pm } }
+    return $null
+}
+
+# The command that installs everything the build needs, for this distribution.
+function Get-LinuxPackageCommand {
+    $pm = Get-LinuxPackageManager
+    switch ($pm) {
+        'apt'    { return "sudo apt install $($LinuxPackages.apt)" }
+        'dnf'    { return "sudo dnf install $($LinuxPackages.dnf)" }
+        'pacman' { return "sudo pacman -S --needed $($LinuxPackages.pacman)" }
+        'zypper' { return "sudo zypper install $($LinuxPackages.zypper)" }
+        default  { return "install: git, cmake, ninja or make, a C++ compiler (g++ or clang), and the development files of OpenSSL, Boost (1.74 or newer), the MySQL client library, readline, bzip2, ncurses and jemalloc" }
+    }
+}
+function Get-LinuxPackageHint { return (Tr 'Install the build tools once with: {0}' (Get-LinuxPackageCommand)) }
+
+function Find-Header([string]$Relative) {
+    foreach ($root in @('/usr/include', '/usr/local/include', '/usr/include/x86_64-linux-gnu', '/usr/include/aarch64-linux-gnu')) {
+        if (Test-Path (Join-Path $root $Relative)) { return (Join-Path $root $Relative) }
+    }
+    return $null
+}
+
+# Everything the Linux build needs, or one error naming what is missing and how to get it.
+function Resolve-LinuxToolchain {
+    $missing = New-Object Collections.Generic.List[string]
+    $cxx = $null
+    foreach ($candidate in 'clang++', 'g++') { $cxx = Find-Program $candidate; if ($cxx) { break } }
+    if (-not $cxx) { $missing.Add('C++ compiler (g++ or clang)') }
+    $generator = if (Find-Program 'ninja') { 'Ninja' } elseif (Find-Program 'make') { 'Unix Makefiles' } else { $missing.Add('ninja or make'); '' }
+    foreach ($h in @(@{ File = 'boost/version.hpp'; Name = 'Boost' }, @{ File = 'openssl/ssl.h'; Name = 'OpenSSL' },
+                     @{ File = 'readline/readline.h'; Name = 'readline' }, @{ File = 'bzlib.h'; Name = 'bzip2' })) {
+        if (-not (Find-Header $h.File)) { $missing.Add($h.Name) }
+    }
+    if (-not (Find-Header 'mysql/mysql.h') -and -not (Find-Header 'mariadb/mysql.h')) { $missing.Add('MySQL client library') }
+    $boost = Find-Header 'boost/version.hpp'
+    if ($boost) {
+        $m = [regex]::Match([IO.File]::ReadAllText($boost), '#define BOOST_VERSION (\d+)')
+        if ($m.Success -and [int]$m.Groups[1].Value -lt 107400) { $missing.Add('Boost 1.74 or newer') }
+    }
+    if ($missing.Count -gt 0) { throw (Tr 'Missing for the build: {0}. {1}' ($missing -join ', ') (Get-LinuxPackageHint)) }
+    $jemalloc = [bool](Find-Header 'jemalloc/jemalloc.h')
+    if (-not $jemalloc) { Write-Log 'jemalloc is not installed; the server is built with the normal memory allocator.' Yellow }
+    Write-Log "C++ compiler: $cxx; build tool: $generator"
+    return [pscustomobject]@{ Compiler = $cxx; Generator = $generator; Jemalloc = $jemalloc }
+}
+
+# =============================================================================
 #  Libraries: OpenSSL 3 and Boost
 # =============================================================================
 function Test-OpenSslFolder([string]$Path) {
@@ -570,9 +663,88 @@ function Resolve-Boost {
 # =============================================================================
 #  Portable MySQL database
 # =============================================================================
-function Get-MySqlTool([string]$Name) { return (Join-Path $Paths.MySql "bin\$Name") }
+function Get-MySqlTool([string]$Name) {
+    if (-not $OnWindows) { $Name = $Name -replace '\.exe$', '' }
+    return (Join-Path $Paths.MySql "bin\$Name")
+}
+
+# Linux: the server's own MySQL in DB/mysql - the official build when it can be downloaded, otherwise a copy of the
+# system's mysqld (a copy, so the AppArmor rules of /usr/sbin/mysqld, which only allow /var/lib/mysql, do not apply).
+# It is always started through DB/mysqld.sh, which gives it the libraries it needs.
+function Install-MySqlLinux {
+    $mysqld = Join-Path $Paths.MySql 'bin/mysqld'
+    $source = Join-Path $Paths.MySql 'afk-source.txt'
+    if ((Test-Path $mysqld) -and (Test-Path $source)) { Write-MySqlLauncher; return }
+    $official = $false
+    try {
+        $file = Save-Download $Downloads.MySqlLinux.Url ('mysql-{0}-linux-minimal.tar.xz' -f $Downloads.MySqlLinux.Version) $Downloads.MySqlLinux.Sha256 $Downloads.MySqlLinux.MinBytes
+        Write-Log 'Unpacking MySQL ...'
+        $temp = Join-Path $Paths.Db '_mysql'
+        Expand-Download $file $temp
+        Remove-Item $Paths.MySql -Recurse -Force -ErrorAction SilentlyContinue
+        Move-Item (Get-SingleFolder $temp) $Paths.MySql
+        Remove-Item $temp -Recurse -Force
+        foreach ($tool in 'mysqld', 'mysql', 'mysqladmin', 'mysqldump') {
+            if (-not (Test-Path (Join-Path $Paths.MySql "bin/$tool"))) { throw (Tr 'The MySQL package is missing {0}.' "bin/$tool") }
+        }
+        [IO.File]::WriteAllText($source, 'official')
+        $official = $true
+    } catch {
+        Write-Log "The official MySQL could not be set up ($($_.Exception.Message)); the MySQL server of this system is used instead." Yellow
+    }
+    if (-not $official) {
+        $system = @('/usr/sbin/mysqld', '/usr/libexec/mysqld', '/usr/bin/mysqld') | Where-Object { Test-Path $_ } | Select-Object -First 1
+        if (-not $system) { $system = Find-Program 'mysqld' }
+        if (-not $system) { throw (Tr 'MySQL could not be downloaded, and this system has no MySQL server either. Install it ({0}) or check the internet connection.' $(if (Get-LinuxPackageManager) { 'mysql-server' } else { 'MySQL 8' })) }
+        Remove-Item $Paths.MySql -Recurse -Force -ErrorAction SilentlyContinue
+        New-Item -ItemType Directory -Force -Path (Join-Path $Paths.MySql 'bin') | Out-Null
+        Copy-Item $system $mysqld
+        [void](Invoke-Program 'chmod' @('755', $mysqld))
+        foreach ($tool in 'mysql', 'mysqladmin', 'mysqldump') {
+            $found = Find-Program $tool
+            if (-not $found) { throw (Tr '{0} is not installed. {1}' $tool (Get-LinuxPackageHint)) }
+            # A small script instead of a link: the scripts of CoA pass --no-login-paths, which clients older than 8.4 do not know.
+            $wrapper = Join-Path $Paths.MySql "bin/$tool"
+            Remove-Item $wrapper -Force -ErrorAction SilentlyContinue
+            [IO.File]::WriteAllText($wrapper, "#!/bin/sh`n# $tool of this system, written by AFK Realm`nfor a in `"`$@`"; do shift; [ `"`$a`" = --no-login-paths ] || set -- `"`$@`" `"`$a`"; done`nexec `"$found`" `"`$@`"`n")
+            [void](Invoke-Program 'chmod' @('755', $wrapper))
+        }
+        [IO.File]::WriteAllText($source, "system $system")
+        Write-Log "MySQL: a copy of $system"
+    }
+    Write-MySqlLauncher
+}
+
+# DB/mysqld.sh starts the database. The official build asks for libaio.so.1, which newer distributions only have as
+# libaio.so.1t64; a link of that name in DB/mysql/compat gives it what it looks for.
+function Write-MySqlLauncher {
+    $compat = Join-Path $Paths.MySql 'compat'
+    New-Item -ItemType Directory -Force -Path $compat | Out-Null
+    foreach ($lib in @(Get-ChildItem '/usr/lib', '/usr/lib64', '/usr/lib/x86_64-linux-gnu', '/lib/x86_64-linux-gnu' -Filter 'libaio.so.1t64*' -ErrorAction SilentlyContinue | Select-Object -First 1)) {
+        $link = Join-Path $compat 'libaio.so.1'
+        if (-not (Test-Path $link)) { [void](Invoke-Program 'ln' @('-sf', $lib.FullName, $link) -AllowFailure) }
+    }
+    $libs = @($compat, (Join-Path $Paths.MySql 'lib'), (Join-Path $Paths.MySql 'lib/private')) -join ':'
+    $script = "#!/bin/sh`n# Starts the database of this server. Written by AFK Realm.`nexport LD_LIBRARY_PATH=`"$libs`${LD_LIBRARY_PATH:+:`$LD_LIBRARY_PATH}`"`nexec `"$(Join-Path $Paths.MySql 'bin/mysqld')`" `"`$@`"`n"
+    $launcher = Join-Path $Paths.Db 'mysqld.sh'
+    [IO.File]::WriteAllText($launcher, $script)
+    [void](Invoke-Program 'chmod' @('755', $launcher))
+}
+
+# Starts a program on Linux in a session of its own, without the output of this script: it keeps running when the
+# script (or AFK Realm) ends.
+function Start-Detached([string]$Program, [string[]]$Arguments, [string]$WorkingDirectory) {
+    $psi = New-Object Diagnostics.ProcessStartInfo
+    $psi.FileName = 'setsid'
+    foreach ($a in @('-f', 'sh', '-c', 'exec "$0" "$@" </dev/null >/dev/null 2>&1', $Program) + $Arguments) { $psi.ArgumentList.Add($a) }
+    $psi.UseShellExecute = $false
+    if ($WorkingDirectory) { $psi.WorkingDirectory = $WorkingDirectory }
+    $p = [Diagnostics.Process]::Start($psi)
+    $p.WaitForExit()
+}
 
 function Install-MySql {
+    if (-not $OnWindows) { Install-MySqlLinux; return }
     if ((Test-Path (Join-Path $Paths.MySql 'bin\mysqld.exe')) -and (Test-Path (Join-Path $Paths.MySql 'lib\mysqlclient.lib'))) { return }
     $zip = Save-Download $Downloads.MySql.Url ('mysql-{0}-winx64.zip' -f $Downloads.MySql.Version) $Downloads.MySql.Sha256 $Downloads.MySql.MinBytes
     Write-Log 'Unpacking MySQL (about 1 GB; this can take a while) ...'
@@ -605,6 +777,28 @@ function Write-MySqlConfig {
         'host=127.0.0.1'
         'protocol=tcp'
     )
+    if (-not $OnWindows) {
+        # The socket goes to /tmp: a socket path has to stay under 108 characters. The official build reads its
+        # messages from its own folder; the copy of the system's mysqld keeps the places it was built with.
+        $official = (Test-Path (Join-Path $Paths.MySql 'afk-source.txt')) -and ([IO.File]::ReadAllText((Join-Path $Paths.MySql 'afk-source.txt')).Trim() -eq 'official')
+        $extra = @("socket=/tmp/afk-realm-mysql-$DatabasePort.sock", "pid-file=$(Join-Path $Paths.Db 'mysqld.pid')")
+        # secure-file-priv: a build of a distribution points it to /var/lib/mysql-files and refuses to start without it.
+        $files = Join-Path $Paths.Db 'files'
+        New-Item -ItemType Directory -Force -Path $files | Out-Null
+        $extra += @("secure-file-priv=$files")
+        # mysqld refuses to run as root unless told so (servers rented as root, containers)
+        if ((& id -u) -eq '0') { $extra += @('user=root') }
+        if ($official) { $extra += @("lc-messages-dir=$(Join-Path $Paths.MySql 'share')") }
+        else {
+            $lines = $lines | Where-Object { $_ -notlike 'basedir=*' }
+            # the messages of the system's mysqld stay where the distribution put them
+            $messages = @('/usr/share/mysql', '/usr/share/mysql-8.0', '/usr/share/mariadb', '/usr/share/mysql/english/..') |
+                Where-Object { Test-Path (Join-Path $_ 'english/errmsg.sys') } | Select-Object -First 1
+            if ($messages) { $extra += @("lc-messages-dir=$messages") }
+        }
+        $i = [array]::IndexOf($lines, '')
+        $lines = @($lines[0..($i - 1)]) + $extra + @($lines[$i..($lines.Count - 1)])
+    }
     [IO.File]::WriteAllLines($Paths.MyIni, $lines)
 }
 
@@ -617,6 +811,9 @@ function Test-Port([int]$Port) {
 }
 
 function Get-DatabaseProcess {
+    if (-not $OnWindows) {
+        return @(Get-Process -Name 'mysqld' -ErrorAction SilentlyContinue | Where-Object { try { $_.Path -and $_.Path.StartsWith($Paths.MySql) } catch { $false } })
+    }
     return @(Get-CimInstance Win32_Process -Filter "Name='mysqld.exe'" -ErrorAction SilentlyContinue |
              Where-Object { $_.ExecutablePath -and $_.ExecutablePath.StartsWith($Paths.MySql, [StringComparison]::OrdinalIgnoreCase) })
 }
@@ -626,11 +823,16 @@ function Start-Database {
     if (-not (Test-Path (Join-Path $Paths.DbData 'mysql'))) {
         Write-Log 'Creating a new database directory.'
         New-Item -ItemType Directory -Force -Path $Paths.DbData | Out-Null
-        [void](Invoke-Program (Join-Path $Paths.MySql 'bin\mysqld.exe') @("--defaults-file=$($Paths.MyIni)", '--initialize-insecure', '--console'))
+        $mysqld = if ($OnWindows) { Join-Path $Paths.MySql 'bin\mysqld.exe' } else { Join-Path $Paths.Db 'mysqld.sh' }
+        [void](Invoke-Program $mysqld @("--defaults-file=$($Paths.MyIni)", '--initialize-insecure', '--console'))
     }
     if (@(Get-DatabaseProcess).Count -eq 0) {
         if (Test-Port $DatabasePort) { throw (Tr 'Port {0} is already used by another program (another database or repack?). Stop it or choose another port.' $DatabasePort) }
-        Start-Process (Join-Path $Paths.MySql 'bin\mysqld.exe') -ArgumentList "--defaults-file=`"$($Paths.MyIni)`"" -WorkingDirectory $Paths.Db -WindowStyle Hidden | Out-Null
+        if ($OnWindows) {
+            Start-Process (Join-Path $Paths.MySql 'bin\mysqld.exe') -ArgumentList "--defaults-file=`"$($Paths.MyIni)`"" -WorkingDirectory $Paths.Db -WindowStyle Hidden | Out-Null
+        } else {
+            Start-Detached (Join-Path $Paths.Db 'mysqld.sh') @("--defaults-file=$($Paths.MyIni)") $Paths.Db
+        }
     }
     for ($i = 0; $i -lt 90; $i++) { if (Test-Port $DatabasePort) { return }; Start-Sleep -Seconds 1 }
     throw (Tr 'The database did not start. See logs\mysql-error.log.')
@@ -747,7 +949,7 @@ function Set-RealmName([string]$Password) {
 }
 
 function Update-Databases([string]$Password) {
-    $dbimport = Join-Path $Paths.Server 'dbimport.exe'
+    $dbimport = Join-Path $Paths.ServerBin (Exe 'dbimport')
     if (-not (Test-Path $dbimport)) { Write-Log 'dbimport.exe was not built; the worldserver applies the updates on its first start.' Yellow; return }
     $root = New-ClientOptions 'root' $Password
     try {
@@ -948,6 +1150,39 @@ function Find-Updates([string]$Git) {
 # =============================================================================
 #  Compiling
 # =============================================================================
+# Linux: the same build with the compiler and libraries of the distribution. The programs go to Server/bin (where
+# AzerothCore puts them on Linux), the config files to Server/configs as on Windows.
+function Invoke-ConfigureLinux([string]$CMake, $Toolchain, [switch]$Clean) {
+    $cache = Join-Path $Paths.Build 'CMakeCache.txt'
+    $samePlace = $true
+    if (Test-Path $cache) {
+        $text = [IO.File]::ReadAllText($cache)
+        $m = [regex]::Match($text, '(?m)^CMAKE_CACHEFILE_DIR:INTERNAL=(.*?)\r?$')
+        if ($m.Success -and $m.Groups[1].Value.Trim().TrimEnd('/') -ne $Paths.Build.TrimEnd('/')) {
+            Write-Log "The build folder was made at $($m.Groups[1].Value.Trim()); the server folder was copied or moved, so the build starts afresh (this takes longer once)."
+            $samePlace = $false
+        }
+        $g = [regex]::Match($text, '(?m)^CMAKE_GENERATOR:INTERNAL=(.*?)\r?$')
+        if ($g.Success -and $g.Groups[1].Value.Trim() -ne $Toolchain.Generator) { $samePlace = $false }
+    }
+    if ($Clean -or -not $samePlace) { Remove-Item $Paths.Build -Recurse -Force -ErrorAction SilentlyContinue }
+    New-Item -ItemType Directory -Force -Path $Paths.Build, $Paths.Server | Out-Null
+    $confDir = Join-Path $Paths.Source 'conf'
+    New-Item -ItemType Directory -Force -Path $confDir | Out-Null
+    [IO.File]::WriteAllText((Join-Path $confDir 'config.cmake'), "# Written by AFK Realm.`n")
+    $cc = if ($Toolchain.Compiler -like '*clang++') { $Toolchain.Compiler -replace 'clang\+\+$', 'clang' } else { $Toolchain.Compiler -replace 'g\+\+$', 'gcc' }
+    $arguments = @(
+        '-S', $Paths.Source, '-B', $Paths.Build, '-G', $Toolchain.Generator,
+        '-DCMAKE_BUILD_TYPE=RelWithDebInfo',
+        "-DCMAKE_C_COMPILER=$cc", "-DCMAKE_CXX_COMPILER=$($Toolchain.Compiler)",
+        "-DCMAKE_INSTALL_PREFIX=$($Paths.Server)",
+        "-DCONF_DIR=$($Paths.Configs)",
+        '-DTOOLS_BUILD=all', '-DSCRIPTS=static', '-DMODULES=static',
+        "-DGIT_EXECUTABLE=$script:GitExe")
+    if (-not $Toolchain.Jemalloc) { $arguments += '-DNOJEM=1' }
+    [void](Invoke-Program $CMake $arguments)
+}
+
 function Invoke-Configure([string]$CMake, $VisualStudio, [string]$OpenSsl, [string]$Boost, [switch]$Clean) {
     # A cache created for another Visual Studio instance cannot be switched, so it is started fresh.
     $cache = Join-Path $Paths.Build 'CMakeCache.txt'
@@ -1000,17 +1235,26 @@ function Invoke-Compile([string]$CMake) {
     # '--parallel' is the number of projects built at once; each project already
     # compiles on all cores. Too many at once exhausts memory (C1076/C3859), so the
     # count follows the free memory and a memory failure is retried one by one.
-    $freeGB = [double](Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory / 1MB
-    $jobs = [int][math]::Max(1, [math]::Min(4, [math]::Floor($freeGB / 4)))
-    Write-Log ('Free memory {0:N1} GB - building {1} project(s) at a time. This may take a long time.' -f $freeGB, $jobs)
+    if ($OnWindows) {
+        $freeGB = [double](Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory / 1MB
+        $jobs = [int][math]::Max(1, [math]::Min(4, [math]::Floor($freeGB / 4)))
+        Write-Log ('Free memory {0:N1} GB - building {1} project(s) at a time. This may take a long time.' -f $freeGB, $jobs)
+    } else {
+        # On Linux every job is one compiler; the big files of Playerbots need up to 2 GB each.
+        $available = [regex]::Match([IO.File]::ReadAllText('/proc/meminfo'), '(?m)^MemAvailable:\s+(\d+)')
+        $freeGB = if ($available.Success) { [double]$available.Groups[1].Value / 1MB } else { 4 }
+        $jobs = [int][math]::Max(1, [math]::Min([Environment]::ProcessorCount, [math]::Floor($freeGB / 2)))
+        Write-Log ('Free memory {0:N1} GB, {1} processor cores - compiling {2} file(s) at a time. This may take a long time.' -f $freeGB, [Environment]::ProcessorCount, $jobs)
+    }
     $sources = @(Get-ChildItem $Paths.Source -Recurse -Filter '*.cpp' -File -ErrorAction SilentlyContinue |
-                 Where-Object { $_.FullName -notmatch '\\(deps|test|tests)\\' }).Count
+                 Where-Object { $_.FullName -notmatch '[\\/](deps|test|tests)[\\/]' }).Count
     Send-Event 'SOURCES' "$sources"
-    $arguments = @('--build', $Paths.Build, '--config', 'RelWithDebInfo', '--target', 'INSTALL', '--parallel')
+    $target = if ($OnWindows) { 'INSTALL' } else { 'install' }
+    $arguments = @('--build', $Paths.Build, '--config', 'RelWithDebInfo', '--target', $target, '--parallel')
     $code = Invoke-Program $CMake ($arguments + "$jobs") -AllowFailure
     if ($code -eq 0) { return }
     $tail = (Get-Content $Paths.Log -Tail 3000 -ErrorAction SilentlyContinue) -join "`n"
-    if ($jobs -gt 1 -and $tail -match 'C1076|C3859|C1060|C1002|out of heap|heap limit|Heapgrenze|virtuellen Speichers') {
+    if ($jobs -gt 1 -and $tail -match 'C1076|C3859|C1060|C1002|out of heap|heap limit|Heapgrenze|virtuellen Speichers|virtual memory exhausted|Killed signal terminated|cannot allocate memory|out of memory') {
         Write-Log 'The compiler ran out of memory. Retrying one project at a time (finished parts are kept). Closing games and browsers helps.' Yellow
         [void](Invoke-Program $CMake ($arguments + '1'))
         return
@@ -1019,6 +1263,7 @@ function Invoke-Compile([string]$CMake) {
 }
 
 function Copy-Runtime([string]$OpenSsl) {
+    if (-not $OnWindows) { return }                         # Linux: the system's libraries
     Copy-Item (Join-Path $Paths.MySql 'lib\libmysql.dll') $Paths.Server -Force
     foreach ($dll in @(Get-ChildItem $OpenSsl -Recurse -Filter '*.dll' | Where-Object { $_.Name -match '^(libssl|libcrypto)-3' -or $_.Name -eq 'legacy.dll' })) {
         Copy-Item $dll.FullName $Paths.Server -Force
@@ -1067,6 +1312,11 @@ function Set-ServerConfig([string]$Password) {
     foreach ($file in $auth, $world) { if (-not (Test-Path $file)) { throw (Tr 'Missing configuration file {0}.' $file) } }
     $connection = { param($schema) '"127.0.0.1;{0};acore;{1};{2}"' -f $DatabasePort, $Password, $schema }
     $mysql = '"' + (Get-MySqlTool 'mysql.exe').Replace('\', '/') + '"'
+    if (-not $OnWindows) {
+        # The worldserver reads commands from its terminal and stops at the end of its input; started in the
+        # background by AFK Realm it has none. Commands go through the remote service instead.
+        Set-ConfigValue $world 'Console.Enable' '0'
+    }
     Set-ConfigValue $auth 'LoginDatabaseInfo' (& $connection 'acore_auth')
     Set-ConfigValue $auth 'MySQLExecutable' $mysql
     Set-ConfigValue $world 'LoginDatabaseInfo' (& $connection 'acore_auth')
@@ -1094,6 +1344,14 @@ function Set-ServerConfig([string]$Password) {
 #  CoA world data
 # =============================================================================
 function Resolve-Python {
+    if (-not $OnWindows) {
+        $python = Find-Program 'python3'
+        if (-not $python) { throw (Tr '{0} is not installed. {1}' 'python3' (Get-LinuxPackageHint)) }
+        if ((Invoke-Program $python @('-c', 'import sys, hashlib, zipfile; assert sys.version_info >= (3, 9)') -AllowFailure) -ne 0) {
+            throw (Tr 'Python 3.9 or newer is needed. {0}' (Get-LinuxPackageHint))
+        }
+        return $python
+    }
     $python = Join-Path $Paths.Deps 'Python\python.exe'
     if (-not (Test-Path $python)) {
         $zip = Save-Download $Downloads.Python.Url ('python-{0}-embed-amd64.zip' -f $Downloads.Python.Version) $Downloads.Python.Sha256 $Downloads.Python.MinBytes
@@ -1110,11 +1368,13 @@ function Resolve-DbcTools {
     $script = Join-Path $Paths.Source 'apps\coa-dbc\client_dbc.py'
     if (-not (Test-Path $script)) { return }
     [void](Resolve-Python)
-    $tool = Join-Path $Paths.Deps 'Tools\mpqcli.exe'
-    if (-not (Test-Path $tool) -or -not (Test-FileHash $tool $Downloads.MpqCli.Sha256)) {
-        $file = Save-Download $Downloads.MpqCli.Url ('mpqcli-{0}.exe' -f $Downloads.MpqCli.Version) $Downloads.MpqCli.Sha256 $Downloads.MpqCli.MinBytes
+    $mpq = if ($OnWindows) { $Downloads.MpqCli } else { $Downloads.MpqCliLinux }
+    $tool = Join-Path $Paths.Deps ('Tools\' + (Exe 'mpqcli'))
+    if (-not (Test-Path $tool) -or -not (Test-FileHash $tool $mpq.Sha256)) {
+        $file = Save-Download $mpq.Url $(if ($OnWindows) { 'mpqcli-{0}.exe' -f $mpq.Version } else { 'mpqcli-{0}-linux' -f $mpq.Version }) $mpq.Sha256 $mpq.MinBytes
         New-Item -ItemType Directory -Force -Path (Split-Path $tool) | Out-Null
         Copy-Item $file $tool -Force
+        if (-not $OnWindows) { [void](Invoke-Program 'chmod' @('755', $tool)) }
     }
     Write-Log 'Tools for the CoA client DBC extraction are ready.'
 }
@@ -1146,7 +1406,41 @@ function Import-WorldData([string]$Password) {
 # =============================================================================
 #  Launchers and checks
 # =============================================================================
+# Linux: start-server.sh does what START-SERVER.cmd does on Windows - for starting the server without AFK Realm.
+function Write-LaunchersLinux([string]$Password) {
+    $authPort = 3724
+    $authConf = Join-Path $Paths.Configs 'authserver.conf'
+    $worldConf = Join-Path $Paths.Configs 'worldserver.conf'
+    $m = if (Test-Path $authConf) { Select-String -Path $authConf -Pattern '^\s*RealmServerPort\s*=\s*(\d+)' | Select-Object -First 1 } else { $null }
+    if ($m) { $authPort = [int]$m.Matches[0].Groups[1].Value }
+    $cnf = Join-Path $Paths.Db 'launcher.cnf'
+    [IO.File]::WriteAllText($cnf, "[client]`nuser=acore`npassword=`"$Password`"`nhost=127.0.0.1`nport=$DatabasePort`nprotocol=tcp`n", (New-Object Text.UTF8Encoding($false)))
+    [void](Invoke-Program 'chmod' @('600', $cnf))
+    $q = { param($t) "'" + $t.Replace("'", "'\''") + "'" }
+    $lines = @(
+        '#!/bin/sh'
+        '# Starts database, authserver and worldserver in the background. Created by AFK Realm.'
+        "cd $(& $q $Paths.Server) || exit 1"
+        'port_open() { (exec 3<>"/dev/tcp/127.0.0.1/$1") 2>/dev/null; }'
+        'wait_port() { i=0; while [ $i -lt "$2" ]; do port_open "$1" && return 0; sleep 1; i=$((i+1)); done; return 1; }'
+        "if [ ! -d $(& $q (Join-Path $Paths.Data 'maps')) ]; then echo 'WARNING: map data is missing in Server/Data - create it first.'; exit 1; fi"
+        "if ! port_open $DatabasePort; then"
+        "  setsid -f $(& $q (Join-Path $Paths.Db 'mysqld.sh')) --defaults-file=$(& $q $Paths.MyIni) </dev/null >/dev/null 2>&1"
+        "  wait_port $DatabasePort 90 || { echo 'The database did not start. See logs/mysql-error.log.'; exit 1; }"
+        'fi'
+        "pgrep -f $(& $q (Join-Path $Paths.ServerBin 'worldserver')) >/dev/null || $(& $q (Get-MySqlTool 'mysql')) --defaults-extra-file=$(& $q $cnf) -e 'UPDATE acore_auth.realmlist SET flag = flag & ~1' >/dev/null 2>&1"
+        "setsid -f $(& $q (Join-Path $Paths.ServerBin 'authserver')) --config $(& $q $authConf) </dev/null >/dev/null 2>&1"
+        "wait_port $authPort 120 || { echo 'The authserver did not become ready. See Server/Auth.log.'; exit 1; }"
+        "setsid -f $(& $q (Join-Path $Paths.ServerBin 'worldserver')) --config $(& $q $worldConf) </dev/null >/dev/null 2>&1"
+        "echo 'The worldserver is loading; its log is Server/Server.log.'"
+    )
+    $file = Join-Path $Paths.Root 'start-server.sh'
+    [IO.File]::WriteAllText($file, ($lines -join "`n") + "`n")
+    [void](Invoke-Program 'chmod' @('755', $file))
+}
+
 function Write-Launchers([string]$Password) {
+    if (-not $OnWindows) { Write-LaunchersLinux $Password; return }
     $portCheck = { param($port, $seconds) "powershell -NoProfile -Command `"`$t=[DateTime]::Now.AddSeconds($seconds); while([DateTime]::Now -lt `$t){ try { (New-Object Net.Sockets.TcpClient('127.0.0.1',$port)).Close(); exit 0 } catch { Start-Sleep 1 } }; exit 1`" >nul 2>&1" }
     $mysqld = Join-Path $Paths.MySql 'bin\mysqld.exe'
     $authPort = 3724
@@ -1183,10 +1477,14 @@ function Write-Launchers([string]$Password) {
 }
 
 function Test-Installation {
-    $required = @('authserver.exe', 'worldserver.exe', 'libmysql.dll', 'configs\authserver.conf', 'configs\worldserver.conf')
+    if ($OnWindows) {
+        $required = @('authserver.exe', 'worldserver.exe', 'libmysql.dll', 'configs\authserver.conf', 'configs\worldserver.conf')
+    } else {
+        $required = @('bin/authserver', 'bin/worldserver', 'configs/authserver.conf', 'configs/worldserver.conf')
+    }
     foreach ($file in $required) { if (-not (Test-Path (Join-Path $Paths.Server $file))) { throw (Tr 'Check failed: Server\{0} is missing.' $file) } }
-    foreach ($tool in @('map_extractor.exe|mapextractor.exe', 'vmap4_extractor.exe|vmap4extractor.exe', 'vmap4_assembler.exe|vmap4assembler.exe', 'mmaps_generator.exe')) {
-        if (-not ($tool.Split('|') | Where-Object { Test-Path (Join-Path $Paths.Server $_) })) { throw (Tr 'Check failed: Server\{0} is missing.' $tool.Split('|')[0]) }
+    foreach ($tool in @('map_extractor|mapextractor', 'vmap4_extractor|vmap4extractor', 'vmap4_assembler|vmap4assembler', 'mmaps_generator')) {
+        if (-not ($tool.Split('|') | Where-Object { Test-Path (Join-Path $Paths.ServerBin (Exe $_)) })) { throw (Tr 'Check failed: Server\{0} is missing.' (Exe $tool.Split('|')[0])) }
     }
     if (-not (Get-ChildItem $Paths.Configs -Recurse -Filter 'playerbots.conf')) { throw (Tr 'Check failed: playerbots.conf is missing; the Playerbots module was not built.') }
     Write-Log 'All checks passed.'
@@ -1469,7 +1767,7 @@ function Edit-ModuleFolders([string]$Git, [string[]]$Add, [string[]]$Remove) {
             $state.Added.Add($folder)
             [void](Invoke-Program $Git @('clone', '--recurse-submodules', $url.Trim(), $folder))
         }
-        $hasCode = @(Get-ChildItem $folder -Recurse -File -Include '*.cpp', '*.h' -ErrorAction SilentlyContinue | Where-Object { $_.FullName -notmatch '\\\.git\\' }).Count -gt 0
+        $hasCode = @(Get-ChildItem $folder -Recurse -File -Include '*.cpp', '*.h' -ErrorAction SilentlyContinue | Where-Object { $_.FullName -notmatch '[\\/]\.git[\\/]' }).Count -gt 0
         $hasSql = Test-Path ([IO.Path]::Combine($folder, 'data', 'sql'))
         if (-not $hasCode -and -not $hasSql) { throw (Tr '{0} does not look like an AzerothCore module (no source code and no SQL files).' $name) }
         $state.Urls[$folder] = $url.Trim()
@@ -1939,10 +2237,11 @@ function New-Snapshot([string]$Password, [string]$Reason) {
     $zipFile = Join-Path $partial 'server.zip'
     $zip = [IO.Compression.ZipFile]::Open($zipFile, [IO.Compression.ZipArchiveMode]::Create)
     try {
-        $files = @(Get-ChildItem $Paths.Server -File | Where-Object { $_.Extension -in '.exe', '.dll', '.yaml' })
+        if ($OnWindows) { $files = @(Get-ChildItem $Paths.Server -File | Where-Object { $_.Extension -in '.exe', '.dll', '.yaml' }) }
+        else { $files = @(Get-ChildItem $Paths.ServerBin -File -ErrorAction SilentlyContinue) + @(Get-ChildItem $Paths.Server -File -Filter '*.yaml' -ErrorAction SilentlyContinue) }
         $files += @(Get-ChildItem $Paths.Configs -File -Recurse -ErrorAction SilentlyContinue)
         foreach ($f in $files) {
-            $relative = $f.FullName.Substring($Paths.Server.Length).TrimStart('\')
+            $relative = $f.FullName.Substring($Paths.Server.Length).TrimStart('\', '/')
             [void][IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $f.FullName, $relative, [IO.Compression.CompressionLevel]::Optimal)
         }
     } finally { $zip.Dispose() }
@@ -2089,7 +2388,7 @@ function Restore-SnapshotParts([string]$Name, [string]$Parts, [string]$Password)
         try {
             foreach ($entry in $zip.Entries) {
                 $relative = $entry.FullName.Replace('/', '\')
-                if (-not $entry.Name -or $relative -notmatch '^configs\\' -or $entry.Name -notmatch '\.conf$') { continue }
+                if (-not $entry.Name -or $relative -notmatch '^configs[\\/]' -or $entry.Name -notmatch '\.conf$') { continue }
                 $target = Join-Path $Paths.Server $relative
                 if (-not (Test-Path $target) -and -not (Test-Path "$target.dist")) { continue }
                 [IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $target, $true)
@@ -2115,6 +2414,12 @@ function Restore-SnapshotParts([string]$Name, [string]$Parts, [string]$Password)
 #  Main
 # =============================================================================
 function Assert-Administrator {
+    if (-not $OnWindows) {
+        # Linux needs no administrator: everything stays in the server folder. Running as root would leave files only
+        # root can change, and the servers do not need it.
+        if ((Get-ProgramOutput 'id' @('-u')) -eq '0') { Write-Log 'Running as root is not needed; the server folder will belong to root.' Yellow }
+        return
+    }
     $principal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
     if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) { throw (Tr 'Please run this as administrator.') }
 }
@@ -2144,7 +2449,7 @@ function Read-Password {
 
 # Decides what to do: the -Mode parameter, a menu for an existing server, or a fresh install.
 function Resolve-Mode {
-    $installed = Test-Path (Join-Path $Paths.Server 'worldserver.exe')
+    $installed = Test-Path (Join-Path $Paths.ServerBin (Exe 'worldserver'))
     if ($Mode) { return $Mode }
     if (-not $installed) { return 'Install' }
     if ($NonInteractive) { throw 'A server already exists here; choose -Mode Update, Rebuild or Setup.' }
@@ -2167,13 +2472,14 @@ try {
     New-Item -ItemType Directory -Force -Path $Paths.Logs, $Paths.Deps, $Paths.Downloads, $Paths.Db, $Paths.Data | Out-Null
     Write-Log "===== $($Project.Name) server builder - $(Get-Date -Format 'yyyy-MM-dd HH:mm') - $InstallRoot ====="
     Use-ShortDependencies
-    if (-not [Environment]::Is64BitOperatingSystem -or [Environment]::OSVersion.Version.Major -lt 10) { throw (Tr 'Windows 10 or 11 (64-bit) is required.') }
+    if ($OnWindows -and (-not [Environment]::Is64BitOperatingSystem -or [Environment]::OSVersion.Version.Major -lt 10)) { throw (Tr 'Windows 10 or 11 (64-bit) is required.') }
+    if (-not $OnWindows -and -not [Environment]::Is64BitOperatingSystem) { throw (Tr 'A 64-bit Linux is required.') }
     Assert-Administrator
     Read-Revisions
 
     $action = Resolve-Mode
     if (-not $action) { Write-Log 'Cancelled; nothing was changed.'; Send-Event 'DONE' 'cancelled'; exit 0 }
-    if ($action -eq 'Install' -and (Test-Path (Join-Path $Paths.Server 'worldserver.exe'))) {
+    if ($action -eq 'Install' -and (Test-Path (Join-Path $Paths.ServerBin (Exe 'worldserver')))) {
         # A repeated installation continues where the last one stopped: without
         # compiling when the last build finished, otherwise with an incremental build.
         $finished = (Test-Path $Paths.BuildMarker) -and ([IO.File]::ReadAllText($Paths.BuildMarker).Trim() -eq (Get-BuildStamp))
@@ -2225,7 +2531,7 @@ try {
         Assert-ServerStopped
         # Before an update or rebuild changes anything, the current server is saved,
         # so it can be rolled back if the new version does not work.
-        if (($action -eq 'Update' -or $action -eq 'Rebuild' -or $action -eq 'Modules') -and (Test-Path (Join-Path $Paths.Server 'worldserver.exe'))) {
+        if (($action -eq 'Update' -or $action -eq 'Rebuild' -or $action -eq 'Modules') -and (Test-Path (Join-Path $Paths.ServerBin (Exe 'worldserver')))) {
             Enter-Phase 'backup' 'Backing up the current server'
             if (-not $password) { $password = Read-Password }
             Start-Database
@@ -2235,11 +2541,17 @@ try {
             Stop-Database $password
         }
         $cmake = Resolve-CMake
-        Enter-Phase 'vs' 'Visual Studio C++ Build Tools'
-        $vs = Resolve-VisualStudio
-        Enter-Phase 'libs' 'OpenSSL and Boost'
-        $openssl = Resolve-OpenSsl
-        $boost = Resolve-Boost
+        if ($OnWindows) {
+            Enter-Phase 'vs' 'Visual Studio C++ Build Tools'
+            $vs = Resolve-VisualStudio
+            Enter-Phase 'libs' 'OpenSSL and Boost'
+            $openssl = Resolve-OpenSsl
+            $boost = Resolve-Boost
+        } else {
+            Enter-Phase 'vs' 'Compiler and libraries'
+            $toolchain = Resolve-LinuxToolchain
+            $openssl = $null; $boost = $null; $vs = $null
+        }
     }
     Enter-Phase 'mysql' 'Portable MySQL database'
     Install-MySql
@@ -2263,7 +2575,8 @@ try {
             Invoke-ModulePatches $git
             $failedAt = 'configure'
             Enter-Phase 'configure' 'Preparing the build (CMake)'
-            Invoke-Configure $cmake $vs $openssl $boost -Clean:($action -eq 'Rebuild')
+            if ($OnWindows) { Invoke-Configure $cmake $vs $openssl $boost -Clean:($action -eq 'Rebuild') }
+            else { Invoke-ConfigureLinux $cmake $toolchain -Clean:($action -eq 'Rebuild') }
             $failedAt = 'compile'
             Enter-Phase 'compile' 'Compiling the server'
             Invoke-Compile $cmake

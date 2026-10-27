@@ -24,6 +24,9 @@ namespace CoAInstaller
             public readonly List<string> PatchWarnings = new List<string>(); // patches of modules that would not fit the update
         }
 
+        /// <summary>The file of a release that is this program: AFK-Realm.exe, or the Linux build of the web version.</summary>
+        public static string ToolAsset = Product.FileStem + ".exe";
+
         public static Result Run(Install inst)
         {
             var r = new Result();
@@ -76,7 +79,7 @@ namespace CoAInstaller
                             foreach (var a in (object[])assets)
                             {
                                 var asset = (Dictionary<string, object>)a;
-                                if (!string.Equals(Convert.ToString(asset["name"]), Product.FileStem + ".exe", StringComparison.OrdinalIgnoreCase)) continue;
+                                if (!string.Equals(Convert.ToString(asset["name"]), ToolAsset, StringComparison.OrdinalIgnoreCase)) continue;
                                 r.ToolDownload = Convert.ToString(asset["browser_download_url"]);
                                 object digest;
                                 var m = asset.TryGetValue("digest", out digest) ? Regex.Match(Convert.ToString(digest), "^sha256:([0-9a-fA-F]{64})$") : Match.Empty;
@@ -263,8 +266,8 @@ namespace CoAInstaller
         static string FindGit(Install inst)
         {
             var candidates = new List<string>();
-            foreach (var dir in (Environment.GetEnvironmentVariable("PATH") ?? "").Split(';'))
-                if (dir.Trim().Length > 0) candidates.Add(Path.Combine(dir.Trim().Trim('"'), "git.exe"));
+            foreach (var dir in (Environment.GetEnvironmentVariable("PATH") ?? "").Split(Path.PathSeparator))
+                if (dir.Trim().Length > 0) candidates.Add(Path.Combine(dir.Trim().Trim('"'), Os.Exe("git")));
             candidates.Add(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Git", "cmd", "git.exe"));
             candidates.Add(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Git", "cmd", "git.exe"));
             candidates.Add(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "Git", "cmd", "git.exe"));

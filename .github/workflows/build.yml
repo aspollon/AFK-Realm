@@ -35,3 +35,37 @@ jobs:
           body_path: RELEASE_NOTES.md
           # Tags with a suffix (v0.1.0-preview, v0.2.0-beta) are published as pre-releases.
           prerelease: ${{ contains(github.ref_name, '-') }}
+
+  # The cross-platform build (app/): a local web server with the page in an app window or the browser.
+  # Self-contained single files, so neither .NET nor anything else has to be installed first.
+  web:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: windows-latest, rid: win-x64, file: AFK-Realm.exe, asset: AFK-Realm-web.exe }
+          - { os: ubuntu-latest, rid: linux-x64, file: AFK-Realm, asset: AFK-Realm-linux-x64 }
+          - { os: ubuntu-latest, rid: linux-arm64, file: AFK-Realm, asset: AFK-Realm-linux-arm64 }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Publish
+        shell: bash
+        run: |
+          dotnet publish app/AfkRealm.csproj -c Release -r ${{ matrix.rid }} --self-contained true \
+            -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true \
+            -p:DebugType=none -o out
+          mv "out/${{ matrix.file }}" "out/${{ matrix.asset }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset }}
+          path: out/${{ matrix.asset }}
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: out/${{ matrix.asset }}
+          prerelease: ${{ contains(github.ref_name, '-') }}

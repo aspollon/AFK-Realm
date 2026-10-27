@@ -136,8 +136,58 @@ def engine_keys(keys):
 
 
 def cs_files():
-    d = os.path.join(ROOT, 'src')
-    return sorted(os.path.join(d, f) for f in os.listdir(d) if f.endswith('.cs'))
+    out = []
+    for d in (os.path.join(ROOT, 'src'), os.path.join(ROOT, 'app', 'Web'), os.path.join(ROOT, 'app', 'Shims')):
+        if os.path.isdir(d):
+            out += sorted(os.path.join(d, f) for f in os.listdir(d) if f.endswith('.cs'))
+    return out
+
+
+JS_CALL = re.compile(r"(?<![\w.$])([TF])\(\s*")
+JS_CTX = re.compile(r"(?<![\w.$])C\(\s*'([^']*)'\s*,\s*")
+
+
+def js_literal(src, i):
+    """Reads the JavaScript string literal ('..' or "..") at src[i]; returns (text, end) or None."""
+    if i >= len(src) or src[i] not in "'\"":
+        return None
+    q = src[i]; i += 1; out = []
+    while i < len(src):
+        c = src[i]
+        if c == '\\':
+            n = src[i + 1]
+            simple = {'n': '\n', 'r': '\r', 't': '\t', '"': '"', "'": "'", '\\': '\\', '0': '\0'}
+            if n in simple:
+                out.append(simple[n]); i += 2; continue
+            if n == 'u':
+                out.append(chr(int(src[i + 2:i + 6], 16))); i += 6; continue
+            out.append(n); i += 2; continue
+        if c == q:
+            return ''.join(out), i + 1
+        if c == '\n':
+            return None
+        out.append(c); i += 1
+    return None
+
+
+def js_keys(keys):
+    """Texts of the web page (app/wwwroot/js): T('text'), F('text {0}', ...) and C('context', 'text')."""
+    d = os.path.join(ROOT, 'app', 'wwwroot', 'js')
+    if not os.path.isdir(d):
+        return
+    for name in sorted(os.listdir(d)):
+        if not name.endswith('.js'):
+            continue
+        path = os.path.join(d, name)
+        src = open(path, encoding='utf-8').read()
+        for m in JS_CALL.finditer(src):
+            r = js_literal(src, m.end())
+            if r and r[0].strip():
+                keys.setdefault(r[0].replace('\r\n', '\n').strip(), 'app/wwwroot/js/%s:%d' % (name, src.count('\n', 0, m.start()) + 1))
+        for m in JS_CTX.finditer(src):
+            r = js_literal(src, m.end())
+            if r and r[0].strip():
+                keys.setdefault(m.group(1) + '|' + r[0].strip(), 'app/wwwroot/js/%s:%d' % (name, src.count('\n', 0, m.start()) + 1))
 
 
 def load(path):
@@ -244,6 +294,7 @@ def main():
     else:
         keys, bad = code_keys(cs_files())
         engine_keys(keys)
+        js_keys(keys)
 
     if cmd == 'keys':
         os.makedirs(lang_dir, exist_ok=True)
