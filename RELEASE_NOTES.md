@@ -1,6 +1,10 @@
-# AFK Realm 1.1.3
+# AFK Realm 1.1.4
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11 and now also on Linux.
+
+## New in 1.1.4
+
+- **Male-only race packs are saved correctly.** Older race folders could carry `MaleOnly = 0` even for Vrykul, Tuskarr, Fel Orc and the other male-only races. The pages now write the known male-only list into the setting as well; together with the client script, the female button stays off.
 
 ## New in 1.1.3
 

@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.4
+
+- Male-only race packs save `MaleOnly = 1` even when the race folder came from an older client or pack. The web and Windows pages use the same known list as the client script.
+
 ## 1.1.3
 
 - Custom races with two faction rows use a base of their own side. A saved Alliance base is not reused for the Horde row: Pandaren Horde falls back to Orc, Dracthyr Horde to Orc, Darkfallen Horde to Blood Elf, and an old wrong base is corrected when the page is saved. The web and Windows pages agree.

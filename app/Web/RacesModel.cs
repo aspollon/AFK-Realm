@@ -534,7 +534,7 @@ namespace CoAInstaller.Web
                 putText("Name", pack.Name); putText("Prefix", pack.Prefix); putText("File", pack.File.Length > 0 ? pack.File : pack.Key);
                 put("MaleDisplay", id > 0 ? (RaceImport.DisplayBase + id * 2).ToString() : "0");
                 put("FemaleDisplay", id > 0 ? (RaceImport.DisplayBase + id * 2 + 1).ToString() : "0");
-                put("MaleOnly", pack.MaleOnly ? "1" : "0");
+                put("MaleOnly", pack.MaleOnly || RaceImport.KnownMaleOnly(r.Key) ? "1" : "0");
                 bool packHelmets = pack.Prefix.Length > 0 && pack.Files.Any(f => f.StartsWith("Item\\ObjectComponents\\Head\\", StringComparison.OrdinalIgnoreCase)
                     && (f.EndsWith("_" + pack.Prefix + "M.m2", StringComparison.OrdinalIgnoreCase) || f.EndsWith("_" + pack.Prefix + "F.m2", StringComparison.OrdinalIgnoreCase)));
                 put("OwnHelmets", helmetPrefixes.Count == 0 || helmetPrefixes.Contains(pack.Prefix) || packHelmets ? "1" : "0");
