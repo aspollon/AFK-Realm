@@ -238,7 +238,9 @@ namespace CoAInstaller.Web
             }
             if (data == null)
             {
-                using (var s = Assembly.GetExecutingAssembly().GetManifestResourceStream("web/" + path))
+                // a build on Windows names the resources of subfolders with a backslash (web/js\app.js)
+                var asm = Assembly.GetExecutingAssembly();
+                using (var s = asm.GetManifestResourceStream("web/" + path) ?? asm.GetManifestResourceStream("web/" + path.Replace('/', '\\')))
                 {
                     if (s != null) { var ms = new MemoryStream(); await s.CopyToAsync(ms); data = ms.ToArray(); }
                 }

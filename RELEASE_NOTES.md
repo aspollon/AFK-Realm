@@ -1,6 +1,10 @@
-# AFK Realm 1.1.0
+# AFK Realm 1.1.1
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11 and now also on Linux.
+
+## New in 1.1.1
+
+- **`AFK-Realm-web.exe` shows its page on Windows.** It opened only a white window: the Windows build stored the files of the page under other names than the program looked for.
 
 ## New in 1.1.0
 
