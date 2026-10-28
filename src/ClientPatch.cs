@@ -425,6 +425,15 @@ namespace CoAInstaller
                 RaceImport.SectionRules(load, save, race, Text(e.SectionRules, "maleOnly") == "1", notes == null ? null : new Action<string>(notes.Add),
                     Text(e.SectionRules, "femaleOnly") == "1");
             }
+            // the reputations of their base races, in the client's own faction table as mod-custom-races does on the server
+            var lend = new List<KeyValuePair<int, int>>();
+            foreach (var e in plan.Edits.Where(e => e.SectionRules != null))
+            {
+                int race;
+                if (!int.TryParse(Text(e.SectionRules, "race"), out race) || race <= 0 || string.IsNullOrEmpty(e.Each)) continue;
+                lend.Add(new KeyValuePair<int, int>(race, BaseRaceId(ConfValue(inst, "mod_custom_races.conf", "CustomRaces." + e.Each + ".Base"))));
+            }
+            if (lend.Count > 0) RaceImport.LendFactions(load, save, lend, notes == null ? null : new Action<string>(notes.Add));
             SortSections(files);
             FillHeights(files, client, plan, load);
             if (files.Count > 0) files[StampName] = Encoding.UTF8.GetBytes(Stamp(files) + string.Concat(plan.Imports.Select(w => "race " + w.Race + " " + w.Pack.Key + "\r\n")));

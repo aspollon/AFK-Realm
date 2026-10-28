@@ -1,6 +1,10 @@
-# AFK Realm 1.1.10
+# AFK Realm 1.1.11
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11 and now also on Linux.
+
+## New in 1.1.11
+
+- **Fixed: custom races had no reputations and saw every NPC as neutral.** The game client didn't know which reputations a custom race starts with; it now gets the ones of the race it "starts like", like the server already did. Run **Game client › Install** once; existing characters show their reputations again (nothing was actually lost on the server).
 
 ## New in 1.1.10
 

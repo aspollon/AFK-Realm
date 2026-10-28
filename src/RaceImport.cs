@@ -656,6 +656,45 @@ namespace CoAInstaller
         }
 
         /// <summary>
+        /// The reputations of the base race for a race of ours, in the client's faction table (Faction.dbc): every race
+        /// mask of a faction that admits the base race admits the race too - what mod-custom-races does to the server's
+        /// table at its start (LendMasks). The game client works out the standing a character starts with and whether a
+        /// faction is shown from its own table; without the race's bit there, a character of a race of ours saw every
+        /// NPC as neutral and an empty reputation page, although the server had given it its base race's reputations.
+        /// A race above 32: the server gives it its base race's bit (the core patch), but the game client shifts by the race
+        /// number as x86 does, by its lowest five bits - race 91 reads the bit of race 27. That bit is lent too, unless a
+        /// race of this realm with another base race has that number.
+        /// </summary>
+        public static void LendFactions(Func<string, byte[]> load, Action<string, byte[]> save, IEnumerable<KeyValuePair<int, int>> races, Action<string> note = null)
+        {
+            var bytes = load("DBFilesClient\\Faction.dbc");
+            if (bytes == null) return;
+            var t = DbcTable.Parse(bytes, "Faction.dbc");
+            if (t.Fields < 6) return;
+            int lent = 0;
+            var all = races.ToList();
+            foreach (var pair in all)
+            {
+                int race = pair.Key, baseRace = pair.Value;
+                if (race < 1 || race > 127 || baseRace < 1 || baseRace > 32 || race == baseRace) continue;
+                int read = ((race - 1) & 31) + 1;               // the race whose bit the client reads
+                if (read != race && (read == baseRace || ClientRaces.Stock.Contains(read) || all.Any(o => o.Key == read && o.Value != baseRace))) continue;
+                uint bit = 1u << (read - 1), baseBit = 1u << (baseRace - 1);
+                foreach (var row in t.Records)
+                    for (int k = 2; k <= 5; k++)
+                    {
+                        uint mask = t.Field(row, k);
+                        if (mask == 0 || mask == 0xFFFFFFFF || (mask & baseBit) == 0 || (mask & bit) != 0) continue;
+                        t.SetField(row, k, mask | bit);
+                        lent++;
+                    }
+            }
+            if (lent == 0) return;
+            save("DBFilesClient\\Faction.dbc", t.ToBytes());
+            if (note != null) note(L.F("Faction.dbc: the reputations of their base races for the added races ({0} masks).", lent));
+        }
+
+        /// <summary>
         /// The rows of a race stop pointing at textures that are nowhere in the client (the race check found them missing
         /// and packing the race again did not bring them): an extra layer (the torso or legs of a skin, the upper face) is
         /// left empty, as stock races have it; a missing main texture takes the one of the nearest colour of the same

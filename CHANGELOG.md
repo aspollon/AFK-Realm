@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.11
+
+- **Custom races: reputations and friendly NPCs.** A character of an added race saw every NPC as neutral and an empty reputation page, and a race change to it seemed to wipe the reputations. The server gave the race its base race's reputations (mod-custom-races lends the race masks of the faction table at its start), but the game client works out starting standings and which factions it shows from its own `Faction.dbc`, which knew nothing of the race. The client patch now lends the same masks in the client's `Faction.dbc`: every race mask that admits the base race admits the race too. For a race above 32 the bit the client reads (its number's lowest five bits) is lent, unless a race of the realm with another base race has that number.
+
 ## 1.1.10
 
 - Custom races page: races could no longer be imported once a race folder had races - **Add races …** skipped the first step. It now always asks where the races come from (go on with the races you have, take races from CoA Custom's folder, choose another client, or download CoA Custom), and an **Import races …** button sits next to it.

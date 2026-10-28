@@ -2017,6 +2017,7 @@
     "CoA Custom is there already: AFK Realm takes the races from its folder. Another client with races? Choose its folder instead.": "CoA Custom 已存在：AFK Realm 从其文件夹中获取种族。另一个带种族的客户端？请改为选择它的文件夹。",
     "Go on with the races I have": "继续使用我已有的种族",
     "Take races from CoA Custom": "从 CoA Custom 获取种族",
-    "Take races from CoA Custom, or from another client or repack with races?": "从 CoA Custom 获取种族，还是从另一个带种族的客户端或整合包获取？"
+    "Take races from CoA Custom, or from another client or repack with races?": "从 CoA Custom 获取种族，还是从另一个带种族的客户端或整合包获取？",
+    "Faction.dbc: the reputations of their base races for the added races ({0} masks).": "Faction.dbc：为新增种族沿用其基础种族的声望（{0} 个掩码）。"
   }
 }

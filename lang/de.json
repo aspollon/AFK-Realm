@@ -2017,6 +2017,7 @@
     "CoA Custom is there already: AFK Realm takes the races from its folder. Another client with races? Choose its folder instead.": "CoA Custom ist schon da: AFK Realm nimmt die Rassen aus seinem Ordner. Ein anderer Client mit Rassen? Dann wähle stattdessen dessen Ordner.",
     "Go on with the races I have": "Mit meinen Rassen weitermachen",
     "Take races from CoA Custom": "Rassen aus CoA Custom holen",
-    "Take races from CoA Custom, or from another client or repack with races?": "Rassen aus CoA Custom holen oder aus einem anderen Client oder Repack mit Rassen?"
+    "Take races from CoA Custom, or from another client or repack with races?": "Rassen aus CoA Custom holen oder aus einem anderen Client oder Repack mit Rassen?",
+    "Faction.dbc: the reputations of their base races for the added races ({0} masks).": "Faction.dbc: die Rufe ihrer Basisrassen für die hinzugefügten Rassen ({0} Masken)."
   }
 }
