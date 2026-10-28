@@ -78,7 +78,7 @@ namespace CoAInstaller
         static bool HasArchives(string dir)
         {
             string data = Path.Combine(dir ?? "", "Data");
-            return Directory.Exists(data) && Directory.EnumerateFiles(data, "*.mpq").Any();
+            return Directory.Exists(data) && Directory.EnumerateFiles(data).Any(f => f.EndsWith(".mpq", StringComparison.OrdinalIgnoreCase));
         }
 
         static bool Named(string name, string want) { return string.Equals(name, want, StringComparison.OrdinalIgnoreCase); }

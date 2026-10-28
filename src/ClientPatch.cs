@@ -957,7 +957,7 @@ namespace CoAInstaller
             if (string.IsNullOrEmpty(client)) return;
             string data = Path.Combine(client, "Data");
             if (!Directory.Exists(data)) return;
-            foreach (string old in Directory.GetFiles(data, LegacyArchiveName, SearchOption.AllDirectories))
+            foreach (string old in Directory.GetFiles(data, "*", SearchOption.AllDirectories).Where(f => Path.GetFileName(f).Equals(LegacyArchiveName, StringComparison.OrdinalIgnoreCase)))
             {
                 try
                 {

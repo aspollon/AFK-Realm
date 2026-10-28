@@ -199,7 +199,7 @@ namespace CoAInstaller
             if (Path.GetFileName(folder.TrimEnd('\\', '/')).Equals("Data", StringComparison.OrdinalIgnoreCase)) return ClientPatch.ClientArchives(Path.GetDirectoryName(folder.TrimEnd('\\', '/')), true);
             // a game folder further down (a repack unpacked into a folder of its own)
             foreach (var dir in Below(folder, 3))
-                if (Directory.Exists(Path.Combine(dir, "Data")) && Directory.GetFiles(Path.Combine(dir, "Data"), "*.mpq").Length > 0) return ClientPatch.ClientArchives(dir, true);
+                if (Directory.Exists(Path.Combine(dir, "Data")) && Directory.GetFiles(Path.Combine(dir, "Data")).Any(f => f.EndsWith(".mpq", StringComparison.OrdinalIgnoreCase))) return ClientPatch.ClientArchives(dir, true);
             var found = new List<string>();
             foreach (var dir in new[] { folder }.Concat(Below(folder, 4)))
                 found.AddRange(Directory.GetFiles(dir).Where(f => f.EndsWith(".mpq", StringComparison.OrdinalIgnoreCase)));
@@ -247,7 +247,7 @@ namespace CoAInstaller
             foreach (var dir in new[] { folder }.Concat(Below(folder, 3)))
             {
                 string data = Path.Combine(dir, "Data");
-                if (Directory.Exists(data) && Directory.GetFiles(data, "*.mpq").Length > 0) return true;
+                if (Directory.Exists(data) && Directory.GetFiles(data).Any(f => f.EndsWith(".mpq", StringComparison.OrdinalIgnoreCase))) return true;
             }
             return false;
         }

@@ -345,3 +345,22 @@ table.grid.cells tr.sel td.rn { background: var(--accent); color: #fff; }
 .stat .tc { font-size: 12.5px; color: var(--muted); }
 @media (max-width: 720px) { .stats { grid-template-columns: repeat(2, 1fr); } }
 .diffgrid .slider { min-width: 0; gap: 4px; } .diffgrid .slider input[type=range] { min-width: 0; width: 100%; }
+
+/* Custom races: the simple list, its state chips and the decisions */
+.race-line { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 7px 0; border-bottom: 1px solid var(--line, rgba(127,127,127,.15)); }
+.race-line:last-child { border-bottom: 0; }
+.race-line .toggle { min-width: 220px; }
+.race-line .meta { color: var(--muted); font-size: 12.5px; }
+.race-line .grow { flex: 1; }
+.chip { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
+.chip.ready { background: rgba(46,160,90,.14); color: #2e9a5a; }
+.chip.auto { background: var(--accent-soft); color: var(--accent-ink); }
+.chip.decide { background: rgba(196,120,20,.16); color: var(--warn); }
+.side-head { font-weight: 700; margin: 14px 0 2px; font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.decision { border: 1px solid var(--warn); border-left-width: 4px; border-radius: 8px; padding: 10px 14px; margin: 8px 0; }
+.decision h3 { margin: 0 0 4px; font-size: 15px; }
+.decision p { margin: 0 0 8px; }
+details.advanced > summary { cursor: pointer; font-weight: 600; margin: 4px 0; }
+.wizard-steps { display: flex; gap: 6px; margin: 0 0 12px; flex-wrap: wrap; }
+.wizard-steps span { font-size: 12.5px; padding: 3px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-ink); opacity: .55; }
+.wizard-steps span.now { opacity: 1; font-weight: 700; }

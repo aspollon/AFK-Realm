@@ -988,6 +988,14 @@ namespace CoAInstaller
                 reservedNumbers.Clear(); reservedNumbers.UnionWith(scan.Reserved);
                 stockCopyNumbers.Clear(); stockCopyNumbers.UnionWith(scan.StockCopies);
                 races.AddRange(scan.Races);
+                // a race made from the row of another (the High Elf from the Blood Elf) has the side of the race it is
+                // meant to be, not that of the row: the High Elf is Alliance although the Blood Elf is Horde
+                foreach (var v in races.Where(x => x.Virtual))
+                {
+                    var k = KnownOf(v);
+                    if (k != null && bases.Contains(k.Base))
+                        v.Side = new[] { "Orc", "Undead", "Tauren", "Troll", "BloodElf" }.Contains(k.Base) ? 1 : 0;
+                }
                 MarkOwnNumbers();
                 slots.AddRange(scan.FreeNumbers);
                 moreSlots.AddRange(scan.MoreNumbers);

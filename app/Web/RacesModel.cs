@@ -142,6 +142,14 @@ namespace CoAInstaller.Web
                 reservedNumbers.Clear(); reservedNumbers.UnionWith(scan.Reserved);
                 stockCopyNumbers.Clear(); stockCopyNumbers.UnionWith(scan.StockCopies);
                 races.AddRange(scan.Races);
+                // a race made from the row of another (the High Elf from the Blood Elf) has the side of the race it is
+                // meant to be, not that of the row: the High Elf is Alliance although the Blood Elf is Horde
+                foreach (var v in races.Where(x => x.Virtual))
+                {
+                    var k = KnownOf(v);
+                    if (k != null && bases.Contains(k.Base))
+                        v.Side = new[] { "Orc", "Undead", "Tauren", "Troll", "BloodElf" }.Contains(k.Base) ? 1 : 0;
+                }
                 MarkOwnNumbers();
                 slots.AddRange(scan.FreeNumbers); moreSlots.AddRange(scan.MoreNumbers); highSlots.AddRange(scan.HighNumbers);
                 foreach (var hp in scan.HelmetPrefixes) helmetPrefixes.Add(hp);
@@ -689,14 +697,120 @@ namespace CoAInstaller.Web
                     alt = r.Alt == null ? null : new { text = L.F("Looks from the race folder ({0}, {1} MB) instead of your client", r.Alt.Source.Length > 0 ? r.Alt.Source : L.T("another client"), r.Alt.Bytes / 1000000), on = Raw("CustomRaces." + r.Key + ".Import", "0") == "1" }
                 };
             };
+            int capacity = own + s.Count + high;
+            var simple = races.OrderBy(r => ClientRaces.SideOf(r)).ThenBy(r => r.Name, StringComparer.CurrentCultureIgnoreCase).Select(r => Simple(r, chosen)).ToList();
+            var conflicts = new List<object>();
+            foreach (var r in races.Where(r => chosen.Any(c => c.Equals(r.Key, StringComparison.OrdinalIgnoreCase))))
+            {
+                var c = Conflict(r);
+                if (c != null) conflicts.Add(c);
+            }
+            if (on > capacity && capacity > 0)
+                conflicts.Add(new
+                {
+                    id = "capacity", title = L.F("More races are on than the game has room for ({0} of {1})", on, capacity),
+                    text = L.T("The game can only show a certain number of races. Switch off the races you want least; their characters keep playing as the race they start like until you switch them on again."),
+                    answers = new object[0]
+                });
             return new
             {
+                list = simple, conflicts, capacity, onCount = on, clientFolder = ClientAddons.ClientFolder ?? "",
+                hasCoa = Raw("CustomRaces.ClientRootFolder", "").Length > 0,
+                setupNeeded = chosen.Count == 0 && !races.Any(r => r.Pack != null || r.Alt != null),
                 problem, knownError, intro, usage, usageWarn = used >= s.Count + high, import, coaButton = coaButton ?? L.T("Download CoA Custom …"),
                 enable = Raw("CustomRaces.Enable", "1") == "1", more = More, high = High, unsaved = Unsaved,
                 bases = bases.Select(x => new { key = x, name = BaseName(x) }).ToArray(),
                 imported = races.Where(r => r.Pack != null).OrderBy(r => r.Name, StringComparer.CurrentCultureIgnoreCase).Select(race).ToArray(),
                 client = races.Where(r => r.Pack == null).OrderBy(r => r.Name, StringComparer.CurrentCultureIgnoreCase).Select(race).ToArray(),
                 after = L.F("The race choice of the game shows the races of the client patch. After a change, open Modules › Game client and choose Install: {0} builds the patch anew. The other players need the new ZIP. A race switched off keeps its characters as their base race until it is on again; changing the base race of a race with characters may move them to the other faction. When the game client changes with an update, open this page again: it reads the races anew.", Product.Name)
+            };
+        }
+
+        // ---------------------------------------------------------------- the simple view: one line per race
+
+        /// <summary>Whether a race is an Esteria race: its looks are built by CoA Custom's appearance DLL, which needs CoA
+        /// Custom's game exe and the race's number there.</summary>
+        bool NeedsCoaExe(ClientRace r)
+        {
+            var p = PackOf(r);
+            if (p != null) return p.Files.Any(f => f.IndexOf("\\native\\", StringComparison.OrdinalIgnoreCase) >= 0);
+            return r.Source >= 64 || EsteriaFile(r) != null;
+        }
+
+        bool HasCoaExe { get { return High && Raw("CustomRaces.ClientExe", "").Length > 0; } }
+
+        /// <summary>A race the user has to decide something about, in plain words with the ways out; null when AFK Realm
+        /// handles everything itself.</summary>
+        object Conflict(ClientRace r)
+        {
+            string name = L.Outside(r.Name);
+            if (NeedsCoaExe(r) && !HasCoaExe)
+                return new
+                {
+                    id = "coa:" + r.Key, key = r.Key, title = L.F("{0} needs CoA Custom", name),
+                    text = L.F("The looks of {0} (fur, armour styles, extra choices) are drawn by a part of CoA Custom's game. Without it the race appears in pieces. Download CoA Custom once - AFK Realm sets everything up - or switch the race off.", name),
+                    answers = new object[] { new { value = "coa-download", text = L.T("Download CoA Custom (recommended)"), primary = true },
+                        new { value = "coa-folder", text = L.T("I have CoA Custom already: choose its folder"), primary = false },
+                        new { value = "off:" + r.Key, text = L.F("Switch {0} off", name), primary = false } }
+                };
+            if (!r.OwnNumber && IdOf(r) <= 0)
+            {
+                var answers = new List<object>();
+                if (!More && moreSlots.Count > 0) answers.Add(new { value = "more", text = L.T("Make room for more races (recommended)"), primary = true });
+                answers.Add(new { value = "off:" + r.Key, text = L.F("Switch {0} off", name), primary = answers.Count == 0 });
+                return new
+                {
+                    id = "room:" + r.Key, key = r.Key, title = L.F("No room for {0}", name),
+                    text = !More && moreSlots.Count > 0
+                        ? L.T("The game is full. AFK Realm can make room for more races: it adds a small file of CoA Custom next to the game for that.")
+                        : L.T("The game is full. Switch off a race you want less, then switch this one on again."),
+                    answers = answers.ToArray()
+                };
+            }
+            if (r.Pack != null && NeedsCoaExe(r) && PackNumberConflict(r) != null)
+                return new
+                {
+                    id = "number:" + r.Key, key = r.Key, title = L.F("{0} cannot get its place", name),
+                    text = L.F("{0} has to be at place {1} to look right, but {2} of your game is there already. Switch one of the two off.", name, r.Pack.SourceRace, L.Outside(OtherAtNumber(r.Pack.SourceRace, r).Name)),
+                    answers = new object[] { new { value = "off:" + r.Key, text = L.F("Switch {0} off", name), primary = true } }
+                };
+            return null;
+        }
+
+        /// <summary>One line of the simple list.</summary>
+        object Simple(ClientRace r, List<string> chosen)
+        {
+            bool isOn = chosen.Any(c => c.Equals(r.Key, StringComparison.OrdinalIgnoreCase));
+            int side = ClientRaces.SideOf(r);
+            string b = Raw("CustomRaces." + r.Key + ".Base", DefaultBase(r));
+            if (!ClientRaces.BaseFitsSide(side, b)) b = DefaultBase(r);
+            bool female = r.Pack != null ? r.Pack.FemaleOnly : r.FemaleOnly;
+            bool male = !female && (r.Pack != null ? r.Pack.MaleOnly : r.MaleOnly);
+            string state = "ready", stateText = L.T("ready");
+            if (isOn && Conflict(r) != null) { state = "decide"; stateText = L.T("needs your decision"); }
+            else if (isOn && r.Pack != null && PackNumberConflict(r) != null) { state = "auto"; stateText = L.T("gets a free place automatically"); }
+            else if (!isOn) { state = "off"; stateText = ""; }
+            object variant = null;
+            if (r.Alt != null)
+            {
+                bool usesFolder = Raw("CustomRaces." + r.Key + ".Import", "0") == "1";
+                string other = r.Alt.Source.Length > 0 ? r.Alt.Source : L.T("another client");
+                variant = new
+                {
+                    text = usesFolder ? L.F("Looks: {0} (more choices)", other) : L.T("Looks: your game"),
+                    swap = usesFolder ? L.T("Use the looks of your game instead") : L.F("Use the looks of {0} instead", other),
+                    on = usesFolder
+                };
+            }
+            string from = r.Pack != null ? (r.Pack.Source.Length > 0 ? r.Pack.Source : L.T("another client")) : L.T("your game");
+            return new
+            {
+                key = r.Key, name = L.Outside(r.Name), on = isOn, side = side == 0 ? "alliance" : side == 1 ? "horde" : "",
+                sex = male ? L.T("men only") : female ? L.T("women only") : "",
+                @base = b, from, state, stateText, variant,
+                pack = r.Pack != null, canFree = !r.OwnNumber, freeEnabled = !r.OwnNumber && IdOf(r) > 0 && !isOn,
+                canMove = r.Pack == null && !r.Virtual && !ClientRaces.Stock.Contains(r.Source),
+                number = r.OwnNumber ? L.F("race number {0} (its own)", r.Source) : IdOf(r) > 0 ? L.F("race number {0}", IdOf(r)) : L.T("no race number yet")
             };
         }
 
@@ -756,6 +870,9 @@ namespace CoAInstaller.Web
                         throw new UserError(L.F("All {0} free race numbers are taken{1}. Free the number of a race you do not want any more (switch it off, then \"Free its number\") to make room for the {2}.", Slots.Count, More ? "" : " " + L.T("(switch on the 64-race patch for more)"), L.Outside(r.Name)));
                 }
                 if (Raw("CustomRaces." + r.Key + ".Base", "").Length == 0) Set("CustomRaces." + r.Key + ".Base", "\"" + DefaultBase(r) + "\"");
+                // a race the game has and the race folder too (the Vulpera of the game and CoA Custom's): AFK Realm picks the
+                // folder's looks (more choices) unless the user chose before; the line says so and can switch back
+                if (r.Alt != null && Raw("CustomRaces." + r.Key + ".Import", "").Length == 0) Set("CustomRaces." + r.Key + ".Import", "1");
                 Describe(r, id);
                 chosen.Add(r.Key);
             }
