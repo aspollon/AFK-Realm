@@ -2006,6 +2006,8 @@
     "Add \"{0}\" to the application menu": "Adicionar “{0}” ao menu de aplicativos",
     "If build tools of your distribution are missing, AFK Realm stops and shows the one command that installs them (it needs sudo once). Compiling puts a heavy load on your PC.": "Se faltarem ferramentas de compilação da sua distribuição, o AFK Realm para e mostra o comando que as instala (ele precisa de sudo uma vez). A compilação exige muito do seu PC.",
     "{0}: packed again from the newer {1} in {2}.": "{0}: empacotado novamente a partir da versão mais nova de {1} em {2}.",
-    "{0}: its rows are copied from number {1} of the game client to its number {2}.": "{0}: suas linhas são copiadas do número {1} do cliente do jogo para o número {2}."
+    "{0}: its rows are copied from number {1} of the game client to its number {2}.": "{0}: suas linhas são copiadas do número {1} do cliente do jogo para o número {2}.",
+    "{0}: the race table of the game has no row for it (its row is under number {1}).": "{0}: a tabela de raças do jogo não tem linha para ela (a linha dela está no número {1}).",
+    "{0}: its row is under number {1} of the game client; it is taken from there for its number {2}.": "{0}: a linha dela está no número {1} do cliente do jogo; é usada de lá para o número {2}."
   }
 }

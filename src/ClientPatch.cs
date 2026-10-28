@@ -1471,14 +1471,23 @@ namespace CoAInstaller
         /// place of the installed one.</summary>
         static List<string> ArchivesWith(string client, string path, string temp)
         {
-            var list = ClientArchives(client);
+            // every archive the game reads - the race archives of AFK Realm too, the imported races' models are in them
+            var list = ClientArchives(client, true);
             int at = list.FindIndex(p => string.Equals(Path.GetFullPath(p), Path.GetFullPath(path), StringComparison.OrdinalIgnoreCase));
             if (at >= 0) { list[at] = temp; return list; }
-            string data = Os.Resolve(client, "Data");
-            at = list.FindIndex(p => string.Equals(Path.GetDirectoryName(Path.GetFullPath(p)), Path.GetFullPath(data), StringComparison.OrdinalIgnoreCase) &&
-                Path.GetFileName(p).StartsWith("patch", StringComparison.OrdinalIgnoreCase) &&
-                string.Compare(Path.GetFileName(p), ArchiveName, StringComparison.OrdinalIgnoreCase) > 0);
-            if (at < 0) list.Add(temp); else list.Insert(at, temp);
+            // not there yet (first install): where the game will read it - after every lettered patch of Data whose name
+            // sorts before it. "patch.MPQ" sorts after "patch-ZZZZZ.MPQ" by its characters, but the game reads it
+            // first; only the lettered patches count here.
+            string data = Path.GetFullPath(Os.Resolve(client, "Data"));
+            Func<string, bool> lettered = p =>
+            {
+                string name = Path.GetFileName(p);
+                return string.Equals(Path.GetDirectoryName(Path.GetFullPath(p)), data, StringComparison.OrdinalIgnoreCase) &&
+                    name.StartsWith("patch-", StringComparison.OrdinalIgnoreCase) && !Regex.IsMatch(name, @"^patch-\d\.mpq$", RegexOptions.IgnoreCase);
+            };
+            at = list.FindIndex(p => lettered(p) && StringComparer.OrdinalIgnoreCase.Compare(Path.GetFileName(p), ArchiveName) > 0);
+            if (at < 0) at = list.FindLastIndex(p => lettered(p)) + 1;
+            if (at <= 0) list.Add(temp); else list.Insert(at, temp);
             return list;
         }
 

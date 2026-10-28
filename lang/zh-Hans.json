@@ -2006,6 +2006,8 @@
     "Add \"{0}\" to the application menu": "将“{0}”添加到应用程序菜单",
     "If build tools of your distribution are missing, AFK Realm stops and shows the one command that installs them (it needs sudo once). Compiling puts a heavy load on your PC.": "如果缺少发行版的构建工具，AFK Realm 会停下并显示安装它们的命令（需要一次 sudo）。编译会给电脑带来很大负载。",
     "{0}: packed again from the newer {1} in {2}.": "{0}：已从 {2} 中较新的 {1} 重新打包。",
-    "{0}: its rows are copied from number {1} of the game client to its number {2}.": "{0}：其数据行从游戏客户端的编号 {1} 复制到它的编号 {2}。"
+    "{0}: its rows are copied from number {1} of the game client to its number {2}.": "{0}：其数据行从游戏客户端的编号 {1} 复制到它的编号 {2}。",
+    "{0}: the race table of the game has no row for it (its row is under number {1}).": "{0}：游戏的种族表中没有它的行（它的行在编号 {1} 下）。",
+    "{0}: its row is under number {1} of the game client; it is taken from there for its number {2}.": "{0}：它的行在游戏客户端的编号 {1} 下；从那里取用于它的编号 {2}。"
   }
 }

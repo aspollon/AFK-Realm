@@ -157,7 +157,16 @@ namespace CoAInstaller
                             // a race of the game client under a number other than its row's (moved, or given CoA
                             // Custom's number), with its rows edited in place: copy them to its number instead
                             int source = SourceOf(inst, key);
-                            if (!import && source > 0 && source != f.Id && Get(inst, "CustomRaces." + key + ".Copy") != "1")
+                            // its row is under another number than the settings say (a move of the client races, or
+                            // settings older than the client): take the rows from where they are
+                            if (!import && f.FoundAt > 0 && f.FoundAt != source)
+                            {
+                                values["CustomRaces." + key + ".Source"] = f.FoundAt.ToString();
+                                values["CustomRaces." + key + ".Copy"] = f.FoundAt == f.Id ? "0" : "1";
+                                done.Add(L.F("{0}: its row is under number {1} of the game client; it is taken from there for its number {2}.", name, f.FoundAt, f.Id));
+                                changed = true;
+                            }
+                            else if (!import && source > 0 && source != f.Id && Get(inst, "CustomRaces." + key + ".Copy") != "1")
                             {
                                 values["CustomRaces." + key + ".Copy"] = "1";
                                 done.Add(L.F("{0}: its rows are copied from number {1} of the game client to its number {2}.", name, source, f.Id));

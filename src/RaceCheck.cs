@@ -23,6 +23,8 @@ namespace CoAInstaller
         {
             public string Kind, Key, Text;
             public int Id, CoaNumber;
+            /// <summary>NoRow: the number the race's row has in the built table (found by its file name), 0 if none.</summary>
+            public int FoundAt;
             public override string ToString() { return Text; }
         }
 
@@ -43,7 +45,7 @@ namespace CoAInstaller
 
         public static List<string> Run(Install inst, string client, IEnumerable<string> repaired)
         {
-            var found = Inspect(inst, client, ClientPatch.ClientArchives(client));
+            var found = Inspect(inst, client, ClientPatch.ClientArchives(client, true));   // with the patch and race archives: what the game reads
             var problems = found.Select(f => f.Text).ToList();
             try
             {
@@ -53,6 +55,18 @@ namespace CoAInstaller
                 foreach (var r in repaired ?? Enumerable.Empty<string>()) text.AppendLine("* " + r);
                 if (problems.Count == 0) text.AppendLine(L.T("No problems found."));
                 foreach (var p in problems) text.AppendLine("- " + p);
+                // the race settings as the patch read them, for whoever helps with a problem
+                text.AppendLine();
+                text.AppendLine("CustomRaces.Races = " + (ClientPatch.ConfValue(inst, Conf, "CustomRaces.Races") ?? ""));
+                text.AppendLine("CustomRaces.MoveClientRaces = " + (ClientPatch.ConfValue(inst, Conf, "CustomRaces.MoveClientRaces") ?? ""));
+                text.AppendLine("CustomRaces.HighRaces = " + (ClientPatch.ConfValue(inst, Conf, "CustomRaces.HighRaces") ?? ""));
+                string confPath = Path.Combine(inst.ConfigDir, "modules", Conf);
+                var withNumber = File.Exists(confPath)
+                    ? Regex.Matches(File.ReadAllText(confPath), @"(?m)^[ \t]*CustomRaces\.([A-Za-z0-9_]+)\.Id[ \t]*=").Cast<Match>().Select(m => m.Groups[1].Value).Distinct(StringComparer.OrdinalIgnoreCase)
+                    : Enumerable.Empty<string>();
+                foreach (var k in withNumber)
+                    text.AppendLine(k + ": " + string.Join(" ", new[] { "Id", "Source", "Copy", "Import", "File", "Base" }
+                        .Select(o => o + "=" + (ClientPatch.ConfValue(inst, Conf, "CustomRaces." + k + "." + o) ?? ""))));
                 File.WriteAllText(Path.Combine(inst.LogDir, "race-check.txt"), text.ToString(), new UTF8Encoding(false));
             }
             catch { }
@@ -128,7 +142,17 @@ namespace CoAInstaller
                         who = name + " (" + id + ")";
                         bool hidesHelmets = (ClientPatch.ConfValue(inst, Conf, "CustomRaces." + key + ".OwnHelmets") ?? "1") == "0";
                         var row = cr.Records.FirstOrDefault(r => cr.Field(r, 0) == (uint)id);
-                        if (row == null) { add(NoRow, L.F("{0}: the race table of the game has no row for it.", who)); continue; }
+                        if (row == null)
+                        {
+                            // where its row is instead (moved to another number, or never renumbered): by its file name
+                            string file = ClientPatch.ConfValue(inst, Conf, "CustomRaces." + key + ".File") ?? "";
+                            var elsewhere = file.Length == 0 ? null : cr.Records.FirstOrDefault(r => ClientRaces.Str(cr, r, 11).Equals(file, StringComparison.OrdinalIgnoreCase));
+                            add(NoRow, elsewhere != null
+                                ? L.F("{0}: the race table of the game has no row for it (its row is under number {1}).", who, cr.Field(elsewhere, 0))
+                                : L.F("{0}: the race table of the game has no row for it.", who));
+                            if (elsewhere != null) problems[problems.Count - 1].FoundAt = (int)cr.Field(elsewhere, 0);
+                            continue;
+                        }
                         bool maleOnly = (ClientPatch.ConfValue(inst, Conf, "CustomRaces." + key + ".MaleOnly") ?? "0") == "1";
                         bool femaleOnly = (ClientPatch.ConfValue(inst, Conf, "CustomRaces." + key + ".FemaleOnly") ?? "0") == "1";
                         var sexes = maleOnly ? new[] { 0 } : femaleOnly ? new[] { 1 } : new[] { 0, 1 };

@@ -1,6 +1,10 @@
-# AFK Realm 1.1.6
+# AFK Realm 1.1.7
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11 and now also on Linux.
+
+## New in 1.1.7
+
+- **Fixed: imported races were switched off at every Game client › Install** ("the race table of the game has no row for it"). The race check looked at the game's archives in the wrong order and missed the new races. Update, switch your races on again on **Modules › Custom races** and run **Game client › Install**.
 
 ## New in 1.1.6
 

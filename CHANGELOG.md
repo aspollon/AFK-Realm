@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.7
+
+- **Fixed: every imported race was switched off at Game client › Install** ("the race table of the game has no row for it"). The race check read the new client patch as if the game loaded it before `patch.MPQ` (by the characters of the names, `patch.MPQ` sorts after `patch-ZZZZZ.MPQ`), so the rows of the client's own `patch-M.MPQ` hid the rows of the imported races. It also left out the race archives (`patch-ZYG..`) with their models. The check now reads every archive the game reads, in the game's order. The final check and **Check the races …** read the installed patch and race archives too.
+- Race check: when a race of the game client has no row under its number, it looks for the row by the race's file name and takes it from there (a race moved to another number) instead of switching the race off; the message says where the row is.
+- `logs\race-check.txt` lists the race settings (number, source, copy, import, file, base of every race, the moves of client races), so one file shows what the check saw.
+
 ## 1.1.6
 
 - Custom races: a race of the game client whose number differs from the number of its row there (an Esteria race given CoA Custom's number by the race check, or a number changed by hand) was switched off at the next client install ("the race table of the game has no row for it"): its rows were edited in place instead of copied to its number. The race check now copies them (as for the High Elf), the page writes `Copy = 1` for such a race, and the numbers check of the page leaves a copied race at its number.
