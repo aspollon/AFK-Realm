@@ -95,6 +95,7 @@ namespace CoAInstaller.Web
             MapBots(app);
             MapFiles(app);
             MapRemote(app);
+            MapSupport(app);
         }
 
         // ---- helpers ----

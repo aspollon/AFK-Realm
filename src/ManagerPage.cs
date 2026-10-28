@@ -66,6 +66,26 @@ namespace CoAInstaller
         readonly Button consoles = Ui.Secondary(L.T("Open server consoles …"));
         ConsolesDialog consolesWindow;
 
+        /// <summary>Collects the logs, crash reports and dumps of server and game client into one ZIP (SupportBundle) and
+        /// shows where it is.</summary>
+        void GetHelp()
+        {
+            if (!Ui.Confirm(this, L.T("Something does not work - the server does not build, crashes, the game shows errors? AFK Realm now collects everything needed to find the cause: the logs of the build and the server, crash reports and dumps, the settings (without passwords) and the logs of your game client.") + "\n\n" +
+                L.T("You get one ZIP file. Send it on Discord together with a few words about what happened - that is all."))) return;
+            SupportBundle.Result r;
+            try { r = Busy.Run(this, L.T("Collecting the files for help …"), rep => SupportBundle.Make(inst, ClientAddons.ClientFolder, t => rep(t, 0, 0))); }
+            catch (Exception ex) { Ui.Error(this, ex.Message); return; }
+            string text = L.T("Done! Your help file is ready.") + "\n\n" + r.Zip + "\n\n" + L.T("Next steps:") + "\n" +
+                "1. " + L.T("Open the folder with the button below - the file is selected there.") + "\n" +
+                "2. " + L.T("Drag the file into the AFK Realm channel on Discord (or attach it with the + button).") + "\n" +
+                "3. " + L.T("Write in a few words what you did and what went wrong.");
+            if (r.ZipBytes > 9.5 * 1048576) text += "\n\n" + L.T("The file is larger than Discord allows without Nitro (10 MB). Upload it to Google Drive, OneDrive or a similar service and post the link instead.");
+            if (r.Dumps != null) text += "\n\n" + L.F("Crash dumps were found as well ({0} MB). They are in a second file next to it ({1}); send it only when you are asked for it - it is usually too large for Discord.", Math.Round(r.DumpBytes / 1048576.0, 1), Path.GetFileName(r.Dumps));
+            text += "\n\n" + L.T("Open the folder now?");
+            if (MessageBox.Show(this, text, Product.Name, MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
+                try { Process.Start("explorer.exe", "/select,\"" + r.Zip + "\""); } catch { }
+        }
+
         /// <summary>
         /// The consoles are a window of their own with its own taskbar entry. It runs on its own
         /// thread, so it stays usable while AFK Realm shows another window (settings, modules,
@@ -246,6 +266,11 @@ namespace CoAInstaller
             var buttons = Ui.Row(); buttons.Location = new Point(28, 70); buttons.BackColor = Ui.Canvas;
             Ui.WithIcon(start, "server");
             buttons.Controls.Add(start); buttons.Controls.Add(stop); buttons.Controls.Add(restart); buttons.Controls.Add(consoles);
+            // "Problem? Get help": all logs and crash files in one ZIP for Discord - next to the main buttons, never hidden
+            var help = Ui.Danger(L.T("Problem? Get help"));
+            help.Margin = new Padding(16, 4, 8, 4);
+            help.Click += (s, e) => GetHelp();
+            buttons.Controls.Add(help);
             consoles.Margin = new Padding(16, 4, 8, 4);
             consoles.Click += (s, e) => OpenConsoles();
             start.Click += (s, e) => StartServer();

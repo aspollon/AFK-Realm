@@ -220,6 +220,14 @@ export function waitJob(job) {
  * Starts a task (an API call that answers with a job) and shows its status lines in a small dialog until it ends;
  * returns the finished job. Errors are shown.
  */
+/** A job that went wrong: its message, and the way to the help files right there. */
+export async function failed(message) {
+  const v = await dialog({ title: meta.product, icon: 'warn', body: h('div', {}, h('div.pre', {}, message),
+    h('p.small.muted', { style: { marginTop: '12px' } }, T('Stuck? "Get help" collects all logs and crash files into one ZIP you can send on Discord.'))),
+    buttons: [{ text: T('Get help …'), value: 'help' }, { text: T('OK'), kind: 'primary', value: true }] });
+  if (v === 'help') import('./help.js').then(m => m.helpBundle());
+}
+
 export async function runTask(call, title) {
   let job;
   try { job = await call(); }
@@ -228,7 +236,7 @@ export async function runTask(call, title) {
     await alert(e.message); return null;
   }
   if (!job || !job.id) return job;
-  if (!job.running) { if (!job.ok) await alert(job.message); return job; }
+  if (!job.running) { if (!job.ok) await failed(job.message); return job; }
   const status = h('div.muted', {}, job.status || T('Working …'));
   const bar = h('div.bar.thin.busy', {}, h('i'));
   let closeIt;
@@ -237,7 +245,7 @@ export async function runTask(call, title) {
   const end = await waitJob(job);
   off();
   closeIt && closeIt();
-  if (end && !end.ok) await alert(end.message);
+  if (end && !end.ok) await failed(end.message);
   return end;
 }
 
@@ -372,6 +380,6 @@ export async function runProgress(call, title, { quiet = false } = {}) {
   const end = job.running ? await waitJob(job) : job;
   off();
   closeIt && closeIt();
-  if (end && !end.ok && !quiet) await alert(end.message);
+  if (end && !end.ok && !quiet) await failed(end.message);
   return end;
 }

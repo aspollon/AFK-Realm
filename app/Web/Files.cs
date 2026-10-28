@@ -23,11 +23,13 @@ namespace CoAInstaller.Web
             if (Program.Opts.Listen != null || string.IsNullOrEmpty(path)) return false;
             try
             {
-                if (Os.Windows) Process.Start(new ProcessStartInfo("explorer.exe", MySql.Arg(path)) { UseShellExecute = true });
+                // a file: its folder, with the file selected where the file manager can do that
+                bool file = File.Exists(path);
+                if (Os.Windows) Process.Start(new ProcessStartInfo("explorer.exe", file ? "/select," + MySql.Arg(path) : MySql.Arg(path)) { UseShellExecute = true });
                 else
                 {
                     if (!AppWindow.CanShow) return false;
-                    Process.Start(new ProcessStartInfo("xdg-open", MySql.Arg(path)) { UseShellExecute = false, RedirectStandardError = true, RedirectStandardOutput = true });
+                    Process.Start(new ProcessStartInfo("xdg-open", MySql.Arg(file ? Path.GetDirectoryName(path) : path)) { UseShellExecute = false, RedirectStandardError = true, RedirectStandardOutput = true });
                 }
                 return true;
             }

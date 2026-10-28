@@ -3,6 +3,7 @@ import { h, T, F, meta, post, get, replace, clear, lines, on, state } from './co
 import { primary, secondary, ghost, card, field, input, password, select, toggle, confirm, alert, act, runTask, menu, choose, check, dialog, note, setNote, toast } from './ui.js';
 import { icon } from './icons.js';
 import { show, languageMenu, themeMenu } from './app.js';
+import { helpButton } from './help.js';
 
 const sections = [
   ['server', () => T('Server'), 'server'],
@@ -25,7 +26,7 @@ export function manager() {
   const lang = h('button', { type: 'button', onclick: () => languageMenu(lang) }, icon('language'), (meta.languages.find(l => l.code === meta.language) || { name: 'English' }).name);
   const theme = h('button', { type: 'button', title: T('Theme'), onclick: () => themeMenu(theme) }, icon('sun'));
   const sidebar = h('aside.sidebar', {}, picker, nav,
-    h('div.sidefoot', {}, h('div.tools', {}, lang, theme), h('div', {}, meta.product + ' ' + meta.version)));
+    h('div.sidefoot', {}, helpButton(), h('div.tools', {}, lang, theme), h('div', {}, meta.product + ' ' + meta.version)));
 
   // the bar at the top
   const pills = { db: pill(T('Database')), auth: pill(T('Login (authserver)')), world: pill(T('Game world (worldserver)')) };

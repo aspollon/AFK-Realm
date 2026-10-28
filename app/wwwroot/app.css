@@ -364,3 +364,8 @@ details.advanced > summary { cursor: pointer; font-weight: 600; margin: 4px 0; }
 .wizard-steps { display: flex; gap: 6px; margin: 0 0 12px; flex-wrap: wrap; }
 .wizard-steps span { font-size: 12.5px; padding: 3px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-ink); opacity: .55; }
 .wizard-steps span.now { opacity: 1; font-weight: 700; }
+
+/* "Problem? Get help": always visible in the side bar */
+.helpbtn { display: flex; align-items: center; gap: 8px; width: 100%; margin: 10px 0 8px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--warn); background: rgba(196,120,20,.12); color: var(--warn); font-weight: 700; font-size: 14px; cursor: pointer; text-align: left; }
+.helpbtn:hover { background: rgba(196,120,20,.22); }
+.helpbtn span:first-child { font-size: 18px; }
