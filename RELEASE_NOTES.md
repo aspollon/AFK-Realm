@@ -1,6 +1,10 @@
-# AFK Realm 1.1.9
+# AFK Realm 1.1.10
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11 and now also on Linux.
+
+## New in 1.1.10
+
+- **Import races again at any time.** Once you had races, **Add races …** no longer offered to take more. Now it always asks where the races come from, and there is an **Import races …** button (CoA Custom or another client).
 
 ## New in 1.1.9
 

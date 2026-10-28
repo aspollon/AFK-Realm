@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.10
+
+- Custom races page: races could no longer be imported once a race folder had races - **Add races …** skipped the first step. It now always asks where the races come from (go on with the races you have, take races from CoA Custom's folder, choose another client, or download CoA Custom), and an **Import races …** button sits next to it.
+
 ## 1.1.9
 
 - **Moves of client races tidied up by themselves.** Moving the same race again and again wrote chains (`16:76 76:77 77:83 83:84`). The Custom races page now writes one move per race, from its number in the client to where it ends (`16:84`), leaves out moves that do nothing (a race the client does not have, a number that is taken, a move back), and puts them in an order in which every new number is free. Existing settings are tidied at the next opening of the page or client install; what the moves do stays the same.

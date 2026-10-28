@@ -1256,7 +1256,7 @@
     "There are {0} free race numbers below 32 and {1} more above 31; together with the {2} races that bring their own number, up to {3} races can be on at once.": "There are {0} free race numbers below 32 and {1} more above 31; together with the {2} races that bring their own number, up to {3} races can be on at once.",
     "Import races": "Import races",
     "Choose the game client or repack once. AFK Realm finds its races and the files it needs for your game client, takes the races from that client and keeps the required files up to date when the client patch is installed.": "Choose the game client or repack once. AFK Realm finds its races and the files it needs for your game client, takes the races from that client and keeps the required files up to date when the client patch is installed.",
-    "Import races …": "Import races …",
+    "Import races …": "导入种族 …",
     "Download CoA Custom …": "下载 CoA Custom …",
     "Show race IDs …": "显示种族 ID …",
     "A custom race keeps the race number its client and Esteria appearance use. Stock-copy rows 51-61 (NightElf2, Gnome2, ...) are placeholders and are replaced, not moved. “Show race IDs” lists the actual mapping of your client.": "自定义种族会保留其客户端和 Esteria Appearance 使用的种族编号。原版种族的副本行 51-61（NightElf2、Gnome2 等）只是占位符，会被替换而不是移动。“显示种族 ID”会列出你客户端的实际对应关系。",
@@ -2012,6 +2012,11 @@
     "The race number move {0}:{1} is left out: {2}.": "种族编号移动 {0}:{1} 被跳过：{2}。",
     "the client has no race {0}": "客户端没有种族 {0}",
     "race {0} is taken": "种族 {0} 已被占用",
-    "{0}: {1} missing textures are left out of its looks (its client does not have them either).": "{0}：{1} 个缺失的纹理从其外观中省略（其客户端也没有）。"
+    "{0}: {1} missing textures are left out of its looks (its client does not have them either).": "{0}：{1} 个缺失的纹理从其外观中省略（其客户端也没有）。",
+    "Take more races into your race folder, or go on with the races you have.": "将更多种族加入你的种族文件夹，或继续使用已有的种族。",
+    "CoA Custom is there already: AFK Realm takes the races from its folder. Another client with races? Choose its folder instead.": "CoA Custom 已存在：AFK Realm 从其文件夹中获取种族。另一个带种族的客户端？请改为选择它的文件夹。",
+    "Go on with the races I have": "继续使用我已有的种族",
+    "Take races from CoA Custom": "从 CoA Custom 获取种族",
+    "Take races from CoA Custom, or from another client or repack with races?": "从 CoA Custom 获取种族，还是从另一个带种族的客户端或整合包获取？"
   }
 }

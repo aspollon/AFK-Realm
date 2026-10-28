@@ -1256,7 +1256,7 @@
     "There are {0} free race numbers below 32 and {1} more above 31; together with the {2} races that bring their own number, up to {3} races can be on at once.": "There are {0} free race numbers below 32 and {1} more above 31; together with the {2} races that bring their own number, up to {3} races can be on at once.",
     "Import races": "Import races",
     "Choose the game client or repack once. AFK Realm finds its races and the files it needs for your game client, takes the races from that client and keeps the required files up to date when the client patch is installed.": "Choose the game client or repack once. AFK Realm finds its races and the files it needs for your game client, takes the races from that client and keeps the required files up to date when the client patch is installed.",
-    "Import races …": "Import races …",
+    "Import races …": "Импортировать расы …",
     "Download CoA Custom …": "Скачать CoA Custom …",
     "Show race IDs …": "Показать ID рас …",
     "A custom race keeps the race number its client and Esteria appearance use. Stock-copy rows 51-61 (NightElf2, Gnome2, ...) are placeholders and are replaced, not moved. “Show race IDs” lists the actual mapping of your client.": "Собственная раса сохраняет номер, который используют её клиент и Esteria Appearance. Строки-копии стандартных рас 51-61 (NightElf2, Gnome2, ...) — заглушки: они заменяются, а не переносятся. «Показать ID рас» выводит фактическое соответствие вашего клиента.",
@@ -2012,6 +2012,11 @@
     "The race number move {0}:{1} is left out: {2}.": "Перенос номера расы {0}:{1} пропущен: {2}.",
     "the client has no race {0}": "в клиенте нет расы {0}",
     "race {0} is taken": "раса {0} занята",
-    "{0}: {1} missing textures are left out of its looks (its client does not have them either).": "{0}: {1} отсутствующих текстур убраны из её облика (в её клиенте их тоже нет)."
+    "{0}: {1} missing textures are left out of its looks (its client does not have them either).": "{0}: {1} отсутствующих текстур убраны из её облика (в её клиенте их тоже нет).",
+    "Take more races into your race folder, or go on with the races you have.": "Добавь ещё рас в папку рас или продолжай с теми, что есть.",
+    "CoA Custom is there already: AFK Realm takes the races from its folder. Another client with races? Choose its folder instead.": "CoA Custom уже есть: AFK Realm берёт расы из его папки. Другой клиент с расами? Выбери его папку.",
+    "Go on with the races I have": "Продолжить с моими расами",
+    "Take races from CoA Custom": "Взять расы из CoA Custom",
+    "Take races from CoA Custom, or from another client or repack with races?": "Взять расы из CoA Custom или из другого клиента или репака с расами?"
   }
 }

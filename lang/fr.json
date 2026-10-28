@@ -1256,7 +1256,7 @@
     "There are {0} free race numbers below 32 and {1} more above 31; together with the {2} races that bring their own number, up to {3} races can be on at once.": "There are {0} free race numbers below 32 and {1} more above 31; together with the {2} races that bring their own number, up to {3} races can be on at once.",
     "Import races": "Import races",
     "Choose the game client or repack once. AFK Realm finds its races and the files it needs for your game client, takes the races from that client and keeps the required files up to date when the client patch is installed.": "Choose the game client or repack once. AFK Realm finds its races and the files it needs for your game client, takes the races from that client and keeps the required files up to date when the client patch is installed.",
-    "Import races …": "Import races …",
+    "Import races …": "Importer des races …",
     "Download CoA Custom …": "Télécharger CoA Custom …",
     "Show race IDs …": "Afficher les ID des races …",
     "A custom race keeps the race number its client and Esteria appearance use. Stock-copy rows 51-61 (NightElf2, Gnome2, ...) are placeholders and are replaced, not moved. “Show race IDs” lists the actual mapping of your client.": "Une race personnalisée garde le numéro de race qu'utilisent son client et Esteria Appearance. Les lignes de copies des races de base 51-61 (NightElf2, Gnome2, ...) sont des espaces réservés : elles sont remplacées, pas déplacées. « Afficher les ID des races » montre la correspondance réelle de votre client.",
@@ -2012,6 +2012,11 @@
     "The race number move {0}:{1} is left out: {2}.": "Le déplacement du numéro de race {0}:{1} est ignoré : {2}.",
     "the client has no race {0}": "le client n'a pas de race {0}",
     "race {0} is taken": "la race {0} est occupée",
-    "{0}: {1} missing textures are left out of its looks (its client does not have them either).": "{0} : {1} textures manquantes sont retirées de son apparence (son client ne les a pas non plus)."
+    "{0}: {1} missing textures are left out of its looks (its client does not have them either).": "{0} : {1} textures manquantes sont retirées de son apparence (son client ne les a pas non plus).",
+    "Take more races into your race folder, or go on with the races you have.": "Ajouter d'autres races à ton dossier de races, ou continuer avec celles que tu as.",
+    "CoA Custom is there already: AFK Realm takes the races from its folder. Another client with races? Choose its folder instead.": "CoA Custom est déjà là : AFK Realm prend les races dans son dossier. Un autre client avec des races ? Choisis plutôt son dossier.",
+    "Go on with the races I have": "Continuer avec mes races",
+    "Take races from CoA Custom": "Prendre des races de CoA Custom",
+    "Take races from CoA Custom, or from another client or repack with races?": "Prendre des races de CoA Custom, ou d'un autre client ou repack avec des races ?"
   }
 }

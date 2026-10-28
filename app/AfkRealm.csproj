@@ -11,7 +11,7 @@
     <OutputType>WinExe</OutputType>
     <AssemblyName>AFK-Realm</AssemblyName>
     <Product>AFK Realm</Product>
-    <Version>1.1.9</Version>
+    <Version>1.1.10</Version>
     <RootNamespace>CoAInstaller</RootNamespace>
     <Nullable>disable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>

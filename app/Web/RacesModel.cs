@@ -272,6 +272,20 @@ namespace CoAInstaller.Web
                 (string.Equals(file, r.Pack.SourceFile, StringComparison.OrdinalIgnoreCase) || string.Equals(file, packFile, StringComparison.OrdinalIgnoreCase));
         }
 
+        /// <summary>CoA Custom's client to take races from: files\client next to its client_root, else client_root; "" without one.</summary>
+        string CoaSource()
+        {
+            try
+            {
+                string root = Raw("CustomRaces.ClientRootFolder", "");
+                if (root.Length == 0) return "";
+                string files = Path.GetDirectoryName(root.TrimEnd('\\', '/'));
+                if (files != null && Directory.Exists(Os.Resolve(files, "client"))) return Os.Resolve(files, "client");
+                return Directory.Exists(root) ? root : "";
+            }
+            catch { return ""; }
+        }
+
         int CoaNumberOf(ClientRace r)
         {
             if (!High || r == null || r.Pack == null || !r.Pack.Source.Equals("CoA Custom", StringComparison.OrdinalIgnoreCase)) return 0;
@@ -733,6 +747,7 @@ namespace CoAInstaller.Web
             {
                 list = simple, conflicts, capacity, onCount = on, clientFolder = ClientAddons.ClientFolder ?? "",
                 hasCoa = Raw("CustomRaces.ClientRootFolder", "").Length > 0,
+                coaSource = CoaSource(),
                 setupNeeded = chosen.Count == 0 && !races.Any(r => r.Pack != null || r.Alt != null),
                 problem, knownError, intro, usage, usageWarn = used >= s.Count + high, import, coaButton = coaButton ?? L.T("Download CoA Custom …"),
                 enable = Raw("CustomRaces.Enable", "1") == "1", more = More, high = High, unsaved = Unsaved,

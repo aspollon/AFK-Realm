@@ -2012,6 +2012,11 @@
     "The race number move {0}:{1} is left out: {2}.": "Die Verschiebung der Rassennummer {0}:{1} wird ausgelassen: {2}.",
     "the client has no race {0}": "der Client hat keine Rasse {0}",
     "race {0} is taken": "Rasse {0} ist belegt",
-    "{0}: {1} missing textures are left out of its looks (its client does not have them either).": "{0}: {1} fehlende Texturen werden aus seinem Aussehen weggelassen (sein Client hat sie auch nicht)."
+    "{0}: {1} missing textures are left out of its looks (its client does not have them either).": "{0}: {1} fehlende Texturen werden aus seinem Aussehen weggelassen (sein Client hat sie auch nicht).",
+    "Take more races into your race folder, or go on with the races you have.": "Weitere Rassen in deinen Rassenordner holen oder mit den vorhandenen Rassen weitermachen.",
+    "CoA Custom is there already: AFK Realm takes the races from its folder. Another client with races? Choose its folder instead.": "CoA Custom ist schon da: AFK Realm nimmt die Rassen aus seinem Ordner. Ein anderer Client mit Rassen? Dann wähle stattdessen dessen Ordner.",
+    "Go on with the races I have": "Mit meinen Rassen weitermachen",
+    "Take races from CoA Custom": "Rassen aus CoA Custom holen",
+    "Take races from CoA Custom, or from another client or repack with races?": "Rassen aus CoA Custom holen oder aus einem anderen Client oder Repack mit Rassen?"
   }
 }

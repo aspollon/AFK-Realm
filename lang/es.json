@@ -1256,7 +1256,7 @@
     "There are {0} free race numbers below 32 and {1} more above 31; together with the {2} races that bring their own number, up to {3} races can be on at once.": "There are {0} free race numbers below 32 and {1} more above 31; together with the {2} races that bring their own number, up to {3} races can be on at once.",
     "Import races": "Import races",
     "Choose the game client or repack once. AFK Realm finds its races and the files it needs for your game client, takes the races from that client and keeps the required files up to date when the client patch is installed.": "Choose the game client or repack once. AFK Realm finds its races and the files it needs for your game client, takes the races from that client and keeps the required files up to date when the client patch is installed.",
-    "Import races …": "Import races …",
+    "Import races …": "Importar razas …",
     "Download CoA Custom …": "Descargar CoA Custom …",
     "Show race IDs …": "Mostrar ID de razas …",
     "A custom race keeps the race number its client and Esteria appearance use. Stock-copy rows 51-61 (NightElf2, Gnome2, ...) are placeholders and are replaced, not moved. “Show race IDs” lists the actual mapping of your client.": "Una raza personalizada conserva el número de raza que usan su cliente y Esteria Appearance. Las filas de copias de razas base 51-61 (NightElf2, Gnome2, ...) son marcadores de posición y se reemplazan, no se mueven. «Mostrar ID de razas» lista la asignación real de tu cliente.",
@@ -2012,6 +2012,11 @@
     "The race number move {0}:{1} is left out: {2}.": "Se omite el cambio de número de raza {0}:{1}: {2}.",
     "the client has no race {0}": "el cliente no tiene la raza {0}",
     "race {0} is taken": "la raza {0} está ocupada",
-    "{0}: {1} missing textures are left out of its looks (its client does not have them either).": "{0}: se omiten {1} texturas que faltan de su aspecto (su cliente tampoco las tiene)."
+    "{0}: {1} missing textures are left out of its looks (its client does not have them either).": "{0}: se omiten {1} texturas que faltan de su aspecto (su cliente tampoco las tiene).",
+    "Take more races into your race folder, or go on with the races you have.": "Añade más razas a tu carpeta de razas o sigue con las que tienes.",
+    "CoA Custom is there already: AFK Realm takes the races from its folder. Another client with races? Choose its folder instead.": "CoA Custom ya está: AFK Realm toma las razas de su carpeta. ¿Otro cliente con razas? Elige su carpeta en su lugar.",
+    "Go on with the races I have": "Seguir con mis razas",
+    "Take races from CoA Custom": "Tomar razas de CoA Custom",
+    "Take races from CoA Custom, or from another client or repack with races?": "¿Tomar razas de CoA Custom o de otro cliente o repack con razas?"
   }
 }

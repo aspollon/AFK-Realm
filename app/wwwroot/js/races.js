@@ -95,7 +95,9 @@ export async function racesDialog() {
       card(T('Races in your game'), T('Switch on the races you want. Each one starts like the race you choose under "starts like" (start area, reputation, first quests) and keeps its own looks. AFK Realm takes care of race numbers, files and repairs; when something needs you, it says so at the top.'), 'accounts',
         view.problem ? small(view.problem) : h('div', { style: { fontWeight: '700', margin: '4px 0 8px' } }, F('{0} of {1} races on', view.onCount, view.capacity)),
         view.knownError ? h('div.small.bad', {}, view.knownError) : null,
-        h('div.row', {}, primary(T('Add races …'), () => setup()), view.hasCoa ? null : secondary(view.coaButton, () => downloadCoa()), secondary(T('Check the races …'), () => checkRaces()))),
+        h('div.row', {}, primary(T('Add races …'), () => setup()),
+          secondary(T('Import races …'), () => view.hasCoa && view.coaSource ? importFrom() : importRaces()),
+          view.hasCoa ? null : secondary(view.coaButton, () => downloadCoa()), secondary(T('Check the races …'), () => checkRaces()))),
       view.conflicts.length ? card(T('Please decide'), T('AFK Realm cannot decide these alone. The first button is the recommended way.'), 'warn', ...view.conflicts.map(decision)) : null,
       card(T('All races'), null, 'client', ...groups.map(g => [h('div.side-head', {}, side(g.sd)), ...g.items.map(raceLine)]).flat(2)),
       card(T('After a change'), null, 'client', small(T('Save, then open Modules › Game client and choose Install: AFK Realm checks and repairs every race on the way and builds the game patch. Other players need the new ZIP. A race you switch off keeps its characters as the race it starts like until you switch it on again.')), advanced()));
@@ -106,15 +108,23 @@ export async function racesDialog() {
   async function setup() {
     const steps = [T('1 Get races'), T('2 Choose'), T('3 Check'), T('4 Into the game')];
     const bar = n => h('div.wizard-steps', {}, steps.map((x, i) => h('span' + (i === n ? '.now' : ''), {}, x)));
-    // 1: where the races come from
-    if (!view.list.some(r => r.pack || r.variant)) {
+    // 1: where the races come from - every time, so more races can be taken in later
+    {
+      const have = view.list.some(r => r.pack || r.variant);
+      const fromCoa = view.hasCoa && view.coaSource;
       const how = await dialog({ title: T('Add races'), icon: 'races', body: h('div', {}, bar(0),
-        h('p', {}, T('Most extra races come from CoA Custom, a free race package for Conquest of Azeroth. AFK Realm downloads it once and takes the races from it - nothing else changes in your game.')),
-        h('p.small.muted', {}, T('Already have CoA Custom or another client with races? Choose its folder instead.'))),
-        buttons: [{ text: T('Cancel'), value: null }, ...(view.list.length ? [{ text: T('Only the races of my game'), value: 'skip' }] : []),
-          { text: T('Choose a folder …'), value: 'folder' }, { text: T('Download CoA Custom (recommended)'), kind: 'primary', value: 'coa' }] });
+        have ? h('p', {}, T('Take more races into your race folder, or go on with the races you have.'))
+             : h('p', {}, T('Most extra races come from CoA Custom, a free race package for Conquest of Azeroth. AFK Realm downloads it once and takes the races from it - nothing else changes in your game.')),
+        h('p.small.muted', {}, fromCoa ? T('CoA Custom is there already: AFK Realm takes the races from its folder. Another client with races? Choose its folder instead.')
+                                       : T('Already have CoA Custom or another client with races? Choose its folder instead.'))),
+        buttons: [{ text: T('Cancel'), value: null },
+          ...(view.list.length ? [{ text: have ? T('Go on with the races I have') : T('Only the races of my game'), value: 'skip', kind: have ? 'primary' : '' }] : []),
+          { text: T('Choose a folder …'), value: 'folder' },
+          fromCoa ? { text: T('Take races from CoA Custom'), value: 'coa', kind: have ? '' : 'primary' }
+                  : { text: T('Download CoA Custom (recommended)'), kind: have ? '' : 'primary', value: 'coa' }] });
       if (!how) return;
-      if (how === 'coa') await downloadCoa(); else if (how === 'folder') await importRaces();
+      if (how === 'coa') { if (fromCoa) await importRaces(view.coaSource); else await downloadCoa(); }
+      else if (how === 'folder') await importRaces();
       if (how !== 'skip' && !view.list.some(r => r.pack || r.variant)) return;
     }
     // 2: which races
@@ -149,6 +159,14 @@ export async function racesDialog() {
     if (!view.clientFolder) return alert(T('Choose your game client first (Game client).'));
     const j = await runProgress(() => post('/api/client/install', { folder: view.clientFolder, clearCache: true }), T('Installing into your game …'));
     if (j && j.message) await alert(j.message);
+  }
+
+  // Import: from CoA Custom's folder, or from another client
+  async function importFrom() {
+    const where = await dialog({ title: T('Import races …'), icon: 'races', body: h('p', {}, T('Take races from CoA Custom, or from another client or repack with races?')),
+      buttons: [{ text: T('Cancel'), value: null }, { text: T('Choose a folder …'), value: 'folder' }, { text: T('Take races from CoA Custom'), kind: 'primary', value: 'coa' }] });
+    if (where === 'coa') return importRaces(view.coaSource);
+    if (where === 'folder') return importRaces();
   }
 
   async function raceIds() {
