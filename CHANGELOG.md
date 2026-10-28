@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.8
+
+- Windows: the build stopped at CMake with "Could NOT find Boost (missing: filesystem program_options iostreams regex thread) (found suitable version ...)" when another Boost was set in Windows (environment variable `BOOST_ROOT`, e.g. a newer Boost installed for something else, without the compiled libraries). The core's CMake takes that variable before anything on the command line. The engine now points `Boost_ROOT`/`BOOST_ROOT` at the Boost it uses for its own run (Windows' settings are not changed), says so in the log, and makes CMake look for Boost again (`-U Boost_*`), so a failed run's cache does not keep the other one.
+
 ## 1.1.7
 
 - **Fixed: every imported race was switched off at Game client › Install** ("the race table of the game has no row for it"). The race check read the new client patch as if the game loaded it before `patch.MPQ` (by the characters of the names, `patch.MPQ` sorts after `patch-ZZZZZ.MPQ`), so the rows of the client's own `patch-M.MPQ` hid the rows of the imported races. It also left out the race archives (`patch-ZYG..`) with their models. The check now reads every archive the game reads, in the game's order. The final check and **Check the races …** read the installed patch and race archives too.

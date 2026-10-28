@@ -1,6 +1,10 @@
-# AFK Realm 1.1.7
+# AFK Realm 1.1.8
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11 and now also on Linux.
+
+## New in 1.1.8
+
+- **Fixed: "Could NOT find Boost" when building the server.** If another Boost was set up in Windows (for another program), the build picked that one and stopped. AFK Realm now always uses its own Boost for the build. Just run **Install** / **Update** again.
 
 ## New in 1.1.7
 

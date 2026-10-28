@@ -643,7 +643,7 @@ function Test-BoostFolder([string]$Path) {
 }
 
 function Resolve-Boost {
-    if (Test-BoostFolder $env:BOOST_ROOT) { Write-Log "Boost: $env:BOOST_ROOT"; return $env:BOOST_ROOT }
+    if (Test-BoostFolder $env:BOOST_ROOT) { Write-Log "Boost: $env:BOOST_ROOT"; Use-Boost $env:BOOST_ROOT; return $env:BOOST_ROOT }
     $folder = Join-Path $Paths.Deps $Downloads.Boost.Folder
     if (-not (Test-BoostFolder $folder)) {
         $installer = Save-Download $Downloads.Boost.Url 'boost-installer.exe' $Downloads.Boost.Sha256 $Downloads.Boost.MinBytes
@@ -657,7 +657,21 @@ function Resolve-Boost {
         if (-not (Test-BoostFolder $folder)) { throw (Tr 'Boost could not be installed (installer exit code {0}). Details: {1}' $code $setupLog) }
     }
     Write-Log "Boost: $folder"
+    Use-Boost $folder
     return $folder
+}
+
+# The core's CMake takes the Boost_ROOT environment variable before anything given on the command line (Windows does
+# not tell BOOST_ROOT and Boost_ROOT apart). Another Boost the user installed for something else (a newer one with
+# headers only, say) then wins and the build stops with "Could NOT find Boost (missing: filesystem ...)". For this
+# run, both point at the Boost the build uses; the user's settings are not changed.
+function Use-Boost([string]$Folder) {
+    $other = [Environment]::GetEnvironmentVariable('Boost_ROOT')
+    if ($other -and -not [string]::Equals($other.TrimEnd('\', '/'), $Folder.TrimEnd('\', '/'), [StringComparison]::OrdinalIgnoreCase)) {
+        Write-Log "Another Boost is set in Windows (BOOST_ROOT = $other); this build uses $Folder."
+    }
+    $env:Boost_ROOT = $Folder
+    $env:BOOST_ROOT = $Folder
 }
 
 # =============================================================================
@@ -1223,7 +1237,9 @@ function Invoke-Configure([string]$CMake, $VisualStudio, [string]$OpenSsl, [stri
         "-DCMAKE_GENERATOR_INSTANCE=$instance",
         "-DCMAKE_INSTALL_PREFIX=$(& $forward $Paths.Server)",
         '-DTOOLS_BUILD=all', '-DSCRIPTS=static', '-DMODULES=static',
-        "-DBOOST_ROOT=$(& $forward $Boost)",
+        # Boost found before (by a failed run, with another Boost) is looked for again
+        '-U', 'Boost_*',
+        "-DBOOST_ROOT=$(& $forward $Boost)", "-DBoost_ROOT=$(& $forward $Boost)",
         "-DOPENSSL_ROOT_DIR=$(& $forward $OpenSsl)", '-DOPENSSL_USE_STATIC_LIBS=FALSE',
         "-DMYSQL_INCLUDE_DIR=$(& $forward (Join-Path $Paths.MySql 'include'))",
         "-DMYSQL_LIBRARY=$(& $forward (Join-Path $Paths.MySql 'lib\mysqlclient.lib'))",
