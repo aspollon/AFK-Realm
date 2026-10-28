@@ -185,6 +185,7 @@ namespace CoAInstaller
             public int Id;
             public string Key, Name;
             public bool MaleOnly;
+            public bool FemaleOnly;       // a woman only: no man of its own (CoA Custom's Banshee, Harpy, Alpha Goblin)
             public bool InYourClient;     // the player's client has a race of this name too
             public bool InRaceFolder;     // the race folder has it already
             public override string ToString() { return Name; }
@@ -411,10 +412,32 @@ namespace CoAInstaller
                 // Esteria's Gnoll and Saberon have female rows that only reuse the male body; the runtime draws no
                 // woman for them. Their source says "male only" outside the tables, so they are named here.
                 bool maleOnly = femaleSkins == 0 || !hasBody(female) || RaceImport.KnownMaleOnly(key);
-                list.Add(new Candidate { Id = id, Key = key, Name = displayName, MaleOnly = maleOnly,
+                // The other way round: a race with women only (no male rows, or one CoA Custom names female only)
+                int maleSkins; skins.TryGetValue(id * 2L, out maleSkins);
+                bool femaleOnly = (maleSkins == 0 && femaleSkins > 0) || RaceImport.KnownFemaleOnly(key) || RaceImport.KnownFemaleOnly(file);
+                if (femaleOnly) maleOnly = false;
+                list.Add(new Candidate { Id = id, Key = key, Name = displayName, MaleOnly = maleOnly, FemaleOnly = femaleOnly,
                     InYourClient = inClient, InRaceFolder = inFolder });
             }
             return list;
+        }
+
+        /// <summary>Whether the other client has a file of another content than the player's client under the same name:
+        /// by size first, then byte by byte.</summary>
+        static bool Differs(Archives source, Archives yours, string name)
+        {
+            try
+            {
+                long a = source.SizeOf(name), b = yours.SizeOf(name);
+                if (a < 0 || b < 0) return false;
+                if (a != b) return true;
+                var x = source.Read(name);
+                var y = yours.Read(name);
+                if (x == null || y == null || x.Length != y.Length) return x != null && y != null;
+                for (int i = 0; i < x.Length; i++) if (x[i] != y[i]) return true;
+                return false;
+            }
+            catch { return false; }
         }
 
         /// <summary>The files a model needs: itself, its skins, its animations kept outside it and the textures named in it.</summary>
@@ -659,11 +682,13 @@ namespace CoAInstaller
             // everything else the race's own folder in the client holds
             foreach (var root in roots)
                 foreach (var f in source.Under(root)) files.Add(f);
-            // A folder the player's client already has in part: add the source files it does not have, without
-            // replacing its own. This is where the female-only meshes and textures of a race went missing.
+            // A folder the player's client already has in part: add the source files it does not have, and those the
+            // other client changed under the same name. This is where the female-only meshes and textures of a race
+            // went missing - and the fixed files of a client like CoA Custom (Creature\Banshee, Character\Worgen:
+            // models with the helmet points set right, retextured skins) stayed the old ones of the player's client.
             foreach (var root in partial)
                 foreach (var f in source.Under(root))
-                    if (!yours.Has(f)) files.Add(f);
+                    if (!yours.Has(f) || Differs(source, yours, f)) files.Add(f);
 
             // the items fitted to the race: the game finds a helmet (and any other item part made per race) by the prefix
             // of the race - Item\ObjectComponents\Head\<helmet>_<prefix><M|F>.m2, its skins, textures named so; without
@@ -845,6 +870,7 @@ namespace CoAInstaller
                 { "file", modelFolder.Length > 0 ? modelFolder : Str(cr, row, 11) },
                 { "sourceFile", Str(cr, row, 11) },
                 { "maleOnly", race.MaleOnly ? "1" : "0" },
+                { "femaleOnly", race.FemaleOnly ? "1" : "0" },
                 { "labels", cr.Fields > 67 ? new[] { Str(cr, row, 65), Str(cr, row, 66), Str(cr, row, 67) } : new string[0] },
                 { "ui_camera", Rows(Table(source, "UICameraAppearanceChrRaces"), 1, race.Id) },
                 { "models", models },

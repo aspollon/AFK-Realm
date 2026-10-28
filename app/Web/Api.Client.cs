@@ -106,6 +106,7 @@ namespace CoAInstaller.Web
             Post(app, "/api/client/install", a =>
             {
                 var inst = Inst;
+                RefreshRaces(inst);
                 var look = LookAtClient(inst, a.Str("folder"));
                 string client = look.Client;
                 if (client == null) throw new UserError(L.T("This is not a game folder: it needs a \"Data\" folder with the game's .MPQ archives."));

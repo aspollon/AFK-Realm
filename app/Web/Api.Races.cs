@@ -32,6 +32,26 @@ namespace CoAInstaller.Web
             packSource = packYours = null; packRaces = null;
         }
 
+        /// <summary>Before the client patch is built: what the Custom races page writes of every race (helmet prefix,
+        /// male or female only, CoA Custom's numbers, the racials) is written again from the game client and the race
+        /// folder as they are now, so a page saved with an older AFK Realm - or never saved after an update - cannot
+        /// give the patch stale values.</summary>
+        static void RefreshRaces(Install inst)
+        {
+            try
+            {
+                string path = Path.Combine(inst.ConfigDir, "modules", "mod_custom_races.conf");
+                if (!File.Exists(path)) return;
+                lock (racesLock)
+                {
+                    var m = new RacesModel(inst);
+                    if (m.Unsaved > 0) m.Save();
+                    racesModel = null;
+                }
+            }
+            catch { }
+        }
+
         static void MapRaces(WebApplication app)
         {
             Post(app, "/api/races/open", a =>
@@ -77,6 +97,15 @@ namespace CoAInstaller.Web
             Post(app, "/api/races/save", a => { lock (racesLock) { var m = Races; string msg = m.Save(); Manager.CheckClient(false); return new { message = msg, view = m.View() }; } });
 
             Post(app, "/api/races/ids", a => { lock (racesLock) return new { text = Races.RaceIds() }; });
+
+            // the check of every custom race the installed client patch has (also run by every install of the patch)
+            Post(app, "/api/races/check", a =>
+            {
+                string client = ClientAddons.ClientFolder;
+                if (client == null || !ClientAddons.IsClientFolder(client)) throw new UserError(L.T("Choose your game client first (Game client)."));
+                var problems = RaceCheck.Run(Inst, client);
+                return new { text = problems.Count == 0 ? L.T("No problems found.") : string.Join("\n", problems.Select(p => "- " + p)), count = problems.Count };
+            });
 
             Post(app, "/api/races/coa/check", a =>
             {
@@ -158,7 +187,7 @@ namespace CoAInstaller.Web
                         races = packRaces.Select((r, i) => new
                         {
                             index = i, name = r.Name, inFolder = r.InRaceFolder,
-                            notes = string.Join(", ", new[] { r.MaleOnly ? L.T("male only") : null, r.InYourClient ? L.T("your client has it too") : null, r.InRaceFolder ? L.T("in your race folder already") : null }.Where(x => x != null))
+                            notes = string.Join(", ", new[] { r.MaleOnly ? L.T("male only") : null, r.FemaleOnly ? L.T("female only") : null, r.InYourClient ? L.T("your client has it too") : null, r.InRaceFolder ? L.T("in your race folder already") : null }.Where(x => x != null))
                         }).ToArray(),
                         view = m.View()
                     };

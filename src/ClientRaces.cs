@@ -15,6 +15,7 @@ namespace CoAInstaller
         public string Key, Name, Prefix, File;
         public uint MaleDisplay, FemaleDisplay;
         public bool MaleOnly;
+        public bool FemaleOnly;             // women only: no man of its own (CoA Custom's Banshee, Harpy, Alpha Goblin)
         public bool Virtual;                // made from the row of another race, under its own name (the High Elf)
         public bool HasHelmets;             // the client has helmet models for its prefix (Item\ObjectComponents\Head\*_<prefix><sex>.m2)
         public RaceImport.Pack Pack;        // a race of the user's race folder, not of this client
@@ -49,6 +50,52 @@ namespace CoAInstaller
             public HashSet<int> StockCopies = new HashSet<int>();
             public bool ModelsChecked;
             public HashSet<string> HelmetPrefixes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            /// <summary>The helmets of the client by prefix and sex ("HuM", "VuF"): the names of the helmet models
+            /// (Helm_Plate_D_02 of Helm_Plate_D_02_HuM.m2), for how many of them a prefix has.</summary>
+            public Dictionary<string, HashSet<string>> HelmetStems = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+        }
+
+        static readonly string[] StockHelmetPrefixes = { "Hu", "Or", "Dw", "Ni", "Sc", "Ta", "Gn", "Tr", "Be", "Dr" };
+        static readonly Regex HelmetFile = new Regex(@"^item[\\/]objectcomponents[\\/]head[\\/](.+)_([a-z]{2})([mf])\.m2$", RegexOptions.IgnoreCase);
+
+        /// <summary>
+        /// Whether a prefix has (nearly) every helmet the stock races have, in this client and the given files of a race
+        /// pack. The game finds the helmet of an item by the prefix of the race (Helm_X_&lt;prefix&gt;&lt;M|F&gt;.m2); one that is
+        /// missing is drawn as the blue and white placeholder cube. A race that brings helmet models for some items only
+        /// (the Vulpera of Esteria, a Pandaren of Eunoia) shows that cube for all the others - the CoA items above all,
+        /// which only the stock races have. Such a race wears the helmets of its base race instead, as CoA Custom does it.
+        /// Without a list of the client's files (an old scan) every prefix counts as complete, as before.
+        /// </summary>
+        public static bool FullHelmets(Scan scan, string prefix, bool maleOnly, IEnumerable<string> more, bool femaleOnly = false)
+        {
+            if (scan == null || scan.HelmetStems.Count == 0 || string.IsNullOrEmpty(prefix)) return true;
+            var extra = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+            foreach (var f in more ?? Enumerable.Empty<string>())
+            {
+                var m = HelmetFile.Match(f ?? "");
+                if (!m.Success) continue;
+                string key = m.Groups[2].Value + m.Groups[3].Value.ToUpperInvariant();
+                HashSet<string> set;
+                if (!extra.TryGetValue(key, out set)) extra[key] = set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                set.Add(m.Groups[1].Value);
+            }
+            foreach (var sex in maleOnly ? new[] { "M" } : femaleOnly ? new[] { "F" } : new[] { "M", "F" })
+            {
+                // the stock race with the most helmets of this sex is the measure
+                HashSet<string> measure = null;
+                foreach (var p in StockHelmetPrefixes)
+                {
+                    HashSet<string> s;
+                    if (scan.HelmetStems.TryGetValue(p + sex, out s) && (measure == null || s.Count > measure.Count)) measure = s;
+                }
+                if (measure == null || measure.Count == 0) continue;
+                HashSet<string> own, added;
+                scan.HelmetStems.TryGetValue(prefix + sex, out own);
+                extra.TryGetValue(prefix + sex, out added);
+                int have = measure.Count(stem => (own != null && own.Contains(stem)) || (added != null && added.Contains(stem)));
+                if (have < measure.Count * 0.97) return false;
+            }
+            return true;
         }
 
         sealed class Archives : IDisposable
@@ -185,10 +232,10 @@ namespace CoAInstaller
         static Scan Copy(Scan s)
         {
             return new Scan { Races = s.Races.Select(r => new ClientRace { Source = r.Source, Side = r.Side, Key = r.Key, Name = r.Name, Prefix = r.Prefix, File = r.File,
-                MaleDisplay = r.MaleDisplay, FemaleDisplay = r.FemaleDisplay, MaleOnly = r.MaleOnly, Virtual = r.Virtual, HasHelmets = r.HasHelmets }).ToList(),
+                MaleDisplay = r.MaleDisplay, FemaleDisplay = r.FemaleDisplay, MaleOnly = r.MaleOnly, FemaleOnly = r.FemaleOnly, Virtual = r.Virtual, HasHelmets = r.HasHelmets }).ToList(),
                 FreeNumbers = s.FreeNumbers.ToList(), MoreNumbers = s.MoreNumbers.ToList(), HighNumbers = s.HighNumbers.ToList(), ModelsChecked = s.ModelsChecked,
                 Reserved = new HashSet<int>(s.Reserved), StockCopies = new HashSet<int>(s.StockCopies),
-                HelmetPrefixes = new HashSet<string>(s.HelmetPrefixes, StringComparer.OrdinalIgnoreCase) };
+                HelmetPrefixes = new HashSet<string>(s.HelmetPrefixes, StringComparer.OrdinalIgnoreCase), HelmetStems = s.HelmetStems };
         }
 
         static Scan ReadNow(string client, IDictionary<string, KeyValuePair<int, string>> virtuals)
@@ -232,11 +279,15 @@ namespace CoAInstaller
 
                 // Helmets are a model for each race and sex, named after the race's prefix: a race of the client without its
                 // own shows a placeholder for every helmet, and wears those of another race instead.
-                var helmet = new Regex(@"^item[\\/]objectcomponents[\\/]head[\\/].*_([a-z]{2})[mf]\.m2$", RegexOptions.IgnoreCase);
                 foreach (var name in archives.Listed())
                 {
-                    var m = helmet.Match(name);
-                    if (m.Success) scan.HelmetPrefixes.Add(m.Groups[1].Value);
+                    var m = HelmetFile.Match(name);
+                    if (!m.Success) continue;
+                    scan.HelmetPrefixes.Add(m.Groups[2].Value);
+                    string key = m.Groups[2].Value + m.Groups[3].Value.ToUpperInvariant();
+                    HashSet<string> stems;
+                    if (!scan.HelmetStems.TryGetValue(key, out stems)) scan.HelmetStems[key] = stems = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    stems.Add(m.Groups[1].Value);
                 }
                 if (!scan.ModelsChecked || scan.HelmetPrefixes.Count == 0)
                     foreach (var p in new[] { "Hu", "Or", "Dw", "Ni", "Sc", "Ta", "Gn", "Tr", "Be", "Dr", "Go" }) scan.HelmetPrefixes.Add(p);
@@ -265,11 +316,13 @@ namespace CoAInstaller
                     var row = rows[id];
                     var r = new ClientRace { Source = id, Side = (int)races.Field(row, 13), Key = key, Name = name, Prefix = Str(races, row, 6), File = Str(races, row, 11),
                         MaleDisplay = races.Field(row, 4), FemaleDisplay = races.Field(row, 5) };
-                    r.HasHelmets = scan.HelmetPrefixes.Contains(r.Prefix);
                     // a race with a female body and at least one female section has a woman: some custom races
                     // bring only one plain row per section (the Esteria looks), not the ten rows of a stock race
                     r.MaleOnly = r.FemaleDisplay == r.MaleDisplay || r.FemaleDisplay == 0 || !hasModel(r.FemaleDisplay) ||
                         skinsOf(id, 1) == 0 || RaceImport.KnownMaleOnly(key);
+                    r.FemaleOnly = (skinsOf(id, 0) == 0 && skinsOf(id, 1) > 0) || RaceImport.KnownFemaleOnly(r.File) || RaceImport.KnownFemaleOnly(key);
+                    if (r.FemaleOnly) r.MaleOnly = false;
+                    r.HasHelmets = scan.HelmetPrefixes.Contains(r.Prefix) && FullHelmets(scan, r.Prefix, r.MaleOnly, null, r.FemaleOnly);
                     return r;
                 };
                 // The player's client can carry NPC rows too, and a race the module made playable may have any flags;

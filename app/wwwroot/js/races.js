@@ -67,7 +67,7 @@ export async function racesDialog() {
         view.problem ? small(view.problem) : h('div', { style: { fontWeight: '700', margin: '4px 0 8px', color: view.usageWarn ? 'var(--warn)' : '' } }, view.usage),
         view.knownError ? h('div.small.bad', {}, view.knownError) : null),
       card(T('Import races'), T('Choose the game client or repack once. AFK Realm finds its races and the files it needs for your game client, takes the races from that client and keeps the required files up to date when the client patch is installed.'), 'client',
-        h('div.row', {}, primary(T('Import races …'), () => importRaces()), secondary(view.coaButton, () => downloadCoa()), secondary(T('Show race IDs …'), () => raceIds())),
+        h('div.row', {}, primary(T('Import races …'), () => importRaces()), secondary(view.coaButton, () => downloadCoa()), secondary(T('Show race IDs …'), () => raceIds()), secondary(T('Check the races …'), () => checkRaces())),
         small(T('A custom race keeps the race number its client and Esteria appearance use. Stock-copy rows 51-61 (NightElf2, Gnome2, ...) are placeholders and are replaced, not moved. “Show race IDs” lists the actual mapping of your client.')),
         small(view.import)),
       card(T('Race numbers above 31'), T('The 64-race patch and the high race numbers of CoA Custom are switched on by the import. They stay visible here so they can be switched off if a client really has no 64-race dinput8.dll.'), 'client',
@@ -85,6 +85,15 @@ export async function racesDialog() {
     let r;
     try { r = await post('/api/races/ids'); } catch (e) { return alert(e.message); }
     dialog({ title: T('Race IDs of this realm'), icon: 'races', wide: true, body: h('pre.small', { style: { maxHeight: '60vh', overflow: 'auto', whiteSpace: 'pre', tabSize: 8 } }, r.text),
+      buttons: [{ text: T('Copy'), onclick: async () => { try { await navigator.clipboard.writeText(r.text); } catch { } return false; } }, { text: T('Close'), kind: 'primary', value: true }] });
+  }
+
+  async function checkRaces() {
+    let r;
+    try { r = await post('/api/races/check'); } catch (e) { return alert(e.message); }
+    dialog({ title: T('Race check'), icon: 'races', wide: true,
+      body: h('div', {}, h('p.small.muted', {}, T('Every race that is switched on, both sexes, against what your game client reads now: model, skins, faces, HD rows, textures, helmets and Esteria numbers. Install the client patch first after a change.')),
+        h('pre.small', { style: { maxHeight: '60vh', overflow: 'auto', whiteSpace: 'pre-wrap' } }, r.text)),
       buttons: [{ text: T('Copy'), onclick: async () => { try { await navigator.clipboard.writeText(r.text); } catch { } return false; } }, { text: T('Close'), kind: 'primary', value: true }] });
   }
 

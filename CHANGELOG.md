@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.1.5
+
+- Race check and repair: before the client patch goes into the game, every custom race that is switched on is checked for both sexes against what the game client will read (race row, model and its .skin, skins/faces/hair/underwear rows, a face and an underwear for every skin colour, double rows, HD rows paired with the wrong look, missing textures, helmet coverage of its prefix, Esteria races without CoA Custom's exe or number) - and repaired: helmets of the base race, strict section rules, CoA Custom's exe and 64-race patch switched on, the Esteria race given CoA Custom's number (mod-custom-races moves its characters along), an imported race packed again from CoA Custom's folder. The patch is built again until the check is clean; a race that cannot be repaired is switched off with the reason. Before that, the Custom races settings are written again from the client and race folder, so a page never saved after an update cannot give stale values. The result goes to `logs\race-check.txt` and the install message; the Custom races page has a **Check the races …** button.
+- Copied races (the High Elf from the Blood Elf): Death Knight rows that have an ordinary twin are dropped instead of being made playable, and HD rows keep the pairing the copy gave them. The High Elf showed Death Knight faces and its eyes beside its eyes.
+- Custom races: a race counts as having its own helmets only when its prefix has (nearly) every helmet the stock races have, in the game client and its race pack. A race with helmets for some items only (Esteria's Vulpera, Eunoia's races) showed the blue and white placeholder cube for every other helmet, the CoA items above all; it now wears the helmets of its base race, as CoA Custom does it. Save the Custom races page and install the client patch again.
+- Race packs: in a model folder the player's client already has in part (`Creature\Banshee`, `Character\Worgen`), files the other client changed under the same name are taken as well, not only those that are missing. CoA Custom's fixed models and textures stayed the old ones. Re-pack the affected races.
+- Race packs: races with women only (CoA Custom's Banshee, Harpy and Alpha Goblin) are marked `FemaleOnly`; the character creation offers only the woman and the server makes men of them (bots) women.
+- Racials: the rows of an older CoA Custom server pack (1.8) are added to those of mod-custom-races instead of replacing them, so the races of CoA Custom 1.9 (Hozen, Sylvari, Mantid, Ethereal, Kyrian, Venthyr, Slime Giant, Centaur, Banshee, Faceless One) get their racials.
+
 ## 1.1.4
 
 - Male-only race packs save `MaleOnly = 1` even when the race folder came from an older client or pack. The web and Windows pages use the same known list as the client script.

@@ -1,6 +1,15 @@
-# AFK Realm 1.1.4
+# AFK Realm 1.1.5
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11 and now also on Linux.
+
+## New in 1.1.5
+
+- **Races repair themselves.** Every time the client patch is installed, AFK Realm checks every custom race (both sexes) for all the problems we have seen so far - white bodies, models in pieces, faces and eyes in the wrong place, missing textures, placeholder helmet cubes, crash-prone skin colours, Esteria races (Mechagnome & co.) without CoA Custom's exe or race number - and **fixes them on its own**: base-race helmets, cleaned-up skin/face rows, CoA Custom's exe switched on, the right race number (characters move along), races re-packed from your CoA Custom folder. Only a race that really cannot be fixed is switched off, with the reason. Details in the install message and `logs\race-check.txt`; **Custom races › Check the races …** runs the check any time.
+- **High Elf faces fixed.** Copied races no longer pick up Death Knight faces, and their HD faces stay with the right look (no more eyes beside the eyes).
+- **No more blue and white cubes instead of helmets.** Custom races that bring helmet models for only some items now wear the helmets of their base race, like CoA Custom does it. Open **Modules › Custom races**, save the page, then **Game client › Install** again.
+- **Race packs take CoA Custom's fixed files.** Changed models and textures in folders your client already has (Banshee, Worgen and others) are now packed as well. **Re-import the affected races** after updating.
+- **Female-only races** (Banshee, Harpy, Alpha Goblin) only offer the woman in the character creation, and their bots become women.
+- **Racials of the CoA Custom 1.9 races** (Hozen, Sylvari, Mantid, Ethereal, Kyrian, Venthyr, Slime Giant, Centaur, Banshee, Faceless One) come along even with an older CoA Custom server pack. Update mod-custom-races as well.
 
 ## New in 1.1.4
 

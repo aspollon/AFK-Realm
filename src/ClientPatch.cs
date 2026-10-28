@@ -48,6 +48,8 @@ namespace CoAInstaller
             internal List<RootFile> RootFiles = new List<RootFile>();
             /// <summary>A folder of files for next to the exe that was chosen but is not there: module TAB folder.</summary>
             internal List<string> MissingFolders = new List<string>();
+            /// <summary>Race numbers whose sections get the strict rules (RaceRepair, after the race check found them wrong).</summary>
+            internal HashSet<int> StrictSections = new HashSet<int>();
             public bool Empty { get { return Files.Count == 0 && Edits.Count == 0; } }
         }
 
@@ -411,7 +413,9 @@ namespace CoAInstaller
             {
                 int race;
                 if (!int.TryParse(Text(e.SectionRules, "race"), out race) || race <= 0) continue;
-                RaceImport.SectionRules(load, save, race, Text(e.SectionRules, "maleOnly") == "1", notes == null ? null : new Action<string>(notes.Add));
+                if (plan.StrictSections.Contains(race)) RaceImport.StrictSections(load, save, race);
+                RaceImport.SectionRules(load, save, race, Text(e.SectionRules, "maleOnly") == "1", notes == null ? null : new Action<string>(notes.Add),
+                    Text(e.SectionRules, "femaleOnly") == "1");
             }
             SortSections(files);
             FillHeights(files, client, plan, load);
@@ -1383,12 +1387,48 @@ namespace CoAInstaller
             if (installed == "") throw new InvalidOperationException(Foreign);
             CheckRootFiles(plan, client, inst);
             var notes = new List<string>();
-            progress(L.T("Building the client patch from your game client …"), 0, 0);
-            var files = Build(inst, client, plan, notes);
             string temp = path + ".new";
             string what = L.F("Writing Data\\{0}", ArchiveName);
-            progress(what + " …", 0, files.Count + 2);
-            MpqArchive.Write(temp, files, (done, all) => progress(what + ": " + done + " of " + all + " files", done, all));
+            SortedDictionary<string, byte[]> files = null;
+            // With custom races: the patch is checked before it goes into the game (RaceCheck), what the check finds is
+            // repaired (RaceRepair) and the patch built again - until nothing is left; a race that cannot be repaired is
+            // switched off, so no player gets it in pieces.
+            bool races = plan.Modules.Any(m => m.IndexOf("custom-races", StringComparison.OrdinalIgnoreCase) >= 0);
+            var repaired = new List<string>();
+            var tried = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var strict = new HashSet<int>();
+            var off = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            int offDone = 0;
+            for (int round = 0; ; round++)
+            {
+                plan.StrictSections = new HashSet<int>(strict);
+                var roundNotes = new List<string>();
+                progress(L.T("Building the client patch from your game client …"), 0, 0);
+                files = Build(inst, client, plan, roundNotes);
+                progress(what + " …", 0, files.Count + 2);
+                MpqArchive.Write(temp, files, (done, all) => progress(what + ": " + done + " of " + all + " files", done, all));
+                if (!races || round >= 5) { notes.AddRange(roundNotes); break; }
+                progress(L.T("Checking the custom races …"), 0, 0);
+                var found = RaceCheck.Inspect(inst, client, ArchivesWith(client, path, temp)).Where(f => f.Kind != RaceCheck.Stopped).ToList();
+                if (found.Count == 0) { notes.AddRange(roundNotes); break; }
+                bool changed = round < 4 && RaceRepair.Fix(inst, client, found, tried, strict, off, repaired, t => progress(t, 0, 0));
+                if (!changed)
+                    foreach (var f in found.Where(f => !string.IsNullOrEmpty(f.Key) && !off.ContainsKey(f.Key))) off[f.Key] = f.Text;
+                if (off.Count > offDone)
+                {
+                    RaceRepair.SwitchOff(inst, off.Keys);
+                    foreach (var o in off.Skip(offDone)) repaired.Add(L.F("switched off - {0}", o.Value));
+                    offDone = off.Count;
+                    changed = true;
+                }
+                if (!changed) { notes.AddRange(roundNotes); break; }
+                // the settings changed: what the modules want of the client, and the race archives, are read again
+                plan = Collect(inst);
+                ClientBinaryPatch.Prepare(plan);
+                UseInstalledRootFiles(plan, client);
+                raceNotes = RaceImport.Sync(client, plan.Imports, progress);
+                if (plan.Empty) break;
+            }
             try
             {
                 if (File.Exists(path)) File.Replace(temp, path, null);
@@ -1404,9 +1444,33 @@ namespace CoAInstaller
             notes.AddRange(raceNotes);
             progress(L.T("Placing the files next to the game …"), 0, 0);
             notes.AddRange(SyncRootFiles(inst, client, plan));
+            // every custom race, both sexes, against what the game reads now: written to logs\race-check.txt with the repairs
+            if (races)
+            {
+                var problems = RaceCheck.Run(inst, client, repaired);
+                if (repaired.Count > 0) notes.Add(L.F("race check: {0} repaired, see logs\\race-check.txt", repaired.Count));
+                notes.AddRange(repaired.Take(12));
+                notes.Add(problems.Count == 0 ? L.T("race check: no problems") : L.F("race check: {0} problems, see logs\\race-check.txt", problems.Count));
+                notes.AddRange(problems.Take(12));
+            }
             Directory.CreateDirectory(Path.GetDirectoryName(RecordFile(inst)));
             File.WriteAllLines(RecordFile(inst), new[] { ArchiveName }.Concat(plan.Modules), new UTF8Encoding(false));
             return L.F("the client patch Data\\{0} built for {1}", ArchiveName, string.Join(", ", plan.Modules)) + (notes.Count > 0 ? " " + L.F("(changes {0})", string.Join(", ", notes)) : "");
+        }
+
+        /// <summary>The archives of the game in the order it reads them, with the patch about to be installed (temp) in the
+        /// place of the installed one.</summary>
+        static List<string> ArchivesWith(string client, string path, string temp)
+        {
+            var list = ClientArchives(client);
+            int at = list.FindIndex(p => string.Equals(Path.GetFullPath(p), Path.GetFullPath(path), StringComparison.OrdinalIgnoreCase));
+            if (at >= 0) { list[at] = temp; return list; }
+            string data = Path.Combine(client, "Data");
+            at = list.FindIndex(p => string.Equals(Path.GetDirectoryName(Path.GetFullPath(p)), Path.GetFullPath(data), StringComparison.OrdinalIgnoreCase) &&
+                Path.GetFileName(p).StartsWith("patch", StringComparison.OrdinalIgnoreCase) &&
+                string.Compare(Path.GetFileName(p), ArchiveName, StringComparison.OrdinalIgnoreCase) > 0);
+            if (at < 0) list.Add(temp); else list.Insert(at, temp);
+            return list;
         }
 
         /// <summary>Puts the patch into a ZIP for other players, as Data\patch-ZZZZZ.MPQ.</summary>

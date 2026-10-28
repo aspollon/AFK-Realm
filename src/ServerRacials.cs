@@ -63,12 +63,18 @@ namespace CoAInstaller
         }
 
         /// <summary>Reads CoA Custom's rows of its racials from a file of its own (its server pack's, or the copy of
-        /// mod-custom-races): spell_dbc, spell_script_names and spell_proc, by spell.</summary>
-        public static void UseCoaRows(string rowsFile)
+        /// mod-custom-races): spell_dbc, spell_script_names and spell_proc, by spell. With add, the rows go on top of
+        /// those read before: the server pack of an older CoA Custom (1.8: 10_esteria_racials_1.8.sql) has no rows of
+        /// the races that came later (1.9: Hozen, Sylvari, Centaur and the others), and replacing the module's newer
+        /// rows with it left those races without racials.</summary>
+        public static void UseCoaRows(string rowsFile, bool add = false)
         {
-            coaSpellRows = new Dictionary<uint, string>();
-            coaScripts = new Dictionary<uint, string>();
-            coaProcs = new Dictionary<uint, string>();
+            if (!add)
+            {
+                coaSpellRows = new Dictionary<uint, string>();
+                coaScripts = new Dictionary<uint, string>();
+                coaProcs = new Dictionary<uint, string>();
+            }
             if (string.IsNullOrEmpty(rowsFile) || !File.Exists(rowsFile)) return;
             // INSERT INTO <table> ... VALUES then one row per line, "(<id>,...)," up to the last one "(...);"
             string table = null;

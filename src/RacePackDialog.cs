@@ -72,6 +72,7 @@ namespace CoAInstaller
             {
                 var notes = new List<string>();
                 if (Race.MaleOnly) notes.Add(L.T("male only"));
+                if (Race.FemaleOnly) notes.Add(L.T("female only"));
                 if (Race.InYourClient) notes.Add(L.T("your client has it too"));
                 if (Race.InRaceFolder) notes.Add(L.T("in your race folder already"));
                 return Race.Name + (notes.Count > 0 ? "   (" + string.Join(", ", notes) + ")" : "");

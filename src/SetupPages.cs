@@ -552,6 +552,7 @@ namespace CoAInstaller
         }
         List<int> Slots { get { return More ? slots.Concat(moreSlots).ToList() : slots; } }
         readonly HashSet<string> helmetPrefixes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        ClientRaces.Scan helmetScan;
         string folder;
         readonly Label usage = new Label { AutoSize = true, Font = Ui.Bold, ForeColor = Ui.Text, BackColor = Ui.Surface, Margin = new Padding(0, 4, 0, 8) };
         Label importStatus;
@@ -936,7 +937,7 @@ namespace CoAInstaller
                     string coaFolder = Raw("CustomRaces.ClientRootFolder", "");
                     if (ConfigOption.IsQuoted(coaFolder)) coaFolder = ConfigOption.Unquote(coaFolder);
                     string packRows = ServerRacials.PackRows(coaFolder);
-                    if (packRows != null) ServerRacials.UseCoaRows(packRows);
+                    if (packRows != null) ServerRacials.UseCoaRows(packRows, true);
                 }
             }
             catch (Exception ex) { Shown += (s, e) => Ui.Error(this, L.F("What mod-custom-races knows of the races could not be read ({0}): {1}", file, ex.Message)); }
@@ -992,6 +993,7 @@ namespace CoAInstaller
                 moreSlots.AddRange(scan.MoreNumbers);
                 highSlots.AddRange(scan.HighNumbers);
                 foreach (var h in scan.HelmetPrefixes) helmetPrefixes.Add(h);
+                helmetScan = scan;
                 return races.Count == 0 ? L.T("Your game client has no races beyond the stock ones.") : null;
             }
             catch (Exception ex) { return L.T("The races of your game client could not be read:") + " " + ex.Message; }
@@ -1035,7 +1037,7 @@ namespace CoAInstaller
                         (p.SourceRace > 0 && r.Source == p.SourceRace &&
                             (p.Name.Equals(r.Name, StringComparison.OrdinalIgnoreCase) || p.Key.Equals(r.Key, StringComparison.OrdinalIgnoreCase)))));
                 if (same != null) { same.Alt = p; continue; }
-                races.Add(new ClientRace { Key = p.Key, Name = p.Name, Prefix = p.Prefix, File = p.File, MaleOnly = p.MaleOnly, Pack = p });
+                races.Add(new ClientRace { Key = p.Key, Name = p.Name, Prefix = p.Prefix, File = p.File, MaleOnly = p.MaleOnly, FemaleOnly = p.FemaleOnly, Pack = p });
             }
         }
 
@@ -1474,12 +1476,17 @@ namespace CoAInstaller
                 putText("File", pack.File.Length > 0 ? pack.File : pack.Key);
                 put("MaleDisplay", id > 0 ? (RaceImport.DisplayBase + id * 2).ToString() : "0");
                 put("FemaleDisplay", id > 0 ? (RaceImport.DisplayBase + id * 2 + 1).ToString() : "0");
-                put("MaleOnly", pack.MaleOnly || RaceImport.KnownMaleOnly(r.Key) ? "1" : "0");
+                put("MaleOnly", (pack.MaleOnly || RaceImport.KnownMaleOnly(r.Key)) && !pack.FemaleOnly ? "1" : "0");
+                put("FemaleOnly", pack.FemaleOnly ? "1" : "0");
                 // its own helmets: in the game client, or in its race pack (made from a client that has them)
-                bool packHelmets = pack.Prefix.Length > 0 && pack.Files.Any(f => f.StartsWith("Item\\ObjectComponents\\Head\\", StringComparison.OrdinalIgnoreCase)
-                    && (f.EndsWith("_" + pack.Prefix + "M.m2", StringComparison.OrdinalIgnoreCase) || f.EndsWith("_" + pack.Prefix + "F.m2", StringComparison.OrdinalIgnoreCase)));
-                put("OwnHelmets", helmetPrefixes.Count == 0 || helmetPrefixes.Contains(pack.Prefix) || packHelmets ? "1" : "0");
-                ownHelmetPrefix = PackHelmetPrefix(pack);
+                // its own helmets: those of its prefix in the game client and in its race pack - only when they are (nearly)
+                // all there; a race with helmets for some items only shows the placeholder cube for every other one
+                string own = PackHelmetPrefix(pack);
+                if (own.Length == 0) own = pack.Prefix;
+                bool full = own.Length > 0 && (helmetPrefixes.Count == 0 || helmetPrefixes.Contains(own) || pack.Files.Any(f => f.EndsWith("_" + own + "M.m2", StringComparison.OrdinalIgnoreCase) || f.EndsWith("_" + own + "F.m2", StringComparison.OrdinalIgnoreCase)))
+                    && ClientRaces.FullHelmets(helmetScan, own, pack.MaleOnly, pack.Files, pack.FemaleOnly);
+                put("OwnHelmets", full ? "1" : "0");
+                ownHelmetPrefix = full ? own : "";
             }
             else
             {
@@ -1493,6 +1500,7 @@ namespace CoAInstaller
                 put("MaleDisplay", r.MaleDisplay.ToString());
                 put("FemaleDisplay", r.FemaleDisplay.ToString());
                 put("MaleOnly", r.MaleOnly ? "1" : "0");
+                put("FemaleOnly", r.FemaleOnly ? "1" : "0");
                 put("OwnHelmets", r.HasHelmets ? "1" : "0");
             }
             string currentBase = Raw("CustomRaces." + r.Key + ".Base", "");
@@ -1706,7 +1714,7 @@ namespace CoAInstaller
             if (!DeleteFolder(pack.Dir)) return;
             var chosen = Chosen().Where(c => !c.Equals(r.Key, StringComparison.OrdinalIgnoreCase)).ToList();
             Set("CustomRaces.Races", string.Join(" ", chosen));
-            foreach (var option in new[] { "Source", "Id", "Copy", "Import", "Name", "Prefix", "File", "MaleDisplay", "FemaleDisplay", "MaleOnly", "OwnHelmets", "HelmetPrefix", "Base", "Racials", "IconFile", "Icon", "Appearance" })
+            foreach (var option in new[] { "Source", "Id", "Copy", "Import", "Name", "Prefix", "File", "MaleDisplay", "FemaleDisplay", "MaleOnly", "FemaleOnly", "OwnHelmets", "HelmetPrefix", "Base", "Racials", "IconFile", "Icon", "Appearance" })
                 Unset("CustomRaces." + r.Key + "." + option);
             row.Visible = false; about.Visible = false; button.Visible = false;
             races.Remove(r);

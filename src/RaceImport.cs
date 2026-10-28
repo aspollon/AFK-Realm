@@ -18,7 +18,8 @@ namespace CoAInstaller
     /// Also the rules the character creation of the Ascension client needs for the sections (skins, faces, hair,
     /// underwear) of every added race, whether imported or copied from the client's own rows; without them it crashes or
     /// paints the wrong textures:
-    ///  - every row playable (flag 1), none for Death Knights only (4) or pre-composed (8);
+    ///  - every row playable (flag 1), none for Death Knights only (4) or pre-composed (8) - a Death Knight row that has
+    ///    an ordinary twin (same sex, section, style and colour) goes instead;
     ///  - a face and an underwear for every skin colour, and no style without rows (the creation screen reads them
     ///    without checking: 0x004EA77F);
     ///  - female rows for races that have only men (the creation looks them up before the switch to male);
@@ -118,10 +119,21 @@ namespace CoAInstaller
             /// <summary>The racial spells the pack carries: its id, its row of the other client's spell table (texts
             /// as text) and the texture of its icon.</summary>
             public List<Dictionary<string, object>> Spells { get { return List(Data, "spells").OfType<Dictionary<string, object>>().ToList(); } }
+            /// <summary>A race with a woman only (CoA Custom's Banshee, Harpy and Alpha Goblin): its male body is
+            /// missing or broken (the Alpha Goblin's man has no head), so its characters are women.</summary>
+            public bool FemaleOnly
+            {
+                get
+                {
+                    string marked = Str(Info, "femaleOnly");
+                    return marked == "1" || (marked.Length == 0 && KnownFemaleOnly(Key));
+                }
+            }
             public bool MaleOnly
             {
                 get
                 {
+                    if (FemaleOnly) return false;
                     string marked = Str(Info, "maleOnly");
                     if (marked.Length > 0) return marked == "1";
                     object v;
@@ -157,7 +169,7 @@ namespace CoAInstaller
         }
 
         const string InfoName = "race.info.json";
-        const int InfoVersion = 5;      // 5: the client file for custom models, and male-only races
+        const int InfoVersion = 6;      // 5: the client file for custom models, and male-only races; 6: female-only races
 
         /// <summary>Races whose client tables still carry a female row or display although the game has no
         /// female model. The race overview in the module README lists them as "male only": the client must
@@ -173,6 +185,14 @@ namespace CoAInstaller
                 default:
                     return false;
             }
+        }
+
+        /// <summary>Races that are female only although their source has male rows (CoA Custom: the Banshee 90, the Harpy
+        /// 56 since 1.8.1, the Alpha Goblin 57 whose man has no head).</summary>
+        public static bool KnownFemaleOnly(string key)
+        {
+            string k = Regex.Replace(key ?? "", "[^A-Za-z]", "").ToLowerInvariant();
+            return k.StartsWith("banshee") || k.StartsWith("harpy") || k == "goblina" || k.StartsWith("alphagoblin");
         }
 
         /// <summary>What the page needs of a race, from its full race.json.</summary>
@@ -195,7 +215,8 @@ namespace CoAInstaller
             {
                 { "version", InfoVersion }, { "stamp", stamp }, { "key", Str(data, "key") }, { "name", Str(data, "name") }, { "prefix", Str(data, "prefix") },
                 { "file", file }, { "sourceFile", Str(data, "sourceFile").Length > 0 ? Str(data, "sourceFile") : Str(data, "file") }, { "icon", Str(data, "icon") }, { "client", source == null ? "" : Str(source, "client") }, { "race", source == null ? 0 : Num(source.ContainsKey("race") ? source["race"] : null) }, { "side", side ?? 2 },
-                { "female", female }, { "maleOnly", maleOnly ? "1" : "0" }, { "missing", List(data, "missing").Length }, { "bytes", bytes }, { "files", files },
+                { "female", female }, { "maleOnly", maleOnly ? "1" : "0" },
+                { "femaleOnly", data.ContainsKey("femaleOnly") ? (Num(data["femaleOnly"]) != 0 ? "1" : "0") : (KnownFemaleOnly(Str(data, "key")) ? "1" : "0") }, { "missing", List(data, "missing").Length }, { "bytes", bytes }, { "files", files },
             };
         }
 
@@ -779,12 +800,55 @@ namespace CoAInstaller
 
         // ---------------------------------------------------------------------------------------- the rules
 
+        /// <summary>The sections of a race put in order when the race check found them wrong: one row for each sex,
+        /// section, style and colour (an ordinary one before a Death Knight one, the lower id before the higher), and only
+        /// HD rows that belong to a plain row of the same look. SectionRules then adds what is missing.</summary>
+        public static void StrictSections(Func<string, byte[]> load, Action<string, byte[]> save, int race)
+        {
+            var csBytes = load("DBFilesClient\\CharSections.dbc");
+            if (csBytes == null) return;
+            var cs = DbcTable.Parse(csBytes, "CharSections.dbc");
+            Func<DbcTable, byte[], string> key = (t, r) => t.Field(r, 2) + "/" + t.Field(r, 3) + "/" + t.Field(r, 8) + "/" + t.Field(r, 9);
+            var keep = new HashSet<byte[]>(cs.Records.Where(r => cs.Field(r, 1) == race).GroupBy(r => key(cs, r))
+                .Select(g => g.OrderBy(r => (cs.Field(r, 7) & 12u) != 0 ? 1 : 0).ThenBy(r => cs.Field(r, 0)).First()));
+            cs.Records.RemoveAll(r => cs.Field(r, 1) == race && !keep.Contains(r));
+            save("DBFilesClient\\CharSections.dbc", cs.ToBytes());
+            var hdBytes = load("DBFilesClient\\HDCharSections.dbc");
+            if (hdBytes == null) return;
+            var hd = DbcTable.Parse(hdBytes, "HDCharSections.dbc");
+            var plain = keep.ToDictionary(r => cs.Field(r, 0), r => key(cs, r));
+            var seen = new HashSet<uint>();
+            hd.Records.RemoveAll(r =>
+            {
+                if (hd.Field(r, 1) != race) return false;
+                string k;
+                uint id = hd.Field(r, 0);
+                return !plain.TryGetValue(id, out k) || k != key(hd, r) || !seen.Add(id);
+            });
+            save("DBFilesClient\\HDCharSections.dbc", hd.ToBytes());
+        }
+
+        static void DropSpecialTwins(DbcTable t, int race)
+        {
+            Func<byte[], string> key = r => t.Field(r, 2) + "/" + t.Field(r, 3) + "/" + t.Field(r, 8) + "/" + t.Field(r, 9);
+            Func<byte[], bool> special = r => (t.Field(r, 7) & 12u) != 0;
+            var ordinary = new HashSet<string>(t.Records.Where(r => t.Field(r, 1) == race && !special(r)).Select(key));
+            t.Records.RemoveAll(r => t.Field(r, 1) == race && special(r) && ordinary.Contains(key(r)));
+        }
+
         /// <summary>The rules of the character creation for the sections of one added race (see the class summary).</summary>
-        public static void SectionRules(Func<string, byte[]> load, Action<string, byte[]> save, int race, bool maleOnly, Action<string> note = null)
+        public static void SectionRules(Func<string, byte[]> load, Action<string, byte[]> save, int race, bool maleOnly, Action<string> note = null, bool femaleOnly = false)
         {
             var cs = DbcTable.Parse(load("DBFilesClient\\CharSections.dbc"), "CharSections.dbc");
             var hdBytes = load("DBFilesClient\\HDCharSections.dbc");
             var hd = hdBytes == null ? null : DbcTable.Parse(hdBytes, "HDCharSections.dbc");
+            // Rows only for Death Knights (flag 4) or pre-composed (8) next to an ordinary row of the same sex, section,
+            // style and colour go: a stock race carries a Death Knight face (glowing eyes, scars) for every ordinary one,
+            // under the same numbers. Made playable below, a race copied from it (the High Elf from the Blood Elf) showed
+            // the Death Knight face and, with the HD rows paired to the wrong one, the eyes beside the eyes. Only a row
+            // that has no ordinary twin is kept and made playable.
+            DropSpecialTwins(cs, race);
+            if (hd != null) DropSpecialTwins(hd, race);
             var mine = cs.Records.Where(r => cs.Field(r, 1) == race).ToList();
             if (mine.Count == 0) return;
             uint next = Math.Max(MaxId(cs), hd == null ? 0 : MaxId(hd)) + 1;
@@ -799,9 +863,10 @@ namespace CoAInstaller
             };
             // men only: the women get the men's rows
             var sexes = new HashSet<uint>(mine.Where(r => cs.Field(r, 3) == 0).Select(r => cs.Field(r, 2)));
-            if (maleOnly || sexes.Count == 1)
+            // women only (the Banshee, the Harpy): the men get the women's rows the same way
+            if (maleOnly || femaleOnly || sexes.Count == 1)
             {
-                uint only = sexes.Contains(0) ? 0u : 1u;
+                uint only = femaleOnly && sexes.Contains(1) ? 1u : sexes.Contains(0) ? 0u : 1u;
                 cs.Records.RemoveAll(r => cs.Field(r, 1) == race && cs.Field(r, 2) != only);
                 mine = cs.Records.Where(r => cs.Field(r, 1) == race).ToList();
                 foreach (var r in mine.Where(r => cs.Field(r, 3) < 5).ToList()) clone(r, 2, 1 - only);
@@ -857,15 +922,26 @@ namespace CoAInstaller
             if (hd == null) return;
             // HD rows of the race: the id of the plain row with the same race, sex, section, style and colour
             var idOf = block.GroupBy(r => cs.Field(r, 2) + "/" + cs.Field(r, 3) + "/" + cs.Field(r, 8) + "/" + cs.Field(r, 9)).ToDictionary(g => g.Key, g => cs.Field(g.First(), 0));
-            var plainIds = new HashSet<uint>(cs.Records.Select(r => cs.Field(r, 0)));
-            foreach (var r in hd.Records.Where(r => hd.Field(r, 1) == race))
+            // An HD row that already has the id of a plain row of the race keeps it: the copy made them pairs by id, and
+            // two rows of the same numbers (an ordinary face and its Death Knight twin) must not both be paired by numbers
+            // to the first plain row. Only the others (rows of new plain clones) are paired by sex, section, style and
+            // colour, and only where that plain row has no HD row yet; what is left over goes.
+            var raceIds = new HashSet<uint>(block.Select(r => cs.Field(r, 0)));
+            var mineHd = hd.Records.Where(r => hd.Field(r, 1) == race).ToList();
+            var paired = new HashSet<uint>(mineHd.Where(r => raceIds.Contains(hd.Field(r, 0))).Select(r => hd.Field(r, 0)));
+            var orphans = new HashSet<byte[]>();
+            foreach (var r in mineHd)
             {
-                uint id;
-                if (idOf.TryGetValue(hd.Field(r, 2) + "/" + hd.Field(r, 3) + "/" + hd.Field(r, 8) + "/" + hd.Field(r, 9), out id)) hd.SetField(r, 0, id);
                 hd.SetField(r, 7, (hd.Field(r, 7) | 1u) & ~4u & ~8u);
+                if (raceIds.Contains(hd.Field(r, 0))) continue;
+                uint id;
+                if (idOf.TryGetValue(hd.Field(r, 2) + "/" + hd.Field(r, 3) + "/" + hd.Field(r, 8) + "/" + hd.Field(r, 9), out id) && paired.Add(id))
+                    hd.SetField(r, 0, id);
+                else
+                    orphans.Add(r);
             }
             var seen = new HashSet<uint>();
-            hd.Records.RemoveAll(r => hd.Field(r, 1) == race && !seen.Add(hd.Field(r, 0)));
+            hd.Records.RemoveAll(r => hd.Field(r, 1) == race && (orphans.Contains(r) || !seen.Add(hd.Field(r, 0))));
             save("DBFilesClient\\HDCharSections.dbc", hd.ToBytes());
         }
 
