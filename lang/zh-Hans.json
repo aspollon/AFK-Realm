@@ -2004,6 +2004,8 @@
     "Your servers": "你的服务器",
     "Everything goes into this folder: tools, source code, database and the finished server. Best is a folder in your home folder without spaces or special characters, e.g. ~/CoA-Server.": "所有内容都放在这个文件夹中：工具、源代码、数据库和构建好的服务器。最好是主目录中不含空格和特殊字符的文件夹，例如 ~/CoA-Server。",
     "Add \"{0}\" to the application menu": "将“{0}”添加到应用程序菜单",
-    "If build tools of your distribution are missing, AFK Realm stops and shows the one command that installs them (it needs sudo once). Compiling puts a heavy load on your PC.": "如果缺少发行版的构建工具，AFK Realm 会停下并显示安装它们的命令（需要一次 sudo）。编译会给电脑带来很大负载。"
+    "If build tools of your distribution are missing, AFK Realm stops and shows the one command that installs them (it needs sudo once). Compiling puts a heavy load on your PC.": "如果缺少发行版的构建工具，AFK Realm 会停下并显示安装它们的命令（需要一次 sudo）。编译会给电脑带来很大负载。",
+    "{0}: packed again from the newer {1} in {2}.": "{0}：已从 {2} 中较新的 {1} 重新打包。",
+    "{0}: its rows are copied from number {1} of the game client to its number {2}.": "{0}：其数据行从游戏客户端的编号 {1} 复制到它的编号 {2}。"
   }
 }

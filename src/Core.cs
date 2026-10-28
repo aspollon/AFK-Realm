@@ -23,7 +23,7 @@ namespace CoAInstaller
         public const string Name = "AFK Realm";                   // window titles, dialogs
         public const string ShortName = "AFK Realm";              // desktop shortcut, firewall rules
         public const string FileStem = "AFK-Realm";                // exe name, settings folder
-        public const string Version = "1.1.5";                    // a release; "-preview" marks a pre-release
+        public const string Version = "1.1.6";                    // a release; "-preview" marks a pre-release
         public const string Tagline = "build, run and tweak your own server the lazy way";
         public const string BuildsFor = "Conquest of AzerothCore";
         public const string WindowTitle = Name;
@@ -41,6 +41,34 @@ namespace CoAInstaller
 
         [DllImport("libc", EntryPoint = "kill", SetLastError = true)] static extern int SysKill(int pid, int signal);
         [DllImport("libc", EntryPoint = "chmod", SetLastError = true)] static extern int SysChmod(string path, int mode);
+
+        /// <summary>
+        /// A path below a folder, given the way the game and Windows write it ("Data\enUS", "Interface/AddOns",
+        /// "Data\Retail\Assets\EquipmentFitting\60-0.bin"): with the separators of this system, and on Linux - where
+        /// names are case-sensitive - with the spelling of a folder or file that exists already ("data" for "Data"), so a
+        /// game folder copied from Windows is found, and nothing is made twice under another case. Parts that do not
+        /// exist yet keep the spelling given.
+        /// </summary>
+        public static string Resolve(string folder, string relative)
+        {
+            var parts = (relative ?? "").Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries);
+            string path = folder ?? "";
+            foreach (var part in parts)
+            {
+                string next = Path.Combine(path, part);
+                if (!Windows && !File.Exists(next) && !Directory.Exists(next) && Directory.Exists(path))
+                {
+                    try
+                    {
+                        var match = Directory.EnumerateFileSystemEntries(path).FirstOrDefault(e => string.Equals(Path.GetFileName(e), part, StringComparison.OrdinalIgnoreCase));
+                        if (match != null) next = match;
+                    }
+                    catch { }
+                }
+                path = next;
+            }
+            return path;
+        }
 
         /// <summary>Linux: sends a signal (2 = SIGINT, 15 = SIGTERM) to a process.</summary>
         public static bool Signal(int pid, int signal) { try { return SysKill(pid, signal) == 0; } catch { return false; } }

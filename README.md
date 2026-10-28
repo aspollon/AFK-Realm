@@ -79,7 +79,7 @@ Pre-built repacks go stale quickly. Building from source keeps you on the latest
 
 The short version is below; the [user guide](docs/MANUAL.md) explains every step and every window in detail.
 
-1. Download `AFK-Realm.exe` from the [Releases](../../releases) page and run it.
+1. Download `AFK-Realm.exe` from the [Releases](../../releases) page and run it. It opens in an app window of Edge or Chrome (or your browser).
    Windows SmartScreen may warn about an unknown publisher because the exe is not code-signed. The exe is built from this repository by GitHub Actions; you can also build it yourself (see below).
 2. **Install a new server** → choose a folder such as `C:\CoA-Server` → set a database password → **Install**.
    The installation may take a long time and needs about 40 GB of disk space.
@@ -175,9 +175,8 @@ The texts of AFK Realm are written in English in the code (`L.T("…")`) and tra
 
 ## Building the exe yourself
 
-- Windows: run `build.bat`. It uses the C# compiler that ships with Windows.
-- Linux: run `build.sh` (needs `mono-devel`).
-- The cross-platform version (Windows and Linux, web interface) is in `app/`: `dotnet publish app/AfkRealm.csproj -c Release -r linux-x64 --self-contained true -p:PublishSingleFile=true` (needs the .NET 8 SDK).
+- AFK Realm (Windows and Linux, web interface) is in `app/`: `dotnet publish app/AfkRealm.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true` (`-r linux-x64` for Linux; needs the .NET 8 SDK).
+- The classic Windows version (WinForms, up to 1.1.5) is no longer released; `build.bat` / `build.sh` (needs `mono-devel`) still build it from `src/`. A classic exe that finds the update notice of 1.1.6 or newer updates itself to the web version.
 
 ## Disclaimer
 

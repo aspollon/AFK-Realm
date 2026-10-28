@@ -491,7 +491,7 @@ namespace CoAInstaller
             {
                 string root = ConfigOption.Unquote(Raw("CustomRaces.ClientRootFolder", ""));
                 if (root.Length == 0) return coaRaceFiles;
-                string dbc = Path.Combine(Path.GetDirectoryName(root.TrimEnd('\\', '/')), "dbc", "ChrRaces.dbc");
+                string dbc = Os.Resolve(Path.GetDirectoryName(root.TrimEnd('\\', '/')), "dbc/ChrRaces.dbc");
                 if (!File.Exists(dbc)) return coaRaceFiles;
                 var t = DbcTable.Parse(File.ReadAllBytes(dbc), "ChrRaces.dbc");
                 foreach (var row in t.Records)
@@ -1112,7 +1112,7 @@ namespace CoAInstaller
                 string client = ClientAddons.ClientFolder;
                 if (client == null || !Directory.Exists(client)) return null;
                 string wanted = "Esteria" + (r.Name ?? "").Replace(" ", "");
-                foreach (var file in Directory.GetFiles(client, "Esteria*.bin", SearchOption.TopDirectoryOnly))
+                foreach (var file in Directory.GetFiles(client).Where(f => Path.GetFileName(f).StartsWith("Esteria", StringComparison.OrdinalIgnoreCase) && f.EndsWith(".bin", StringComparison.OrdinalIgnoreCase)))
                     if (Path.GetFileNameWithoutExtension(file).Equals(wanted, StringComparison.OrdinalIgnoreCase))
                         return Path.GetFileName(file);
             }
@@ -1387,6 +1387,8 @@ namespace CoAInstaller
                 if (!r.OwnNumber) continue;
                 int id = IdOf(r);
                 if (id <= 0 || id == r.Source) continue;
+                // copied on purpose to another number (CoA Custom's number of an Esteria race, given by the race check)
+                if (Raw("CustomRaces." + r.Key + ".Copy", "0") == "1") continue;
                 if (CharactersOf(id) != 0) continue;
                 Set("CustomRaces." + r.Key + ".Id", "0");
             }
@@ -1500,7 +1502,7 @@ namespace CoAInstaller
             {
                 put("Source", r.Source.ToString());
                 put("Id", id.ToString());
-                put("Copy", r.OwnNumber ? "0" : "1");
+                put("Copy", r.OwnNumber && (id <= 0 || id == r.Source) ? "0" : "1");
                 put("Import", "0");
                 putText("Name", r.Name);
                 putText("Prefix", r.Prefix);
@@ -1540,7 +1542,7 @@ namespace CoAInstaller
             if (pack != null)
             {
                 var f = pack.Files.FirstOrDefault(x => x.StartsWith("Interface\\Icons\\", StringComparison.OrdinalIgnoreCase));
-                if (f != null) icon = Path.Combine(pack.Dir, "files", f.Replace('\\', Path.DirectorySeparatorChar));
+                if (f != null) icon = Os.Resolve(Path.Combine(pack.Dir, "files"), f);
             }
             if ((icon == null || !File.Exists(icon)) && folder != null) icon = Path.Combine(folder, "_Icons", "CoA_Race_" + r.Key + ".blp");
             if (icon != null && File.Exists(icon))

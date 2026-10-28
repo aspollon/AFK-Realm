@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Threading;
 
@@ -33,10 +34,28 @@ namespace CoAInstaller.Web
             public string WebRoot;                 // development: serve the page from this folder instead of the exe
         }
 
+        [DllImport("kernel32.dll")] static extern bool AttachConsole(int pid);
+        [DllImport("kernel32.dll")] static extern bool AllocConsole();
+
+        /// <summary>
+        /// On Windows AFK Realm is a window program (no empty console next to its window). Started from a command line
+        /// to print something (cli, --help, --no-window, --listen), it writes into the console it was started from; the
+        /// command line (cli) started without one gets a console of its own, since it asks and answers there.
+        /// </summary>
+        static void ConsoleIfNeeded(string[] args)
+        {
+            if (!Os.Windows) return;
+            bool cli = args.Length > 0 && args[0] == "cli";
+            bool prints = cli || args.Any(a => a == "--help" || a == "-h" || a == "--no-window" || a == "--headless" || a == "--listen");
+            if (!prints) return;
+            try { if (!AttachConsole(-1) && cli) AllocConsole(); } catch { }
+        }
+
         static int Main(string[] args)
         {
+            ConsoleIfNeeded(args);
             // The release file this build updates itself from.
-            UpdateCheck.ToolAsset = Os.Windows ? "AFK-Realm-web.exe"
+            UpdateCheck.ToolAsset = Os.Windows ? "AFK-Realm.exe"
                 : System.Runtime.InteropServices.RuntimeInformation.OSArchitecture == System.Runtime.InteropServices.Architecture.Arm64 ? "AFK-Realm-linux-arm64" : "AFK-Realm-linux-x64";
             if (args.Length > 0 && args[0] == "cli") { L.Init(); return Cli.Run(args.Skip(1).ToArray()); }
             for (int i = 0; i < args.Length; i++)

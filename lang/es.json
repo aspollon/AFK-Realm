@@ -2004,6 +2004,8 @@
     "Your servers": "Tus servidores",
     "Everything goes into this folder: tools, source code, database and the finished server. Best is a folder in your home folder without spaces or special characters, e.g. ~/CoA-Server.": "Todo va en esta carpeta: herramientas, código fuente, base de datos y el servidor terminado. Lo mejor es una carpeta en tu carpeta personal sin espacios ni caracteres especiales, p. ej. ~/CoA-Server.",
     "Add \"{0}\" to the application menu": "Añadir «{0}» al menú de aplicaciones",
-    "If build tools of your distribution are missing, AFK Realm stops and shows the one command that installs them (it needs sudo once). Compiling puts a heavy load on your PC.": "Si faltan herramientas de compilación de tu distribución, AFK Realm se detiene y muestra el comando que las instala (necesita sudo una vez). Compilar exige mucho a tu PC."
+    "If build tools of your distribution are missing, AFK Realm stops and shows the one command that installs them (it needs sudo once). Compiling puts a heavy load on your PC.": "Si faltan herramientas de compilación de tu distribución, AFK Realm se detiene y muestra el comando que las instala (necesita sudo una vez). Compilar exige mucho a tu PC.",
+    "{0}: packed again from the newer {1} in {2}.": "{0}: empaquetado de nuevo desde la versión más reciente de {1} en {2}.",
+    "{0}: its rows are copied from number {1} of the game client to its number {2}.": "{0}: sus filas se copian del número {1} del cliente del juego a su número {2}."
   }
 }

@@ -151,23 +151,23 @@ namespace CoAInstaller
                 if (!string.IsNullOrEmpty(client) && Directory.Exists(client))
                 {
                     progress(L.T("Collecting the logs of the game client …"));
-                    foreach (var f in Files(Path.Combine(client, "Logs"), ".log", ".txt").Take(15)) tail(f.FullName, "client/logs/" + f.Name, LogTail);
-                    foreach (var f in Files(Path.Combine(client, "Errors"), ".txt", ".log").Take(6)) tail(f.FullName, "client/crashes/" + f.Name, LogTail);
-                    foreach (var f in Files(Path.Combine(client, "Errors"), ".dmp").Take(3)) dumps.Add(new KeyValuePair<string, FileInfo>("client/", f));
+                    foreach (var f in Files(Os.Resolve(client, "Logs"), ".log", ".txt").Take(15)) tail(f.FullName, "client/logs/" + f.Name, LogTail);
+                    foreach (var f in Files(Os.Resolve(client, "Errors"), ".txt", ".log").Take(6)) tail(f.FullName, "client/crashes/" + f.Name, LogTail);
+                    foreach (var f in Files(Os.Resolve(client, "Errors"), ".dmp").Take(3)) dumps.Add(new KeyValuePair<string, FileInfo>("client/", f));
                     foreach (var f in Files(client, ".log", ".txt", ".conf").Where(x => x.Length < 20000000).Take(15)) tail(f.FullName, "client/" + f.Name, LogTail);
                     foreach (var f in Files(client, ".dmp").Take(2)) dumps.Add(new KeyValuePair<string, FileInfo>("client/", f));
-                    string wtf = Path.Combine(client, "WTF", "Config.wtf");
+                    string wtf = Os.Resolve(client, "WTF/Config.wtf");
                     if (File.Exists(wtf)) redacted(wtf, "client/Config.wtf");
                     var list = new StringBuilder();
                     list.AppendLine("Files of the game folder (name, size, last change):");
                     foreach (var f in Files(client)) list.AppendLine("  " + f.Name + "  " + f.Length + "  " + f.LastWriteTime.ToString("yyyy-MM-dd HH:mm"));
-                    foreach (var dir in new[] { Path.Combine(client, "Data") }.Concat(SafeDirs(Path.Combine(client, "Data"))))
+                    foreach (var dir in new[] { Os.Resolve(client, "Data") }.Concat(SafeDirs(Os.Resolve(client, "Data"))))
                     {
                         list.AppendLine(dir.Substring(client.Length).TrimStart('\\', '/') + ":");
                         foreach (var f in Files(dir)) list.AppendLine("  " + f.Name + "  " + f.Length + "  " + f.LastWriteTime.ToString("yyyy-MM-dd HH:mm"));
                     }
                     list.AppendLine("Add-ons:");
-                    foreach (var d in SafeDirs(Path.Combine(client, "Interface", "AddOns"))) list.AppendLine("  " + Path.GetFileName(d));
+                    foreach (var d in SafeDirs(Os.Resolve(client, "Interface/AddOns"))) list.AppendLine("  " + Path.GetFileName(d));
                     text("client/files.txt", list.ToString());
                 }
 

@@ -6,10 +6,12 @@
   -->
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
-    <OutputType>Exe</OutputType>
+    <!-- WinExe: no empty console window next to the window of AFK Realm on Windows (Program.ConsoleIfNeeded
+         attaches one for the command line). Linux does not know the difference. -->
+    <OutputType>WinExe</OutputType>
     <AssemblyName>AFK-Realm</AssemblyName>
     <Product>AFK Realm</Product>
-    <Version>1.1.5</Version>
+    <Version>1.1.6</Version>
     <RootNamespace>CoAInstaller</RootNamespace>
     <Nullable>disable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>

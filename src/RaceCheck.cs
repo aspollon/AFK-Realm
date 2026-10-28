@@ -105,7 +105,7 @@ namespace CoAInstaller
                     try
                     {
                         string root = ClientPatch.ConfValue(inst, Conf, "CustomRaces.ClientRootFolder") ?? "";
-                        string dbc = root.Length == 0 ? "" : Path.Combine(Path.GetDirectoryName(root.TrimEnd('\\', '/')), "dbc", "ChrRaces.dbc");
+                        string dbc = root.Length == 0 ? "" : Os.Resolve(Path.GetDirectoryName(root.TrimEnd('\\', '/')), "dbc/ChrRaces.dbc");
                         if (dbc.Length > 0 && File.Exists(dbc))
                         {
                             var t = DbcTable.Parse(File.ReadAllBytes(dbc), "ChrRaces.dbc");

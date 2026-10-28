@@ -232,7 +232,7 @@ namespace CoAInstaller
                     string rel = entry.FullName.Replace('\\', '/').TrimStart('/');
                     if (rel.Length == 0 || rel.Split('/').Any(p => p == ".." || p == "." || p.IndexOf(':') >= 0))
                         throw new InvalidOperationException(L.F("{0} contains an unsafe path.", Path.GetFileName(zipFile)));
-                    string dest = Path.Combine(target, rel.Replace('/', '\\'));
+                    string dest = Os.Resolve(target, rel);
                     if (entry.Name.Length == 0)
                     {
                         Directory.CreateDirectory(dest);

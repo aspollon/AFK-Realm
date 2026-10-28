@@ -198,7 +198,7 @@ namespace CoAInstaller
         static string FullPath(string client, string relative)
         {
             string root = Path.GetFullPath(client).TrimEnd('\\') + "\\";
-            string full = Path.GetFullPath(Path.Combine(root, relative.Replace('/', '\\')));
+            string full = Path.GetFullPath(Os.Resolve(root, relative));
             if (!full.StartsWith(root, StringComparison.OrdinalIgnoreCase))
                 throw new InvalidOperationException(L.F("The client list contains a path outside the game folder: {0}", relative));
             return full;

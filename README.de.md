@@ -28,7 +28,7 @@ Dies ist eine Kurzfassung. Die ausführliche Beschreibung steht im [englischen R
 
 ## Loslegen
 
-1. `AFK-Realm.exe` von der Seite [Releases](../../releases) herunterladen und starten. Windows SmartScreen warnt eventuell vor einem unbekannten Herausgeber, weil die exe nicht signiert ist; sie wird von GitHub Actions aus diesem Repository gebaut.
+1. `AFK-Realm.exe` von der Seite [Releases](../../releases) herunterladen und starten. Es öffnet sich in einem App-Fenster von Edge oder Chrome (oder im Browser). Windows SmartScreen warnt eventuell vor einem unbekannten Herausgeber, weil die exe nicht signiert ist; sie wird von GitHub Actions aus diesem Repository gebaut.
 2. **Einen neuen Server installieren** → Ordner wählen, z. B. `C:\CoA-Server` → Datenbank-Passwort festlegen → **Installieren**. Das kann lange dauern und braucht etwa 40 GB Speicherplatz.
 3. In der Serververwaltung: *Kartendaten aus dem Spielclient erstellen* (einmalig), *Account erstellen*, *Server starten*.
 4. In der `realmlist.wtf` deines Clients `set realmlist 127.0.0.1` eintragen und einloggen.

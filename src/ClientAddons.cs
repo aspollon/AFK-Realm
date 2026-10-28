@@ -77,7 +77,7 @@ namespace CoAInstaller
 
         static bool HasArchives(string dir)
         {
-            string data = Path.Combine(dir ?? "", "Data");
+            string data = Os.Resolve(dir ?? "", "Data");
             return Directory.Exists(data) && Directory.EnumerateFiles(data).Any(f => f.EndsWith(".mpq", StringComparison.OrdinalIgnoreCase));
         }
 
@@ -96,7 +96,7 @@ namespace CoAInstaller
             }
         }
 
-        static string AddonsDir(string client) { return Path.Combine(client, "Interface", "AddOns"); }
+        static string AddonsDir(string client) { return Os.Resolve(client, "Interface/AddOns"); }
 
         /// <summary>The add-ons the installed modules bring, with their state in the given client folder (null: all count as missing).</summary>
         public static List<ClientAddon> Find(Install inst, string client)
@@ -239,7 +239,7 @@ namespace CoAInstaller
             SaveRecord(inst, record);
             if (clearCache)
             {
-                string cache = Path.Combine(client, "Cache");
+                string cache = Os.Resolve(client, "Cache");
                 if (Directory.Exists(cache)) { Directory.Delete(cache, true); done.Add(L.T("the client's cache cleared")); }
                 else done.Add(L.T("the client had no cache to clear"));
             }
@@ -582,7 +582,7 @@ namespace CoAInstaller
                     }
                     finally
                     {
-                        string cache = System.IO.Path.Combine(client, "Cache");
+                        string cache = Os.Resolve(client, "Cache");
                         if (clear && Directory.Exists(cache)) { report(L.T("Clearing the game's cache …")); Directory.Delete(cache, true); result += "\n" + L.T("the client's cache cleared"); }
                     }
                     return result;

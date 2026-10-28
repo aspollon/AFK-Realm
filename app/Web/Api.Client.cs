@@ -124,7 +124,7 @@ namespace CoAInstaller.Web
                     }
                     finally
                     {
-                        string cache = Path.Combine(client, "Cache");
+                        string cache = Os.Resolve(client, "Cache");
                         if (clear && Directory.Exists(cache)) { st(L.T("Clearing the game's cache …")); Directory.Delete(cache, true); result += "\n" + L.T("the client's cache cleared"); }
                     }
                     ClientAddons.ClientFolder = client;

@@ -1,6 +1,14 @@
-# AFK Realm 1.1.5
+# AFK Realm 1.1.6
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11 and now also on Linux.
+
+## New in 1.1.6
+
+- **Fixed: races switched back off at Game client › Install** with "the race table of the game has no row for it". It hit races of your own game client that got another race number (for example an Esteria race given CoA Custom's number). Switch the race on again and install the client patch.
+- **No more empty black window.** On Windows, AFK Realm opened an empty console next to its window. Now there is only the AFK Realm window.
+- **One AFK Realm for everyone: the new interface.** `AFK-Realm.exe` is now the web version (it opens in an app window of Edge or Chrome). If you still use the old Windows window, just click the update notice as usual: AFK Realm switches itself to the new version, keeps your servers, settings and desktop shortcut, and running servers keep running. Already on `AFK-Realm-web.exe`? Its update works as before.
+- **Race packs update themselves.** When AFK Realm gets a better race packer, or you put a newer CoA Custom into your CoA Custom folder, your imported races are packed again automatically at the next **Game client › Install**. No need to import them again by hand.
+- **Linux: file and folder names.** Linux tells `Data` and `data` apart, and Windows paths use backslashes. AFK Realm now finds the game folder, CoA Custom and the race files however their names are written, and the CoA Custom download, the game client download and CoA Custom's armour-fitting files land in the right folders on Linux.
 
 ## New in 1.1.5
 

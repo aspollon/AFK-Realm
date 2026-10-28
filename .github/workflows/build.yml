@@ -1,5 +1,10 @@
-# Builds the exe on GitHub's Windows machines. For a tag like v0.1.0-preview the exe is
-# attached to a GitHub release, so everyone can see it was built from this code.
+# Builds AFK Realm on GitHub's machines. For a tag like v1.2.0 the files are attached to a GitHub release, so
+# everyone can see they were built from this code.
+#
+# Since 1.1.6 the web version is the only one: AFK-Realm.exe in a release IS the web version for Windows. The
+# classic WinForms exe (1.1.5 and older) updates itself from the asset named AFK-Realm.exe, so every classic user is
+# moved to the web version by the update notice they already get. AFK-Realm-web.exe (the same file) stays for the
+# web builds 1.1.0-1.1.5, which update from that name.
 name: build
 on:
   push:
@@ -10,32 +15,6 @@ on:
 permissions:
   contents: write
 jobs:
-  build:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Check the engine script
-        shell: pwsh
-        run: |
-          $errors = $null
-          [void][System.Management.Automation.Language.Parser]::ParseFile("$PWD\engine\engine.ps1", [ref]$null, [ref]$errors)
-          if ($errors) { $errors | ForEach-Object { Write-Error $_.Message }; exit 1 }
-      - name: Build
-        shell: cmd
-        run: build.bat nopause
-      - uses: actions/upload-artifact@v4
-        with:
-          name: AFK-Realm
-          path: AFK-Realm.exe
-      - name: Publish release
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
-        with:
-          files: AFK-Realm.exe
-          body_path: RELEASE_NOTES.md
-          # Tags with a suffix (v0.1.0-preview, v0.2.0-beta) are published as pre-releases.
-          prerelease: ${{ contains(github.ref_name, '-') }}
-
   # The cross-platform build (app/): a local web server with the page in an app window or the browser.
   # Self-contained single files, so neither .NET nor anything else has to be installed first.
   web:
@@ -43,7 +22,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: windows-latest, rid: win-x64, file: AFK-Realm.exe, asset: AFK-Realm-web.exe }
+          - { os: windows-latest, rid: win-x64, file: AFK-Realm.exe, asset: AFK-Realm.exe }
           - { os: ubuntu-latest, rid: linux-x64, file: AFK-Realm, asset: AFK-Realm-linux-x64 }
           - { os: ubuntu-latest, rid: linux-arm64, file: AFK-Realm, asset: AFK-Realm-linux-arm64 }
     runs-on: ${{ matrix.os }}
@@ -52,13 +31,28 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
+      - name: Check the engine script
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $errors = $null
+          [void][System.Management.Automation.Language.Parser]::ParseFile("$PWD\engine\engine.ps1", [ref]$null, [ref]$errors)
+          if ($errors) { $errors | ForEach-Object { Write-Error $_.Message }; exit 1 }
       - name: Publish
         shell: bash
         run: |
           dotnet publish app/AfkRealm.csproj -c Release -r ${{ matrix.rid }} --self-contained true \
             -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true \
             -p:DebugType=none -o out
-          mv "out/${{ matrix.file }}" "out/${{ matrix.asset }}"
+          if [ "${{ matrix.file }}" != "${{ matrix.asset }}" ]; then mv "out/${{ matrix.file }}" "out/${{ matrix.asset }}"; fi
+          # The classic exe refuses an update larger than 50 MiB: the Windows file has to stay below it, or the
+          # classic users are not moved over by themselves.
+          size=$(stat -c %s "out/${{ matrix.asset }}" 2>/dev/null || stat -f %z "out/${{ matrix.asset }}")
+          echo "size: $size bytes"
+          if [ "${{ matrix.rid }}" = "win-x64" ]; then
+            if [ "$size" -ge 52428800 ]; then echo "::error::AFK-Realm.exe is $size bytes; the classic exe accepts at most 52428800"; exit 1; fi
+            cp "out/${{ matrix.asset }}" out/AFK-Realm-web.exe
+          fi
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.asset }}
@@ -67,5 +61,9 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: out/${{ matrix.asset }}
+          files: |
+            out/${{ matrix.asset }}
+            out/AFK-Realm-web.exe
+          fail_on_unmatched_files: false
+          body_path: RELEASE_NOTES.md
           prerelease: ${{ contains(github.ref_name, '-') }}

@@ -23,6 +23,13 @@ namespace CoAInstaller
     /// </summary>
     static class RacePacker
     {
+        /// <summary>The version of the packer, written into every race pack (race.json "packer"). Raise it whenever the
+        /// packer takes other or more files than before: a pack made by an older one is packed again by itself at the next
+        /// install of the client patch, as long as the client it came from is still there (RaceRepair.RefreshOldPacks).
+        /// 1: until 1.0.9; 2: helmets, display textures, the own model folder and voice (1.0.10); 3: files another client
+        /// changed under the same name, female-only races (1.1.5).</summary>
+        public const int PackerVersion = 3;
+
         /// <summary>A set of archives, read as the game reads them: the one it reads last wins. Files that lie around
         /// unpacked (the raw files some creators ship) are read after all archives, they only step in for what the
         /// archives do not have.</summary>
@@ -32,6 +39,8 @@ namespace CoAInstaller
             readonly List<Loose> raw = new List<Loose>();
             public readonly List<string> Unreadable = new List<string>();
             public readonly Dictionary<string, DbcTable> Tables = new Dictionary<string, DbcTable>(StringComparer.OrdinalIgnoreCase);
+            /// <summary>What the other client was when it was opened (SourceStamp); empty for the player's own.</summary>
+            public string Stamp = "";
             List<string> known;                                           // every name the archives know, the most important first
             Dictionary<string, List<string>> byName;                      // file name -> the names that share it
 
@@ -195,11 +204,11 @@ namespace CoAInstaller
         /// folder), the Data folder itself, or any folder with patch archives somewhere below it.</summary>
         public static List<string> ArchivesOf(string folder)
         {
-            if (Directory.Exists(Path.Combine(folder, "Data"))) return ClientPatch.ClientArchives(folder, true);
+            if (Directory.Exists(Os.Resolve(folder, "Data"))) return ClientPatch.ClientArchives(folder, true);
             if (Path.GetFileName(folder.TrimEnd('\\', '/')).Equals("Data", StringComparison.OrdinalIgnoreCase)) return ClientPatch.ClientArchives(Path.GetDirectoryName(folder.TrimEnd('\\', '/')), true);
             // a game folder further down (a repack unpacked into a folder of its own)
             foreach (var dir in Below(folder, 3))
-                if (Directory.Exists(Path.Combine(dir, "Data")) && Directory.GetFiles(Path.Combine(dir, "Data")).Any(f => f.EndsWith(".mpq", StringComparison.OrdinalIgnoreCase))) return ClientPatch.ClientArchives(dir, true);
+                if (Directory.Exists(Os.Resolve(dir, "Data")) && Directory.GetFiles(Os.Resolve(dir, "Data")).Any(f => f.EndsWith(".mpq", StringComparison.OrdinalIgnoreCase))) return ClientPatch.ClientArchives(dir, true);
             var found = new List<string>();
             foreach (var dir in new[] { folder }.Concat(Below(folder, 4)))
                 found.AddRange(Directory.GetFiles(dir).Where(f => f.EndsWith(".mpq", StringComparison.OrdinalIgnoreCase)));
@@ -236,7 +245,35 @@ namespace CoAInstaller
             var archives = new Archives(yours.Concat(theirs).ToList());
             if (!IsClient(other)) archives.AddRaw(new Loose(other));
             if (archives.Count == 0) throw new InvalidOperationException(L.F("There are no game archives (.MPQ) in {0}.", other));
+            archives.Stamp = SourceStamp(other);
             return archives;
+        }
+
+        /// <summary>
+        /// What a client the races are packed from is right now: the CoA Custom version AFK Realm downloaded into the
+        /// folder (when it did) and the names and sizes of its archives. Written into every race pack ("sourceStamp"):
+        /// when it is different at a client install, a newer CoA Custom (or another version of the other client) is
+        /// there, and its races are packed again by themselves (RaceRepair.RefreshOldPacks).
+        /// </summary>
+        public static string SourceStamp(string other)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(other) || !Directory.Exists(other)) return "";
+                string version = null;
+                string dir = other.TrimEnd('\\', '/');
+                for (int up = 0; up < 4 && !string.IsNullOrEmpty(dir) && version == null; up++, dir = Path.GetDirectoryName(dir))
+                    version = CoaCustom.Installed(dir);
+                var text = new StringBuilder();
+                foreach (var f in ArchivesOf(other).Select(f => new FileInfo(f)).OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase))
+                    text.Append(f.Name.ToLowerInvariant()).Append(':').Append(f.Length).Append(';');
+                using (var sha = System.Security.Cryptography.SHA1.Create())
+                {
+                    string hash = BitConverter.ToString(sha.ComputeHash(Encoding.UTF8.GetBytes(text.ToString()))).Replace("-", "").Substring(0, 16).ToLowerInvariant();
+                    return (version != null ? version + "/" : "") + hash;
+                }
+            }
+            catch { return ""; }
         }
 
         /// <summary>Whether a folder is a game client: its archives hold everything it has, files lying around next to
@@ -246,7 +283,7 @@ namespace CoAInstaller
             if (Path.GetFileName(folder.TrimEnd('\\', '/')).Equals("Data", StringComparison.OrdinalIgnoreCase)) return true;
             foreach (var dir in new[] { folder }.Concat(Below(folder, 3)))
             {
-                string data = Path.Combine(dir, "Data");
+                string data = Os.Resolve(dir, "Data");
                 if (Directory.Exists(data) && Directory.GetFiles(data).Any(f => f.EndsWith(".mpq", StringComparison.OrdinalIgnoreCase))) return true;
             }
             return false;
@@ -269,7 +306,7 @@ namespace CoAInstaller
         {
             foreach (var dir in new[] { folder }.Concat(Below(folder, 4)))
             {
-                string f = Path.Combine(dir, "dinput8.dll");
+                string f = Os.Resolve(dir, "dinput8.dll");
                 if (File.Exists(f) && IsRacePatch(f)) return f;
             }
             return null;
@@ -789,7 +826,7 @@ namespace CoAInstaller
             if (Directory.Exists(filesDir)) Directory.Delete(filesDir, true);
             if (hasIcon)
             {
-                string to = Path.Combine(filesDir, (icon + ".blp").Replace('\\', Path.DirectorySeparatorChar));
+                string to = Os.Resolve(filesDir, icon + ".blp");
                 Directory.CreateDirectory(Path.GetDirectoryName(to));
                 File.WriteAllBytes(to, iconFrom.Read(iconFound));
                 keep.Add(icon + ".blp");
@@ -819,7 +856,7 @@ namespace CoAInstaller
                     try { mine = yours.Read(f); } catch { mine = null; }
                     if (mine != null && mine.SequenceEqual(data)) { same.Add(f); continue; }
                 }
-                string to = Path.Combine(filesDir, f.Replace('\\', Path.DirectorySeparatorChar));
+                string to = Os.Resolve(filesDir, f);
                 Directory.CreateDirectory(Path.GetDirectoryName(to));
                 File.WriteAllBytes(to, data);
                 keep.Add(f);
@@ -869,6 +906,8 @@ namespace CoAInstaller
                 // in the DBC, "lightforgeddraenei" in the archives); keep the DBC value separately for matching.
                 { "file", modelFolder.Length > 0 ? modelFolder : Str(cr, row, 11) },
                 { "sourceFile", Str(cr, row, 11) },
+                { "packer", PackerVersion },
+                { "sourceStamp", source.Stamp ?? "" },
                 { "maleOnly", race.MaleOnly ? "1" : "0" },
                 { "femaleOnly", race.FemaleOnly ? "1" : "0" },
                 { "labels", cr.Fields > 67 ? new[] { Str(cr, row, 65), Str(cr, row, 66), Str(cr, row, 67) } : new string[0] },
@@ -915,7 +954,7 @@ namespace CoAInstaller
             foreach (var path in list.Where(f => f.EndsWith(".m2", StringComparison.OrdinalIgnoreCase) ||
                                                    f.EndsWith(".mdx", StringComparison.OrdinalIgnoreCase)))
             {
-                string file = Path.Combine(filesDir, path.Replace('\\', Path.DirectorySeparatorChar));
+                string file = Os.Resolve(filesDir, path);
                 if (!File.Exists(file)) continue;
                 byte[] b;
                 try { b = File.ReadAllBytes(file); } catch { continue; }

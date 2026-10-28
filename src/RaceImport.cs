@@ -142,6 +142,8 @@ namespace CoAInstaller
             }
             /// <summary>The side it had in its client: 0 Alliance, 1 Horde, 2 unknown.</summary>
             public int Side { get { object v; return Info.TryGetValue("side", out v) && v != null ? Convert.ToInt32(v) : 2; } }
+            /// <summary>The short name of the client it was packed from ("cc" for CoA Custom; RacePacker.SourceLabel).</summary>
+            public string ClientLabel { get { return Str(Info, "client"); } }
             public string Source
             {
                 get
@@ -153,6 +155,11 @@ namespace CoAInstaller
             /// <summary>Its race number in the client it was taken from (0 when unknown).</summary>
             public int SourceRace { get { object v; return Info.TryGetValue("race", out v) && v != null ? Convert.ToInt32(v) : 0; } }
             public int Missing { get { object v; return Info.TryGetValue("missing", out v) && v != null ? Convert.ToInt32(v) : 0; } }
+            /// <summary>The version of the packer that made it (RacePacker.PackerVersion); 0 for a pack made before the
+            /// version was written.</summary>
+            public int Packer { get { object v; return Info.TryGetValue("packer", out v) && v != null ? Convert.ToInt32(v) : 0; } }
+            /// <summary>What the client it was packed from was then (RacePacker.SourceStamp); empty for older packs.</summary>
+            public string SourceStamp { get { return Str(Info, "sourceStamp"); } }
             public long Bytes { get { object v; return Info.TryGetValue("bytes", out v) && v != null ? Convert.ToInt64(v) : 0; } }
         }
 
@@ -169,7 +176,7 @@ namespace CoAInstaller
         }
 
         const string InfoName = "race.info.json";
-        const int InfoVersion = 6;      // 5: the client file for custom models, and male-only races; 6: female-only races
+        const int InfoVersion = 8;      // 5: the client file for custom models, and male-only races; 6: female-only races; 7: packer version; 8: source stamp
 
         /// <summary>Races whose client tables still carry a female row or display although the game has no
         /// female model. The race overview in the module README lists them as "male only": the client must
@@ -207,7 +214,7 @@ namespace CoAInstaller
             if (file.Length == 0) file = Str(data, "sourceFile").Length > 0 ? Str(data, "sourceFile") : Str(data, "file");
             var source = data.ContainsKey("source") ? data["source"] as Dictionary<string, object> : null;
             var files = List(data, "files").Select(Convert.ToString).ToList();
-            long bytes = files.Sum(f => { var p = Path.Combine(dir, "files", f.Replace('\\', Path.DirectorySeparatorChar)); return System.IO.File.Exists(p) ? new FileInfo(p).Length : 0; });
+            long bytes = files.Sum(f => { var p = Os.Resolve(Path.Combine(dir, "files"), f); return System.IO.File.Exists(p) ? new FileInfo(p).Length : 0; });
             bool maleOnly = data.ContainsKey("maleOnly") ? Num(data["maleOnly"]) != 0 : KnownMaleOnly(Str(data, "key"));
             bool female = !maleOnly && List(data, "sections").OfType<object[]>().Any(r => r.Length > 3 && Num(r[2]) == 1 && Num(r[3]) == 0);
             object side; data.TryGetValue("side", out side);
@@ -215,7 +222,7 @@ namespace CoAInstaller
             {
                 { "version", InfoVersion }, { "stamp", stamp }, { "key", Str(data, "key") }, { "name", Str(data, "name") }, { "prefix", Str(data, "prefix") },
                 { "file", file }, { "sourceFile", Str(data, "sourceFile").Length > 0 ? Str(data, "sourceFile") : Str(data, "file") }, { "icon", Str(data, "icon") }, { "client", source == null ? "" : Str(source, "client") }, { "race", source == null ? 0 : Num(source.ContainsKey("race") ? source["race"] : null) }, { "side", side ?? 2 },
-                { "female", female }, { "maleOnly", maleOnly ? "1" : "0" },
+                { "female", female }, { "maleOnly", maleOnly ? "1" : "0" }, { "packer", data.ContainsKey("packer") ? Num(data["packer"]) : 0 }, { "sourceStamp", Str(data, "sourceStamp") },
                 { "femaleOnly", data.ContainsKey("femaleOnly") ? (Num(data["femaleOnly"]) != 0 ? "1" : "0") : (KnownFemaleOnly(Str(data, "key")) ? "1" : "0") }, { "missing", List(data, "missing").Length }, { "bytes", bytes }, { "files", files },
             };
         }
@@ -990,7 +997,7 @@ namespace CoAInstaller
             long bytes = 0;
             foreach (var f in w.Pack.FilesOnDisk())
             {
-                string p = Path.Combine(w.Pack.Dir, "files", f.Replace('\\', Path.DirectorySeparatorChar));
+                string p = Os.Resolve(Path.Combine(w.Pack.Dir, "files"), f);
                 try { if (File.Exists(p)) bytes += new FileInfo(p).Length; } catch { }
             }
             return bytes;
@@ -1026,7 +1033,7 @@ namespace CoAInstaller
             sb.Append("race ").Append(w.Race).Append(' ').Append(w.Pack.Key).Append('\n');
             foreach (var f in w.Pack.FilesOnDisk())
             {
-                var p = Path.Combine(w.Pack.Dir, "files", f.Replace('\\', Path.DirectorySeparatorChar));
+                var p = Os.Resolve(Path.Combine(w.Pack.Dir, "files"), f);
                 var fi = new FileInfo(p);
                 sb.Append(f).Append(' ').Append(fi.Length).Append(' ').Append(fi.LastWriteTimeUtc.Ticks).Append('\n');
             }
@@ -1056,7 +1063,7 @@ namespace CoAInstaller
         /// <summary>Whether the archives of the imported races in the game folder are as they should be.</summary>
         public static bool Current(string client, List<Wanted> wanted)
         {
-            string data = Path.Combine(client, "Data");
+            string data = Os.Resolve(client, "Data");
             var groups = Groups(wanted);
             for (int i = 0; i < groups.Count; i++)
                 if (InstalledStamp(Path.Combine(data, GroupName(i))) != GroupStamp(groups[i])) return false;
@@ -1071,7 +1078,7 @@ namespace CoAInstaller
         public static List<string> Sync(string client, List<Wanted> wanted, Action<string, int, int> progress)
         {
             var notes = new List<string>();
-            string data = Path.Combine(client, "Data");
+            string data = Os.Resolve(client, "Data");
             Directory.CreateDirectory(data);
             var groups = Groups(wanted);
             for (int gi = 0; gi < groups.Count; gi++)
@@ -1086,7 +1093,7 @@ namespace CoAInstaller
                 foreach (var w in group)
                     foreach (var f in w.Pack.FilesOnDisk())
                     {
-                        var p = Path.Combine(w.Pack.Dir, "files", f.Replace('\\', Path.DirectorySeparatorChar));
+                        var p = Os.Resolve(Path.Combine(w.Pack.Dir, "files"), f);
                         if (File.Exists(p)) files[f] = p;
                     }
                 string temp = path + ".new";
@@ -1123,7 +1130,7 @@ namespace CoAInstaller
             foreach (var w in group)
                 foreach (var f in w.Pack.FilesOnDisk())
                 {
-                    var p = Path.Combine(w.Pack.Dir, "files", f.Replace('\\', Path.DirectorySeparatorChar));
+                    var p = Os.Resolve(Path.Combine(w.Pack.Dir, "files"), f);
                     if (File.Exists(p)) files[f] = p;
                 }
             string temp = Path.GetTempFileName();

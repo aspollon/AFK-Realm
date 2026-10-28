@@ -53,10 +53,10 @@ namespace CoAInstaller
             if (string.IsNullOrEmpty(coaCustomFolder)) return null;
             string root = ClientPatch.ClientRootOf(coaCustomFolder);
             string files = root != null ? Path.GetDirectoryName(root.TrimEnd('\\', '/')) : null;
-            foreach (var dir in new[] { files == null ? null : Path.Combine(files, "sql"), Path.Combine(coaCustomFolder, "files", "sql"), Path.Combine(coaCustomFolder, "sql") })
+            foreach (var dir in new[] { files == null ? null : Os.Resolve(files, "sql"), Os.Resolve(coaCustomFolder, "files/sql"), Os.Resolve(coaCustomFolder, "sql") })
             {
                 if (dir == null || !Directory.Exists(dir)) continue;
-                var found = Directory.GetFiles(dir, "*esteria_racials*.sql").OrderBy(f => f, StringComparer.OrdinalIgnoreCase).LastOrDefault();
+                var found = Directory.GetFiles(dir).Where(f => Path.GetFileName(f).IndexOf("esteria_racials", StringComparison.OrdinalIgnoreCase) >= 0 && f.EndsWith(".sql", StringComparison.OrdinalIgnoreCase)).OrderBy(f => f, StringComparer.OrdinalIgnoreCase).LastOrDefault();
                 if (found != null) return found;
             }
             return null;

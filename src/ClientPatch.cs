@@ -294,7 +294,7 @@ namespace CoAInstaller
         /// patch (the old patch-Y and the current patch are its own).</summary>
         internal static List<string> ClientArchives(string client, bool other)
         {
-            string data = Path.Combine(client, "Data");
+            string data = Os.Resolve(client, "Data");
             Func<string, int> rank = path =>
             {
                 string name = Path.GetFileName(path).ToLowerInvariant();
@@ -516,7 +516,7 @@ namespace CoAInstaller
             byte[] bytes = null;
             foreach (var w in plan.Imports)
             {
-                string file = Path.Combine(w.Pack.Dir, "files", path.Replace('/', '\\'));
+                string file = Os.Resolve(Path.Combine(w.Pack.Dir, "files"), path);
                 if (File.Exists(file)) { bytes = File.ReadAllBytes(file); break; }
             }
             if (bytes == null) { string source; try { bytes = FromClient(client, path, out source); } catch { bytes = null; } }
@@ -936,7 +936,7 @@ namespace CoAInstaller
         /// <summary>The stamp of the patch in the game folder: null without one, "" when the archive there is not ours.</summary>
         static string InstalledStamp(string client)
         {
-            string path = Path.Combine(client, "Data", ArchiveName);
+            string path = Os.Resolve(client, "Data/" + ArchiveName);
             if (!File.Exists(path)) return null;
             try
             {
@@ -955,7 +955,7 @@ namespace CoAInstaller
         static void RemoveLegacyPatch(string client)
         {
             if (string.IsNullOrEmpty(client)) return;
-            string data = Path.Combine(client, "Data");
+            string data = Os.Resolve(client, "Data");
             if (!Directory.Exists(data)) return;
             foreach (string old in Directory.GetFiles(data, "*", SearchOption.AllDirectories).Where(f => Path.GetFileName(f).Equals(LegacyArchiveName, StringComparison.OrdinalIgnoreCase)))
             {
@@ -1028,14 +1028,14 @@ namespace CoAInstaller
             if (!string.IsNullOrEmpty(files))
             {
                 dirs.Add(files);
-                dirs.Add(Path.Combine(files, "client"));
+                dirs.Add(Os.Resolve(files, "client"));
                 string pack = Path.GetDirectoryName(files);
                 if (!string.IsNullOrEmpty(pack)) dirs.Add(pack);
             }
             foreach (string name in new[] { "Ascension.exe", "Ascension-b.exe" })
                 foreach (string dir in dirs)
                 {
-                    string file = Path.Combine(dir, name);
+                    string file = Os.Resolve(dir, name);
                     if (File.Exists(file)) return file;
                 }
             return null;
@@ -1047,7 +1047,7 @@ namespace CoAInstaller
         {
             if (string.IsNullOrEmpty(picked)) return null;
             picked = picked.TrimEnd('\\', '/');
-            foreach (var c in new[] { Path.Combine(picked, "files", "client_root"), Path.Combine(picked, "client_root"), picked })
+            foreach (var c in new[] { Os.Resolve(picked, "files/client_root"), Os.Resolve(picked, "client_root"), picked })
                 if (Path.GetFileName(c).Equals("client_root", StringComparison.OrdinalIgnoreCase) && Directory.Exists(c) && Directory.GetFiles(c).Length > 0) return c;
             return null;
         }
@@ -1060,7 +1060,7 @@ namespace CoAInstaller
             if (string.IsNullOrEmpty(clientRoot)) return null;
             string root = clientRoot.TrimEnd('\\', '/');
             string files = Path.GetDirectoryName(root);
-            string exact = files == null ? null : Path.Combine(files, "client", "dinput8.dll");
+            string exact = files == null ? null : Os.Resolve(files, "client/dinput8.dll");
             if (exact != null && File.Exists(exact) && RacePacker.IsRacePatch(exact)) return exact;
             foreach (string start in new[] { files, root, files == null ? null : Path.GetDirectoryName(files) })
             {
@@ -1096,7 +1096,7 @@ namespace CoAInstaller
             {
                 if (!r.To.Equals("dinput8.dll", StringComparison.OrdinalIgnoreCase)) continue;
                 if (!string.IsNullOrEmpty(r.From) && File.Exists(r.From)) continue;
-                string dest = Path.Combine(client, r.To);
+                string dest = Os.Resolve(client, r.To);
                 if (File.Exists(dest) && RacePacker.IsRacePatch(dest)) r.From = dest;
             }
         }
@@ -1108,7 +1108,7 @@ namespace CoAInstaller
             if (placed.Count == 0) return false;
             foreach (var p in placed)
             {
-                string dest = Path.Combine(client, p.Key);
+                string dest = Os.Resolve(client, p.Key);
                 if (!File.Exists(dest) || Hash(dest) != p.Value) return false;
             }
             return true;
@@ -1122,7 +1122,7 @@ namespace CoAInstaller
             foreach (var p in RootPlaced(inst))
             {
                 if (plan.RootFiles.Any(r => r.To.Equals(p.Key, StringComparison.OrdinalIgnoreCase))) continue;
-                string dest = Path.Combine(client, p.Key);
+                string dest = Os.Resolve(client, p.Key);
                 if (File.Exists(dest) && Hash(dest) == p.Value)
                     plan.RootFiles.Add(new RootFile { Module = L.T("the installed client"), To = p.Key, From = dest, Zip = true });
             }
@@ -1136,7 +1136,7 @@ namespace CoAInstaller
             // longer exists.
             bool missingCoa = plan.MissingFolders.Any(m => m.StartsWith("mod-custom-races\t", StringComparison.OrdinalIgnoreCase));
             bool coaInstalled = missingCoa && !string.IsNullOrEmpty(client) &&
-                (File.Exists(Path.Combine(client, "Ascension.exe")) || File.Exists(Path.Combine(client, "Ascension-b.exe"))) &&
+                (File.Exists(Os.Resolve(client, "Ascension.exe")) || File.Exists(Os.Resolve(client, "Ascension-b.exe"))) &&
                 File.Exists(Path.Combine(client, "EsteriaAppearance.dll"));
             bool installed = InstalledRootFilesIntact(inst, client);
             foreach (var m in plan.MissingFolders)
@@ -1181,7 +1181,7 @@ namespace CoAInstaller
             var placed = RootPlaced(inst, out found);
             foreach (var r in plan.RootFiles)
             {
-                string dest = Path.Combine(client, r.To);
+                string dest = Os.Resolve(client, r.To);
                 if (!File.Exists(dest) || Hash(dest) != Hash(r.From)) return false;
             }
             // A source folder that has gone away is not a request to remove its installed files;
@@ -1189,7 +1189,7 @@ namespace CoAInstaller
             if (plan.MissingFolders.Count > 0) return true;
             // one placed before and no longer wanted is still there
             foreach (var p in placed)
-                if (!found.Contains(p.Key) && !plan.RootFiles.Any(r => r.To.Equals(p.Key, StringComparison.OrdinalIgnoreCase)) && File.Exists(Path.Combine(client, p.Key)) && Hash(Path.Combine(client, p.Key)) == p.Value)
+                if (!found.Contains(p.Key) && !plan.RootFiles.Any(r => r.To.Equals(p.Key, StringComparison.OrdinalIgnoreCase)) && File.Exists(Os.Resolve(client, p.Key)) && Hash(Path.Combine(client, p.Key)) == p.Value)
                     return false;
             return true;
         }
@@ -1209,7 +1209,7 @@ namespace CoAInstaller
             {
                 foreach (var r in plan.RootFiles)
                 {
-                    string dest = Path.Combine(client, r.To), want = Hash(r.From), mine;
+                    string dest = Os.Resolve(client, r.To), want = Hash(r.From), mine;
                     if (File.Exists(dest) && Hash(dest) == want)
                     {
                         // the same file already there: ours from before, or put there by hand (then it stays when no longer wanted)
@@ -1228,7 +1228,7 @@ namespace CoAInstaller
                     foreach (var p in placed)
                     {
                         if (now.ContainsKey(p.Key) || found.Contains(p.Key)) continue;
-                        string dest = Path.Combine(client, p.Key);
+                        string dest = Os.Resolve(client, p.Key);
                         if (File.Exists(dest) && Hash(dest) == p.Value)
                         {
                             File.Delete(dest);
@@ -1240,7 +1240,7 @@ namespace CoAInstaller
                     // The source folder is gone, not the files next to the game: keep its
                     // installed files and keep the record for them.
                     foreach (var p in placed)
-                        if (!now.ContainsKey(p.Key) && File.Exists(Path.Combine(client, p.Key)))
+                        if (!now.ContainsKey(p.Key) && File.Exists(Os.Resolve(client, p.Key)))
                         {
                             now[p.Key] = p.Value;
                             if (found.Contains(p.Key)) keep.Add(p.Key);
@@ -1365,11 +1365,20 @@ namespace CoAInstaller
             ClientBinaryPatch.Prepare(plan);
             UseInstalledRootFiles(plan, client);
             RemoveLegacyPatch(client);
-            string path = Path.Combine(client, "Data", ArchiveName);
+            string path = Os.Resolve(client, "Data/" + ArchiveName);
             string installed = InstalledStamp(client);
             // Race archives are independent of the client patch: even when no module changes a client file,
             // the races must be written (and old per-race archives removed).
+            // race packs made by an older packer: packed again from their client first (RaceRepair.RefreshOldPacks)
+            var repacked = RaceRepair.RefreshOldPacks(inst, client, plan.Imports, t => progress(t, 0, 0));
+            if (repacked.Count > 0)
+            {
+                plan = Collect(inst);
+                ClientBinaryPatch.Prepare(plan);
+                UseInstalledRootFiles(plan, client);
+            }
             var raceNotes = RaceImport.Sync(client, plan.Imports, progress);
+            raceNotes.InsertRange(0, repacked);
             if (plan.Empty)
             {
                 SyncServerAppearance(inst, plan, null);
@@ -1465,7 +1474,7 @@ namespace CoAInstaller
             var list = ClientArchives(client);
             int at = list.FindIndex(p => string.Equals(Path.GetFullPath(p), Path.GetFullPath(path), StringComparison.OrdinalIgnoreCase));
             if (at >= 0) { list[at] = temp; return list; }
-            string data = Path.Combine(client, "Data");
+            string data = Os.Resolve(client, "Data");
             at = list.FindIndex(p => string.Equals(Path.GetDirectoryName(Path.GetFullPath(p)), Path.GetFullPath(data), StringComparison.OrdinalIgnoreCase) &&
                 Path.GetFileName(p).StartsWith("patch", StringComparison.OrdinalIgnoreCase) &&
                 string.Compare(Path.GetFileName(p), ArchiveName, StringComparison.OrdinalIgnoreCase) > 0);

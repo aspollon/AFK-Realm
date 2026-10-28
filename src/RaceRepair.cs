@@ -124,6 +124,9 @@ namespace CoAInstaller
                             if (target > 0 && !NumberTaken(inst, key, target))
                             {
                                 values["CustomRaces." + key + ".Id"] = target.ToString();
+                                // a race of the game client keeps its row where the client has it; under another number
+                                // its rows are copied there (as for the High Elf), else the new number has no row at all
+                                if (!import && SourceOf(inst, key) != target) values["CustomRaces." + key + ".Copy"] = "1";
                                 if (import)
                                 {
                                     values["CustomRaces." + key + ".MaleDisplay"] = (RaceImport.DisplayBase + target * 2).ToString();
@@ -150,13 +153,81 @@ namespace CoAInstaller
                             else if (!import && !off.ContainsKey(key)) off[key] = f.Text;
                             break;
                         case RaceCheck.NoRow:
-                            if (!off.ContainsKey(key)) off[key] = f.Text;
+                        {
+                            // a race of the game client under a number other than its row's (moved, or given CoA
+                            // Custom's number), with its rows edited in place: copy them to its number instead
+                            int source = SourceOf(inst, key);
+                            if (!import && source > 0 && source != f.Id && Get(inst, "CustomRaces." + key + ".Copy") != "1")
+                            {
+                                values["CustomRaces." + key + ".Copy"] = "1";
+                                done.Add(L.F("{0}: its rows are copied from number {1} of the game client to its number {2}.", name, source, f.Id));
+                                changed = true;
+                            }
+                            else if (!off.ContainsKey(key)) off[key] = f.Text;
                             break;
+                        }
                     }
                 }
             }
             Set(inst, values);
             return changed;
+        }
+
+        /// <summary>
+        /// Packs that are out of date are packed again from the client they came from, before the client patch is built:
+        ///  - made by an older packer (RacePacker.PackerVersion): a fix of the packer reaches every race by itself;
+        ///  - made from another version of that client (RacePacker.SourceStamp): a newer CoA Custom in its folder brings
+        ///    its new models, textures and helmets to the races by itself.
+        /// Nobody has to import a race again by hand. A pack whose client is not there any more stays as it is (it works
+        /// as before); that is noted in its folder, so it is not tried again at every install until something changes.
+        /// Returns lines for the user (empty: nothing done).
+        /// </summary>
+        public static List<string> RefreshOldPacks(Install inst, string client, IEnumerable<RaceImport.Wanted> imports, Action<string> progress)
+        {
+            var done = new List<string>();
+            string source = SourceFolder(inst);
+            string label = source == null ? "" : RacePacker.SourceLabel(source);
+            string stamp = null;
+            foreach (var pack in imports.Select(w => w.Pack).Where(p => p != null).GroupBy(p => p.Dir, StringComparer.OrdinalIgnoreCase).Select(g => g.First()))
+            {
+                bool oldPacker = pack.Packer < RacePacker.PackerVersion;
+                // only a pack of that same client is compared with it (a race of Ashen Order is not packed from CoA Custom)
+                bool sameClient = source != null && (pack.ClientLabel.Length == 0 || pack.ClientLabel.Equals(label, StringComparison.OrdinalIgnoreCase));
+                if (sameClient && stamp == null) stamp = RacePacker.SourceStamp(source);
+                bool newerClient = sameClient && pack.SourceStamp.Length > 0 && stamp.Length > 0 && pack.SourceStamp != stamp;
+                if (!oldPacker && !newerClient) continue;
+                string marker = Path.Combine(pack.Dir, "afk-repack-tried.txt");
+                string state = RacePacker.PackerVersion + "|" + (stamp ?? "");
+                try { if (File.Exists(marker) && File.ReadAllText(marker).Trim() == state) continue; } catch { }
+                string line = sameClient || pack.ClientLabel.Length == 0 ? Repack(inst, client, pack.Key, progress) : null;
+                if (line != null)
+                {
+                    try { if (File.Exists(marker)) File.Delete(marker); } catch { }
+                    done.Add(newerClient && !oldPacker
+                        ? L.F("{0}: packed again from the newer {1} in {2}.", pack.Name, pack.Source, source)
+                        : line);
+                }
+                else try { File.WriteAllText(marker, state); } catch { }
+            }
+            return done;
+        }
+
+        /// <summary>The client the imported races are packed again from: the files\client folder of CoA Custom next to
+        /// its client_root (the Custom races page), else client_root itself; null when none is chosen or there.</summary>
+        static string SourceFolder(Install inst)
+        {
+            string root = Get(inst, "CustomRaces.ClientRootFolder");
+            if (root.Length == 0) return null;
+            string files = Path.GetDirectoryName(root.TrimEnd('\\', '/'));
+            if (files != null && Directory.Exists(Os.Resolve(files, "client"))) return Os.Resolve(files, "client");
+            return Directory.Exists(root) ? root : null;
+        }
+
+        /// <summary>The number of a race's row in the game client (CustomRaces.X.Source; 0 for an imported race).</summary>
+        static int SourceOf(Install inst, string key)
+        {
+            int n;
+            return int.TryParse(Get(inst, "CustomRaces." + key + ".Source").Trim('"'), out n) ? n : 0;
         }
 
         /// <summary>Whether another race of the settings has the number already.</summary>
@@ -172,16 +243,14 @@ namespace CoAInstaller
         /// <summary>Packs an imported race again from the client it came from (CoA Custom's folder of the Custom races
         /// page): a race folder made before a fix of the packer, or from an older CoA Custom, lacks files. Null when that
         /// client is not there or does not have the race.</summary>
-        static string Repack(Install inst, string client, string key, Action<string> progress)
+        internal static string Repack(Install inst, string client, string key, Action<string> progress)
         {
             try
             {
                 string folder = Get(inst, "CustomRaces.ImportFolder");
                 var pack = folder.Length > 0 ? RaceImport.Find(folder, key) : null;
-                string root = Get(inst, "CustomRaces.ClientRootFolder");
-                if (pack == null || root.Length == 0) return null;
-                string files = Path.GetDirectoryName(root.TrimEnd('\\', '/'));
-                string source = files != null && Directory.Exists(Path.Combine(files, "client")) ? Path.Combine(files, "client") : root;
+                string source = SourceFolder(inst);
+                if (pack == null || source == null) return null;
                 if (progress != null) progress(L.F("Packing {0} again from {1} …", pack.Name, source));
                 using (var src = RacePacker.Open(source, client))
                 using (var yours = new RacePacker.Archives(ClientPatch.ClientArchives(client)))
