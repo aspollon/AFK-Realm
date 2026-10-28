@@ -1,6 +1,14 @@
-# AFK Realm 1.1.8
+# AFK Realm 1.1.9
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11 and now also on Linux.
+
+## New in 1.1.9
+
+- **Race number moves cleaned up automatically.** If you moved a race to a free number several times, the settings now keep just one tidy move per race.
+- **Fixed: races moved to another number were switched off** at Game client › Install (Troglodyte, Northrend Skeleton and others moved with "Move to a free number").
+- **Fixed: races with a few missing textures were switched off** (e.g. CoA Custom's Zandalari Troll). Missing extra layers are now simply left out, as on the stock races, instead of turning the race off.
+
+Update, switch the races back on in **Modules › Custom races** and run **Game client › Install**.
 
 ## New in 1.1.8
 

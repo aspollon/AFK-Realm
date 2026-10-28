@@ -59,6 +59,13 @@ namespace CoAInstaller
         public static bool Fix(Install inst, string client, List<RaceCheck.Finding> found, HashSet<string> tried, HashSet<int> strict,
             Dictionary<string, string> off, List<string> done, Action<string> progress)
         {
+            return Fix(inst, client, found, tried, strict, new Dictionary<int, HashSet<string>>(), off, done, progress);
+        }
+
+        /// <summary>missingTextures: textures by race number its rows stop pointing at (ClientPatch.Plan.MissingTextures).</summary>
+        public static bool Fix(Install inst, string client, List<RaceCheck.Finding> found, HashSet<string> tried, HashSet<int> strict,
+            Dictionary<int, HashSet<string>> missingTextures, Dictionary<string, string> off, List<string> done, Action<string> progress)
+        {
             bool changed = false;
             var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             foreach (var group in found.Where(f => !string.IsNullOrEmpty(f.Key)).GroupBy(f => f.Key, StringComparer.OrdinalIgnoreCase))
@@ -72,6 +79,21 @@ namespace CoAInstaller
                 foreach (var f in group.GroupBy(x => x.Kind).Select(g => g.First()))
                 {
                     string mark = f.Kind + ":" + key;
+                    // textures still missing after the race was packed again (or a race of the client, which cannot be):
+                    // its rows stop pointing at them - once; still missing after that, the race goes off
+                    bool textures = f.Kind == RaceCheck.Textures && f.Missing != null && f.Missing.Count > 0 && f.Id > 0;
+                    if (textures && (tried.Contains(mark) || !import || tried.Contains("repack:" + key)) && !tried.Contains("blank:" + key + ":" + f.Text))
+                    {
+                        tried.Add(mark); tried.Add("blank:" + key + ":" + f.Text);
+                        HashSet<string> set;
+                        if (!missingTextures.TryGetValue(f.Id, out set)) missingTextures[f.Id] = set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                        // both sexes: one finding each
+                        var all = group.Where(x => x.Kind == RaceCheck.Textures && x.Missing != null).SelectMany(x => x.Missing).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+                        foreach (var m in all) set.Add(m);
+                        done.Add(L.F("{0}: {1} missing textures are left out of its looks (its client does not have them either).", name, all.Count));
+                        changed = true;
+                        continue;
+                    }
                     if (tried.Contains(mark)) { if (!off.ContainsKey(key)) off[key] = f.Text; continue; }
                     tried.Add(mark);
                     switch (f.Kind)

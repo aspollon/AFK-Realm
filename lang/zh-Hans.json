@@ -2008,6 +2008,10 @@
     "{0}: packed again from the newer {1} in {2}.": "{0}：已从 {2} 中较新的 {1} 重新打包。",
     "{0}: its rows are copied from number {1} of the game client to its number {2}.": "{0}：其数据行从游戏客户端的编号 {1} 复制到它的编号 {2}。",
     "{0}: the race table of the game has no row for it (its row is under number {1}).": "{0}：游戏的种族表中没有它的行（它的行在编号 {1} 下）。",
-    "{0}: its row is under number {1} of the game client; it is taken from there for its number {2}.": "{0}：它的行在游戏客户端的编号 {1} 下；从那里取用于它的编号 {2}。"
+    "{0}: its row is under number {1} of the game client; it is taken from there for its number {2}.": "{0}：它的行在游戏客户端的编号 {1} 下；从那里取用于它的编号 {2}。",
+    "The race number move {0}:{1} is left out: {2}.": "种族编号移动 {0}:{1} 被跳过：{2}。",
+    "the client has no race {0}": "客户端没有种族 {0}",
+    "race {0} is taken": "种族 {0} 已被占用",
+    "{0}: {1} missing textures are left out of its looks (its client does not have them either).": "{0}：{1} 个缺失的纹理从其外观中省略（其客户端也没有）。"
   }
 }

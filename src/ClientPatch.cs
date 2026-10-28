@@ -50,6 +50,9 @@ namespace CoAInstaller
             internal List<string> MissingFolders = new List<string>();
             /// <summary>Race numbers whose sections get the strict rules (RaceRepair, after the race check found them wrong).</summary>
             internal HashSet<int> StrictSections = new HashSet<int>();
+            /// <summary>Textures the race check did not find, by race number: the rows of the race stop pointing at them
+            /// (RaceRepair, when packing the race again did not bring them).</summary>
+            internal Dictionary<int, HashSet<string>> MissingTextures = new Dictionary<int, HashSet<string>>();
             public bool Empty { get { return Files.Count == 0 && Edits.Count == 0; } }
         }
 
@@ -357,6 +360,22 @@ namespace CoAInstaller
                 files[f.To] = bytes;
             }
             IdShifts(client, plan, files);
+            Func<string, byte[]> load = name =>
+            {
+                byte[] b; string src;
+                if (files.TryGetValue(name, out b)) return b;
+                b = FromClient(client, name, out src);
+                if (b != null && notes != null) notes.Add(name + " (from " + src + ")");
+                return b;
+            };
+            Action<string, byte[]> save = (name, b) => files[name] = b;
+            // client races moved to other numbers (by the Custom races page) first: every edit of the modules - the rows
+            // made playable or copied for a race by its number (CustomRaces.X.Source) - means the number the race has
+            // after the move, as the page shows it. Moved after those edits, a copied race found no row to copy and a
+            // race edited in place had the row of another race edited.
+            string moves = ConfValue(inst, "mod_custom_races.conf", "CustomRaces.MoveClientRaces");
+            if (!string.IsNullOrWhiteSpace(moves))
+                RaceImport.MoveClientRaces(load, save, moves, notes == null ? null : new Action<string>(notes.Add));
             foreach (var group in plan.Edits.Where(e => e.ImportRace == null && e.SectionRules == null && e.AddFile == null).GroupBy(e => e.File, StringComparer.OrdinalIgnoreCase))
             {
                 byte[] bytes;
@@ -376,19 +395,6 @@ namespace CoAInstaller
                 if (notes != null) notes.Add(L.F("{0} (from {1})", group.Key, source));
             }
             // imported races, then the rules of the character creation for every added race
-            Func<string, byte[]> load = name =>
-            {
-                byte[] b; string src;
-                if (files.TryGetValue(name, out b)) return b;
-                b = FromClient(client, name, out src);
-                if (b != null && notes != null) notes.Add(name + " (from " + src + ")");
-                return b;
-            };
-            Action<string, byte[]> save = (name, b) => files[name] = b;
-            // a test or an advanced user can give a client race another number before the imported races are added
-            string moves = ConfValue(inst, "mod_custom_races.conf", "CustomRaces.MoveClientRaces");
-            if (!string.IsNullOrWhiteSpace(moves))
-                RaceImport.MoveClientRaces(load, save, moves, notes == null ? null : new Action<string>(notes.Add));
             // files of the user's race folder (the icon of a race): taken as they are, when they exist
             foreach (var e in plan.Edits.Where(e => e.AddFile != null))
             {
@@ -413,6 +419,8 @@ namespace CoAInstaller
             {
                 int race;
                 if (!int.TryParse(Text(e.SectionRules, "race"), out race) || race <= 0) continue;
+                HashSet<string> missing;
+                if (plan.MissingTextures.TryGetValue(race, out missing)) RaceImport.DropMissingTextures(load, save, race, missing);
                 if (plan.StrictSections.Contains(race)) RaceImport.StrictSections(load, save, race);
                 RaceImport.SectionRules(load, save, race, Text(e.SectionRules, "maleOnly") == "1", notes == null ? null : new Action<string>(notes.Add),
                     Text(e.SectionRules, "femaleOnly") == "1");
@@ -1406,11 +1414,13 @@ namespace CoAInstaller
             var repaired = new List<string>();
             var tried = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var strict = new HashSet<int>();
+            var missingTextures = new Dictionary<int, HashSet<string>>();
             var off = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             int offDone = 0;
             for (int round = 0; ; round++)
             {
                 plan.StrictSections = new HashSet<int>(strict);
+                plan.MissingTextures = missingTextures.ToDictionary(kv => kv.Key, kv => new HashSet<string>(kv.Value, StringComparer.OrdinalIgnoreCase));
                 var roundNotes = new List<string>();
                 progress(L.T("Building the client patch from your game client …"), 0, 0);
                 files = Build(inst, client, plan, roundNotes);
@@ -1420,7 +1430,7 @@ namespace CoAInstaller
                 progress(L.T("Checking the custom races …"), 0, 0);
                 var found = RaceCheck.Inspect(inst, client, ArchivesWith(client, path, temp)).Where(f => f.Kind != RaceCheck.Stopped).ToList();
                 if (found.Count == 0) { notes.AddRange(roundNotes); break; }
-                bool changed = round < 4 && RaceRepair.Fix(inst, client, found, tried, strict, off, repaired, t => progress(t, 0, 0));
+                bool changed = round < 4 && RaceRepair.Fix(inst, client, found, tried, strict, missingTextures, off, repaired, t => progress(t, 0, 0));
                 if (!changed)
                     foreach (var f in found.Where(f => !string.IsNullOrEmpty(f.Key) && !off.ContainsKey(f.Key))) off[f.Key] = f.Text;
                 if (off.Count > offDone)

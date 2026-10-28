@@ -25,6 +25,8 @@ namespace CoAInstaller
             public int Id, CoaNumber;
             /// <summary>NoRow: the number the race's row has in the built table (found by its file name), 0 if none.</summary>
             public int FoundAt;
+            /// <summary>Textures: the paths that are not in the client.</summary>
+            public List<string> Missing;
             public override string ToString() { return Text; }
         }
 
@@ -146,7 +148,9 @@ namespace CoAInstaller
                         {
                             // where its row is instead (moved to another number, or never renumbered): by its file name
                             string file = ClientPatch.ConfValue(inst, Conf, "CustomRaces." + key + ".File") ?? "";
-                            var elsewhere = file.Length == 0 ? null : cr.Records.FirstOrDefault(r => ClientRaces.Str(cr, r, 11).Equals(file, StringComparison.OrdinalIgnoreCase));
+                            // several races can share a file name (a Troglodyte and a Murloc of the client): its name first
+                            var elsewhere = file.Length == 0 ? null : cr.Records.Where(r => ClientRaces.Str(cr, r, 11).Equals(file, StringComparison.OrdinalIgnoreCase))
+                                .OrderBy(r => ClientRaces.Str(cr, r, 14).Split('|')[0].Trim().Equals(name, StringComparison.OrdinalIgnoreCase) ? 0 : 1).FirstOrDefault();
                             add(NoRow, elsewhere != null
                                 ? L.F("{0}: the race table of the game has no row for it (its row is under number {1}).", who, cr.Field(elsewhere, 0))
                                 : L.F("{0}: the race table of the game has no row for it.", who));
@@ -184,7 +188,10 @@ namespace CoAInstaller
                             var missing = mine.SelectMany(r => new[] { 4, 5, 6 }.Select(k => cs.Field(r, k) == 0 ? "" : ClientRaces.Str(cs, r, k)))
                                 .Where(p => p.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).Where(p => !a.Has(p)).ToList();
                             if (missing.Count > 0)
+                            {
                                 add(Textures, L.F("{0}: {1} textures of its skins, faces or hair are missing, for example {2}.", whoSex, missing.Count, string.Join(", ", missing.Take(3))));
+                                problems[problems.Count - 1].Missing = missing;
+                            }
                             var colours = mine.Where(r => cs.Field(r, 3) == 0).Select(r => cs.Field(r, 9)).Distinct().ToList();
                             foreach (uint section in new uint[] { 1, 4 })
                             {

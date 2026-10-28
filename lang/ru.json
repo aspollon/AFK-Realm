@@ -2008,6 +2008,10 @@
     "{0}: packed again from the newer {1} in {2}.": "{0}: заново упакована из более новой версии {1} в {2}.",
     "{0}: its rows are copied from number {1} of the game client to its number {2}.": "{0}: её строки копируются с номера {1} игрового клиента на её номер {2}.",
     "{0}: the race table of the game has no row for it (its row is under number {1}).": "{0}: в таблице рас игры нет строки для неё (её строка под номером {1}).",
-    "{0}: its row is under number {1} of the game client; it is taken from there for its number {2}.": "{0}: её строка в игровом клиенте под номером {1}; она берётся оттуда для её номера {2}."
+    "{0}: its row is under number {1} of the game client; it is taken from there for its number {2}.": "{0}: её строка в игровом клиенте под номером {1}; она берётся оттуда для её номера {2}.",
+    "The race number move {0}:{1} is left out: {2}.": "Перенос номера расы {0}:{1} пропущен: {2}.",
+    "the client has no race {0}": "в клиенте нет расы {0}",
+    "race {0} is taken": "раса {0} занята",
+    "{0}: {1} missing textures are left out of its looks (its client does not have them either).": "{0}: {1} отсутствующих текстур убраны из её облика (в её клиенте их тоже нет)."
   }
 }

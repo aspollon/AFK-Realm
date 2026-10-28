@@ -959,8 +959,22 @@ namespace CoAInstaller
 
         /// <summary>The races read from the client are the client before the patch: apply the moves the patch will
         /// make, so the page sees the freed numbers and the moved races under their new ones.</summary>
+        /// <summary>The race numbers of the game client before the moves (the stock races and its own races).</summary>
+        List<int> clientNumbers = new List<int>();
+
+        /// <summary>The moves written short ("16:76 76:77 77:83" -> "16:83"), with the ones that do nothing left out.</summary>
+        void TidyClientMoves()
+        {
+            string raw = Raw("CustomRaces.MoveClientRaces", "");
+            if (raw.Trim().Length == 0) return;
+            string tidy = RaceImport.NormalizeMoves(clientNumbers, raw);
+            if (tidy != raw.Trim()) Set("CustomRaces.MoveClientRaces", "\"" + tidy + "\"");
+        }
+
         void ApplyClientMoves()
         {
+            clientNumbers = races.Where(r => r.Pack == null && !r.Virtual).Select(r => r.Source).Concat(ClientRaces.Stock).Distinct().ToList();
+            TidyClientMoves();
             foreach (var pair in ClientMoves())
             {
                 var race = races.FirstOrDefault(r => r.Pack == null && r.Source == pair.Key);
@@ -1136,6 +1150,7 @@ namespace CoAInstaller
             var pairs = ClientMoves().Where(p => p.Key != r.Source && p.Value != to).ToList();
             pairs.Add(new KeyValuePair<int, int>(r.Source, to));
             Set("CustomRaces.MoveClientRaces", "\"" + string.Join(" ", pairs.Select(p => p.Key + ":" + p.Value)) + "\"");
+            TidyClientMoves();
             int from = r.Source;
             r.Source = to;
             slots.Remove(to); moreSlots.Remove(to); highSlots.Remove(to);

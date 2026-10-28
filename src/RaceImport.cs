@@ -548,6 +548,46 @@ namespace CoAInstaller
             }
         }
 
+        /// <summary>
+        /// The moves of client races tidied up: what they do to a client with these race numbers (in order, each only when
+        /// the race is there and its new number free - as MoveClientRaces applies them), written as one move per race from
+        /// where it is in the client to where it ends ("16:76 76:77 77:83 83:84" is "16:84"), moves that do nothing left
+        /// out, and in an order in which every new number is free when its turn comes. The same moves as before, shorter.
+        /// The moves as they are when they cannot be put in such an order.
+        /// </summary>
+        public static string NormalizeMoves(IEnumerable<int> clientRaces, string moves)
+        {
+            var pairs = new List<KeyValuePair<int, int>>();
+            foreach (string word in (moves ?? "").Split(new[] { ' ', ',', ';' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                string[] p = word.Split(':'); int from, to;
+                if (p.Length != 2 || !int.TryParse(p[0], out from) || !int.TryParse(p[1], out to)) return moves;
+                pairs.Add(new KeyValuePair<int, int>(from, to));
+            }
+            var at = new HashSet<int>(clientRaces);
+            var whereIs = at.ToDictionary(n => n, n => n);           // origin -> number now
+            foreach (var pair in pairs)
+            {
+                if (pair.Key == pair.Value || !at.Contains(pair.Key) || at.Contains(pair.Value)) continue;
+                at.Remove(pair.Key); at.Add(pair.Value);
+                int origin = whereIs.First(kv => kv.Value == pair.Key).Key;
+                whereIs[origin] = pair.Value;
+            }
+            var pending = whereIs.Where(kv => kv.Key != kv.Value).OrderBy(kv => kv.Key).ToList();
+            var now = new HashSet<int>(clientRaces);
+            var ordered = new List<KeyValuePair<int, int>>();
+            while (pending.Count > 0)
+            {
+                int i = pending.FindIndex(kv => !now.Contains(kv.Value));
+                if (i < 0) return moves;                              // a ring of moves: left as it is
+                var pair = pending[i];
+                pending.RemoveAt(i);
+                now.Remove(pair.Key); now.Add(pair.Value);
+                ordered.Add(pair);
+            }
+            return string.Join(" ", ordered.Select(kv => kv.Key + ":" + kv.Value));
+        }
+
         /// <summary>Moves existing races of the game client to other numbers: "62:64 63:65". Used for a race of the
         /// client that is not played and whose number an imported race needs (Earthen/Human Cultist beside the
         /// Lightforged/Nightborne of another client). Only the client tables are changed; Stock races never.</summary>
@@ -564,6 +604,28 @@ namespace CoAInstaller
                 pairs.Add(new KeyValuePair<int, int>(from, to));
             }
             if (pairs.Count == 0) return;
+            // the moves in order, each only when the race is there and its new number free - as the Custom races page
+            // reads them (a move onto a number another race has would mix the two races' rows)
+            var raceBytes = load("DBFilesClient\\ChrRaces.dbc");
+            if (raceBytes != null)
+            {
+                var cr = DbcTable.Parse(raceBytes, "ChrRaces.dbc");
+                var have = new HashSet<int>(cr.Records.Select(r => (int)cr.Field(r, 0)));
+                var kept = new List<KeyValuePair<int, int>>();
+                foreach (var pair in pairs)
+                {
+                    if (!have.Contains(pair.Key) || have.Contains(pair.Value))
+                    {
+                        if (note != null) note(L.F("The race number move {0}:{1} is left out: {2}.", pair.Key, pair.Value,
+                            !have.Contains(pair.Key) ? L.F("the client has no race {0}", pair.Key) : L.F("race {0} is taken", pair.Value)));
+                        continue;
+                    }
+                    have.Remove(pair.Key); have.Add(pair.Value);
+                    kept.Add(pair);
+                }
+                pairs = kept;
+                if (pairs.Count == 0) return;
+            }
             var tables = new[]
             {
                 new { Name = "ChrRaces", Field = 0 }, new { Name = "CharSections", Field = 1 },
@@ -591,6 +653,35 @@ namespace CoAInstaller
                 save("DBFilesClient\\" + table.Name + ".dbc", t.ToBytes());
                 if (note != null) note(L.F("{0}: {1} race row(s) moved", table.Name, moved));
             }
+        }
+
+        /// <summary>
+        /// The rows of a race stop pointing at textures that are nowhere in the client (the race check found them missing
+        /// and packing the race again did not bring them): an extra layer (the torso or legs of a skin, the upper face) is
+        /// left empty, as stock races have it; a missing main texture takes the one of the nearest colour of the same
+        /// section and style. Better a repeated colour than a white body or a race switched off.
+        /// </summary>
+        public static void DropMissingTextures(Func<string, byte[]> load, Action<string, byte[]> save, int race, HashSet<string> missing)
+        {
+            var bytes = load("DBFilesClient\\CharSections.dbc");
+            if (bytes == null || missing == null || missing.Count == 0) return;
+            var cs = DbcTable.Parse(bytes, "CharSections.dbc");
+            var mine = cs.Records.Where(r => cs.Field(r, 1) == (uint)race).ToList();
+            Func<byte[], int, string> tex = (r, k) => cs.Field(r, k) == 0 ? "" : Str(cs, r, k);
+            Func<byte[], bool> mainOk = r => tex(r, 4).Length > 0 && !missing.Contains(tex(r, 4));
+            int changed = 0;
+            foreach (var r in mine)
+            {
+                foreach (int k in new[] { 5, 6 })
+                    if (tex(r, k).Length > 0 && missing.Contains(tex(r, k))) { cs.SetField(r, k, 0); changed++; }
+                if (tex(r, 4).Length == 0 || !missing.Contains(tex(r, 4))) continue;
+                var near = mine.Where(o => o != r && cs.Field(o, 2) == cs.Field(r, 2) && cs.Field(o, 3) == cs.Field(r, 3) && mainOk(o))
+                    .OrderBy(o => cs.Field(o, 8) == cs.Field(r, 8) ? 0 : 1)
+                    .ThenBy(o => Math.Abs((long)cs.Field(o, 9) - cs.Field(r, 9)))
+                    .FirstOrDefault();
+                if (near != null) { cs.SetField(r, 4, cs.Field(near, 4)); changed++; }
+            }
+            if (changed > 0) save("DBFilesClient\\CharSections.dbc", cs.ToBytes());
         }
 
         static byte[] Section(DbcTable t, object[] r, uint id, int race)

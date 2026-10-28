@@ -2008,6 +2008,10 @@
     "{0}: packed again from the newer {1} in {2}.": "{0}: neu gepackt aus dem neueren {1} in {2}.",
     "{0}: its rows are copied from number {1} of the game client to its number {2}.": "{0}: seine Zeilen werden von Nummer {1} des Spielclients auf seine Nummer {2} kopiert.",
     "{0}: the race table of the game has no row for it (its row is under number {1}).": "{0}: Die Rassentabelle des Spiels hat keine Zeile dafür (seine Zeile steht unter Nummer {1}).",
-    "{0}: its row is under number {1} of the game client; it is taken from there for its number {2}.": "{0}: Seine Zeile steht im Spielclient unter Nummer {1}; sie wird von dort für seine Nummer {2} genommen."
+    "{0}: its row is under number {1} of the game client; it is taken from there for its number {2}.": "{0}: Seine Zeile steht im Spielclient unter Nummer {1}; sie wird von dort für seine Nummer {2} genommen.",
+    "The race number move {0}:{1} is left out: {2}.": "Die Verschiebung der Rassennummer {0}:{1} wird ausgelassen: {2}.",
+    "the client has no race {0}": "der Client hat keine Rasse {0}",
+    "race {0} is taken": "Rasse {0} ist belegt",
+    "{0}: {1} missing textures are left out of its looks (its client does not have them either).": "{0}: {1} fehlende Texturen werden aus seinem Aussehen weggelassen (sein Client hat sie auch nicht)."
   }
 }

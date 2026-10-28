@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.9
+
+- **Moves of client races tidied up by themselves.** Moving the same race again and again wrote chains (`16:76 76:77 77:83 83:84`). The Custom races page now writes one move per race, from its number in the client to where it ends (`16:84`), leaves out moves that do nothing (a race the client does not have, a number that is taken, a move back), and puts them in an order in which every new number is free. Existing settings are tidied at the next opening of the page or client install; what the moves do stays the same.
+- **Fixed: moved client races were switched off** ("no row for it (its row is under number N)"). Client races moved to other numbers on the Custom races page (`CustomRaces.MoveClientRaces`) were moved *after* the edits that make a race playable or copy it to its number, while the page writes the number after the move. A copied race found nothing to copy, and a race edited in place had another race's row edited. The moves now come first. A move onto a number another race has, or of a race the client does not have, is left out with a note, as the page reads it (chained moves like `42:65 65:72` keep working).
+- **Races with textures their own client lacks stay on.** When packing a race again did not bring the textures the race check missed (CoA Custom's Zandalari Troll has rows for torso skins it does not ship), its rows stop pointing at them: an extra layer (torso, legs, upper face) is left empty as on stock races, a missing main texture takes the one of the nearest colour. Only if textures are still missing after that is the race switched off.
+- Race check: a race found under another number by its file name prefers the row with its own name (a Troglodyte and a Murloc of the client share the file name).
+
 ## 1.1.8
 
 - Windows: the build stopped at CMake with "Could NOT find Boost (missing: filesystem program_options iostreams regex thread) (found suitable version ...)" when another Boost was set in Windows (environment variable `BOOST_ROOT`, e.g. a newer Boost installed for something else, without the compiled libraries). The core's CMake takes that variable before anything on the command line. The engine now points `Boost_ROOT`/`BOOST_ROOT` at the Boost it uses for its own run (Windows' settings are not changed), says so in the log, and makes CMake look for Boost again (`-U Boost_*`), so a failed run's cache does not keep the other one.
