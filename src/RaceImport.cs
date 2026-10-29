@@ -37,6 +37,9 @@ namespace CoAInstaller
         const int GroupMaxRaces = 16;                 // small races share an archive; the byte limit splits large ones
         const long GroupMaxBytes = 1500000000;
         const string StampName = "AFK-Realm\\race.txt";
+        // Bump this when the archives get files the race pack does not hold (the character-select portraits below):
+        // the stamp changes without touching the pack, so the next client install rebuilds them.
+        const string PortraitVersion = "portraits 1";
         public const int DisplayBase = 980000;          // display and model ids of imported races: 980000 + race * 2 + sex
 
         /// <summary>A row of the client's spell table, the 234-field layout this client family (CoA and Descension
@@ -417,6 +420,8 @@ namespace CoAInstaller
             Func<object[], string> key = r => Num(r[2]) + "/" + Num(r[3]) + "/" + Num(r[8]) + "/" + Num(r[9]);
             var plain = pack.Rows("sections");
             var hdRows = pack.Rows("hd_sections");
+            NormalizeHairTextures(plain, pack);
+            NormalizeHairTextures(hdRows, pack);
             var idOf = new Dictionary<string, uint>();
             foreach (var r in plain.OrderBy(r => Num(r[2])).ThenBy(r => Num(r[3])).ThenBy(r => Num(r[8])).ThenBy(r => Num(r[9])))
             {
@@ -741,6 +746,31 @@ namespace CoAInstaller
             t.SetField(rec, 8, Num(r[8]));
             t.SetField(rec, 9, Num(r[9]));
             return rec;
+        }
+
+        /// <summary>
+        /// The Blood Elf hair of a race pack is under Character\BloodElf\ (ScalpLowerHair, ScalpUpperHair), the way
+        /// the stock Blood Elf rows name it. Some packs name it under Character\BloodElf\Male\ or \Female\ instead;
+        /// those files are not the same (often the HD or another race's scalp) and paint a wrong hairline or forehead
+        /// on the Darkfallen model. When the pack has the unisex file, its rows point at it.
+        /// </summary>
+        static void NormalizeHairTextures(List<object[]> rows, Pack pack)
+        {
+            if (rows.Count == 0) return;
+            HashSet<string> files;
+            try { files = new HashSet<string>(pack.Files, StringComparer.OrdinalIgnoreCase); }
+            catch { return; }
+            foreach (var r in rows)
+                for (int k = 4; k <= 6 && k < r.Length; k++)
+                {
+                    string path = r[k] as string;
+                    if (string.IsNullOrEmpty(path) || path.IndexOf("\\BloodElf\\", StringComparison.OrdinalIgnoreCase) < 0) continue;
+                    string name = Path.GetFileName(path);
+                    if (!name.StartsWith("ScalpLowerHair", StringComparison.OrdinalIgnoreCase) &&
+                        !name.StartsWith("ScalpUpperHair", StringComparison.OrdinalIgnoreCase)) continue;
+                    string unisex = Regex.Replace(path, @"\\(?:Female|Male)\\", "\\", RegexOptions.IgnoreCase);
+                    if (!unisex.Equals(path, StringComparison.OrdinalIgnoreCase) && files.Contains(unisex)) r[k] = unisex;
+                }
         }
 
         static void CopyRows(Func<string, byte[]> load, Action<string, byte[]> save, string table, string hdTable, List<object[]> rows, List<object[]> hdRows,
@@ -1166,6 +1196,7 @@ namespace CoAInstaller
         {
             var sb = new StringBuilder();
             sb.Append("race ").Append(w.Race).Append(' ').Append(w.Pack.Key).Append('\n');
+            sb.Append(PortraitVersion).Append('\n');
             foreach (var f in w.Pack.FilesOnDisk())
             {
                 var p = Os.Resolve(Path.Combine(w.Pack.Dir, "files"), f);
@@ -1175,6 +1206,39 @@ namespace CoAInstaller
             using (var sha = SHA256.Create())
                 return "Made by " + Product.Name + " for race " + w.Race + " (" + w.Pack.Key + ").\r\nContents " +
                     BitConverter.ToString(sha.ComputeHash(Encoding.UTF8.GetBytes(sb.ToString()))).Replace("-", "").Substring(0, 16) + "\r\n";
+        }
+
+        /// <summary>
+        /// The character-select and paper-doll portrait of an imported race. The client loads it as
+        /// Interface\CharacterFrame\TemporaryPortrait-&lt;Sex&gt;-&lt;ClientFilestring&gt;.blp. A fresh Descension
+        /// client has these for the stock races only; without them the portrait is blank for a custom race even
+        /// though the preview in the character creation is fine. The race's own icon is a BLP of the right race:
+        /// it is put under that name when the player's client has none. Existing stock portraits (High Elf uses
+        /// BloodElf) are left alone.
+        /// </summary>
+        static void AddPortraits(List<Wanted> group, SortedDictionary<string, string> files, string client)
+        {
+            foreach (var w in group)
+            {
+                string file = w.Pack.File;
+                string icon = w.Pack.Icon;
+                if (string.IsNullOrEmpty(file) || string.IsNullOrEmpty(icon)) continue;
+                string iconPath = icon.EndsWith(".blp", StringComparison.OrdinalIgnoreCase) ? icon : icon + ".blp";
+                string iconFile = w.Pack.FilesOnDisk().FirstOrDefault(f => f.Equals(iconPath, StringComparison.OrdinalIgnoreCase));
+                if (iconFile == null) continue;
+                string from = Os.Resolve(Path.Combine(w.Pack.Dir, "files"), iconFile);
+                if (!File.Exists(from)) continue;
+                foreach (string sex in new[] { "Male", "Female" })
+                {
+                    string to = "Interface\\CharacterFrame\\TemporaryPortrait-" + sex + "-" + file + ".blp";
+                    if (client != null)
+                    {
+                        try { string ignored; if (ClientPatch.FromClient(client, to, out ignored) != null) continue; }
+                        catch { }
+                    }
+                    files[to] = from;
+                }
+            }
         }
 
         static string InstalledStamp(string path)
@@ -1231,6 +1295,7 @@ namespace CoAInstaller
                         var p = Os.Resolve(Path.Combine(w.Pack.Dir, "files"), f);
                         if (File.Exists(p)) files[f] = p;
                     }
+                AddPortraits(group, files, client);
                 string temp = path + ".new";
                 string what = L.F("Writing the files of {0} races (Data\\{1})", group.Count, name);
                 if (progress != null) progress(what + " …", 0, files.Count + 2);
@@ -1268,6 +1333,7 @@ namespace CoAInstaller
                     var p = Os.Resolve(Path.Combine(w.Pack.Dir, "files"), f);
                     if (File.Exists(p)) files[f] = p;
                 }
+            AddPortraits(group, files, null);
             string temp = Path.GetTempFileName();
             MpqArchive.WriteFromFiles(temp, files, new Dictionary<string, byte[]> { { StampName, Encoding.UTF8.GetBytes(GroupStamp(group)) } });
             return temp;

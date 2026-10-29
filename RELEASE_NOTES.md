@@ -1,4 +1,14 @@
-# AFK Realm 1.1.13
+# AFK Realm 1.1.14
+
+Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11 and now also on Linux.
+
+## New in 1.1.14
+
+- **Custom races: portraits in the character list and the wardrobe work again.** A fresh Descension client has the `TemporaryPortrait-<Sex>-<race>.blp` pictures for the stock races only; a custom race had none, so its character list and paper-doll portrait stayed blank. AFK Realm now adds the race's icon under that name to the race archive when the client has no picture. No re-import and no manual file copying are needed - update, then **Game client → Install** once.
+- **Darkfallen hair and forehead fixed.** Its hair rows named `Character\BloodElf\Female\Scalp...`/`\Male\Scalp...`, while the race pack carries the stock unisex `Character\BloodElf\Scalp...`. The wrong layer painted the hairline/forehead on the Darkfallen model. The importer now points those rows at the unisex file the pack already has. This also applies to an already imported race pack; **Game client → Install** rebuilds the tables.
+- Both fixes are included for race archives in the ZIP too, so other players get the portraits as well.
+
+## New in 1.1.13
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11 and now also on Linux.
 
