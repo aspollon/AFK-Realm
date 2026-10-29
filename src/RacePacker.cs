@@ -31,8 +31,9 @@ namespace CoAInstaller
         /// CharHairGeosets never named (1.1.15); 5: the original hair textures for models made for them, where an HD patch
         /// replaced them (1.1.16); 6: all textures borrowed from such a stock race - skin, face, scalp, beard, underwear
         /// (1.1.17), and no HD scalp layers where the original has none; 7: Darkfallen's own skin no longer keeps the
-        /// HD eye that landed on the classic model's forehead (1.1.18).</summary>
-        public const int PackerVersion = 7;
+        /// HD eye that landed on the classic model's forehead (1.1.18); 8: its painted red eye is removed from the face
+        /// rows too, so only the eye-glow layer is still red (1.1.19).</summary>
+        public const int PackerVersion = 8;
 
         /// <summary>A set of archives, read as the game reads them: the one it reads last wins. Files that lie around
         /// unpacked (the raw files some creators ship) are read after all archives, they only step in for what the
@@ -1216,8 +1217,8 @@ namespace CoAInstaller
             string identity = (race.Key + " " + race.Name).ToLowerInvariant();
             if (!identity.Contains("darkfallen")) return;
             var skins = sections.Concat(hdSections).OfType<object[]>()
-                .Where(r => Convert.ToInt32(r[3]) == 0)
-                .Select(r => r[4] as string)
+                .Where(r => Convert.ToInt32(r[3]) == 0 || Convert.ToInt32(r[3]) == 1)
+                .SelectMany(r => new[] { r[4] as string, r[5] as string })
                 .Where(p => !string.IsNullOrEmpty(p) && p.StartsWith("Character\\Darkfallen\\", StringComparison.OrdinalIgnoreCase))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToList();

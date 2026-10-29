@@ -1,4 +1,13 @@
-# AFK Realm 1.1.18
+# AFK Realm 1.1.19
+
+Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11 and now also on Linux.
+
+## New in 1.1.19
+
+- **Darkfallen: only the eye-glow is red now.** The broad red around the eyes was painted into Darkfallen's face textures, not the glow. AFK Realm removes those red pixels from the face rows and fills them with the surrounding skin; the separate eye-glow textures are untouched, so the eyes keep their glow.
+- **Packer version 8:** old Darkfallen packs are packed again automatically at **Game client → Install**.
+
+## New in 1.1.18
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11 and now also on Linux.
 
