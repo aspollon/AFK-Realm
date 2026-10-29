@@ -1,6 +1,11 @@
-# AFK Realm 1.1.15
+# AFK Realm 1.1.16
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11 and now also on Linux.
+
+## New in 1.1.16
+
+- **Darkfallen: the right hair texture at last.** Its model was made for the classic Blood Elf hair, but the HD patch of the client replaces that texture with one of a different layout, so jewelry and black pieces landed on hair, ears, brows and beards. AFK Realm now notices this and gives the race the original textures in its own folder (Blood Elves keep their HD hair). Run **Game client › Install** once; the race packs are refreshed by themselves.
+- **Only one AFK Realm window after an update** again.
 
 ## New in 1.1.15
 

@@ -28,8 +28,9 @@ namespace CoAInstaller
         /// install of the client patch, as long as the client it came from is still there (RaceRepair.RefreshOldPacks).
         /// 1: until 1.0.9; 2: helmets, display textures, the own model folder and voice (1.0.10); 3: files another client
         /// changed under the same name, female-only races (1.1.5); 4: hair shapes of the model that
-        /// CharHairGeosets never named (1.1.15).</summary>
-        public const int PackerVersion = 4;
+        /// CharHairGeosets never named (1.1.15); 5: the original hair textures for models made for them, where an HD patch
+        /// replaced them (1.1.16).</summary>
+        public const int PackerVersion = 5;
 
         /// <summary>A set of archives, read as the game reads them: the one it reads last wins. Files that lie around
         /// unpacked (the raw files some creators ship) are read after all archives, they only step in for what the
@@ -77,6 +78,15 @@ namespace CoAInstaller
                 if (h is MpqArchive) return ((MpqArchive)h).Read(name);
                 return h is Loose ? ((Loose)h).Read(name) : null;
             }
+            /// <summary>A file as Blizzard shipped it: from the game's own archives (common, expansion, lichking, patch,
+            /// patch-2, patch-3 and their locale archives), not from an HD or other patch put on top. Null when none has it.</summary>
+            public byte[] ReadOriginal(string name)
+            {
+                foreach (var a in list)
+                    if (Blizzard.IsMatch(Path.GetFileName(a.Path)) && a.Contains(name)) return a.Read(name);
+                return null;
+            }
+            static readonly Regex Blizzard = new Regex(@"^((common|common-2|expansion|lichking|patch|patch-2|patch-3)|((locale|expansion-locale|lichking-locale|speech|expansion-speech|lichking-speech|patch)-(enUS|enGB|deDE|frFR|esES|esMX|ruRU|koKR|zhCN|zhTW|ptBR|itIT)(-2|-3)?))\.mpq$", RegexOptions.IgnoreCase);
 
             /// <summary>Every file name the archives list in their (listfile) and the raw folders hold, the most
             /// important first.</summary>
@@ -562,6 +572,115 @@ namespace CoAInstaller
             return result;
         }
 
+        /// <summary>
+        /// A race whose model was made for a stock race's hair texture as Blizzard shipped it, in a client where an HD
+        /// patch replaced that texture with one of another layout. CoA Custom's Darkfallen borrows the Blood Elf hair
+        /// (Character\BloodElf\Hair00_00.blp, 128x128), the Descension client's HD patch (patch-Q) has a 512x256 one laid
+        /// out for the HD Blood Elf: on the Darkfallen model the hair, the brows, the beards and the earrings then showed
+        /// pieces of jewelry and black. Whether a model was made for the original or the replacement is told by where its
+        /// hair (geosets 1-99 drawn with the hair texture) lies on the texture, compared with the stock race's original
+        /// and replaced model. When it fits the original, the race gets the original textures in its own folder
+        /// (&lt;model folder&gt;\&lt;race&gt;Hair00_00.blp) and its hair rows point there; the stock race keeps the HD ones.
+        /// Returns the files to add to the pack.
+        /// </summary>
+        static Dictionary<string, byte[]> OriginalHairTextures(Archives source, Dictionary<string, object> models, List<object> sections, List<object> hdSections)
+        {
+            var added = new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
+            for (int sex = 0; sex < 2; sex++)
+            {
+                try
+                {
+                    object m;
+                    if (!models.TryGetValue(sex == 0 ? "male" : "female", out m) || !(m is Dictionary<string, object>)) continue;
+                    string model = M2(Convert.ToString(((Dictionary<string, object>)m)["path"]));
+                    if (!model.EndsWith(".m2", StringComparison.OrdinalIgnoreCase) || !model.Contains("\\")) continue;
+                    string modelDir = model.Substring(0, model.LastIndexOf('\\') + 1);
+                    var mine = HairCells(source.Read(model), source.Read(model.Substring(0, model.Length - 3) + "00.skin"));
+                    if (mine.Count == 0) continue;
+                    var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                    var verdict = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);    // stock folder -> use the original
+                    foreach (object[] r in sections.Concat(hdSections).OfType<object[]>())
+                    {
+                        if (Convert.ToInt32(r[2]) != sex || Convert.ToInt32(r[3]) != 3) continue;
+                        string tex = r[4] as string;
+                        if (string.IsNullOrEmpty(tex) || tex.StartsWith(modelDir, StringComparison.OrdinalIgnoreCase) || map.ContainsKey(tex)) continue;
+                        var parts = tex.Split('\\');
+                        if (parts.Length != 3 || !parts[0].Equals("Character", StringComparison.OrdinalIgnoreCase)) continue;   // Character\<stock race>\HairNN_NN.blp
+                        bool original;
+                        if (!verdict.TryGetValue(parts[1], out original))
+                        {
+                            string sexName = sex == 0 ? "Male" : "Female";
+                            string stock = "Character\\" + parts[1] + "\\" + sexName + "\\" + parts[1] + sexName;
+                            var before = HairCells(source.ReadOriginal(stock + ".m2"), source.ReadOriginal(stock + "00.skin"));
+                            var now = HairCells(source.Read(stock + ".m2"), source.Read(stock + "00.skin"));
+                            original = before.Count > 0 && now.Count > 0 && Jaccard(mine, before) > Jaccard(mine, now) + 0.2;
+                            verdict[parts[1]] = original;
+                        }
+                        if (!original) continue;
+                        byte[] first = source.ReadOriginal(tex), top = source.Read(tex);
+                        if (first == null || top == null || first.SequenceEqual(top)) continue;
+                        string to = modelDir + parts[1] + parts[2];
+                        map[tex] = to;
+                        added[to] = first;
+                    }
+                    if (map.Count == 0) continue;
+                    foreach (object[] r in sections.Concat(hdSections).OfType<object[]>())
+                    {
+                        string tex = r[4] as string, to;
+                        if (Convert.ToInt32(r[2]) == sex && Convert.ToInt32(r[3]) == 3 && tex != null && map.TryGetValue(tex, out to)) r[4] = to;
+                    }
+                }
+                catch { }
+            }
+            return added;
+        }
+
+        static double Jaccard(HashSet<int> a, HashSet<int> b)
+        {
+            int both = a.Count(b.Contains);
+            int any = a.Count + b.Count - both;
+            return any == 0 ? 0 : (double)both / any;
+        }
+
+        /// <summary>Where on its hair texture a model draws its hair: the cells of a 16x16 grid its hair geosets
+        /// (1-99, drawn with the hair texture, type 6) reach. Empty when the model cannot be read.</summary>
+        static HashSet<int> HairCells(byte[] m2, byte[] skin)
+        {
+            var cells = new HashSet<int>();
+            try
+            {
+                if (m2 == null || skin == null || m2.Length < 140 || skin.Length < 48) return cells;
+                if (Encoding.ASCII.GetString(m2, 0, 4) != "MD20" || Encoding.ASCII.GetString(skin, 0, 4) != "SKIN") return cells;
+                Func<byte[], int, int> i32 = (b, o) => BitConverter.ToInt32(b, o);
+                Func<byte[], int, int> u16 = (b, o) => BitConverter.ToUInt16(b, o);
+                int nv = i32(m2, 60), ov = i32(m2, 64), nt = i32(m2, 80), ot = i32(m2, 84), nl = i32(m2, 128), ol = i32(m2, 132);
+                int ni = i32(skin, 4), oi = i32(skin, 8), nsub = i32(skin, 28), osub = i32(skin, 32), nb = i32(skin, 36), ob = i32(skin, 40);
+                for (int i = 0; i < nb; i++)
+                {
+                    int at = ob + i * 24;
+                    int section = u16(skin, at + 4), count = u16(skin, at + 14), combo = u16(skin, at + 16);
+                    if (section >= nsub || count == 0 || combo >= nl) continue;
+                    int texture = u16(m2, ol + combo * 2);
+                    if (texture >= nt || i32(m2, ot + texture * 16) != 6) continue;          // the hair texture
+                    int sub = osub + section * 48;
+                    int id = u16(skin, sub);
+                    if (id < 1 || id > 99) continue;
+                    int start = u16(skin, sub + 4) + (u16(skin, sub + 2) << 16), n = u16(skin, sub + 6);
+                    for (int k = start; k < start + n && k < ni; k++)
+                    {
+                        int v = u16(skin, oi + k * 2);
+                        if (v >= nv) continue;
+                        float u = BitConverter.ToSingle(m2, ov + v * 48 + 32), w = BitConverter.ToSingle(m2, ov + v * 48 + 36);
+                        if (float.IsNaN(u) || float.IsNaN(w)) continue;
+                        u -= (float)Math.Floor(u); w -= (float)Math.Floor(w);
+                        cells.Add(Math.Min(15, (int)(w * 16)) * 16 + Math.Min(15, (int)(u * 16)));
+                    }
+                }
+            }
+            catch { cells.Clear(); }
+            return cells;
+        }
+
         /// <summary>The hair shapes (geosets 1-99) the first view (.skin) of a model has.</summary>
         static HashSet<int> HairShapes(Archives source, string m2)
         {
@@ -923,6 +1042,14 @@ namespace CoAInstaller
             }
 
             RepairDecorationTextures(filesDir, keep);
+            foreach (var extra in OriginalHairTextures(source, models, sections, hdSections))
+            {
+                string to = Os.Resolve(filesDir, extra.Key);
+                Directory.CreateDirectory(Path.GetDirectoryName(to));
+                File.WriteAllBytes(to, extra.Value);
+                keep.Add(extra.Key);
+                bytes += extra.Value.Length;
+            }
 
             // the client rows of the race's racial spells (the ids the server data names): the texts as text and the
             // icon as the picture it stands for - the player's client may give the same picture another number

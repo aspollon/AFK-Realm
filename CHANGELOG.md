@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.16
+
+- Custom races: CoA Custom's Darkfallen model is the classic Blood Elf model (128x128 hair texture), but it borrows `Character\BloodElf\HairNN_NN.blp`, which the Descension client's HD patch (patch-Q) replaces with a 512x256 texture laid out for the HD Blood Elf. On the Darkfallen the hair, ears, brows, beards and earrings showed pieces of jewelry and black. The race packer now compares where the race model draws its hair on the texture with the stock race's original and replaced model; when the race model fits the original, the original textures from the game's own archives go into the race's folder (`Character\Darkfallen\Female\BloodElfHair00_00.blp` and so on) and its hair rows point there. The Blood Elf keeps the HD ones. Packer version 5: existing packs are packed again by themselves at the next **Game client › Install**.
+- Windows: after an update (or a restart of its own) the old AFK Realm window stayed open next to the new one. Since AFK Realm has no console window (1.1.12) nothing closed the old browser window; the old process now closes it before it ends.
+
 ## 1.1.15
 
 - Custom races: CoA Custom's Darkfallen has 40 hair styles in CharSections but only 10 (men 9) in CharHairGeosets, while her model has 20 hair shapes (men 16, the Blood Elf ones). A style beyond the table froze the barber and the creation when clicked through, and a character made with one was drawn after the next login with another shape under the Blood Elf hair texture - hair, ears and brows full of ornaments. The race packer now reads the hair shapes from the model (`00.skin`) and adds the CharHairGeosets rows the table never named (shape = style + the race's step): Darkfallen keeps styles 10-19 (men 9-15). Styles and beards that still have no shape are left out of the race's sections. Races of EsteriaAppearance.dll keep their rows (the DLL draws them). Packer version 4: existing packs are packed again by themselves at the next **Game client › Install**.

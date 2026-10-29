@@ -108,6 +108,7 @@ namespace CoAInstaller.Web
             var psi = new ProcessStartInfo(Exe, args) { UseShellExecute = Os.Windows, WorkingDirectory = Path.GetDirectoryName(Exe) };
             if (Program.Opts.Listen != null && !string.IsNullOrEmpty(Program.Opts.Password)) { psi.UseShellExecute = false; psi.Environment["AFK_REALM_PASSWORD"] = Program.Opts.Password; }
             Process.Start(psi);
+            AppWindow.Close();
             WebHost.Shutdown();
         }
 
@@ -115,6 +116,7 @@ namespace CoAInstaller.Web
         public static void RestartSame()
         {
             Process.Start(new ProcessStartInfo(Exe, "--restart") { UseShellExecute = Os.Windows, WorkingDirectory = Path.GetDirectoryName(Exe) });
+            AppWindow.Close();
             WebHost.Shutdown();
         }
     }

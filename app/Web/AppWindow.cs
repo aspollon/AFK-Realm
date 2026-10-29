@@ -18,6 +18,24 @@ namespace CoAInstaller.Web
         /// <summary>The browser the app window was started with (for the start log).</summary>
         public static string Browser = "";
 
+        /// <summary>Closes the app window this program opened (before it starts itself again after an update or a
+        /// restart: the new one opens its own window). Since AFK Realm has no console window any more (1.1.12), nothing
+        /// else ends the old browser process, and two AFK Realm windows were open. The window runs in a profile folder
+        /// of its own, so no other browser window is touched.</summary>
+        public static void Close()
+        {
+            var p = Current;
+            Current = null;
+            if (p == null) return;
+            try
+            {
+                if (p.HasExited) return;
+                p.CloseMainWindow();
+                if (!p.WaitForExit(3000)) p.Kill(true);
+            }
+            catch { }
+        }
+
         static IEnumerable<string> Candidates()
         {
             if (Os.Windows)
