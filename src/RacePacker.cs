@@ -35,8 +35,9 @@ namespace CoAInstaller
         /// rows too, so only the eye-glow layer is still red (1.1.19); 9: the male Darkfallen model uses the red eye
         /// glow its female model uses (1.1.20); 10: Darkfallen is packed on the player's HD Blood Elf model instead of
         /// its own classic model (1.1.21); 11: it keeps its own skins, faces, hair and other sections on that HD model
-        /// (1.1.22).</summary>
-        public const int PackerVersion = 11;
+        /// (1.1.22); 12: the borrowed Blood Elf hair/scalp is the original classic one, exactly as 1.1.17 had it
+        /// (1.1.23).</summary>
+        public const int PackerVersion = 12;
 
         /// <summary>A set of archives, read as the game reads them: the one it reads last wins. Files that lie around
         /// unpacked (the raw files some creators ship) are read after all archives, they only step in for what the
@@ -592,7 +593,7 @@ namespace CoAInstaller
         /// folder (&lt;model folder&gt;\&lt;stock race&gt;&lt;file name&gt;) and its rows point there; the stock race keeps the HD ones.
         /// Returns the files to add to the pack.
         /// </summary>
-        static Dictionary<string, byte[]> OriginalTextures(Archives source, DbcTable cr, Dictionary<string, object> models, List<object> sections, List<object> hdSections, HashSet<string> dropped)
+        static Dictionary<string, byte[]> OriginalTextures(Archives source, DbcTable cr, Dictionary<string, object> models, List<object> sections, List<object> hdSections, HashSet<string> dropped, bool forceOriginal = false)
         {
             var added = new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
             DbcTable blizzard = null;
@@ -633,6 +634,7 @@ namespace CoAInstaller
                                     var now = ModelCells(nowM2, source.Read(stock + "00.skin"));
                                     original = before.Count > 0 && now.Count > 0 && Jaccard(mine, before) > Jaccard(mine, now) + 0.2;
                                 }
+                                if (forceOriginal && folder.Equals("BloodElf", StringComparison.OrdinalIgnoreCase)) original = true;
                                 verdict[folder] = original;
                             }
                             if (!original) continue;
@@ -915,7 +917,7 @@ namespace CoAInstaller
             var files = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
             var roots = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);      // the race's own trees in the client
             var partial = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);     // trees the player's client already partly has
-            string modelFolder = hdDarkfallen ? Str(cr, row, 11) : "";                 // Darkfallen keeps its own file string
+            string modelFolder = hdDarkfallen ? "Darkfallen" : "";                     // both factions keep Darkfallen's file string
             for (int sex = 0; sex < 2; sex++)
             {
                 uint display = cr.Field(stockRow ?? row, 4 + sex);
@@ -1128,7 +1130,7 @@ namespace CoAInstaller
 
             RepairDecorationTextures(filesDir, keep);
             var dropped = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var originals = OriginalTextures(source, cr, models, sections, hdSections, dropped);
+            var originals = OriginalTextures(source, cr, models, sections, hdSections, dropped, hdDarkfallen);
             // layers left empty: their files go when no row names them any more
             var named = new HashSet<string>(sections.Concat(hdSections).OfType<object[]>().SelectMany(r => new[] { r[4], r[5], r[6] }).OfType<string>(), StringComparer.OrdinalIgnoreCase);
             foreach (var f in dropped.Where(f => !named.Contains(f)))

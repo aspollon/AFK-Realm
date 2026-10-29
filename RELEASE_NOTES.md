@@ -1,4 +1,13 @@
-# AFK Realm 1.1.22
+# AFK Realm 1.1.23
+
+Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11 and now also on Linux.
+
+## New in 1.1.23
+
+- **Darkfallen: everything as in 1.1.17, but on the HD model.** The race uses the player's HD Blood Elf body/face mesh and keeps Darkfallen's own skin, face and hair rows. The borrowed Blood Elf hair/scalp uses the original classic textures, exactly as 1.1.17 did. The red-eye workarounds from 1.1.18 – 1.1.20 are off.
+- **Packer version 12:** old packs are rebuilt at **Game client → Install**.
+
+## New in 1.1.22
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11 and now also on Linux.
 
