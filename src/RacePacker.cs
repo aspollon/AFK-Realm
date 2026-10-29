@@ -29,8 +29,9 @@ namespace CoAInstaller
         /// 1: until 1.0.9; 2: helmets, display textures, the own model folder and voice (1.0.10); 3: files another client
         /// changed under the same name, female-only races (1.1.5); 4: hair shapes of the model that
         /// CharHairGeosets never named (1.1.15); 5: the original hair textures for models made for them, where an HD patch
-        /// replaced them (1.1.16).</summary>
-        public const int PackerVersion = 5;
+        /// replaced them (1.1.16); 6: all textures borrowed from such a stock race - skin, face, scalp, beard, underwear
+        /// (1.1.17), and no HD scalp layers where the original has none.</summary>
+        public const int PackerVersion = 6;
 
         /// <summary>A set of archives, read as the game reads them: the one it reads last wins. Files that lie around
         /// unpacked (the raw files some creators ship) are read after all archives, they only step in for what the
@@ -573,19 +574,24 @@ namespace CoAInstaller
         }
 
         /// <summary>
-        /// A race whose model was made for a stock race's hair texture as Blizzard shipped it, in a client where an HD
-        /// patch replaced that texture with one of another layout. CoA Custom's Darkfallen borrows the Blood Elf hair
-        /// (Character\BloodElf\Hair00_00.blp, 128x128), the Descension client's HD patch (patch-Q) has a 512x256 one laid
-        /// out for the HD Blood Elf: on the Darkfallen model the hair, the brows, the beards and the earrings then showed
-        /// pieces of jewelry and black. Whether a model was made for the original or the replacement is told by where its
-        /// hair (geosets 1-99 drawn with the hair texture) lies on the texture, compared with the stock race's original
-        /// and replaced model. When it fits the original, the race gets the original textures in its own folder
-        /// (&lt;model folder&gt;\&lt;race&gt;Hair00_00.blp) and its hair rows point there; the stock race keeps the HD ones.
+        /// A race whose model is a stock race's model as Blizzard shipped it, in a client where an HD patch replaced that
+        /// race's model and textures with others of another layout. CoA Custom's Darkfallen is the classic Blood Elf model
+        /// under another name and borrows the Blood Elf's skins, faces, scalps and hair (Character\BloodElf\...); the
+        /// Descension client's HD patch (patch-Q) has those laid out for the HD Blood Elf: on the Darkfallen the hair,
+        /// face, ears, brows, beards and earrings showed pieces of other textures. Whether a model was made for the
+        /// original or the replacement is told by where it lays its body and its hair on their textures, compared with
+        /// the stock race's original and replaced model. When it fits the original, every texture it borrows from that
+        /// race is the original one: the file of the game's own archives, or - for a name only the HD patch has - the
+        /// texture Blizzard's own CharSections gives the stock race in the same place, or no layer where Blizzard has none
+        /// (the classic Blood Elf has no scalp textures). They go into the race's own
+        /// folder (&lt;model folder&gt;\&lt;stock race&gt;&lt;file name&gt;) and its rows point there; the stock race keeps the HD ones.
         /// Returns the files to add to the pack.
         /// </summary>
-        static Dictionary<string, byte[]> OriginalHairTextures(Archives source, Dictionary<string, object> models, List<object> sections, List<object> hdSections)
+        static Dictionary<string, byte[]> OriginalTextures(Archives source, DbcTable cr, Dictionary<string, object> models, List<object> sections, List<object> hdSections, HashSet<string> dropped)
         {
             var added = new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
+            DbcTable blizzard = null;
+            bool blizzardRead = false;
             for (int sex = 0; sex < 2; sex++)
             {
                 try
@@ -595,44 +601,102 @@ namespace CoAInstaller
                     string model = M2(Convert.ToString(((Dictionary<string, object>)m)["path"]));
                     if (!model.EndsWith(".m2", StringComparison.OrdinalIgnoreCase) || !model.Contains("\\")) continue;
                     string modelDir = model.Substring(0, model.LastIndexOf('\\') + 1);
-                    var mine = HairCells(source.Read(model), source.Read(model.Substring(0, model.Length - 3) + "00.skin"));
+                    var mine = ModelCells(source.Read(model), source.Read(model.Substring(0, model.Length - 3) + "00.skin"));
                     if (mine.Count == 0) continue;
+                    string sexName = sex == 0 ? "Male" : "Female";
                     var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                    var verdict = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);    // stock folder -> use the original
-                    foreach (object[] r in sections.Concat(hdSections).OfType<object[]>())
-                    {
-                        if (Convert.ToInt32(r[2]) != sex || Convert.ToInt32(r[3]) != 3) continue;
-                        string tex = r[4] as string;
-                        if (string.IsNullOrEmpty(tex) || tex.StartsWith(modelDir, StringComparison.OrdinalIgnoreCase) || map.ContainsKey(tex)) continue;
-                        var parts = tex.Split('\\');
-                        if (parts.Length != 3 || !parts[0].Equals("Character", StringComparison.OrdinalIgnoreCase)) continue;   // Character\<stock race>\HairNN_NN.blp
-                        bool original;
-                        if (!verdict.TryGetValue(parts[1], out original))
+                    var verdict = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);    // stock folder -> use the originals
+                    var stray = new HashSet<string>(StringComparer.OrdinalIgnoreCase);    // textures only the HD patch has, in no original place
+                    var rows = sections.Concat(hdSections).OfType<object[]>().Where(r => Convert.ToInt32(r[2]) == sex).ToList();
+                    foreach (var r in rows)
+                        for (int k = 4; k <= 6 && k < r.Length; k++)
                         {
-                            string sexName = sex == 0 ? "Male" : "Female";
-                            string stock = "Character\\" + parts[1] + "\\" + sexName + "\\" + parts[1] + sexName;
-                            var before = HairCells(source.ReadOriginal(stock + ".m2"), source.ReadOriginal(stock + "00.skin"));
-                            var now = HairCells(source.Read(stock + ".m2"), source.Read(stock + "00.skin"));
-                            original = before.Count > 0 && now.Count > 0 && Jaccard(mine, before) > Jaccard(mine, now) + 0.2;
-                            verdict[parts[1]] = original;
+                            string tex = r[k] as string;
+                            if (string.IsNullOrEmpty(tex) || tex.StartsWith(modelDir, StringComparison.OrdinalIgnoreCase) || map.ContainsKey(tex)) continue;
+                            var parts = tex.Split('\\');
+                            if (parts.Length < 3 || !parts[0].Equals("Character", StringComparison.OrdinalIgnoreCase)) continue;   // Character\<stock race>\...
+                            string folder = parts[1];
+                            bool original;
+                            if (!verdict.TryGetValue(folder, out original))
+                            {
+                                string stock = "Character\\" + folder + "\\" + sexName + "\\" + folder + sexName;
+                                byte[] beforeM2 = source.ReadOriginal(stock + ".m2"), nowM2 = source.Read(stock + ".m2");
+                                original = false;
+                                if (beforeM2 != null && nowM2 != null && !beforeM2.SequenceEqual(nowM2))
+                                {
+                                    var before = ModelCells(beforeM2, source.ReadOriginal(stock + "00.skin"));
+                                    var now = ModelCells(nowM2, source.Read(stock + "00.skin"));
+                                    original = before.Count > 0 && now.Count > 0 && Jaccard(mine, before) > Jaccard(mine, now) + 0.2;
+                                }
+                                verdict[folder] = original;
+                            }
+                            if (!original) continue;
+                            byte[] top = source.Read(tex), first = source.ReadOriginal(tex);
+                            if (first == null)
+                            {
+                                // a name only the HD patch has (or a copy of an HD file under a name of the original): the
+                                // texture Blizzard gives the stock race in this place
+                                if (!blizzardRead)
+                                {
+                                    blizzardRead = true;
+                                    var b = source.ReadOriginal("DBFilesClient\\CharSections.dbc");
+                                    if (b != null) try { blizzard = DbcTable.Parse(b, "CharSections.dbc"); } catch { }
+                                }
+                                string instead = StockTexture(blizzard, cr, folder, r, k);
+                                if (instead != null) first = source.ReadOriginal(instead);
+                                if (first == null && k != 4 && blizzard != null)
+                                {
+                                    // the original has nothing there (the classic Blood Elf has no scalp layers at all, the
+                                    // HD ones painted the HD hairline into the classic face): the layer is left empty
+                                    map[tex] = "";
+                                    continue;
+                                }
+                            }
+                            if (first == null && k == 4) { stray.Add(tex); continue; }
+                            if (first == null || (top != null && first.SequenceEqual(top))) continue;
+                            string to = modelDir + folder + tex.Substring(tex.LastIndexOf('\\') + 1);
+                            map[tex] = to;
+                            added[to] = first;
                         }
-                        if (!original) continue;
-                        byte[] first = source.ReadOriginal(tex), top = source.Read(tex);
-                        if (first == null || top == null || first.SequenceEqual(top)) continue;
-                        string to = modelDir + parts[1] + parts[2];
-                        map[tex] = to;
-                        added[to] = first;
-                    }
                     if (map.Count == 0) continue;
-                    foreach (object[] r in sections.Concat(hdSections).OfType<object[]>())
+                    foreach (var r in rows)
+                        for (int k = 4; k <= 6 && k < r.Length; k++)
+                        {
+                            string tex = r[k] as string, to;
+                            if (tex != null && map.TryGetValue(tex, out to)) r[k] = to;
+                        }
+                    // a colour only the HD patch has (the HD Blood Elf man's hair colours 13-15): the original texture of
+                    // the nearest colour of the same look, so the slider keeps its steps
+                    var originalNow = new HashSet<string>(added.Keys, StringComparer.OrdinalIgnoreCase);
+                    foreach (var r in rows.Where(r => stray.Contains(r[4] as string ?? "")))
                     {
-                        string tex = r[4] as string, to;
-                        if (Convert.ToInt32(r[2]) == sex && Convert.ToInt32(r[3]) == 3 && tex != null && map.TryGetValue(tex, out to)) r[4] = to;
+                        var near = rows.Where(o => Convert.ToInt32(o[3]) == Convert.ToInt32(r[3]) && originalNow.Contains(o[4] as string ?? ""))
+                            .OrderBy(o => Convert.ToInt64(o[8]) == Convert.ToInt64(r[8]) ? 0 : 1)
+                            .ThenBy(o => Math.Abs(Convert.ToInt64(o[9]) - Convert.ToInt64(r[9])))
+                            .FirstOrDefault();
+                        if (near != null) r[4] = near[4];
                     }
+                    foreach (var e in map) if (e.Value.Length == 0) dropped.Add(e.Key);
                 }
                 catch { }
             }
             return added;
+        }
+
+        /// <summary>The texture Blizzard's CharSections gives a stock race (by its folder) in the place of a row:
+        /// same sex, section, variation and colour - or, without such a row, the same sex, section and colour.</summary>
+        static string StockTexture(DbcTable blizzard, DbcTable cr, string folder, object[] row, int field)
+        {
+            if (blizzard == null || cr == null) return null;
+            var stock = cr.Records.FirstOrDefault(c => Str(cr, c, 11).Equals(folder, StringComparison.OrdinalIgnoreCase));
+            if (stock == null) return null;
+            uint race = cr.Field(stock, 0), sex = Convert.ToUInt32(row[2]), section = Convert.ToUInt32(row[3]), variation = Convert.ToUInt32(row[8]), colour = Convert.ToUInt32(row[9]);
+            var mine = blizzard.Records.Where(b => blizzard.Field(b, 1) == race && blizzard.Field(b, 2) == sex && blizzard.Field(b, 3) == section).ToList();
+            var hit = mine.FirstOrDefault(b => blizzard.Field(b, 8) == variation && blizzard.Field(b, 9) == colour)
+                      ?? mine.Where(b => blizzard.Field(b, 9) == colour).OrderBy(b => blizzard.Field(b, 8)).FirstOrDefault();
+            if (hit == null || blizzard.Field(hit, field) == 0) return null;
+            string tex = Str(blizzard, hit, field);
+            return tex.Length == 0 ? null : tex;
         }
 
         static double Jaccard(HashSet<int> a, HashSet<int> b)
@@ -642,9 +706,12 @@ namespace CoAInstaller
             return any == 0 ? 0 : (double)both / any;
         }
 
-        /// <summary>Where on its hair texture a model draws its hair: the cells of a 16x16 grid its hair geosets
-        /// (1-99, drawn with the hair texture, type 6) reach. Empty when the model cannot be read.</summary>
-        static HashSet<int> HairCells(byte[] m2, byte[] skin)
+        /// <summary>Where a model lays its body (type 1, the skin texture) and its hair (geosets 1-99, type 6) on their
+        /// textures: the cells of a 32x32 grid they reach, the body's below 10000 and the hair's above. A model made for
+        /// other textures differs in both. Empty when the model cannot be read.</summary>
+        static HashSet<int> ModelCells(byte[] m2, byte[] skin) { return Cells(m2, skin, 32, true); }
+
+        static HashSet<int> Cells(byte[] m2, byte[] skin, int grid, bool body)
         {
             var cells = new HashSet<int>();
             try
@@ -661,10 +728,11 @@ namespace CoAInstaller
                     int section = u16(skin, at + 4), count = u16(skin, at + 14), combo = u16(skin, at + 16);
                     if (section >= nsub || count == 0 || combo >= nl) continue;
                     int texture = u16(m2, ol + combo * 2);
-                    if (texture >= nt || i32(m2, ot + texture * 16) != 6) continue;          // the hair texture
+                    int type = texture >= nt ? -1 : i32(m2, ot + texture * 16);
                     int sub = osub + section * 48;
                     int id = u16(skin, sub);
-                    if (id < 1 || id > 99) continue;
+                    bool hair = type == 6 && id >= 1 && id <= 99;
+                    if (!hair && !(body && type == 1)) continue;
                     int start = u16(skin, sub + 4) + (u16(skin, sub + 2) << 16), n = u16(skin, sub + 6);
                     for (int k = start; k < start + n && k < ni; k++)
                     {
@@ -673,7 +741,7 @@ namespace CoAInstaller
                         float u = BitConverter.ToSingle(m2, ov + v * 48 + 32), w = BitConverter.ToSingle(m2, ov + v * 48 + 36);
                         if (float.IsNaN(u) || float.IsNaN(w)) continue;
                         u -= (float)Math.Floor(u); w -= (float)Math.Floor(w);
-                        cells.Add(Math.Min(15, (int)(w * 16)) * 16 + Math.Min(15, (int)(u * 16)));
+                        cells.Add((hair ? 10000 : 0) + Math.Min(grid - 1, (int)(w * grid)) * grid + Math.Min(grid - 1, (int)(u * grid)));
                     }
                 }
             }
@@ -1042,7 +1110,16 @@ namespace CoAInstaller
             }
 
             RepairDecorationTextures(filesDir, keep);
-            foreach (var extra in OriginalHairTextures(source, models, sections, hdSections))
+            var dropped = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var originals = OriginalTextures(source, cr, models, sections, hdSections, dropped);
+            // layers left empty: their files go when no row names them any more
+            var named = new HashSet<string>(sections.Concat(hdSections).OfType<object[]>().SelectMany(r => new[] { r[4], r[5], r[6] }).OfType<string>(), StringComparer.OrdinalIgnoreCase);
+            foreach (var f in dropped.Where(f => !named.Contains(f)))
+            {
+                if (keep.RemoveAll(k => k.Equals(f, StringComparison.OrdinalIgnoreCase)) == 0) continue;
+                try { File.Delete(Os.Resolve(filesDir, f)); } catch { }
+            }
+            foreach (var extra in originals)
             {
                 string to = Os.Resolve(filesDir, extra.Key);
                 Directory.CreateDirectory(Path.GetDirectoryName(to));

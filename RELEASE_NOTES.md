@@ -1,6 +1,10 @@
-# AFK Realm 1.1.16
+# AFK Realm 1.1.17
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11 and now also on Linux.
+
+## New in 1.1.17
+
+- **Darkfallen (men and women): no more HD hairline in the face.** The scalp layers and the last hair colours of the men also came from the HD Blood Elf; now every Blood Elf texture the Darkfallen borrow is the classic one their model was made for. Run **Game client › Install** once; the race packs are refreshed by themselves.
 
 ## New in 1.1.16
 
