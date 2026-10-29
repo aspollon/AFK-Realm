@@ -33,8 +33,9 @@ namespace CoAInstaller
         /// (1.1.17), and no HD scalp layers where the original has none; 7: Darkfallen's own skin no longer keeps the
         /// HD eye that landed on the classic model's forehead (1.1.18); 8: its painted red eye is removed from the face
         /// rows too, so only the eye-glow layer is still red (1.1.19); 9: the male Darkfallen model uses the red eye
-        /// glow its female model uses (1.1.20).</summary>
-        public const int PackerVersion = 9;
+        /// glow its female model uses (1.1.20); 10: Darkfallen is packed on the player's HD Blood Elf model and HD
+        /// sections instead of its own classic model (1.1.21).</summary>
+        public const int PackerVersion = 10;
 
         /// <summary>A set of archives, read as the game reads them: the one it reads last wins. Files that lie around
         /// unpacked (the raw files some creators ship) are read after all archives, they only step in for what the
@@ -904,14 +905,19 @@ namespace CoAInstaller
             var row = cr.Records.First(r => cr.Field(r, 0) == race.Id);
             var di = Table(source, "CreatureDisplayInfo");
             var md = Table(source, "CreatureModelData");
+            // Darkfallen's own model is the classic Blood Elf model; in a client with an HD Blood Elf the classic one
+            // has the old face and no real eye glow. Its own skin/face textures are the HD Blood Elf's anyway, so use
+            // the HD model and the HD section rows of the stock Blood Elf. The race keeps its name, number and icon.
+            bool hdDarkfallen = (race.Key + " " + race.Name).IndexOf("darkfallen", StringComparison.OrdinalIgnoreCase) >= 0;
+            var stockRow = hdDarkfallen ? cr.Records.FirstOrDefault(r => cr.Field(r, 0) == 10) : null;
             var models = new Dictionary<string, object>();
             var files = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
             var roots = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);      // the race's own trees in the client
             var partial = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);     // trees the player's client already partly has
-            string modelFolder = "";                                                   // the real asset folder, often not ClientFilestring
+            string modelFolder = hdDarkfallen ? Str(cr, row, 11) : "";                 // Darkfallen keeps its own file string
             for (int sex = 0; sex < 2; sex++)
             {
-                uint display = cr.Field(row, 4 + sex);
+                uint display = cr.Field(stockRow ?? row, 4 + sex);
                 var d = di.Records.FirstOrDefault(r => di.Field(r, 0) == display);
                 var m = d == null ? null : md.Records.FirstOrDefault(r => md.Field(r, 0) == di.Field(d, 1));
                 if (m == null) continue;
@@ -935,6 +941,11 @@ namespace CoAInstaller
                 var parts = M2(path).Split('\\');
                 if (parts.Length >= 3 && modelFolder.Length == 0)
                     modelFolder = parts[1];
+                if (hdDarkfallen)
+                {
+                    // the stock Blood Elf folder belongs to the player's client; only the model files are added
+                    continue;
+                }
                 if (parts.Length >= 3 && parts[0].Equals("custom", StringComparison.OrdinalIgnoreCase)) roots.Add(parts[0] + "\\" + parts[1] + "\\");
                 // The same for a folder of its own elsewhere (Character\IllidariNightElf\, Creature\WhimMurloc\):
                 // textures its model or its creator's code loads by name. A client that has some of the folder
@@ -1031,8 +1042,9 @@ namespace CoAInstaller
                 }
             }
 
-            var sections = Rows(Table(source, "CharSections"), 1, race.Id, 4, 5, 6);
-            var hdSections = Rows(Table(source, "HDCharSections"), 1, race.Id, 4, 5, 6);
+            int sectionRace = hdDarkfallen ? 10 : race.Id;
+            var sections = Rows(Table(source, "CharSections"), 1, sectionRace, 4, 5, 6);
+            var hdSections = Rows(Table(source, "HDCharSections"), 1, sectionRace, 4, 5, 6);
             RepairSections(source, cr, di, md, race.Id, models, sections, hdSections);
             foreach (object[] r in sections.Concat(hdSections))
                 for (int k = 4; k <= 6; k++) { var t = r[k] as string; if (!string.IsNullOrEmpty(t)) files.Add(t); }
@@ -1113,8 +1125,6 @@ namespace CoAInstaller
             }
 
             RepairDecorationTextures(filesDir, keep);
-            RepairDarkfallenEyes(source, filesDir, sections, hdSections, keep, race);
-            RepairDarkfallenMaleGlow(source, filesDir, models, keep, race);
             var dropped = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var originals = OriginalTextures(source, cr, models, sections, hdSections, dropped);
             // layers left empty: their files go when no row names them any more

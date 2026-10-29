@@ -1,4 +1,14 @@
-# AFK Realm 1.1.20
+# AFK Realm 1.1.21
+
+Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11 and now also on Linux.
+
+## New in 1.1.21
+
+- **Darkfallen now uses the HD Blood Elf model and its HD section rows.** CoA Custom's Darkfallen model was the classic Blood Elf model, so its face stayed low-resolution and the painted red eye landed wrongly. The race now takes the player's HD Blood Elf model, skins, faces, scalps, hair and underwear, while keeping its own name, number, icon and racials.
+- **The temporary red-eye repairs from 1.1.18 – 1.1.20 are no longer applied.** They were a workaround for the classic model; the HD model has its own face and eyes.
+- **Packer version 10:** old Darkfallen packs are packed again automatically at **Game client → Install**. No re-import is needed.
+
+## New in 1.1.20
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11 and now also on Linux.
 
