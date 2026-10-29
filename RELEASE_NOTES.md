@@ -1,12 +1,12 @@
-# AFK Realm 1.1.26
+# AFK Realm 1.1.27
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11 and now also on Linux.
 
-## New in 1.1.26
+## New in 1.1.27
 
-- **Darkfallen: the red eye paint is removed, the glow stays.** The red splotches came from Darkfallen's own face textures, not from the eye glow. They are now removed like the skin's misplaced HD eye; `DarkfallenEyeGlow` and `DarkfallenDKGlow` are untouched.
-- **Both male eye slots now use `DarkfallenDKGlow`**, like the female model, so the male eye glow should show too.
-- **Packer version 15:** every old pack is rebuilt at **Game client → Install**.
+- **Back to the 1.1.25 state.** The 1.1.26 red-eye repaint is removed again; this is the version that worked best for Darkfallen.
+- **Packer version 14:** race packs made by 1.1.26 are rebuilt at **Game client → Install**.
+- No HD model and no test patch data are included.
 
 ## New in 1.1.25
 
