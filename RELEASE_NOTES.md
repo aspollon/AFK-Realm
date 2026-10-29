@@ -1,58 +1,12 @@
-# AFK Realm 1.1.23
+# AFK Realm 1.1.24
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11 and now also on Linux.
 
-## New in 1.1.23
+## New in 1.1.24
 
-- **Darkfallen: everything as in 1.1.17, but on the HD model.** The race uses the player's HD Blood Elf body/face mesh and keeps Darkfallen's own skin, face and hair rows. The borrowed Blood Elf hair/scalp uses the original classic textures, exactly as 1.1.17 did. The red-eye workarounds from 1.1.18 – 1.1.20 are off.
-- **Packer version 12:** old packs are rebuilt at **Game client → Install**.
-
-## New in 1.1.22
-
-Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11 and now also on Linux.
-
-## New in 1.1.22
-
-- **Darkfallen: HD model, but all of its own textures.** The race now uses the player's HD Blood Elf body/face mesh, while its skins, faces, hair, scalp, beard and underwear stay Darkfallen's own rows from CoA Custom. It does **not** take the stock Blood Elf skin or face.
-- The old red-eye workarounds from 1.1.18 – 1.1.20 are not applied to this variant.
-- **Packer version 11:** old packs are rebuilt at **Game client → Install**.
-
-## New in 1.1.21
-
-Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11 and now also on Linux.
-
-## New in 1.1.21
-
-- **Darkfallen now uses the HD Blood Elf model and its HD section rows.** CoA Custom's Darkfallen model was the classic Blood Elf model, so its face stayed low-resolution and the painted red eye landed wrongly. The race now takes the player's HD Blood Elf model, skins, faces, scalps, hair and underwear, while keeping its own name, number, icon and racials.
-- **The temporary red-eye repairs from 1.1.18 – 1.1.20 are no longer applied.** They were a workaround for the classic model; the HD model has its own face and eyes.
-- **Packer version 10:** old Darkfallen packs are packed again automatically at **Game client → Install**. No re-import is needed.
-
-## New in 1.1.20
-
-Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11 and now also on Linux.
-
-## New in 1.1.20
-
-- **Darkfallen men now have the red eye glow too.** Their model had two eye-texture slots, but both pointed at `DarkfallenEyeGlow`; the female's second slot uses `DarkfallenDKGlow`, which is the visible red glow. The male's second slot now points at the same `DarkfallenDKGlow`; no new texture is needed.
-- **Packer version 9:** the male model is updated automatically at **Game client → Install**.
-
-## New in 1.1.19
-
-Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11 and now also on Linux.
-
-## New in 1.1.19
-
-- **Darkfallen: only the eye-glow is red now.** The broad red around the eyes was painted into Darkfallen's face textures, not the glow. AFK Realm removes those red pixels from the face rows and fills them with the surrounding skin; the separate eye-glow textures are untouched, so the eyes keep their glow.
-- **Packer version 8:** old Darkfallen packs are packed again automatically at **Game client → Install**.
-
-## New in 1.1.18
-
-Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11 and now also on Linux.
-
-## New in 1.1.18
-
-- **Darkfallen: the misplaced red eye on the forehead is gone.** Darkfallen's skin texture was painted from the HD Blood Elf skin, but its model is the classic Blood Elf: the HD eye landed above the classic eyes. AFK Realm now removes those red pixels from Darkfallen's skin and fills them with the surrounding skin. The face keeps its red eyes, and `DarkfallenEyeGlow`/`DarkfallenDKGlow` keep their glow.
-- **Packer version 7:** old Darkfallen packs are packed again automatically at **Game client → Install**. No re-import is needed.
+- **Reset to the 1.1.17 code.** The Darkfallen eye-glow and HD-model experiments from 1.1.18 - 1.1.23 are removed; the behaviour is the proven 1.1.17 one again.
+- **Packer version 13:** race packs made by 1.1.18 - 1.1.23 are rebuilt from CoA Custom at **Game client → Install**, so the HD Darkfallen model does not stay behind.
+- No re-import is needed.
 
 ## New in 1.1.17
 
