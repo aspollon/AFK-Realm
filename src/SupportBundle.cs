@@ -176,6 +176,8 @@ namespace CoAInstaller
                 {
                     string own = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), Product.FileStem, "startup-error.txt");
                     if (File.Exists(own)) tail(own, "afk-realm/startup-error.txt", LogTail);
+                    string steps = Path.Combine(Path.GetDirectoryName(own), "startup.log");
+                    if (File.Exists(steps)) tail(steps, "afk-realm/startup.log", LogTail);
                 }
                 catch { }
 

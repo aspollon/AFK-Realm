@@ -76,8 +76,28 @@ namespace CoAInstaller.Web
                 catch { }
         }
 
+        /// <summary>What a start did, step by step (startup.log in the settings folder, written anew at every start): a
+        /// start that ends without an error - the window never came, another AFK Realm already ran - says so there.</summary>
+        public static void StartLog(string line)
+        {
+            try
+            {
+                Directory.CreateDirectory(Paths.SettingsDir);
+                File.AppendAllText(Path.Combine(Paths.SettingsDir, "startup.log"), DateTime.Now.ToString("HH:mm:ss") + " [" + Environment.ProcessId + "] " + line + Environment.NewLine);
+            }
+            catch { }
+        }
+
         static int Main(string[] args)
         {
+            try
+            {
+                string log = Path.Combine(Paths.SettingsDir, "startup.log");
+                bool restart = args.Any(a => a == "--restart" || a == "--updated" || a == "--after-update");
+                if (!restart && File.Exists(log) && (DateTime.Now - File.GetLastWriteTime(log)).TotalMinutes > 2) File.Delete(log);
+            }
+            catch { }
+            StartLog(Product.Name + " " + Product.Version + " started: " + Environment.ProcessPath + " " + string.Join(" ", args) + " (" + Environment.OSVersion + ")");
             AppDomain.CurrentDomain.UnhandledException += (s, e) => { if (e.ExceptionObject is Exception ex) Fatal(ex); };
             try { return Start(args); }
             catch (Exception ex) { Fatal(ex); return 1; }
@@ -116,6 +136,7 @@ namespace CoAInstaller.Web
             // Windows: installing Visual Studio, the firewall rules and the database need administrator rights.
             if (Os.Windows && !IsAdministrator())
             {
+                StartLog("not an administrator: starting again with administrator rights");
                 try
                 {
                     Process.Start(new ProcessStartInfo(Environment.ProcessPath, string.Join(" ", args.Select(MySql.Arg))) { UseShellExecute = true, Verb = "runas" });
@@ -133,6 +154,7 @@ namespace CoAInstaller.Web
             var running = Instance.Running();
             if (running != null && !Opts.Restarted)
             {
+                StartLog("already running (process " + running.Pid + ", port " + running.Port + "): showing its window");
                 if (Opts.NoWindow || Opts.Listen != null) { Console.WriteLine(L.F("{0} is already running: {1}", Product.Name, running.Url)); return 0; }
                 AppWindow.Open(running.LoginUrl, false);
                 return 0;
@@ -143,7 +165,10 @@ namespace CoAInstaller.Web
             }
 
             try { SelfUpdateWeb.CleanUp(); } catch { }
-            return WebHost.Run();
+            StartLog("starting the web server");
+            int code = WebHost.Run();
+            StartLog("ended (" + code + ")");
+            return code;
         }
 
         public static bool IsAdministrator()

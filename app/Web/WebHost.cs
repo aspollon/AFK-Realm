@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
@@ -74,9 +75,13 @@ namespace CoAInstaller.Web
                 if (!AppWindow.CanShow && !Program.Opts.NoWindow)
                     Console.WriteLine(L.T("(No desktop was found. On a server without a screen, start with --listen 0.0.0.0 --password <password> to manage it from another computer, or use an SSH tunnel.)"));
             }
-            else AppWindow.Open(localUrl, true);
+            else
+            {
+                bool opened = AppWindow.Open(localUrl, true);
+                Program.StartLog("window: " + (AppWindow.Current != null ? "app window (" + AppWindow.Browser + ")" : opened ? "default browser" : "could not be opened"));
+            }
 
-            Watch(remote);
+            Watch(remote, localUrl);
             RemoteAccess.Stop();
             try { app.StopAsync().Wait(5000); } catch { }
             Instance.Remove();
@@ -139,25 +144,42 @@ namespace CoAInstaller.Web
         /// normal browser - no page has been open for ten minutes. A server that is reachable from elsewhere and the
         /// command without a window run until they are stopped.
         /// </summary>
-        static void Watch(bool remote)
+        static void Watch(bool remote, string localUrl = null)
         {
             bool tracked = AppWindow.Current != null;
+            bool everSeen = false, fallback = false;
+            DateTime started = DateTime.UtcNow;
             while (!Stopping.IsCancellationRequested)
             {
                 Stopping.Token.WaitHandle.WaitOne(2000);
                 if (Stopping.IsCancellationRequested) break;
                 if (remote || Program.Opts.NoWindow || RemoteAccess.Running) continue;     // others may still come
                 if (Jobs.Busy || Manager.AutoRestarting) continue;
+                if (Events.Count > 0) everSeen = true;
                 if (tracked)
                 {
                     var w = AppWindow.Current;
                     bool closed = w == null || w.HasExited;
+                    // The app window closed before its page ever reached this program (the browser failed to start, an
+                    // antivirus stopped it, a firewall keeps it from 127.0.0.1): AFK Realm used to end here without a word.
+                    // The page goes to the default browser once, and a note says where it is.
+                    if (closed && !everSeen && !fallback && localUrl != null && (DateTime.UtcNow - started).TotalSeconds > 6)
+                    {
+                        fallback = true;
+                        tracked = false;
+                        Program.StartLog("the app window closed before its page connected (exit code " + SafeExit(w) + "); opening the default browser");
+                        try { Process.Start(new ProcessStartInfo(localUrl) { UseShellExecute = true }); } catch (Exception ex) { Program.StartLog("default browser: " + ex.Message); }
+                        Events.LastSeen = DateTime.UtcNow;
+                        continue;
+                    }
                     // Some browsers hand the window to a process that already runs and end at once: then the pages count.
                     if (closed && Events.Count == 0 && (DateTime.UtcNow - Events.LastSeen).TotalSeconds > 8) break;
                 }
                 else if (Events.Count == 0 && (DateTime.UtcNow - Events.LastSeen).TotalMinutes > 10) break;
             }
         }
+
+        static string SafeExit(Process p) { try { return p == null ? "-" : p.ExitCode.ToString(); } catch { return "?"; } }
 
         public static void Shutdown() { Stopping.Cancel(); }
 

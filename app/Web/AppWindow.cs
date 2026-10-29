@@ -15,6 +15,8 @@ namespace CoAInstaller.Web
     {
         /// <summary>The window started last, while it is open; null when the page went to a normal browser.</summary>
         public static Process Current;
+        /// <summary>The browser the app window was started with (for the start log).</summary>
+        public static string Browser = "";
 
         static IEnumerable<string> Candidates()
         {
@@ -72,6 +74,7 @@ namespace CoAInstaller.Web
                     {
                         psi.RedirectStandardError = true; psi.RedirectStandardOutput = true;    // the browser's chatter stays out of the terminal
                     }
+                    Browser = browser;
                     var p = Process.Start(psi);
                     if (p != null && !Os.Windows) { p.ErrorDataReceived += (s, e) => { }; p.OutputDataReceived += (s, e) => { }; p.BeginErrorReadLine(); p.BeginOutputReadLine(); }
                     if (track && p != null) Current = p;

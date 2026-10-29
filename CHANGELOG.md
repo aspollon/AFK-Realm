@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.13
+
+- Windows: when the app window closed before its page ever reached AFK Realm (the browser did not start, an antivirus stopped it, a firewall blocks 127.0.0.1), AFK Realm ended after a few seconds without a word and without an error. It now opens the page in the default browser instead. Every start writes what it did to `startup.log` in the settings folder (`%APPDATA%\AFK-Realm`): administrator restart, another AFK Realm already running, which browser the window used, how it ended. The Get help ZIP includes it.
+- Linux, existing server folders: the engine stops with a plain explanation when the database's start script cannot be made executable (a drive without Linux permissions), instead of PowerShell's "Cannot run a document in the middle of a pipeline".
+- Linux: a new server folder on a drive mounted with `noexec` is refused with the command that fixes it (`sudo mount -o remount,exec <mount point>` and the same in `/etc/fstab`). The permissions there look right, but no program runs - the database's start script failed with "Cannot run a document in the middle of a pipeline".
+
 ## 1.1.12
 
 - **A failed start says why.** Since 1.1.6 the Windows version has no console window, so a start that failed just vanished after a few seconds. Now the error goes into a message box and `startup-error.txt` in the settings folder (`%APPDATA%\AFK-Realm`, also in the Get help ZIP). Answering No to the question for administrator rights says that AFK Realm needs them.

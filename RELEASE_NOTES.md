@@ -1,6 +1,11 @@
-# AFK Realm 1.1.12
+# AFK Realm 1.1.13
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11 and now also on Linux.
+
+## New in 1.1.13
+
+- **Windows: AFK Realm no longer closes silently** when its window can't be opened: the page then opens in your normal browser. `startup.log` in `%APPDATA%\AFK-Realm` shows what each start did.
+- **Linux: drives mounted with "noexec" are detected** when you choose the server folder, with the command to fix the mount.
 
 ## New in 1.1.12
 

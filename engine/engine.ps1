@@ -743,6 +743,12 @@ function Write-MySqlLauncher {
     $launcher = Join-Path $Paths.Db 'mysqld.sh'
     [IO.File]::WriteAllText($launcher, $script)
     [void](Invoke-Program 'chmod' @('755', $launcher))
+    # A drive that keeps no Linux permissions (NTFS/exFAT with an fmask/umask, a network share) or runs no programs
+    # (noexec): chmod does nothing there, and PowerShell refused the script as "a document". Said plainly instead.
+    $mode = [IO.File]::GetUnixFileMode($launcher)
+    if (($mode -band [IO.UnixFileMode]::UserExecute) -eq 0 -or ($mode -band [IO.UnixFileMode]::OtherWrite) -ne 0) {
+        throw (Tr 'The server folder {0} is on a drive without Linux file permissions (an NTFS or exFAT drive of Windows, or a network share): programs cannot be made executable there, and the database ignores a settings file everyone may change. Put the server on a Linux drive (ext4, btrfs, xfs), or mount this drive with uid=<your user id>,gid=<your group id>,umask=022 (ntfs-3g also with "permissions").' $InstallRoot)
+    }
 }
 
 # Starts a program on Linux in a session of its own, without the output of this script: it keeps running when the

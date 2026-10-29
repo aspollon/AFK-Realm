@@ -119,13 +119,23 @@ namespace CoAInstaller.Web
             string test = Path.Combine(folder, ".afk-mode-test");
             try
             {
-                File.WriteAllText(test, "#!/bin/sh\n");
+                File.WriteAllText(test, "#!/bin/sh\nexit 0\n");
                 File.SetUnixFileMode(test, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
                 var mode = File.GetUnixFileMode(test);
                 bool exec = (mode & UnixFileMode.UserExecute) != 0;
                 bool otherWrite = (mode & UnixFileMode.OtherWrite) != 0;
                 if (!exec || otherWrite)
                     return L.F("{0} is on a drive without Linux file permissions (for example an NTFS or exFAT drive of Windows, or a network share). The database and the server cannot run from there. Choose a folder on a Linux drive, for example ~/CoA-Server.", folder);
+                // a drive mounted with "noexec" keeps the permissions but runs no program
+                try
+                {
+                    using (var p = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(test) { UseShellExecute = false }))
+                        p.WaitForExit(5000);
+                }
+                catch (System.ComponentModel.Win32Exception)
+                {
+                    return L.F("Programs cannot run from {0}: its drive is mounted with \"noexec\". Mount it with \"exec\" (for example: sudo mount -o remount,exec <mount point>, and the same in /etc/fstab), or choose another folder.", folder);
+                }
                 return null;
             }
             catch { return null; }
