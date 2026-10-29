@@ -1,4 +1,13 @@
-# AFK Realm 1.1.17
+# AFK Realm 1.1.18
+
+Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11 and now also on Linux.
+
+## New in 1.1.18
+
+- **Darkfallen: the misplaced red eye on the forehead is gone.** Darkfallen's skin texture was painted from the HD Blood Elf skin, but its model is the classic Blood Elf: the HD eye landed above the classic eyes. AFK Realm now removes those red pixels from Darkfallen's skin and fills them with the surrounding skin. The face keeps its red eyes, and `DarkfallenEyeGlow`/`DarkfallenDKGlow` keep their glow.
+- **Packer version 7:** old Darkfallen packs are packed again automatically at **Game client → Install**. No re-import is needed.
+
+## New in 1.1.17
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11 and now also on Linux.
 

@@ -30,8 +30,9 @@ namespace CoAInstaller
         /// changed under the same name, female-only races (1.1.5); 4: hair shapes of the model that
         /// CharHairGeosets never named (1.1.15); 5: the original hair textures for models made for them, where an HD patch
         /// replaced them (1.1.16); 6: all textures borrowed from such a stock race - skin, face, scalp, beard, underwear
-        /// (1.1.17), and no HD scalp layers where the original has none.</summary>
-        public const int PackerVersion = 6;
+        /// (1.1.17), and no HD scalp layers where the original has none; 7: Darkfallen's own skin no longer keeps the
+        /// HD eye that landed on the classic model's forehead (1.1.18).</summary>
+        public const int PackerVersion = 7;
 
         /// <summary>A set of archives, read as the game reads them: the one it reads last wins. Files that lie around
         /// unpacked (the raw files some creators ship) are read after all archives, they only step in for what the
@@ -1110,6 +1111,7 @@ namespace CoAInstaller
             }
 
             RepairDecorationTextures(filesDir, keep);
+            RepairDarkfallenEyes(source, filesDir, sections, hdSections, keep, race);
             var dropped = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var originals = OriginalTextures(source, cr, models, sections, hdSections, dropped);
             // layers left empty: their files go when no row names them any more
@@ -1200,6 +1202,93 @@ namespace CoAInstaller
                 (racialSpells.Count > 0 ? L.F(", {0} racial spells", racialSpells.Count) : "") +
                 (helmets > 0 ? L.F(", {0} helmet models", helmets) : "") +
                 (missing.Count > 0 ? L.F(", {0} missing", missing.Count) : "") + ".";
+        }
+
+        /// <summary>
+        /// Darkfallen's body texture was painted from the HD Blood Elf skin, but its model is the classic Blood Elf
+        /// model. The red HD eye therefore lies on the classic model's forehead (the face rows have their own red eye
+        /// and the eye-glow textures still glow). The red pixels of the skin are replaced by the surrounding skin so the
+        /// misplaced dot disappears; the face, the glow textures and everything else stay as they are.
+        /// </summary>
+        static void RepairDarkfallenEyes(Archives source, string filesDir, List<object> sections, List<object> hdSections,
+            List<string> keep, Candidate race)
+        {
+            string identity = (race.Key + " " + race.Name).ToLowerInvariant();
+            if (!identity.Contains("darkfallen")) return;
+            var skins = sections.Concat(hdSections).OfType<object[]>()
+                .Where(r => Convert.ToInt32(r[3]) == 0)
+                .Select(r => r[4] as string)
+                .Where(p => !string.IsNullOrEmpty(p) && p.StartsWith("Character\\Darkfallen\\", StringComparison.OrdinalIgnoreCase))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            foreach (string path in skins)
+            {
+                try
+                {
+                    string file = Os.Resolve(filesDir, path);
+                    byte[] data = File.Exists(file) ? File.ReadAllBytes(file) : source.Read(path);
+                    byte[] fixedData = data == null ? null : RemoveRedEye(data);
+                    if (fixedData == null) continue;
+                    Directory.CreateDirectory(Path.GetDirectoryName(file));
+                    File.WriteAllBytes(file, fixedData);
+                    if (!keep.Contains(path, StringComparer.OrdinalIgnoreCase)) keep.Add(path);
+                }
+                catch { }
+            }
+        }
+
+        /// <summary>Replaces the red pixels of a paletted BLP2 skin by their nearest non-red neighbours. Null when
+        /// the file is not such a BLP or has no red pixel.</summary>
+        static byte[] RemoveRedEye(byte[] source)
+        {
+            if (source == null || source.Length < 0x494 || source[0] != 'B' || source[1] != 'L' || source[2] != 'P' || source[3] != '2' || source[8] != 1)
+                return null;
+            int width = BitConverter.ToInt32(source, 12), height = BitConverter.ToInt32(source, 16);
+            if (width <= 0 || height <= 0 || width > 2048 || height > 2048) return null;
+            var red = new bool[256];
+            bool anyRed = false;
+            for (int i = 0; i < 256; i++)
+            {
+                int at = 148 + i * 4;
+                byte b = source[at], g = source[at + 1], r = source[at + 2];
+                if (r >= 145 && r > g * 1.4 && r > b * 1.4) { red[i] = true; anyRed = true; }
+            }
+            if (!anyRed) return null;
+            byte[] data = (byte[])source.Clone();
+            bool changed = false;
+            for (int level = 0; level < 16; level++)
+            {
+                int at = BitConverter.ToInt32(data, 20 + level * 4);
+                int size = BitConverter.ToInt32(data, 84 + level * 4);
+                int w = Math.Max(1, width >> level), h = Math.Max(1, height >> level), n = w * h;
+                if (at <= 0 || size < n || at + n > data.Length) continue;
+                var pixels = new byte[n];
+                Buffer.BlockCopy(data, at, pixels, 0, n);
+                bool hasRed = false;
+                for (int i = 0; i < n; i++) if (red[pixels[i]]) { hasRed = true; break; }
+                if (!hasRed) continue;
+                var filled = new bool[n];
+                var queue = new Queue<int>();
+                for (int i = 0; i < n; i++)
+                    if (!red[pixels[i]]) { filled[i] = true; queue.Enqueue(i); }
+                while (queue.Count > 0)
+                {
+                    int current = queue.Dequeue(), x = current % w, y = current / w;
+                    for (int k = 0; k < 4; k++)
+                    {
+                        int nx = x + (k == 0 ? 1 : k == 1 ? -1 : 0), ny = y + (k == 2 ? 1 : k == 3 ? -1 : 0);
+                        if (nx < 0 || nx >= w || ny < 0 || ny >= h) continue;
+                        int next = ny * w + nx;
+                        if (filled[next]) continue;
+                        pixels[next] = pixels[current];
+                        filled[next] = true;
+                        queue.Enqueue(next);
+                    }
+                }
+                Buffer.BlockCopy(pixels, 0, data, at, n);
+                changed = true;
+            }
+            return changed ? data : null;
         }
 
         /// <summary>
