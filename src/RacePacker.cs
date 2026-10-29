@@ -32,8 +32,9 @@ namespace CoAInstaller
         /// replaced them (1.1.16); 6: all textures borrowed from such a stock race - skin, face, scalp, beard, underwear
         /// (1.1.17), and no HD scalp layers where the original has none; 7: Darkfallen's own skin no longer keeps the
         /// HD eye that landed on the classic model's forehead (1.1.18); 8: its painted red eye is removed from the face
-        /// rows too, so only the eye-glow layer is still red (1.1.19).</summary>
-        public const int PackerVersion = 8;
+        /// rows too, so only the eye-glow layer is still red (1.1.19); 9: the male Darkfallen model uses the red eye
+        /// glow its female model uses (1.1.20).</summary>
+        public const int PackerVersion = 9;
 
         /// <summary>A set of archives, read as the game reads them: the one it reads last wins. Files that lie around
         /// unpacked (the raw files some creators ship) are read after all archives, they only step in for what the
@@ -1113,6 +1114,7 @@ namespace CoAInstaller
 
             RepairDecorationTextures(filesDir, keep);
             RepairDarkfallenEyes(source, filesDir, sections, hdSections, keep, race);
+            RepairDarkfallenMaleGlow(source, filesDir, models, keep, race);
             var dropped = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var originals = OriginalTextures(source, cr, models, sections, hdSections, dropped);
             // layers left empty: their files go when no row names them any more
@@ -1236,6 +1238,66 @@ namespace CoAInstaller
                 }
                 catch { }
             }
+        }
+
+        /// <summary>
+        /// Darkfallen's male model has the same two explicit eye textures as the female, but both point at the eye
+        /// texture; the female's second one is DarkfallenDKGlow. The female therefore glows and the male does not.
+        /// The male's second eye-texture slot is pointed at the female's DKGlow, which the pack already carries.
+        /// </summary>
+        static void RepairDarkfallenMaleGlow(Archives source, string filesDir, Dictionary<string, object> models,
+            List<string> keep, Candidate race)
+        {
+            string identity = (race.Key + " " + race.Name).ToLowerInvariant();
+            if (!identity.Contains("darkfallen")) return;
+            object maleObject;
+            if (!models.TryGetValue("male", out maleObject)) return;
+            var male = maleObject as Dictionary<string, object>;
+            if (male == null) return;
+            string path = M2(Convert.ToString(male["path"]));
+            string file = Os.Resolve(filesDir, path);
+            if (!File.Exists(file)) return;
+            const string glow = "Character\\Darkfallen\\Female\\DarkfallenDKGlow.blp";
+            string glowFile = Os.Resolve(filesDir, glow);
+            if (!File.Exists(glowFile))
+            {
+                try
+                {
+                    byte[] data = source.Read(glow);
+                    if (data == null) return;
+                    Directory.CreateDirectory(Path.GetDirectoryName(glowFile));
+                    File.WriteAllBytes(glowFile, data);
+                    if (!keep.Contains(glow, StringComparer.OrdinalIgnoreCase)) keep.Add(glow);
+                }
+                catch { return; }
+            }
+            try
+            {
+                byte[] b = File.ReadAllBytes(file);
+                if (b.Length < 0x60 || Encoding.ASCII.GetString(b, 0, 4) != "MD20") return;
+                uint count = BitConverter.ToUInt32(b, 0x50), at = BitConverter.ToUInt32(b, 0x54);
+                if (count < 4 || at > b.Length || count > (b.Length - at) / 16) return;
+                int target = -1;
+                for (int i = 0; i < count; i++)
+                {
+                    uint record = at + (uint)i * 16;
+                    if (BitConverter.ToUInt32(b, (int)record) != 0) continue;
+                    uint length = BitConverter.ToUInt32(b, (int)record + 8), offset = BitConverter.ToUInt32(b, (int)record + 12);
+                    if (length == 0 || offset >= b.Length) continue;
+                    int end = (int)Math.Min((long)b.Length, (long)offset + length);
+                    string name = Encoding.UTF8.GetString(b, (int)offset, end - (int)offset).TrimEnd('\0').Trim();
+                    if (Path.GetFileName(name).IndexOf("EyeGlow", StringComparison.OrdinalIgnoreCase) >= 0) target = (int)record;
+                }
+                if (target < 0) return;
+                byte[] text = Encoding.UTF8.GetBytes(glow + "\0");
+                long where = b.Length;
+                Array.Resize(ref b, b.Length + text.Length);
+                Buffer.BlockCopy(text, 0, b, (int)where, text.Length);
+                BitConverter.GetBytes((uint)where).CopyTo(b, target + 12);
+                BitConverter.GetBytes((uint)text.Length).CopyTo(b, target + 8);
+                File.WriteAllBytes(file, b);
+            }
+            catch { }
         }
 
         /// <summary>Replaces the red pixels of a paletted BLP2 skin by their nearest non-red neighbours. Null when

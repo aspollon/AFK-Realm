@@ -1,4 +1,13 @@
-# AFK Realm 1.1.19
+# AFK Realm 1.1.20
+
+Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11 and now also on Linux.
+
+## New in 1.1.20
+
+- **Darkfallen men now have the red eye glow too.** Their model had two eye-texture slots, but both pointed at `DarkfallenEyeGlow`; the female's second slot uses `DarkfallenDKGlow`, which is the visible red glow. The male's second slot now points at the same `DarkfallenDKGlow`; no new texture is needed.
+- **Packer version 9:** the male model is updated automatically at **Game client → Install**.
+
+## New in 1.1.19
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11 and now also on Linux.
 
