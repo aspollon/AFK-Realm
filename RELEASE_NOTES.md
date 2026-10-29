@@ -1,16 +1,17 @@
-# AFK Realm 1.1.14
+# AFK Realm 1.1.15
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11 and now also on Linux.
+
+## New in 1.1.15
+
+- **Darkfallen (and other races with more hair styles than the hair table knows): no more freezing barber, no more ornaments on hair, ears and brows.** AFK Realm reads the hair shapes from the model itself, so Darkfallen gets 20 working hair styles (men 16) instead of 10; styles without any shape are no longer offered. Run **Game client › Install** (race packs are refreshed by themselves); characters made with a broken style need a new look (GM: `.character customize <name>`, then *Customize* at the character list).
+- **Windows: the AFK Realm window opens even when Edge gets stuck** on an old background process: AFK Realm retries with a fresh browser profile, then uses your default browser.
 
 ## New in 1.1.14
 
 - **Custom races: portraits in the character list and the wardrobe work again.** A fresh Descension client has the `TemporaryPortrait-<Sex>-<race>.blp` pictures for the stock races only; a custom race had none, so its character list and paper-doll portrait stayed blank. AFK Realm now adds the race's icon under that name to the race archive when the client has no picture. No re-import and no manual file copying are needed - update, then **Game client → Install** once.
 - **Darkfallen hair and forehead fixed.** Its hair rows named `Character\BloodElf\Female\Scalp...`/`\Male\Scalp...`, while the race pack carries the stock unisex `Character\BloodElf\Scalp...`. The wrong layer painted the hairline/forehead on the Darkfallen model. The importer now points those rows at the unisex file the pack already has. This also applies to an already imported race pack; **Game client → Install** rebuilds the tables.
 - Both fixes are included for race archives in the ZIP too, so other players get the portraits as well.
-
-## New in 1.1.13
-
-Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11 and now also on Linux.
 
 ## New in 1.1.13
 

@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.1.15
+
+- Custom races: CoA Custom's Darkfallen has 40 hair styles in CharSections but only 10 (men 9) in CharHairGeosets, while her model has 20 hair shapes (men 16, the Blood Elf ones). A style beyond the table froze the barber and the creation when clicked through, and a character made with one was drawn after the next login with another shape under the Blood Elf hair texture - hair, ears and brows full of ornaments. The race packer now reads the hair shapes from the model (`00.skin`) and adds the CharHairGeosets rows the table never named (shape = style + the race's step): Darkfallen keeps styles 10-19 (men 9-15). Styles and beards that still have no shape are left out of the race's sections. Races of EsteriaAppearance.dll keep their rows (the DLL draws them). Packer version 4: existing packs are packed again by themselves at the next **Game client › Install**.
+- Windows: when Edge ends at once with code 0 and no page comes (a browser process left over from an earlier AFK Realm window holds its profile, takes the window over and never shows it), AFK Realm tries once more with a new browser profile before it falls back to the default browser. `startup.log` notes when the page connected.
+
+## 1.1.14
+
+- Custom races: a fresh Descension client has `Interface\CharacterFrame\TemporaryPortrait-<Sex>-<race>.blp` for the stock races only, so a custom race's portrait in the character list and the paper doll stayed blank. The race's icon is put under that name into the race archive when the client has no picture (stamp `portraits 1`, so the next **Game client › Install** rebuilds the archives).
+- Custom races: hair rows that name `Character\BloodElf\Female\Scalp…` / `\Male\Scalp…` point at the unisex `Character\BloodElf\Scalp…` when the pack has it; the other file painted a wrong hairline and forehead on Darkfallen.
+
 ## 1.1.13
 
 - Windows: when the app window closed before its page ever reached AFK Realm (the browser did not start, an antivirus stopped it, a firewall blocks 127.0.0.1), AFK Realm ended after a few seconds without a word and without an error. It now opens the page in the default browser instead. Every start writes what it did to `startup.log` in the settings folder (`%APPDATA%\AFK-Realm`): administrator restart, another AFK Realm already running, which browser the window used, how it ended. The Get help ZIP includes it.

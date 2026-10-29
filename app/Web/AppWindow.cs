@@ -43,6 +43,11 @@ namespace CoAInstaller.Web
                 yield return flatpak;
         }
 
+        static IEnumerable<string> SafeDirs(string folder, string pattern)
+        {
+            try { return Directory.GetDirectories(folder, pattern); } catch { return new string[0]; }
+        }
+
         /// <summary>Whether a window can be shown at all (a Linux server without a desktop cannot).</summary>
         public static bool CanShow
         {
@@ -54,7 +59,11 @@ namespace CoAInstaller.Web
         }
 
         /// <summary>Opens the page. <paramref name="track"/>: this program watches the window and ends with it.</summary>
-        public static bool Open(string url, bool track)
+        public static bool Open(string url, bool track) { return Open(url, track, false); }
+
+        /// <summary>fresh: in a new profile folder - the usual one is held by a browser process that took the window
+        /// over and never showed it (Edge then ends at once with code 0, and no page comes).</summary>
+        public static bool Open(string url, bool track, bool fresh)
         {
             string browser = Candidates().FirstOrDefault(File.Exists);
             if (browser != null)
@@ -62,6 +71,11 @@ namespace CoAInstaller.Web
                 try
                 {
                     string profile = Path.Combine(Paths.DataDir, "window");
+                    if (fresh)
+                    {
+                        foreach (var old in SafeDirs(Paths.DataDir, "window-*")) try { Directory.Delete(old, true); } catch { }
+                        profile = Path.Combine(Paths.DataDir, "window-" + DateTime.Now.ToString("yyyyMMddHHmmss"));
+                    }
                     Directory.CreateDirectory(profile);
                     var psi = new ProcessStartInfo(browser) { UseShellExecute = false };
                     psi.ArgumentList.Add("--app=" + url);

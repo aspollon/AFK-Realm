@@ -27,8 +27,9 @@ namespace CoAInstaller
         /// packer takes other or more files than before: a pack made by an older one is packed again by itself at the next
         /// install of the client patch, as long as the client it came from is still there (RaceRepair.RefreshOldPacks).
         /// 1: until 1.0.9; 2: helmets, display textures, the own model folder and voice (1.0.10); 3: files another client
-        /// changed under the same name, female-only races (1.1.5).</summary>
-        public const int PackerVersion = 3;
+        /// changed under the same name, female-only races (1.1.5); 4: hair shapes of the model that
+        /// CharHairGeosets never named (1.1.15).</summary>
+        public const int PackerVersion = 4;
 
         /// <summary>A set of archives, read as the game reads them: the one it reads last wins. Files that lie around
         /// unpacked (the raw files some creators ship) are read after all archives, they only step in for what the
@@ -523,6 +524,64 @@ namespace CoAInstaller
             return files;
         }
 
+        /// <summary>
+        /// The hair shapes of a race: its CharHairGeosets rows, and more where its model has hair shapes the table never
+        /// named while its sections offer those styles. CoA Custom's Darkfallen woman has 20 hair shapes in her model
+        /// (geosets 2-21, those of the Blood Elf) and 40 hair styles in CharSections, but only styles 0-9 in
+        /// CharHairGeosets: every other style froze the creation and was drawn with a wrong shape after the next login.
+        /// Only rows that follow one rule (shape = style + a fixed step) are carried on, up to the last shape of the model.
+        /// </summary>
+        static List<object> HairGeosets(Archives source, List<object> rows, List<object> sections, Dictionary<string, object> models)
+        {
+            var result = new List<object>(rows);
+            if (rows.Count == 0) return result;
+            foreach (int sex in new[] { 0, 1 })
+            {
+                var mine = rows.OfType<object[]>().Where(r => Convert.ToInt32(r[2]) == sex).OrderBy(r => Convert.ToInt32(r[3])).ToList();
+                if (mine.Count == 0) continue;
+                int step = Convert.ToInt32(mine[0][4]) - Convert.ToInt32(mine[0][3]);
+                if (mine.Any(r => Convert.ToInt32(r[4]) - Convert.ToInt32(r[3]) != step)) continue;      // no single rule
+                object m;
+                if (!models.TryGetValue(sex == 0 ? "male" : "female", out m) || !(m is Dictionary<string, object>)) continue;
+                string path = M2(Convert.ToString(((Dictionary<string, object>)m)["path"]));
+                var shapes = HairShapes(source, path);
+                if (shapes.Count == 0) continue;
+                var styles = new HashSet<int>(sections.OfType<object[]>().Where(r => Convert.ToInt32(r[2]) == sex && Convert.ToInt32(r[3]) == 3).Select(r => Convert.ToInt32(r[8])));
+                var have = new HashSet<int>(mine.Select(r => Convert.ToInt32(r[3])));
+                uint id = rows.OfType<object[]>().Select(r => Convert.ToUInt32(r[0])).DefaultIfEmpty(0u).Max() + 1;
+                foreach (int style in styles.OrderBy(x => x))
+                {
+                    if (have.Contains(style) || !shapes.Contains(style + step)) continue;
+                    var copy = (object[])mine.Last().Clone();
+                    copy[0] = id++;
+                    copy[3] = (uint)style;
+                    copy[4] = (uint)(style + step);
+                    result.Add(copy);
+                }
+            }
+            return result;
+        }
+
+        /// <summary>The hair shapes (geosets 1-99) the first view (.skin) of a model has.</summary>
+        static HashSet<int> HairShapes(Archives source, string m2)
+        {
+            var shapes = new HashSet<int>();
+            try
+            {
+                if (!m2.EndsWith(".m2", StringComparison.OrdinalIgnoreCase)) return shapes;
+                byte[] b = source.Read(m2.Substring(0, m2.Length - 3) + "00.skin");
+                if (b == null || b.Length < 36 || Encoding.ASCII.GetString(b, 0, 4) != "SKIN") return shapes;
+                int count = BitConverter.ToInt32(b, 28), offset = BitConverter.ToInt32(b, 32);
+                for (int i = 0; i < count && offset + i * 48 + 2 <= b.Length; i++)
+                {
+                    int id = BitConverter.ToUInt16(b, offset + i * 48);
+                    if (id > 0 && id < 100) shapes.Add(id);
+                }
+            }
+            catch { }
+            return shapes;
+        }
+
         static List<object> Rows(DbcTable t, int raceField, int race, params int[] strings)
         {
             var list = new List<object>();
@@ -915,7 +974,7 @@ namespace CoAInstaller
                 { "models", models },
                 { "sections", sections },
                 { "hd_sections", hdSections },
-                { "hair_geosets", Rows(Table(source, "CharHairGeosets"), 1, race.Id) },
+                { "hair_geosets", HairGeosets(source, Rows(Table(source, "CharHairGeosets"), 1, race.Id), sections, models) },
                 { "hd_hair_geosets", Rows(Table(source, "HDCharHairGeosets"), 1, race.Id) },
                 { "facial_hair", Rows(Table(source, "CharacterFacialHairStyles"), 0, race.Id) },
                 { "hd_facial_hair", Rows(Table(source, "HDCharacterFacialHairStyles"), 1, race.Id) },

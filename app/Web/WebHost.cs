@@ -147,7 +147,7 @@ namespace CoAInstaller.Web
         static void Watch(bool remote, string localUrl = null)
         {
             bool tracked = AppWindow.Current != null;
-            bool everSeen = false, fallback = false;
+            bool everSeen = false, fallback = false, retried = false;
             DateTime started = DateTime.UtcNow;
             while (!Stopping.IsCancellationRequested)
             {
@@ -155,7 +155,7 @@ namespace CoAInstaller.Web
                 if (Stopping.IsCancellationRequested) break;
                 if (remote || Program.Opts.NoWindow || RemoteAccess.Running) continue;     // others may still come
                 if (Jobs.Busy || Manager.AutoRestarting) continue;
-                if (Events.Count > 0) everSeen = true;
+                if (Events.Count > 0 && !everSeen) { everSeen = true; Program.StartLog("the page connected"); }
                 if (tracked)
                 {
                     var w = AppWindow.Current;
@@ -163,6 +163,20 @@ namespace CoAInstaller.Web
                     // The app window closed before its page ever reached this program (the browser failed to start, an
                     // antivirus stopped it, a firewall keeps it from 127.0.0.1): AFK Realm used to end here without a word.
                     // The page goes to the default browser once, and a note says where it is.
+                    if (closed && !everSeen && !retried && localUrl != null && (DateTime.UtcNow - started).TotalSeconds > 6)
+                    {
+                        // first once more in a new profile folder: a browser process left over from an earlier window can
+                        // hold the usual one, take the window over and never show it
+                        retried = true;
+                        Program.StartLog("the app window closed before its page connected (exit code " + SafeExit(w) + "); trying once more with a new browser profile");
+                        AppWindow.Current = null;
+                        AppWindow.Open(localUrl, true, true);
+                        started = DateTime.UtcNow;
+                        Events.LastSeen = DateTime.UtcNow;
+                        if (AppWindow.Current != null) continue;
+                    }
+                    w = AppWindow.Current;
+                    closed = w == null || w.HasExited;
                     if (closed && !everSeen && !fallback && localUrl != null && (DateTime.UtcNow - started).TotalSeconds > 6)
                     {
                         fallback = true;

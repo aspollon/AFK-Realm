@@ -1009,6 +1009,48 @@ namespace CoAInstaller
         }
 
         /// <summary>The rules of the character creation for the sections of one added race (see the class summary).</summary>
+        /// <summary>
+        /// Hair styles and beards the character creation offers but the model has no shape for: a race pack can have more
+        /// hair rows than hair shapes (CoA Custom's Darkfallen: 40 hair styles in CharSections, 10 in CharHairGeosets).
+        /// Such a style froze the barber and the creation when it was reached, and a character made with it was drawn with
+        /// a shape of another style under its texture after the next login - the hair, ears and brows covered with the
+        /// ornaments of the Blood Elf hair textures. The rows of styles without a shape go; the creation then offers the
+        /// shapes there are. Races of EsteriaAppearance.dll (textures under \native\) keep theirs: the DLL draws them.
+        /// </summary>
+        static void DropShapelessStyles(Func<string, byte[]> load, DbcTable cs, int race, Action<string> note)
+        {
+            var rows = cs.Records.Where(r => cs.Field(r, 1) == race).ToList();
+            if (rows.Count == 0) return;
+            bool native = rows.Any(r => new[] { 4, 5, 6 }.Any(k => cs.Field(r, k) != 0 && Str(cs, r, k).IndexOf("\\native\\", StringComparison.OrdinalIgnoreCase) >= 0));
+            if (native) return;
+            int dropped = 0;
+            // hair (section 3) by CharHairGeosets: race 1, sex 2, style 3
+            var hgBytes = load("DBFilesClient\\CharHairGeosets.dbc");
+            if (hgBytes != null)
+            {
+                var hg = DbcTable.Parse(hgBytes, "CharHairGeosets.dbc");
+                foreach (uint sex in new uint[] { 0, 1 })
+                {
+                    var shapes = new HashSet<uint>(hg.Records.Where(r => hg.Field(r, 1) == race && hg.Field(r, 2) == sex).Select(r => hg.Field(r, 3)));
+                    if (shapes.Count == 0) continue;
+                    dropped += cs.Records.RemoveAll(r => cs.Field(r, 1) == race && cs.Field(r, 2) == sex && cs.Field(r, 3) == 3 && !shapes.Contains(cs.Field(r, 8)));
+                }
+            }
+            // beards (section 2) by CharacterFacialHairStyles: race 0, sex 1, style 2
+            var fhBytes = load("DBFilesClient\\CharacterFacialHairStyles.dbc");
+            if (fhBytes != null)
+            {
+                var fh = DbcTable.Parse(fhBytes, "CharacterFacialHairStyles.dbc");
+                foreach (uint sex in new uint[] { 0, 1 })
+                {
+                    var shapes = new HashSet<uint>(fh.Records.Where(r => fh.Field(r, 0) == race && fh.Field(r, 1) == sex).Select(r => fh.Field(r, 2)));
+                    if (shapes.Count == 0) continue;
+                    dropped += cs.Records.RemoveAll(r => cs.Field(r, 1) == race && cs.Field(r, 2) == sex && cs.Field(r, 3) == 2 && !shapes.Contains(cs.Field(r, 8)));
+                }
+            }
+            if (dropped > 0 && note != null) note(L.F("CharSections.dbc: {0} rows of race {1} for hair styles or beards its model has no shape for were left out.", dropped, race));
+        }
+
         public static void SectionRules(Func<string, byte[]> load, Action<string, byte[]> save, int race, bool maleOnly, Action<string> note = null, bool femaleOnly = false)
         {
             var cs = DbcTable.Parse(load("DBFilesClient\\CharSections.dbc"), "CharSections.dbc");
@@ -1021,6 +1063,7 @@ namespace CoAInstaller
             // that has no ordinary twin is kept and made playable.
             DropSpecialTwins(cs, race);
             if (hd != null) DropSpecialTwins(hd, race);
+            DropShapelessStyles(load, cs, race, note);
             var mine = cs.Records.Where(r => cs.Field(r, 1) == race).ToList();
             if (mine.Count == 0) return;
             uint next = Math.Max(MaxId(cs), hd == null ? 0 : MaxId(hd)) + 1;
