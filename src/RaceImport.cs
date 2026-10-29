@@ -696,9 +696,9 @@ namespace CoAInstaller
 
         /// <summary>
         /// The rows of a race stop pointing at textures that are nowhere in the client (the race check found them missing
-        /// and packing the race again did not bring them): an extra layer (the torso or legs of a skin, the upper face) is
-        /// left empty, as stock races have it; a missing main texture takes the one of the nearest colour of the same
-        /// section and style. Better a repeated colour than a white body or a race switched off.
+        /// and packing the race again did not bring them): each missing layer takes the same layer of the nearest colour of
+        /// the same section and style (a face keeps its upper half); an extra layer no other row has is left empty, as
+        /// stock races have it. Better a repeated colour than a white body, half a face or a race switched off.
         /// </summary>
         public static void DropMissingTextures(Func<string, byte[]> load, Action<string, byte[]> save, int race, HashSet<string> missing)
         {
@@ -707,19 +707,24 @@ namespace CoAInstaller
             var cs = DbcTable.Parse(bytes, "CharSections.dbc");
             var mine = cs.Records.Where(r => cs.Field(r, 1) == (uint)race).ToList();
             Func<byte[], int, string> tex = (r, k) => cs.Field(r, k) == 0 ? "" : Str(cs, r, k);
-            Func<byte[], bool> mainOk = r => tex(r, 4).Length > 0 && !missing.Contains(tex(r, 4));
+            Func<byte[], int, bool> ok = (r, k) => tex(r, k).Length > 0 && !missing.Contains(tex(r, k));
             int changed = 0;
             foreach (var r in mine)
-            {
-                foreach (int k in new[] { 5, 6 })
-                    if (tex(r, k).Length > 0 && missing.Contains(tex(r, k))) { cs.SetField(r, k, 0); changed++; }
-                if (tex(r, 4).Length == 0 || !missing.Contains(tex(r, 4))) continue;
-                var near = mine.Where(o => o != r && cs.Field(o, 2) == cs.Field(r, 2) && cs.Field(o, 3) == cs.Field(r, 3) && mainOk(o))
-                    .OrderBy(o => cs.Field(o, 8) == cs.Field(r, 8) ? 0 : 1)
-                    .ThenBy(o => Math.Abs((long)cs.Field(o, 9) - cs.Field(r, 9)))
-                    .FirstOrDefault();
-                if (near != null) { cs.SetField(r, 4, cs.Field(near, 4)); changed++; }
-            }
+                foreach (int k in new[] { 4, 5, 6 })
+                {
+                    if (tex(r, k).Length == 0 || !missing.Contains(tex(r, k))) continue;
+                    // the same layer of the nearest colour of the same look (the upper face of the face next to it), so a
+                    // face keeps both halves; only a layer no other colour has either is left empty
+                    var near = mine.Where(o => o != r && cs.Field(o, 2) == cs.Field(r, 2) && cs.Field(o, 3) == cs.Field(r, 3) && ok(o, k))
+                        .OrderBy(o => cs.Field(o, 8) == cs.Field(r, 8) ? 0 : 1)
+                        .ThenBy(o => Math.Abs((long)cs.Field(o, 9) - cs.Field(r, 9)))
+                        .ThenBy(o => Math.Abs((long)cs.Field(o, 8) - cs.Field(r, 8)))
+                        .FirstOrDefault();
+                    if (near != null) cs.SetField(r, k, cs.Field(near, k));
+                    else if (k != 4) cs.SetField(r, k, 0);
+                    else continue;
+                    changed++;
+                }
             if (changed > 0) save("DBFilesClient\\CharSections.dbc", cs.ToBytes());
         }
 

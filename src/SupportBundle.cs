@@ -171,6 +171,14 @@ namespace CoAInstaller
                     text("client/files.txt", list.ToString());
                 }
 
+                // ---- a failed start of AFK Realm itself (startup-error.txt in its settings folder)
+                try
+                {
+                    string own = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), Product.FileStem, "startup-error.txt");
+                    if (File.Exists(own)) tail(own, "afk-realm/startup-error.txt", LogTail);
+                }
+                catch { }
+
                 // ---- crash dumps Windows kept for the server programs and the game
                 try
                 {

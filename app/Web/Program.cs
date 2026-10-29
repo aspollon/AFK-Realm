@@ -51,7 +51,39 @@ namespace CoAInstaller.Web
             try { if (!AttachConsole(-1) && cli) AllocConsole(); } catch { }
         }
 
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern int MessageBoxW(IntPtr owner, string text, string caption, uint type);
+
+        /// <summary>The file a failed start is written to (the settings folder: %APPDATA%\AFK-Realm).</summary>
+        static string StartErrorFile { get { return Path.Combine(Paths.SettingsDir, "startup-error.txt"); } }
+
+        /// <summary>
+        /// A start that fails says so: without a console window (Windows) the program used to vanish after a few seconds
+        /// without a word. The error goes to startup-error.txt and, on Windows, into a message box.
+        /// </summary>
+        static void Fatal(Exception ex)
+        {
+            string text = Product.Name + " " + Product.Version + " - " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + Environment.NewLine +
+                Environment.OSVersion + ", " + System.Runtime.InteropServices.RuntimeInformation.OSArchitecture + Environment.NewLine +
+                "Program: " + Environment.ProcessPath + Environment.NewLine + Environment.NewLine + ex;
+            try { Directory.CreateDirectory(Paths.SettingsDir); File.WriteAllText(StartErrorFile, text); } catch { }
+            try { Console.Error.WriteLine(text); } catch { }
+            if (Os.Windows && !Opts.NoWindow)
+                try
+                {
+                    MessageBoxW(IntPtr.Zero, Product.Name + " could not start:" + Environment.NewLine + Environment.NewLine + ex.Message + Environment.NewLine + Environment.NewLine +
+                        "The details are in " + StartErrorFile + " - please send this file on Discord.", Product.Name, 0x10);
+                }
+                catch { }
+        }
+
         static int Main(string[] args)
+        {
+            AppDomain.CurrentDomain.UnhandledException += (s, e) => { if (e.ExceptionObject is Exception ex) Fatal(ex); };
+            try { return Start(args); }
+            catch (Exception ex) { Fatal(ex); return 1; }
+        }
+
+        static int Start(string[] args)
         {
             ConsoleIfNeeded(args);
             // The release file this build updates itself from.
@@ -88,7 +120,12 @@ namespace CoAInstaller.Web
                 {
                     Process.Start(new ProcessStartInfo(Environment.ProcessPath, string.Join(" ", args.Select(MySql.Arg))) { UseShellExecute = true, Verb = "runas" });
                 }
-                catch { }
+                catch (System.ComponentModel.Win32Exception ex) when (ex.NativeErrorCode == 1223)
+                {
+                    // the question for administrator rights was answered with No
+                    if (!Opts.NoWindow)
+                        try { MessageBoxW(IntPtr.Zero, Product.Name + " needs administrator rights (to install the build tools, the database and the firewall rules). Start it again and answer Yes.", Product.Name, 0x30); } catch { }
+                }
                 return 0;
             }
 

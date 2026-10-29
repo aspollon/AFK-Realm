@@ -1,6 +1,13 @@
-# AFK Realm 1.1.11
+# AFK Realm 1.1.12
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11 and now also on Linux.
+
+## New in 1.1.12
+
+- **AFK Realm tells you when it can't start** (message box and `startup-error.txt`), instead of closing silently.
+- **Custom races: no more half faces** when a race's own files lack a texture (High Elf with CoA Custom looks).
+- **Fewer crashes in the character creation** with many custom races (needs the updated mod-custom-races: **Update**, then **Game client › Install**).
+- **Safer folder choice:** no apostrophes or other signs in the server path, and on Linux no folders on Windows (NTFS/exFAT) drives or network shares.
 
 ## New in 1.1.11
 

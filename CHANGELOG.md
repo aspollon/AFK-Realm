@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.12
+
+- **A failed start says why.** Since 1.1.6 the Windows version has no console window, so a start that failed just vanished after a few seconds. Now the error goes into a message box and `startup-error.txt` in the settings folder (`%APPDATA%\AFK-Realm`, also in the Get help ZIP). Answering No to the question for administrator rights says that AFK Realm needs them.
+- Custom races: a missing texture of a race (its own client lacks it too - CoA Custom's High Elf has 138 such paths, a skin colour 62 among them) takes the same layer of the nearest colour of the same look. Before, an upper face or the torso was left empty, and the High Elf showed half faces with CoA Custom's looks.
+- New server folder: an apostrophe or other signs in the path are refused (the Visual Studio installer rejects `C:\Vol'jin` with error 8004). On Linux a folder on a drive without Linux file permissions (an NTFS/exFAT drive of Windows, a network share) is refused: the database ignored its world-writable settings file there and its start script could not run ("Cannot run a document in the middle of a pipeline").
+- mod-custom-races (update the module): the character creation crashed now and then when a race or sex was chosen with many races on - the game's race list ran past the room of the script engine; the race portrait of the navigation is made anew after the game paints it.
+
 ## 1.1.11
 
 - **Custom races: reputations and friendly NPCs.** A character of an added race saw every NPC as neutral and an empty reputation page, and a race change to it seemed to wipe the reputations. The server gave the race its base race's reputations (mod-custom-races lends the race masks of the faction table at its start), but the game client works out starting standings and which factions it shows from its own `Faction.dbc`, which knew nothing of the race. The client patch now lends the same masks in the client's `Faction.dbc`: every race mask that admits the base race admits the race too. For a race above 32 the bit the client reads (its number's lowest five bits) is lent, unless a race of the realm with another base race has that number.

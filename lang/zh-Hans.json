@@ -2018,6 +2018,8 @@
     "Go on with the races I have": "继续使用我已有的种族",
     "Take races from CoA Custom": "从 CoA Custom 获取种族",
     "Take races from CoA Custom, or from another client or repack with races?": "从 CoA Custom 获取种族，还是从另一个带种族的客户端或整合包获取？",
-    "Faction.dbc: the reputations of their base races for the added races ({0} masks).": "Faction.dbc：为新增种族沿用其基础种族的声望（{0} 个掩码）。"
+    "Faction.dbc: the reputations of their base races for the added races ({0} masks).": "Faction.dbc：为新增种族沿用其基础种族的声望（{0} 个掩码）。",
+    "Please use only letters, digits, - and _ in the folder names (no apostrophe or other signs): the build tools cannot handle them.": "文件夹名称中请只使用字母、数字、- 和 _（不要撇号或其他符号）：构建工具无法处理它们。",
+    "{0} is on a drive without Linux file permissions (for example an NTFS or exFAT drive of Windows, or a network share). The database and the server cannot run from there. Choose a folder on a Linux drive, for example ~/CoA-Server.": "{0} 位于不支持 Linux 文件权限的驱动器上（例如 Windows 的 NTFS 或 exFAT 驱动器，或网络共享）。数据库和服务器无法从那里运行。请选择 Linux 驱动器上的文件夹，例如 ~/CoA-Server。"
   }
 }

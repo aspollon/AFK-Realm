@@ -2018,6 +2018,8 @@
     "Go on with the races I have": "Продолжить с моими расами",
     "Take races from CoA Custom": "Взять расы из CoA Custom",
     "Take races from CoA Custom, or from another client or repack with races?": "Взять расы из CoA Custom или из другого клиента или репака с расами?",
-    "Faction.dbc: the reputations of their base races for the added races ({0} masks).": "Faction.dbc: репутации базовых рас для добавленных рас ({0} масок)."
+    "Faction.dbc: the reputations of their base races for the added races ({0} masks).": "Faction.dbc: репутации базовых рас для добавленных рас ({0} масок).",
+    "Please use only letters, digits, - and _ in the folder names (no apostrophe or other signs): the build tools cannot handle them.": "Используй в именах папок только буквы, цифры, - и _ (без апострофа и других знаков): инструменты сборки с ними не справляются.",
+    "{0} is on a drive without Linux file permissions (for example an NTFS or exFAT drive of Windows, or a network share). The database and the server cannot run from there. Choose a folder on a Linux drive, for example ~/CoA-Server.": "{0} находится на диске без прав доступа Linux (например, диск NTFS или exFAT от Windows или сетевая папка). База данных и сервер не могут работать оттуда. Выбери папку на диске Linux, например ~/CoA-Server."
   }
 }

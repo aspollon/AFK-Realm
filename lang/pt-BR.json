@@ -2018,6 +2018,8 @@
     "Go on with the races I have": "Continuar com as minhas raças",
     "Take races from CoA Custom": "Pegar raças do CoA Custom",
     "Take races from CoA Custom, or from another client or repack with races?": "Pegar raças do CoA Custom ou de outro cliente ou repack com raças?",
-    "Faction.dbc: the reputations of their base races for the added races ({0} masks).": "Faction.dbc: as reputações das raças base para as raças adicionadas ({0} máscaras)."
+    "Faction.dbc: the reputations of their base races for the added races ({0} masks).": "Faction.dbc: as reputações das raças base para as raças adicionadas ({0} máscaras).",
+    "Please use only letters, digits, - and _ in the folder names (no apostrophe or other signs): the build tools cannot handle them.": "Use apenas letras, números, - e _ nos nomes das pastas (sem apóstrofo ou outros sinais): as ferramentas de compilação não lidam com eles.",
+    "{0} is on a drive without Linux file permissions (for example an NTFS or exFAT drive of Windows, or a network share). The database and the server cannot run from there. Choose a folder on a Linux drive, for example ~/CoA-Server.": "{0} está em uma unidade sem permissões de arquivo do Linux (por exemplo uma unidade NTFS ou exFAT do Windows, ou um compartilhamento de rede). O banco de dados e o servidor não funcionam a partir dali. Escolha uma pasta em uma unidade Linux, por exemplo ~/CoA-Server."
   }
 }

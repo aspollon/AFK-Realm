@@ -113,6 +113,25 @@ namespace CoAInstaller.Web
             return Path.Combine(drive, "CoA-Server");
         }
 
+        /// <summary>Linux: why a folder cannot hold a server because its drive ignores file permissions, or null.</summary>
+        static string PermissionProblem(string folder)
+        {
+            string test = Path.Combine(folder, ".afk-mode-test");
+            try
+            {
+                File.WriteAllText(test, "#!/bin/sh\n");
+                File.SetUnixFileMode(test, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+                var mode = File.GetUnixFileMode(test);
+                bool exec = (mode & UnixFileMode.UserExecute) != 0;
+                bool otherWrite = (mode & UnixFileMode.OtherWrite) != 0;
+                if (!exec || otherWrite)
+                    return L.F("{0} is on a drive without Linux file permissions (for example an NTFS or exFAT drive of Windows, or a network share). The database and the server cannot run from there. Choose a folder on a Linux drive, for example ~/CoA-Server.", folder);
+                return null;
+            }
+            catch { return null; }
+            finally { try { File.Delete(test); } catch { } }
+        }
+
         /// <summary>An error that keeps the folder from being used, or null; notes (free space, warnings) go to the list.</summary>
         static string CheckFolder(string p, List<string> notes, out bool installed)
         {
@@ -124,6 +143,10 @@ namespace CoAInstaller.Web
                     return Os.Windows ? L.T("Please enter a full path, e.g. C:\\CoA-Server.") : L.T("Please enter a full path, e.g. /home/you/CoA-Server.");
                 string full = Path.GetFullPath(p);
                 if (full.Any(ch => ch > 127)) return L.T("The path contains non-English or special characters, which some build tools cannot handle.");
+                // quotes, apostrophes and the like: the installer of the Visual Studio build tools refuses such a folder
+                // (error 8004 for C:\Vol'jin), and scripts and the database stumble over them too
+                if (full.IndexOfAny(new[] { '\'', '"', '`', '&', '%', '!', '^', '$', ';', '(', ')', '[', ']', '{', '}', '#', '@', '=', '+', ',' }) >= 0)
+                    return L.T("Please use only letters, digits, - and _ in the folder names (no apostrophe or other signs): the build tools cannot handle them.");
                 if (Os.Windows && full.Length > 120) return L.T("The path is too long (120 characters at most).");
                 if (full.IndexOf("OneDrive", StringComparison.OrdinalIgnoreCase) >= 0) return L.T("Please do not use a OneDrive folder: syncing interferes with the database and the build.");
                 if (Os.Windows)
@@ -158,6 +181,11 @@ namespace CoAInstaller.Web
                     string probe = existing;
                     try { string test = Path.Combine(probe, ".afk-write-test"); File.WriteAllText(test, ""); File.Delete(test); }
                     catch { return L.F("You cannot write to {0}. Choose a folder of your own.", probe); }
+                    // A drive without Linux file permissions (NTFS or exFAT of Windows, a network share): every file is
+                    // world-writable and nothing can be made executable - the database ignores its settings file there
+                    // ("World-writable config file ... is ignored") and its start script cannot run.
+                    string why = PermissionProblem(probe);
+                    if (why != null) return why;
                 }
                 return null;
             }
