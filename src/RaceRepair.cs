@@ -221,7 +221,7 @@ namespace CoAInstaller
             string stamp = null;
             foreach (var pack in imports.Select(w => w.Pack).Where(p => p != null).GroupBy(p => p.Dir, StringComparer.OrdinalIgnoreCase).Select(g => g.First()))
             {
-                bool oldPacker = pack.Packer < RacePacker.PackerVersion;
+                bool oldPacker = pack.Packer != RacePacker.PackerVersion;
                 // only a pack of that same client is compared with it (a race of Ashen Order is not packed from CoA Custom)
                 bool sameClient = source != null && (pack.ClientLabel.Length == 0 || pack.ClientLabel.Equals(label, StringComparison.OrdinalIgnoreCase));
                 if (sameClient && stamp == null) stamp = RacePacker.SourceStamp(source);

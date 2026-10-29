@@ -1,4 +1,13 @@
-# AFK Realm 1.1.24
+# AFK Realm 1.1.25
+
+Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11 and now also on Linux.
+
+## New in 1.1.25
+
+- **Force the 1.1.17 race packs back.** 1.1.24 had the 1.1.17 code, but a pack already stamped by 1.1.23/1.1.24 was not rebuilt (the check only looked for *older* packer versions). This could leave the HD model in the installed race archive. Packer version 14 now rebuilds **every** pack whose packer is not 14 at **Game client → Install**.
+- Code and race rows are the 1.1.17 ones.
+
+## New in 1.1.24
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11 and now also on Linux.
 

@@ -31,7 +31,7 @@ namespace CoAInstaller
         /// CharHairGeosets never named (1.1.15); 5: the original hair textures for models made for them, where an HD patch
         /// replaced them (1.1.16); 6: all textures borrowed from such a stock race - skin, face, scalp, beard, underwear
         /// (1.1.17), and no HD scalp layers where the original has none.</summary>
-        public const int PackerVersion = 13;    // 13: the 1.1.17 code again, and old 1.1.18-1.1.23 packs are rebuilt from it
+        public const int PackerVersion = 14;    // 14: the 1.1.17 code again; every pack made by 1.1.18-1.1.24 is rebuilt
 
         /// <summary>A set of archives, read as the game reads them: the one it reads last wins. Files that lie around
         /// unpacked (the raw files some creators ship) are read after all archives, they only step in for what the
