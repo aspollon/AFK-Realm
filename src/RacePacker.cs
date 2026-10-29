@@ -33,9 +33,10 @@ namespace CoAInstaller
         /// (1.1.17), and no HD scalp layers where the original has none; 7: Darkfallen's own skin no longer keeps the
         /// HD eye that landed on the classic model's forehead (1.1.18); 8: its painted red eye is removed from the face
         /// rows too, so only the eye-glow layer is still red (1.1.19); 9: the male Darkfallen model uses the red eye
-        /// glow its female model uses (1.1.20); 10: Darkfallen is packed on the player's HD Blood Elf model and HD
-        /// sections instead of its own classic model (1.1.21).</summary>
-        public const int PackerVersion = 10;
+        /// glow its female model uses (1.1.20); 10: Darkfallen is packed on the player's HD Blood Elf model instead of
+        /// its own classic model (1.1.21); 11: it keeps its own skins, faces, hair and other sections on that HD model
+        /// (1.1.22).</summary>
+        public const int PackerVersion = 11;
 
         /// <summary>A set of archives, read as the game reads them: the one it reads last wins. Files that lie around
         /// unpacked (the raw files some creators ship) are read after all archives, they only step in for what the
@@ -1042,9 +1043,10 @@ namespace CoAInstaller
                 }
             }
 
-            int sectionRace = hdDarkfallen ? 10 : race.Id;
-            var sections = Rows(Table(source, "CharSections"), 1, sectionRace, 4, 5, 6);
-            var hdSections = Rows(Table(source, "HDCharSections"), 1, sectionRace, 4, 5, 6);
+            // the HD model is only a better body and face mesh: the race keeps its own Darkfallen skin, face, hair
+            // and underwear rows. (The stock Blood Elf section rows do not carry Darkfallen's grey skin and red eyes.)
+            var sections = Rows(Table(source, "CharSections"), 1, race.Id, 4, 5, 6);
+            var hdSections = Rows(Table(source, "HDCharSections"), 1, race.Id, 4, 5, 6);
             RepairSections(source, cr, di, md, race.Id, models, sections, hdSections);
             foreach (object[] r in sections.Concat(hdSections))
                 for (int k = 4; k <= 6; k++) { var t = r[k] as string; if (!string.IsNullOrEmpty(t)) files.Add(t); }
