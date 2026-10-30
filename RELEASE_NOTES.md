@@ -1,3 +1,18 @@
+# AFK Realm 1.2.0
+
+Build, run and tweak your own Conquest of Azeroth server on Windows 10/11 and Linux.
+
+## New in 1.2.0
+
+- **CoA Custom setup in AFK Realm.** Modules > CoA Custom copies the finished CoA Custom package, builds the AFK client patch and can export the complete client as one ZIP. No separate patcher EXE; the Windows and Linux web version and the Windows app window use the same page.
+- **Private CoA Custom download.** The download uses the private `ilusixn/CustomRacesCoa` releases, including prereleases. The first click asks for a separate CoA GitHub key; the normal module-catalog token stays separate. New MPQs and files of a newer package are copied as well.
+- **Server DBCs and racials included.** The CoA server DBCs (`Spell`, `SkillLineAbility`, `SkillRaceClassInfo` and the others) and SQL are copied, but `worldserver.exe` is never replaced. The AFK core and `mod-classic-classes` stay in charge.
+- **Base races for CoA races.** The base-race page lists only CoA custom races. Duplicate races such as Pandaren and Forest Troll show their faction, and their base race matches it.
+- **Classic classes and the CoA UI.** The CoA class-switch button stays hidden, the classic classes are added for races 1-127, and the race portrait circles light for every race/class.
+- **Linux performance hint.** The server page recommends `libjemalloc2` and Redis with the Ubuntu/Debian and RHEL commands.
+- **Linux support** for the CoA setup and the complete client ZIP.
+- **Translations** for the CoA setup, ZIP read-me and messages in German, Spanish, French, Portuguese, Russian and Simplified Chinese.
+
 # AFK Realm 1.1.27
 
 Build, run and tweak your own Conquest of Azeroth server (AzerothCore fork with Playerbots) on Windows 10/11 and now also on Linux.

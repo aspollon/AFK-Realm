@@ -396,12 +396,14 @@ namespace CoAInstaller
             var classicBtn = classicCard.Add(Ui.Primary(L.T("Set up the classic classes …")));
             classicBtn.Click += (s, e) => OpenSetup(new ClassicSetup(inst));
 
-            racesCard = Section("modules", L.T("Custom races"), L.T("Which races of the game client - Goblin, Worgen, Pandaren, Vrykul and more - can be played, and the stock race each leans on: where it starts, its quests, racial abilities and faction."), "accounts");
+            racesCard = Section("modules", L.T("CoA Custom"), L.T("Install or update the CoA Custom client and server package. The CoA UI owns race visibility and class selection; only the base race of each CoA custom race is chosen here, for its start zone, faction and reputations."), "accounts");
             racesCard.Stripe = Ui.Accent;
             coaNews.Visible = false;
             coaNews.LinkClicked += (s, e) => OpenRaces();
-            racesButton = racesCard.Add(Ui.Primary(L.T("Set up the races …")));
+            racesButton = racesCard.Add(Ui.Primary(L.T("Install / update CoA Custom …")));
             racesButton.Click += (s, e) => OpenRaces();
+            var baseRacesButton = racesCard.Add(Ui.Secondary(L.T("Base races ...")));
+            baseRacesButton.Click += (s, e) => OpenBaseRaces();
 
             flyingCard = Section("modules", L.T("Azeroth flying"), L.T("Optional flying mounts in Eastern Kingdoms and Kalimdor: off by default, with a configurable no-fly list for the old capitals. Old Azeroth was not built for flying; use it at your own risk."), "journey");
             flyingCard.Stripe = Ui.Accent;
@@ -582,16 +584,21 @@ namespace CoAInstaller
 
         void OpenRaces()
         {
-            Busy.Run(this, L.T("Reading the races of your game client and your race folder …"), report => RacesSetup.Preload(inst));
-            var before = PlayableCustomRaces();
-            OpenSetup(new RacesSetup(inst));
-            OfferBotsForRaces(before);
+            using (var setup = new CoaSetupForm(inst))
+                setup.ShowDialog(this);
+            ShowClientState();
+            CheckDownloadUpdates();
+        }
+
+        void OpenBaseRaces()
+        {
+            OpenSetup(new BaseRacesSetup(inst));
             CheckDownloadUpdates();
         }
 
         void OpenSetup(Form setup)
         {
-            bool races = setup is RacesSetup;
+            bool races = setup is RacesSetup || setup is BaseRacesSetup;
             using (setup)
                 if (setup.ShowDialog(this) == DialogResult.OK)
                     ShowClientState(pending => AfterSetup(pending, races));
@@ -633,7 +640,7 @@ namespace CoAInstaller
                     coaVersion = release.Version;
                     installedCoa = CoaCustom.Installed(RaceFolderForUpdate());
                     // Only an existing CoA Custom installation gets an update notice. Without one this is not a
-                    // "download it now" prompt; the Races page still offers the download when the user opens it.
+                    // "download it now" prompt; the CoA Custom page still offers the download when the user opens it.
                     if (installedCoa != null && installedCoa != coaVersion)
                         coaNewsText = L.F("CoA Custom update available: {0} (installed {1}) — click to update", coaVersion, installedCoa);
                 }
@@ -651,8 +658,8 @@ namespace CoAInstaller
                         ? L.F("Update game client to {0} …", clientVersion)
                         : L.T("Game client …");
                     racesButton.Text = installedCoa != null && installedCoa != coaVersion
-                        ? L.F("Update custom races to {0} …", coaVersion)
-                        : L.T("Set up the races …");
+                        ? L.F("Update CoA Custom to {0} …", coaVersion)
+                        : L.T("Install / update CoA Custom …");
                 };
                 try { BeginInvoke(show); }
                 catch { try { show(); } catch { } }

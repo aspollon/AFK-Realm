@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -23,7 +23,7 @@ namespace CoAInstaller
         public const string Name = "AFK Realm";                   // window titles, dialogs
         public const string ShortName = "AFK Realm";              // desktop shortcut, firewall rules
         public const string FileStem = "AFK-Realm";                // exe name, settings folder
-        public const string Version = "1.1.27";                    // a release; "-preview" marks a pre-release
+        public const string Version = "1.2.0";                    // a release; "-preview" marks a pre-release
         public const string Tagline = "build, run and tweak your own server the lazy way";
         public const string BuildsFor = "Conquest of AzerothCore";
         public const string WindowTitle = Name;
@@ -960,6 +960,38 @@ namespace CoAInstaller
                     Directory.CreateDirectory(Path.GetDirectoryName(TokenFile));
                     if (string.IsNullOrEmpty(value)) { File.Delete(TokenFile); return; }
                     File.WriteAllBytes(TokenFile, ProtectedData.Protect(Encoding.UTF8.GetBytes(value), null, DataProtectionScope.CurrentUser));
+                }
+                catch { }
+            }
+        }
+
+        static string CoaTokenFile { get { return Path.Combine(Path.GetDirectoryName(File_), "coa-github-token.txt"); } }
+
+        /// <summary>A separate GitHub key for the private CoA Custom release, kept apart from the user's
+        /// module-catalog token.</summary>
+        public static string CoaGitHubToken
+        {
+            get
+            {
+                try
+                {
+                    if (!File.Exists(CoaTokenFile)) return null;
+                    var bytes = File.ReadAllBytes(CoaTokenFile);
+                    string t;
+                    try { t = Encoding.UTF8.GetString(ProtectedData.Unprotect(bytes, null, DataProtectionScope.CurrentUser)); }
+                    catch { t = Encoding.UTF8.GetString(bytes); }
+                    t = t.Trim();
+                    return t.Length > 0 ? t : null;
+                }
+                catch { return null; }
+            }
+            set
+            {
+                try
+                {
+                    Directory.CreateDirectory(Path.GetDirectoryName(CoaTokenFile));
+                    if (string.IsNullOrEmpty(value)) { File.Delete(CoaTokenFile); return; }
+                    File.WriteAllBytes(CoaTokenFile, ProtectedData.Protect(Encoding.UTF8.GetBytes(value), null, DataProtectionScope.CurrentUser));
                 }
                 catch { }
             }

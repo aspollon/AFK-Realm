@@ -17,8 +17,7 @@ namespace CoAInstaller
     /// </summary>
     static class CoaCustom
     {
-        public const string Repo = "ilusixn/azerothcore-wotlk-coa";
-        const string FallbackTag = "coa-custom-1.9.2";
+        public const string Repo = "ilusixn/CustomRacesCoa";
         const string VersionFile = ".afk-coa-custom-version";
         static readonly object cacheLock = new object();
         static Release cached;
@@ -42,6 +41,8 @@ namespace CoAInstaller
             try { ServicePointManager.SecurityProtocol |= (SecurityProtocolType)3072; } catch { }
             var req = (HttpWebRequest)WebRequest.Create(url);
             req.UserAgent = Product.FileStem;
+            string token = Settings.CoaGitHubToken;
+            if (!string.IsNullOrEmpty(token)) req.Headers["Authorization"] = "token " + token;
             req.Timeout = timeout;
             req.ReadWriteTimeout = timeout;
             using (var resp = (HttpWebResponse)req.GetResponse())
@@ -66,56 +67,51 @@ namespace CoAInstaller
             {
                 if (!refresh && cached != null && DateTime.UtcNow - cachedAt < TimeSpan.FromHours(1)) return cached;
             }
-            Release found = null;
-            try
-            {
-                string json = Get("https://api.github.com/repos/" + Repo + "/releases?per_page=20");
-                var serializer = new JavaScriptSerializer { MaxJsonLength = int.MaxValue };
-                var releases = serializer.DeserializeObject(json) as object[];
-                if (releases != null)
-                    foreach (var raw in releases)
-                    {
-                        var rel = raw as Dictionary<string, object>;
-                        if (rel == null) continue;
-                        object v;
-                        string tag = rel.TryGetValue("tag_name", out v) ? Convert.ToString(v) : "";
-                        if (!tag.StartsWith("coa-custom-", StringComparison.OrdinalIgnoreCase)) continue;
-                        var release = new Release { Tag = tag };
-                        object assets;
-                        if (rel.TryGetValue("assets", out assets) && assets is object[])
-                            foreach (var a in (object[])assets)
-                            {
-                                var asset = a as Dictionary<string, object>;
-                                if (asset == null) continue;
-                                string name = asset.TryGetValue("name", out v) ? Convert.ToString(v) : "";
-                                if (!name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)) continue;
-                                long size;
-                                if (!asset.TryGetValue("size", out v) || !long.TryParse(Convert.ToString(v), out size)) continue;
-                                string url = asset.TryGetValue("browser_download_url", out v) ? Convert.ToString(v) : "";
-                                string digest = asset.TryGetValue("digest", out v) ? Convert.ToString(v) : "";
-                                if (digest.StartsWith("sha256:", StringComparison.OrdinalIgnoreCase)) digest = digest.Substring(7);
-                                release.Assets.Add(new Asset { Name = name, Url = url, Size = size, Sha256 = digest });
-                            }
-                        if (release.Assets.Count > 0) { found = release; break; }
-                    }
-            }
-            catch { }
-            if (found == null) found = Fallback();
+            if (string.IsNullOrEmpty(Settings.CoaGitHubToken))
+                throw new InvalidOperationException(L.T("A GitHub key for CoA Custom is required before downloading."));
+            Release found = ParseRelease(Get("https://api.github.com/repos/" + Repo + "/releases?per_page=20"));
+            if (found == null)
+                throw new InvalidOperationException(L.T("No downloadable CoA Custom release was found in the private repository."));
             lock (cacheLock) { cached = found; cachedAt = DateTime.UtcNow; }
             return found;
         }
 
-        static Release Fallback()
+        static Release ParseRelease(string json)
         {
-            var r = new Release { Tag = FallbackTag };
-            string baseUrl = "https://github.com/" + Repo + "/releases/download/" + FallbackTag + "/";
-            foreach (var name in new[]
+            var serializer = new JavaScriptSerializer { MaxJsonLength = int.MaxValue };
+            var releases = serializer.DeserializeObject(json) as object[];
+            if (releases == null) return null;
+            foreach (var raw in releases)
             {
-                "CoA-Custom-1.9.2-Client-1.zip", "CoA-Custom-1.9.2-Client-2.zip", "CoA-Custom-1.9.2-Client-3.zip",
-                "CoA-Custom-1.9.2-Client-4.zip", "CoA-Custom-1.9.2-Client-5.zip", "CoA-Custom-1.9.2-Server.zip"
-            })
-                r.Assets.Add(new Asset { Name = name, Url = baseUrl + name, Size = 0 });
-            return r;
+                var rel = raw as Dictionary<string, object>;
+                if (rel == null) continue;
+                object v;
+                string tag = rel.TryGetValue("tag_name", out v) ? Convert.ToString(v) : "";
+                if (!tag.StartsWith("coa-custom-", StringComparison.OrdinalIgnoreCase)) continue;
+                bool draft = rel.TryGetValue("draft", out v) && v is bool && (bool)v;
+                if (draft) continue;
+                var release = new Release { Tag = tag };
+                object assets;
+                if (rel.TryGetValue("assets", out assets) && assets is object[])
+                    foreach (var a in (object[])assets)
+                    {
+                        var asset = a as Dictionary<string, object>;
+                        if (asset == null) continue;
+                        string name = asset.TryGetValue("name", out v) ? Convert.ToString(v) : "";
+                        if (!name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)) continue;
+                        long size;
+                        if (!asset.TryGetValue("size", out v) || !long.TryParse(Convert.ToString(v), out size)) continue;
+                        // Use the API asset URL: the browser download URL of a private
+                        // release returns 404 even with a token.
+                        string url = asset.TryGetValue("url", out v) ? Convert.ToString(v) : "";
+                        if (string.IsNullOrEmpty(url)) url = asset.TryGetValue("browser_download_url", out v) ? Convert.ToString(v) : "";
+                        string digest = asset.TryGetValue("digest", out v) ? Convert.ToString(v) : "";
+                        if (digest.StartsWith("sha256:", StringComparison.OrdinalIgnoreCase)) digest = digest.Substring(7);
+                        release.Assets.Add(new Asset { Name = name, Url = url, Size = size, Sha256 = digest });
+                    }
+                if (release.Assets.Count > 0) return release;
+            }
+            return null;
         }
 
         /// <summary>The version previously downloaded into a race folder, or null.</summary>
@@ -176,6 +172,9 @@ namespace CoAInstaller
                     try { ServicePointManager.SecurityProtocol |= (SecurityProtocolType)3072; } catch { }
                     var req = (HttpWebRequest)WebRequest.Create(asset.Url);
                     req.UserAgent = Product.FileStem;
+                    string downloadToken = Settings.CoaGitHubToken;
+                    if (!string.IsNullOrEmpty(downloadToken)) req.Headers["Authorization"] = "token " + downloadToken;
+                    req.Accept = "application/octet-stream";
                     req.Timeout = 30000;
                     req.ReadWriteTimeout = 60000;
                     if (have > 0) req.AddRange(have);

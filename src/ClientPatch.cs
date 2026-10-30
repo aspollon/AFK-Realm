@@ -1384,10 +1384,9 @@ namespace CoAInstaller
             RemoveLegacyPatch(client);
             string path = Os.Resolve(client, "Data/" + ArchiveName);
             string installed = InstalledStamp(client);
-            // Race archives are independent of the client patch: even when no module changes a client file,
-            // the races must be written (and old per-race archives removed).
-            // race packs made by an older packer: packed again from their client first (RaceRepair.RefreshOldPacks)
-            var repacked = RaceRepair.RefreshOldPacks(inst, client, plan.Imports, t => progress(t, 0, 0));
+            // CoA Custom is installed exactly as its package ships it; its own race and model data is
+            // authoritative. The old AFK race check/repair is therefore not run at all.
+            var repacked = new List<string>();
             if (repacked.Count > 0)
             {
                 plan = Collect(inst);
@@ -1419,7 +1418,7 @@ namespace CoAInstaller
             // With custom races: the patch is checked before it goes into the game (RaceCheck), what the check finds is
             // repaired (RaceRepair) and the patch built again - until nothing is left; a race that cannot be repaired is
             // switched off, so no player gets it in pieces.
-            bool races = plan.Modules.Any(m => m.IndexOf("custom-races", StringComparison.OrdinalIgnoreCase) >= 0);
+            bool races = false;
             var repaired = new List<string>();
             var tried = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var strict = new HashSet<int>();
@@ -1512,6 +1511,27 @@ namespace CoAInstaller
 
         /// <summary>Puts the patch into a ZIP for other players, as Data\patch-ZZZZZ.MPQ.</summary>
         public static void AddToZip(ZipArchive zip, Install inst, string client, Plan plan) { AddToZip(zip, inst, client, plan, null); }
+
+        /// <summary>Adds only the generated AFK client patch to a ZIP (the CoA client export adds the package files itself).</summary>
+        public static void AddPatchToZip(ZipArchive zip, Install inst, string client, Plan plan, Action<string, int, int> progress)
+        {
+            if (progress == null) progress = (t, a, b) => { };
+            ClientBinaryPatch.Prepare(plan);
+            UseInstalledRootFiles(plan, client);
+            AddInstalledRootFiles(plan, inst, client);
+            ClientBinaryPatch.Prepare(plan);
+            progress(L.T("Building the client patch from your game client ..."), 0, 0);
+            var files = Build(inst, client, plan, null);
+            string temp = Path.GetTempFileName();
+            try
+            {
+                string what = L.F("Writing Data\\{0}", ArchiveName);
+                progress(what + " ...", 0, files.Count + 2);
+                MpqArchive.Write(temp, files, (done, all) => progress(what + ": " + done + " of " + all + " files", done, all));
+                zip.CreateEntryFromFile(temp, "Data/" + ArchiveName, CompressionLevel.Optimal);
+            }
+            finally { try { File.Delete(temp); } catch { } }
+        }
 
         public static void AddToZip(ZipArchive zip, Install inst, string client, Plan plan, Action<string, int, int> progress)
         {

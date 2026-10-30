@@ -116,6 +116,8 @@ export function manager() {
     const mapState = h('div');
     sectionEls.mapState = mapState;
     const out = [
+      meta.windows ? null : card(T('Linux: faster databases'), T('On Linux, the database and world server often run noticeably faster with jemalloc, and Redis helps with caching. Install them once; this is a recommendation, not a requirement.'), 'server',
+        h('pre.small', {}, 'Ubuntu / Debian:\nsudo apt update && sudo apt install libjemalloc2 redis-server\n(optional build headers: sudo apt install build-essential libjemalloc-dev)\n\nCentOS / RHEL / Rocky Linux:\nsudo dnf install epel-release\nsudo dnf install redis\nsudo dnf install jemalloc')),
       card(T('Scheduled restart'), F('A world that has run for many hours can grow slow and use more and more memory; a restart gives it back. {0} can do that on its own: players are told in the game beforehand, then the server is stopped cleanly and started again. This works while the server runs and {0} stays open.', meta.product), 'server',
         h('div.row', {}, mode, value, unit),
         h('div.row', {}, h('span', {}, T('Tell players')), warn, h('span', {}, T('minutes before')), apply),
@@ -192,7 +194,9 @@ export function manager() {
     sectionEls.clientState = clientState;
     const clientBtn = secondary(st.clientButton || T('Game client …'), () => import('./client.js').then(x => x.clientDialog()), 'client');
     sectionEls.clientBtn = clientBtn;
-    const racesBtn = primary(st.racesButton || T('Set up the races …'), () => import('./races.js').then(x => x.racesDialog()));
+    const coaBtn = primary(st.coaButton || T('Install / update CoA Custom ...'), () => import('./coa.js').then(x => x.coaDialog()), 'client');
+    sectionEls.coaBtn = coaBtn;
+    const racesBtn = secondary(st.racesButton || T('Base races …'), () => import('./races.js').then(x => x.racesDialog()));
     sectionEls.racesBtn = racesBtn;
     const out = [
       card(T('Manage modules'), T('Add or remove modules: those made for this server and the AzerothCore module catalog. The server is backed up and rebuilt; database changes of modules installed here are recorded, so removing a module undoes them.'), 'modules',
@@ -203,7 +207,7 @@ export function manager() {
         primary(T('Set up the auction house bots …'), setup('setups.js', 'auctionSetup'))),
       moduleCard(m.classic, T('Classic classes'), T('Which classic classes - Warrior to Druid - can be played next to the classes of Conquest of Azeroth, by players and bots.'), 'gamemaster',
         primary(T('Set up the classic classes …'), setup('setups.js', 'classicSetup'))),
-      moduleCard(m.races, T('Custom races'), T('Which races of the game client - Goblin, Worgen, Pandaren, Vrykul and more - can be played, and the stock race each leans on: where it starts, its quests, racial abilities and faction.'), 'races', racesBtn),
+      moduleCard(m.races, T('CoA Custom'), T('Install or update the CoA Custom client and server package. The CoA UI owns race and class selection; only the base race of each CoA custom race is configured here.'), 'races', h('div', { class: 'row' }, coaBtn, racesBtn)),
       moduleCard(m.flying, T('Azeroth flying'), T('Optional flying mounts in Eastern Kingdoms and Kalimdor: off by default, with a configurable no-fly list for the old capitals. Old Azeroth was not built for flying; use it at your own risk.'), 'journey',
         primary(T('Set up Azeroth flying …'), setup('setups.js', 'flyingSetup'))),
       moduleCard(m.immersion, T('Immersion Life'), T('The population of cities and towns, questing, legendary residents, PvP Life and Fishing Life for mod-playerbots-immersion. PvP Life and Fishing Life are off by default; the legendary residents are on.'), 'accounts',
@@ -219,6 +223,7 @@ export function manager() {
     const st = s();
     if (sectionEls.clientState) { sectionEls.clientState.textContent = st.clientState || ''; sectionEls.clientState.classList.toggle('hidden', !st.clientState); }
     if (sectionEls.clientBtn && st.clientButton) sectionEls.clientBtn.lastChild.textContent = st.clientButton;
+    if (sectionEls.coaBtn && st.coaButton) sectionEls.coaBtn.lastChild.textContent = st.coaButton;
     if (sectionEls.racesBtn && st.racesButton) sectionEls.racesBtn.lastChild.textContent = st.racesButton;
   }
 
@@ -272,7 +277,7 @@ export function manager() {
     if (st.serverBanner) banners.appendChild(h('button.banner', { type: 'button', title: (st.serverBanner.news || []).join('\n') + ((st.serverBanner.warnings || []).length ? '\n\n' + st.serverBanner.warnings.join('\n') : '') + (st.serverBanner.limited ? '\n' + st.serverBanner.limited : ''), onclick: serverUpdate }, st.serverBanner.text));
     if (st.toolBanner) banners.appendChild(h('button.banner', { type: 'button', onclick: () => toolUpdate(st.toolBanner) }, st.toolBanner.text));
     if (st.clientBanner) banners.appendChild(h('button.banner', { type: 'button', onclick: () => import('./client.js').then(x => x.clientDialog()) }, st.clientBanner));
-    if (st.coaBanner) banners.appendChild(h('button.banner', { type: 'button', onclick: () => import('./races.js').then(x => x.racesDialog()) }, st.coaBanner));
+    if (st.coaBanner) banners.appendChild(h('button.banner', { type: 'button', onclick: () => import('./coa.js').then(x => x.coaDialog()) }, st.coaBanner));
     drawNav();
     paintServer(); paintModules();
     offers();

@@ -90,6 +90,7 @@ namespace CoAInstaller.Web
             MapBackups(app);
             MapModules(app);
             MapClient(app);
+            MapCoa(app);
             MapRaces(app);
             MapSetups(app);
             MapBots(app);
