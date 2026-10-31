@@ -35,6 +35,13 @@ export async function coaDialog() {
   const clientPath = input(state.client || '', { style: { flex: '1', minWidth: '240px' } });
   const status = h('div.small.muted', {}, state.packageRoot ? F('Package: {0}', state.packageRoot) : T('Choose the extracted CoA Custom package.'));
 
+  async function rememberPaths() {
+    try { await post('/api/coa/paths', { package: packagePath.value, server: serverPath.value, client: clientPath.value }); }
+    catch { /* A path that does not exist yet must not block the dialog. */ }
+  }
+  for (const field of [packagePath, serverPath, clientPath])
+    field.addEventListener('change', () => { rememberPaths(); });
+
   const browse = (inputEl, title, start) => secondary(T('Browse ...'), async () => {
     const p = await choose({ title, start: inputEl.value || start, newFolder: false });
     if (p) inputEl.value = p;
@@ -42,6 +49,7 @@ export async function coaDialog() {
 
   async function check() {
     try {
+      await rememberPaths();
       await post('/api/coa/check', { package: packagePath.value, server: serverPath.value, client: clientPath.value });
       await alert(T('The package can be copied.'));
     } catch (e) { await alert(e.message); }
@@ -49,12 +57,14 @@ export async function coaDialog() {
 
   async function install() {
     if (!await confirm(T('Copy the CoA client files, the CoA server DBCs/SQL and the settings, and install the AFK client patch? Close the game and stop the server first.'))) return;
+    await rememberPaths();
     const job = await runProgress(() => post('/api/coa/install', { package: packagePath.value, server: serverPath.value, client: clientPath.value }), T('Installing CoA Custom ...'));
     if (job && job.message) await alert(job.message);
     status.textContent = job && job.ok ? T('CoA Custom installed.') : status.textContent;
   }
 
   async function exportZip() {
+    await rememberPaths();
     const job = await runProgress(() => post('/api/coa/export', { package: packagePath.value, server: serverPath.value, client: clientPath.value }), T('Packing the complete CoA Custom client ...'));
     if (job && job.ok && job.payload && job.payload.url) {
       download(job.payload.url);
@@ -68,6 +78,7 @@ export async function coaDialog() {
     const job = await runProgress(() => post('/api/coa/download', { target }), T('Downloading CoA Custom ...'));
     if (job && job.ok && job.payload) {
       packagePath.value = job.payload.package || target;
+      await rememberPaths();
       status.textContent = F('Downloaded CoA Custom {0}.', job.payload.version || '');
       await alert(F('CoA Custom {0} downloaded to {1}.', job.payload.version || '', job.payload.package || target));
     }

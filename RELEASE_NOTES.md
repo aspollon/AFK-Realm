@@ -1,3 +1,12 @@
+# AFK Realm 1.2.2
+
+## Fixed in 1.2.2
+
+- **CoA Custom setup no longer hides copy failures.** If the game, launcher or a virus scanner locks a file, the setup now stops with a clear error instead of finishing with missing MPQs, DLLs or Esteria files.
+- **Every copied CoA file is verified.** The setup checks that all client MPQs, `client_root`, add-ons, server DBCs and SQL files are present and complete.
+- **The CoA paths are saved.** Package, server and game-client folders are remembered and filled in again.
+- **The game must be closed.** The setup refuses to start while a program from the game folder is running.
+
 # AFK Realm 1.2.1
 
 ## Fixed in 1.2.1

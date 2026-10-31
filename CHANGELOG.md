@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.2
+
+- **CoA Custom setup no longer copies silently.** A locked file, a running game or launcher, or a full drive now stops the setup with an error instead of reporting success while CoA files are missing. After copying, every package file is checked for presence and size.
+- **The CoA Custom paths are remembered.** Package, server and game-client folders are saved separately and are filled in again when the page is opened.
+- **Setup refuses to run while the game or launcher is running.**
+
 ## 1.2.1
 
 - **Base races page fixed.** Modules > CoA Custom > Base races now shows only the CoA custom races and only their base-race selection. The old race switches, stock-client races, importer and race-number tools are no longer reachable; visibility remains in the CoA UI.

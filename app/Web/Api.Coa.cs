@@ -14,38 +14,54 @@ namespace CoAInstaller.Web
             return Path.Combine(downloads, "COA CUSTOM");
         }
 
-        static string CoaPackage(Args a)
+        static string CoaPackage(Args a) { return CoaPackage(a.Str("package")); }
+
+        static string CoaPackage(string requested)
         {
-            string p = (a.Str("package") ?? "").Trim();
+            string p = (requested ?? "").Trim();
+            if (p.Length == 0) p = (Settings.CoaPackage ?? "").Trim();
             if (p.Length == 0) p = DefaultPackage();
             return p;
         }
 
-        static string CoaClient(Args a)
+        static string CoaClient(Args a) { return CoaClient(a.Str("client")); }
+
+        static string CoaClient(string requested)
         {
-            string c = (a.Str("client") ?? "").Trim();
+            string c = (requested ?? "").Trim();
             if (c.Length == 0) c = ClientAddons.ClientFolder ?? "";
             return c;
         }
 
-        static string CoaServer(Args a)
+        static string CoaServer(Args a) { return CoaServer(a.Str("server")); }
+
+        static string CoaServer(string requested)
         {
-            string s = (a.Str("server") ?? "").Trim();
+            string s = (requested ?? "").Trim();
+            if (s.Length == 0) s = (Settings.CoaServer ?? "").Trim();
             if (s.Length == 0) s = Inst.Root;
             return s;
         }
 
+        static void RememberPaths(Args a, string package, string client, string server)
+        {
+            if (!string.IsNullOrEmpty(package)) Settings.CoaPackage = package;
+            if (!string.IsNullOrEmpty(client)) ClientAddons.ClientFolder = client;
+            if (!string.IsNullOrEmpty(server)) Settings.CoaServer = server;
+        }
+
         static object CoaState(Install inst)
         {
-            string package = DefaultPackage();
+            string package = CoaPackage((string)null);
             string root = null;
             try { root = CoaCustom.PackageRoot(package); } catch { }
+            string server = CoaServer((string)null);
             return new
             {
-                server = inst.Root,
+                server,
                 package,
                 packageRoot = root,
-                version = CoaCustom.Installed(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", "CoA-Custom")),
+                version = CoaCustom.Installed(root ?? package),
                 client = ClientAddons.ClientFolder ?? "",
                 tokenSet = !string.IsNullOrEmpty(Settings.CoaGitHubToken),
                 repository = CoaCustom.Repo
@@ -55,6 +71,12 @@ namespace CoAInstaller.Web
         static void MapCoa(WebApplication app)
         {
             Post(app, "/api/coa/state", a => CoaState(Inst));
+
+            Post(app, "/api/coa/paths", a =>
+            {
+                RememberPaths(a, CoaPackage(a), CoaClient(a), CoaServer(a));
+                return new { ok = true, package = CoaPackage((string)null), client = CoaClient((string)null), server = CoaServer((string)null) };
+            });
 
             Post(app, "/api/coa/token", a =>
             {
@@ -66,6 +88,7 @@ namespace CoAInstaller.Web
             {
                 var inst = Inst;
                 string package = CoaPackage(a), client = CoaClient(a), server = CoaServer(a);
+                RememberPaths(a, package, client, server);
                 int code = CoaSetup.Run(new[] { "--package", package, "--server", server, "--client", client, "--check" });
                 if (code != 0) throw new UserError(L.T("The package could not be checked."));
                 return new { ok = true, message = L.T("The package can be copied.") };
@@ -77,8 +100,11 @@ namespace CoAInstaller.Web
                 if (!Directory.Exists(package)) throw new UserError(L.F("Package folder not found: {0}", package));
                 if (!Directory.Exists(client)) throw new UserError(L.F("Game client folder not found: {0}", client));
                 if (!Directory.Exists(server)) throw new UserError(L.F("Server folder not found: {0}", server));
+                if (ClientAddons.ClientRunning(client))
+                    throw new UserError(L.T("The game or its launcher is running from this folder. Close it first, then run the setup again."));
                 var inst = new Install(server);
                 if (!inst.IsInstalled) throw new UserError(L.F("No complete AFK Realm server in: {0}", server));
+                RememberPaths(a, package, client, server);
                 return Jobs.Run(L.T("Installing CoA Custom ..."), (job, st) =>
                 {
                     st(L.T("Copying the CoA package and building the client patch ..."));
@@ -97,6 +123,7 @@ namespace CoAInstaller.Web
                 string package = CoaPackage(a), client = CoaClient(a), server = CoaServer(a);
                 if (!Directory.Exists(package)) throw new UserError(L.F("Package folder not found: {0}", package));
                 if (!Directory.Exists(client)) throw new UserError(L.F("Game client folder not found: {0}", client));
+                RememberPaths(a, package, client, server);
                 var inst = new Install(server);
                 if (!inst.IsInstalled) throw new UserError(L.F("No complete AFK Realm server in: {0}", server));
                 string file = Path.Combine(Files.Temp, Guid.NewGuid().ToString("N") + ".zip");
@@ -129,6 +156,7 @@ namespace CoAInstaller.Web
                         job.Changed(false);
                     });
                     string root = CoaCustom.PackageRoot(target);
+                    Settings.CoaPackage = root ?? target;
                     job.Payload = new { version, package = root ?? target, target };
                     job.Message = L.F("CoA Custom {0} downloaded.", version);
                 }).Snapshot();

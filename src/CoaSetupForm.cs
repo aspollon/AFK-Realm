@@ -37,9 +37,10 @@ namespace CoAInstaller
             table.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
             string downloads = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
-            string defaultPackage = Path.Combine(downloads, "COA CUSTOM");
-            string defaultServer = Path.Combine(downloads, "AFK-Server");
-            string defaultClient = Path.Combine(downloads, "Descension");
+            string defaultPackage = !string.IsNullOrEmpty(Settings.CoaPackage) ? Settings.CoaPackage : Path.Combine(downloads, "COA CUSTOM");
+            string defaultServer = !string.IsNullOrEmpty(Settings.CoaServer) ? Settings.CoaServer :
+                (install != null ? install.Root : Path.Combine(downloads, "AFK-Server"));
+            string defaultClient = !string.IsNullOrEmpty(ClientAddons.ClientFolder) ? ClientAddons.ClientFolder : Path.Combine(downloads, "Descension");
 
             package = AddPathRow(table, L.T("CoA package"), defaultPackage);
             server = AddPathRow(table, L.T("Server folder"), install != null ? install.Root : defaultServer);
@@ -114,6 +115,7 @@ namespace CoAInstaller
             if (!Directory.Exists(package.Text)) { MessageBox.Show(this, L.F("CoA package folder not found:\n{0}", package.Text), Text, MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
             if (!Directory.Exists(server.Text)) { MessageBox.Show(this, L.F("Server folder not found:\n{0}", server.Text), Text, MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
             if (!Directory.Exists(client.Text)) { MessageBox.Show(this, L.F("Game client folder not found:\n{0}", client.Text), Text, MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
+            RememberPaths();
             string downloads = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
             using (var dialog = new SaveFileDialog
             {
@@ -182,7 +184,7 @@ namespace CoAInstaller
                             AppendLog(text + Environment.NewLine);
                         });
                         AppendLog(L.F("Downloaded CoA Custom {0} to {1}", version, folder) + Environment.NewLine);
-                        BeginInvoke((Action)delegate { package.Text = folder; });
+                        BeginInvoke((Action)delegate { package.Text = folder; RememberPaths(); });
                     }
                     catch (Exception ex)
                     {
@@ -218,12 +220,20 @@ namespace CoAInstaller
             catch { }
         }
 
+        void RememberPaths()
+        {
+            if (Directory.Exists(package.Text)) Settings.CoaPackage = package.Text;
+            if (Directory.Exists(server.Text)) Settings.CoaServer = server.Text;
+            if (Directory.Exists(client.Text)) ClientAddons.ClientFolder = client.Text;
+        }
+
         void RunSetup(string mode)
         {
             if (busy) return;
             if (!Directory.Exists(package.Text)) { MessageBox.Show(this, L.F("CoA package folder not found:\n{0}", package.Text), Text, MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
             if (!Directory.Exists(server.Text)) { MessageBox.Show(this, L.F("Server folder not found:\n{0}", server.Text), Text, MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
             if (!Directory.Exists(client.Text)) { MessageBox.Show(this, L.F("Game client folder not found:\n{0}", client.Text), Text, MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
+            RememberPaths();
             busy = true;
             check.Enabled = rebuild.Enabled = setup.Enabled = download.Enabled = export.Enabled = false;
             log.Clear();

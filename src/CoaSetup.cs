@@ -65,6 +65,14 @@ namespace CoAInstaller
             if (!Directory.Exists(clientSource) || !Directory.Exists(clientRoot))
                 return Fail(L.F("The package has no files\\client or files\\client_root: {0}", packRoot));
 
+            // Remember what the user chose; the setup page starts with these paths next time.
+            Settings.CoaPackage = packRoot;
+            Settings.CoaServer = inst.Root;
+            ClientAddons.ClientFolder = o.Client;
+
+            if (!o.Check && ClientAddons.ClientRunning(o.Client))
+                return Fail(L.T("The game or its launcher is running from this folder. Close it first, then run the setup again."));
+
             string manifestVersion = ReadVersion(Path.Combine(packRoot, "manifest.json"));
             Console.WriteLine(L.F("CoA Custom package: {0}", packRoot + (manifestVersion.Length > 0 ? " (" + L.F("version {0}", manifestVersion) + ")" : "")));
             Console.WriteLine(L.F("Server: {0}", inst.Root));
@@ -219,6 +227,16 @@ namespace CoAInstaller
                 CopyFiles(sqlSource, sqlTarget, "*.sql", o.NoBackup, ref copied, ref skipped);
                 Console.WriteLine(L.T("SQL files copied. Automatic execution is disabled; the included module data is used."));
             }
+
+            VerifyCopied(clientSource, Path.Combine(o.Client, "Data"), "*.MPQ");
+            if (File.Exists(Path.Combine(clientSource, "dinput8.dll")))
+                VerifyFile(Path.Combine(clientSource, "dinput8.dll"), Path.Combine(o.Client, "dinput8.dll"));
+            VerifyTree(clientRoot, o.Client);
+            if (Directory.Exists(addons)) VerifyTree(addons, Path.Combine(o.Client, "Interface", "AddOns"));
+            VerifyCopied(Path.Combine(files, "dbc"), Path.Combine(inst.DataDir, "dbc"), "*.dbc");
+            if (File.Exists(clientDbc)) VerifyFile(clientDbc, Path.Combine(inst.DataDir, "dbc_clientset", "CreatureDisplayInfo.dbc"));
+            if (File.Exists(moduleConf)) VerifyFile(moduleConf, Path.Combine(inst.ConfigDir, "modules", "coa_custom_races.conf.dist"));
+            if (Directory.Exists(sqlSource)) VerifyCopied(sqlSource, Path.Combine(inst.Root, "CoA-Custom", "sql"), "*.sql");
 
             Console.WriteLine(L.T("Writing client settings ..."));
             WriteRaceDefaults(inst, files);
@@ -451,6 +469,35 @@ namespace CoAInstaller
             }
         }
 
+        /// <summary>Checks after a copy that every package file is present and complete.</summary>
+        static void VerifyCopied(string source, string target, string pattern)
+        {
+            if (!Directory.Exists(source)) return;
+            string suffix = pattern.StartsWith("*", StringComparison.Ordinal) ? pattern.Substring(1) : null;
+            foreach (string file in Directory.GetFiles(source)
+                .Where(f => suffix == null || Path.GetFileName(f).EndsWith(suffix, StringComparison.OrdinalIgnoreCase)))
+                VerifyFile(file, Path.Combine(target, Path.GetFileName(file)));
+        }
+
+        static void VerifyTree(string source, string target)
+        {
+            if (!Directory.Exists(source)) return;
+            string root = Path.GetFullPath(source).TrimEnd('\\', '/') + Path.DirectorySeparatorChar;
+            foreach (string file in Directory.GetFiles(source, "*", SearchOption.AllDirectories))
+            {
+                string rel = file.Substring(root.Length);
+                VerifyFile(file, Path.Combine(target, rel));
+            }
+        }
+
+        static void VerifyFile(string source, string target)
+        {
+            if (!File.Exists(target))
+                throw new InvalidOperationException(L.F("The CoA package file is missing after the copy: {0}", target));
+            if (new FileInfo(source).Length != new FileInfo(target).Length)
+                throw new InvalidOperationException(L.F("The CoA package file is incomplete after the copy: {0}", target));
+        }
+
         static bool SameFile(string a, string b)
         {
             try
@@ -475,27 +522,29 @@ namespace CoAInstaller
 
         static bool CopyFile(string source, string target, bool noBackup)
         {
+            Directory.CreateDirectory(Path.GetDirectoryName(target));
+            if (File.Exists(target))
+            {
+                if (SameFile(source, target)) return false;
+                if (!noBackup)
+                {
+                    string backup = target + ".coa-patcher-backup";
+                    if (!File.Exists(backup)) File.Copy(target, backup, false);
+                }
+            }
             try
             {
-                Directory.CreateDirectory(Path.GetDirectoryName(target));
-                if (File.Exists(target))
-                {
-                    if (SameFile(source, target)) return false;
-                    if (!noBackup)
-                    {
-                        string backup = target + ".coa-patcher-backup";
-                        if (!File.Exists(backup)) File.Copy(target, backup, false);
-                    }
-                }
                 File.Copy(source, target, true);
-                Console.WriteLine("  " + target);
-                return true;
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine("  " + target + ": " + ex.Message);
-                return false;
+                // Never report success while a package file was left behind. The former
+                // silent skip hid locked files (game, launcher, antivirus) and produced
+                // clients with missing MPQs, DLLs and Esteria appearance files.
+                throw new InvalidOperationException(L.F("The CoA file could not be copied to {0}. Close the game, the launcher and the server, then run the setup again. ({1})", target, ex.Message), ex);
             }
+            Console.WriteLine("  " + target);
+            return true;
         }
 
         static string PackageRoot(string picked)

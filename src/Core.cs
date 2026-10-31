@@ -23,7 +23,7 @@ namespace CoAInstaller
         public const string Name = "AFK Realm";                   // window titles, dialogs
         public const string ShortName = "AFK Realm";              // desktop shortcut, firewall rules
         public const string FileStem = "AFK-Realm";                // exe name, settings folder
-        public const string Version = "1.2.1";                    // a release; "-preview" marks a pre-release
+        public const string Version = "1.2.2";                    // a release; "-preview" marks a pre-release
         public const string Tagline = "build, run and tweak your own server the lazy way";
         public const string BuildsFor = "Conquest of AzerothCore";
         public const string WindowTitle = Name;
@@ -963,6 +963,24 @@ namespace CoAInstaller
                 }
                 catch { }
             }
+        }
+
+        static string CoaPackageFile { get { return Path.Combine(Path.GetDirectoryName(File_), "coa-package.txt"); } }
+
+        /// <summary>The CoA Custom package folder chosen last time.</summary>
+        public static string CoaPackage
+        {
+            get { try { return File.Exists(CoaPackageFile) ? File.ReadAllText(CoaPackageFile).Trim() : null; } catch { return null; } }
+            set { try { Directory.CreateDirectory(Path.GetDirectoryName(CoaPackageFile)); File.WriteAllText(CoaPackageFile, value ?? ""); } catch { } }
+        }
+
+        static string CoaServerFile { get { return Path.Combine(Path.GetDirectoryName(File_), "coa-server.txt"); } }
+
+        /// <summary>The server folder chosen in the CoA Custom setup last time.</summary>
+        public static string CoaServer
+        {
+            get { try { return File.Exists(CoaServerFile) ? File.ReadAllText(CoaServerFile).Trim() : null; } catch { return null; } }
+            set { try { Directory.CreateDirectory(Path.GetDirectoryName(CoaServerFile)); File.WriteAllText(CoaServerFile, value ?? ""); } catch { } }
         }
 
         static string CoaTokenFile { get { return Path.Combine(Path.GetDirectoryName(File_), "coa-github-token.txt"); } }
