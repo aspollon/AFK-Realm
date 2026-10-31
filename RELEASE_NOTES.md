@@ -1,3 +1,9 @@
+# AFK Realm 1.2.7
+
+## Changed in 1.2.7
+
+- **The CoA class switch is back.** Update `mod-classic-classes` to `7c1a7c5`; the extra classic row is gone, and the CoA switch shows the CoA classes first and the classic classes after one click. The classic class IDs and Reborn functions stay the same.
+
 # AFK Realm 1.2.6
 
 ## Added

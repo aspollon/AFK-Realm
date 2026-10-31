@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.7
+
+- **Classic Classes use the CoA switch again.** `mod-classic-classes` no longer adds the extra classic row or hides `CharCreateSwapClassesButton`; the CoA button now switches from the CoA classes to the classic classes, keeping the module's Reborn class functions.
+
 ## 1.2.6
 
 - **CoA client uninstall.** Every CoA setup run now records the client files it touches. **Remove CoA client files** restores files that existed before and deletes files the setup created. It leaves WTF, Cache, screenshots and personal add-ons alone.
