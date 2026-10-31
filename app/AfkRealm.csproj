@@ -11,7 +11,7 @@
     <OutputType>WinExe</OutputType>
     <AssemblyName>AFK-Realm</AssemblyName>
     <Product>AFK Realm</Product>
-    <Version>1.2.5</Version>
+    <Version>1.2.6</Version>
     <RootNamespace>CoAInstaller</RootNamespace>
     <Nullable>disable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
@@ -25,7 +25,7 @@
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="../src/AccountTransfer.cs;../src/AdminLink.cs;../src/BackupSettings.cs;../src/ClientAddons.cs;../src/ClientBinaryPatch.cs;../src/ClientDownload.cs;../src/ClientPatch.cs;../src/ClientRaces.cs;../src/CoaCustom.cs;../src/CoaSetup.cs;../src/ConfigModel.cs;../src/Core.cs;../src/Engine.cs;../src/GameData.cs;../src/Lang.cs;../src/ModuleBots.cs;../src/ModuleCatalog.cs;../src/Mpq.cs;../src/RaceImport.cs;../src/RaceCheck.cs;../src/RaceRepair.cs;../src/RacePacker.cs;../src/ScheduledRestart.cs;../src/ServerRacials.cs;../src/SupportBundle.cs;../src/UpdateCheck.cs" />
+    <Compile Include="../src/AccountTransfer.cs;../src/AdminLink.cs;../src/BackupSettings.cs;../src/ClientAddons.cs;../src/ClientBinaryPatch.cs;../src/ClientDownload.cs;../src/ClientPatch.cs;../src/ClientRaces.cs;../src/CoaCustom.cs;../src/CoaSetup.cs;../src/CoaUninstall.cs;../src/ConfigModel.cs;../src/Core.cs;../src/Engine.cs;../src/GameData.cs;../src/Lang.cs;../src/ModuleBots.cs;../src/ModuleCatalog.cs;../src/Mpq.cs;../src/RaceImport.cs;../src/RaceCheck.cs;../src/RaceRepair.cs;../src/RacePacker.cs;../src/ScheduledRestart.cs;../src/ServerRacials.cs;../src/SupportBundle.cs;../src/UpdateCheck.cs" />
     <EmbeddedResource Include="../engine/engine.ps1" LogicalName="CoAInstaller.engine.ps1" />
     <EmbeddedResource Include="../engine/account-transfer.sql" LogicalName="CoAInstaller.account-transfer.sql" />
     <EmbeddedResource Include="../engine/module-journal.sql" LogicalName="CoAInstaller.module-journal.sql" />

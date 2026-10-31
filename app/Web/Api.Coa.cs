@@ -63,6 +63,7 @@ namespace CoAInstaller.Web
                 packageRoot = root,
                 version = CoaCustom.Installed(root ?? package),
                 client = ClientAddons.ClientFolder ?? "",
+                canUninstall = CoaUninstall.HasManifest(ClientAddons.ClientFolder),
                 tokenSet = !string.IsNullOrEmpty(Settings.CoaGitHubToken),
                 repository = CoaCustom.Repo
             };
@@ -116,6 +117,26 @@ namespace CoAInstaller.Web
                     try { RefreshRaces(inst); } catch { }
                     Manager.CheckClient(false);
                 }).Snapshot();
+            });
+
+            Post(app, "/api/coa/uninstall", a =>
+            {
+                string client = CoaClient(a);
+                if (!Directory.Exists(client)) throw new UserError(L.F("Game client folder not found: {0}", client));
+                if (ClientAddons.ClientRunning(client))
+                    throw new UserError(L.T("The game or its launcher is running. Close it before removing the CoA files."));
+                if (!CoaUninstall.HasManifest(client))
+                    throw new UserError(L.T("No CoA installation record was found for this client."));
+                RememberPaths(a, CoaPackage(a), client, CoaServer(a));
+                return Jobs.Run(L.T("Removing CoA client files ..."), (job, st) =>
+                {
+                    job.Message = CoaUninstall.Run(client, (t, x, y) =>
+                    {
+                        job.Status = t;
+                        if (y > 0) job.Sub = (double)x / y;
+                        job.Changed(false);
+                    });
+                }, (job, error) => Manager.CheckClient(false)).Snapshot();
             });
 
             Post(app, "/api/coa/export", a =>

@@ -195,6 +195,7 @@ namespace CoAInstaller
 
         static int CopyPackage(Options o, Install inst, string files, string clientSource, string clientRoot)
         {
+            CoaUninstall.Begin(o.Client);
             int copied = 0, skipped = 0;
             Console.WriteLine(L.T("Copying client MPQs ..."));
             CopyFiles(clientSource, Path.Combine(o.Client, "Data"), "*.MPQ", o.NoBackup, ref copied, ref skipped);
@@ -260,17 +261,27 @@ namespace CoAInstaller
             // the user no longer has to run Modules > Game client after the CoA setup.
             Console.WriteLine(L.T("Installing module add-ons ..."));
             var moduleAddons = ClientAddons.Find(inst, o.Client);
+            foreach (var addon in moduleAddons)
+                CoaUninstall.CaptureDirectory(Path.Combine(o.Client, "Interface", "AddOns", addon.Name));
             var leftovers = ClientAddons.Leftovers(inst, moduleAddons, o.Client);
             string addonResult = ClientAddons.Install(inst, o.Client, moduleAddons, leftovers, false);
             if (addonResult.Length > 0) Console.WriteLine(addonResult);
 
-            if (o.ClientPatch)
+            try
             {
-                Console.WriteLine(L.T("Installing AFK client patch ..."));
-                var plan = ClientPatch.Collect(inst);
-                string result = ClientPatch.Install(inst, o.Client, plan,
-                    delegate(string text, int done, int total) { if (total > 0) Console.WriteLine("  " + text); });
-                Console.WriteLine("  " + result);
+                if (o.ClientPatch)
+                {
+                    Console.WriteLine(L.T("Installing AFK client patch ..."));
+                    CoaUninstall.CaptureGenerated(Path.Combine(o.Client, "Data", ClientPatch.ArchiveName));
+                    var plan = ClientPatch.Collect(inst);
+                    string result = ClientPatch.Install(inst, o.Client, plan,
+                        delegate(string text, int done, int total) { if (total > 0) Console.WriteLine("  " + text); });
+                    Console.WriteLine("  " + result);
+                }
+            }
+            finally
+            {
+                CoaUninstall.Flush();
             }
 
             Console.WriteLine();
@@ -564,6 +575,7 @@ namespace CoAInstaller
 
         static bool CopyFile(string source, string target, bool noBackup)
         {
+            CoaUninstall.Capture(target);
             Directory.CreateDirectory(Path.GetDirectoryName(target));
             if (File.Exists(target))
             {

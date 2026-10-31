@@ -1,3 +1,10 @@
+# AFK Realm 1.2.6
+
+## Added
+
+- **Remove CoA client files.** The CoA setup now records every client file it installs. The uninstall button restores files that existed before and deletes files the setup created. WTF, Cache, screenshots and personal add-ons are not touched.
+- Installations made before 1.2.6 do not have this record, so the uninstaller will refuse to guess.
+
 # AFK Realm 1.2.5
 
 ## Fixed in 1.2.5

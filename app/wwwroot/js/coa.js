@@ -72,6 +72,16 @@ export async function coaDialog() {
     }
   }
 
+  async function removeCoa() {
+    if (!await confirm(T('Remove the CoA Custom files this setup installed into the game client? Changed files are restored from their backups; files it created are removed. WTF, Cache, screenshots and your own add-ons are left alone. Close the game first.'))) return;
+    await rememberPaths();
+    const job = await runProgress(() => post('/api/coa/uninstall', { client: clientPath.value }), T('Removing CoA client files ...'));
+    if (job && job.ok) {
+      await alert(job.message || T('CoA client files removed.'));
+      status.textContent = T('CoA client files removed.');
+    }
+  }
+
   async function downloadCoa() {
     const target = await choose({ title: T('Folder for the downloaded CoA Custom package'), start: packagePath.value, newFolder: true });
     if (!target) return;
@@ -100,6 +110,7 @@ export async function coaDialog() {
       { text: T('Close'), value: null },
       { text: T('Check'), onclick: async () => { await check(); return false; } },
       { text: T('Download CoA Custom ...'), onclick: async () => { await downloadCoa(); return false; } },
+      ...(state.canUninstall ? [{ text: T('Remove CoA client files ...'), kind: 'danger', onclick: async () => { await removeCoa(); return false; } }] : []),
       { text: T('Create player ZIP ...'), onclick: async () => { await exportZip(); return false; } },
       { text: T('Install / update everything'), kind: 'primary', onclick: async () => { await install(); return false; } }
     ]

@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.6
+
+- **CoA client uninstall.** Every CoA setup run now records the client files it touches. **Remove CoA client files** restores files that existed before and deletes files the setup created. It leaves WTF, Cache, screenshots and personal add-ons alone.
+- The record is stored in the game folder as `.afk-coa-install.tsv`; installations made before 1.2.6 have no record and cannot be removed safely.
+
 ## 1.2.5
 
 - **AFK Realm can run from the game folder.** The "game or launcher is running" check now ignores AFK Realm's own process, so the manager does not block its own CoA setup when its exe is next to `Ascension.exe`.
