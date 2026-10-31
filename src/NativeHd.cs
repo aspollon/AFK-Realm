@@ -21,7 +21,12 @@ namespace CoAInstaller
     {
         public const string AssetName = "CoA64.zip";
         const string Sha256 = "6B175B8BFE4C4405D37DC89DD7B04E63F0BE0D2DBFB3866618A1DCAA49B5424B";
-        const string DownloadUrl = "https://raw.githubusercontent.com/" + Product.GitHubRepo + "/main/assets/coa64-native/CoA64.zip";
+        const string ExeSha256 = "20729A372708D81D8B48F35D661095E4341B9E8DCB1A2A8D16B8C6C80B3DEA99";
+        static readonly string[] DownloadUrls =
+        {
+            "https://raw.githubusercontent.com/" + Product.GitHubRepo + "/main/assets/coa64-native/CoA64.zip",
+            "https://github.com/" + Product.GitHubRepo + "/releases/latest/download/CoA64.zip"
+        };
 
         public const int Count = 1;
 
@@ -51,6 +56,18 @@ namespace CoAInstaller
                 return BitConverter.ToString(sha.ComputeHash(data)).Replace("-", "").Equals(Sha256, StringComparison.OrdinalIgnoreCase);
         }
 
+        static bool IsNativeExe(string path)
+        {
+            try
+            {
+                if (!File.Exists(path)) return false;
+                using (var sha = SHA256.Create())
+                using (var stream = File.OpenRead(path))
+                    return BitConverter.ToString(sha.ComputeHash(stream)).Replace("-", "").Equals(ExeSha256, StringComparison.OrdinalIgnoreCase);
+            }
+            catch { return false; }
+        }
+
         static byte[] Read()
         {
             foreach (string path in Candidates())
@@ -68,34 +85,39 @@ namespace CoAInstaller
             string cached = CacheFile();
             Directory.CreateDirectory(Path.GetDirectoryName(cached));
             string part = cached + ".part";
-            try { if (File.Exists(part)) File.Delete(part); } catch { }
-            try
+            string last = null;
+            foreach (string url in DownloadUrls)
             {
-                try { ServicePointManager.SecurityProtocol |= (SecurityProtocolType)3072; } catch { }
-                var req = (HttpWebRequest)WebRequest.Create(DownloadUrl);
-                req.UserAgent = Product.FileStem;
-                req.Timeout = 30000;
-                req.ReadWriteTimeout = 60000;
-                using (var resp = (HttpWebResponse)req.GetResponse())
-                using (Stream src = resp.GetResponseStream())
-                using (var dst = File.Create(part))
+                try
                 {
-                    var buffer = new byte[64 * 1024];
-                    int n;
-                    while ((n = src.Read(buffer, 0, buffer.Length)) > 0) dst.Write(buffer, 0, n);
+                    try { if (File.Exists(part)) File.Delete(part); } catch { }
+                    try { ServicePointManager.SecurityProtocol |= (SecurityProtocolType)3072; } catch { }
+                    var req = (HttpWebRequest)WebRequest.Create(url);
+                    req.UserAgent = Product.FileStem;
+                    req.Timeout = 30000;
+                    req.ReadWriteTimeout = 60000;
+                    using (var resp = (HttpWebResponse)req.GetResponse())
+                    using (Stream src = resp.GetResponseStream())
+                    using (var dst = File.Create(part))
+                    {
+                        var buffer = new byte[64 * 1024];
+                        int n;
+                        while ((n = src.Read(buffer, 0, buffer.Length)) > 0) dst.Write(buffer, 0, n);
+                    }
+                    byte[] data = File.ReadAllBytes(part);
+                    if (!Matches(data))
+                        throw new InvalidOperationException(L.T("The downloaded native HD CoA64 file has the wrong checksum."));
+                    if (File.Exists(cached)) File.Delete(cached);
+                    File.Move(part, cached);
+                    return data;
                 }
-                byte[] data = File.ReadAllBytes(part);
-                if (!Matches(data))
-                    throw new InvalidOperationException(L.T("The downloaded native HD CoA64 file has the wrong checksum."));
-                if (File.Exists(cached)) File.Delete(cached);
-                File.Move(part, cached);
-                return data;
+                catch (Exception ex)
+                {
+                    last = ex.Message;
+                    try { if (File.Exists(part)) File.Delete(part); } catch { }
+                }
             }
-            catch (Exception ex)
-            {
-                try { if (File.Exists(part)) File.Delete(part); } catch { }
-                throw new InvalidOperationException(L.F("The native HD CoA64 file could not be downloaded from {0}. Download {1} from the AFK Realm repository and put it next to AFK-Realm.exe, then run the setup again. ({2})", DownloadUrl, AssetName, ex.Message), ex);
-            }
+            throw new InvalidOperationException(L.F("The native HD CoA64 file could not be downloaded. Download {0} from the AFK Realm repository and put it next to AFK-Realm.exe, then run the setup again. ({1})", AssetName, last));
         }
 
         static ZipArchive OpenPacked(byte[] data)
@@ -134,6 +156,11 @@ namespace CoAInstaller
         /// <summary>Writes the native HD CoA64.exe and keeps the previous one as .coa-patcher-backup.</summary>
         public static int Install(string client)
         {
+            string target = Path.Combine(client, "CoA64.exe");
+            // A user who tested a native build already has the correct exe. Do not
+            // depend on a download just to compare it with itself.
+            if (IsNativeExe(target)) return 0;
+
             byte[] expected;
             using (ZipArchive zip = OpenPacked(Read()))
             using (Stream source = ExeEntry(zip).Open())
@@ -141,18 +168,6 @@ namespace CoAInstaller
             {
                 source.CopyTo(memory);
                 expected = memory.ToArray();
-            }
-
-            string target = Path.Combine(client, "CoA64.exe");
-            if (File.Exists(target))
-            {
-                byte[] present = File.ReadAllBytes(target);
-                if (present.Length == expected.Length)
-                {
-                    bool same = true;
-                    for (int i = 0; i < present.Length; i++) if (present[i] != expected[i]) { same = false; break; }
-                    if (same) return 0;
-                }
             }
 
             CoaUninstall.Capture(target);

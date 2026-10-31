@@ -1,4 +1,11 @@
-# AFK Realm 1.2.15
+# AFK Realm 1.2.16
+
+## Fixed in 1.2.16
+
+- **CoA setup no longer needs the native HD download when `CoA64.exe` is already the native build.** 1.2.15 could fail with the generic "CoA Custom setup failed" message after a test build had already been placed in the game folder, because it tried to download `CoA64.zip` before checking the installed exe. The setup now recognises the native exe by its SHA-256 and skips the download.
+- **The actual CoA setup error is shown.** The window now includes the error text instead of only "See the AFK Realm log", so a remaining problem can be identified directly.
+- **Two download URLs are tried** for `CoA64.zip` (repository and release asset), with the existing local-file and `%LOCALAPPDATA%` cache fallback.
+- All 1.2.15 fixes remain: native D3D9 HD, UTF-8 BOM handling, and the full patch-T check.
 
 ## Fixed in 1.2.15
 

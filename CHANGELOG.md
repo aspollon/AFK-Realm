@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.16
+
+- **CoA setup accepts an already-installed native CoA64.exe without downloading.** The native build is recognised by hash before `CoA64.zip` is fetched. This fixes the 1.2.15 setup failure on clients where a test build was already in place.
+- **The exact CoA setup error is shown in the window** instead of the generic "See the AFK Realm log" message.
+- **The native HD ZIP has two download URLs** (repository and release asset); the local sidecar and cache remain as fallbacks.
+- 1.2.15's native D3D9 HD, UTF-8 BOM fix and patch-T check are unchanged.
+
 ## 1.2.15
 
 - **Native D3D9 HD for CoA64.** The CoA setup installs a CoA64 1.9.5 build that opens the HD archives and tables with the normal 64-bit Direct3D9 renderer. It needs no x64 DXVK folder, ignores an existing one by default (`-dxvk` remains available), and keeps the HD character models. This replaces the DXVK-only HD path that still failed to cold-start on some PCs.

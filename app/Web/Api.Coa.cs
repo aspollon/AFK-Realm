@@ -114,7 +114,8 @@ namespace CoAInstaller.Web
                     try { RefreshRaces(inst); } catch { }
                     st(L.T("Copying the CoA package and building the client patch ..."));
                     int code = CoaSetup.Run(new[] { "--package", package, "--server", server, "--client", client });
-                    if (code != 0) throw new UserError(L.T("CoA Custom setup failed. See the AFK Realm log."));
+                    if (code != 0)
+                        throw new UserError(L.F("CoA Custom setup failed: {0}", string.IsNullOrEmpty(CoaSetup.LastError) ? L.T("See the AFK Realm log.") : CoaSetup.LastError));
                     job.Message = L.T("CoA Custom is installed.");
                 }, (job, error) =>
                 {

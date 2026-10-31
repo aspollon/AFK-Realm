@@ -16,6 +16,9 @@ namespace CoAInstaller
     /// </summary>
     static class CoaSetup
     {
+        /// <summary>The exact error of the last setup run, for the web page and the next retry.</summary>
+        public static string LastError { get; private set; }
+
         public sealed class Options
         {
             public string Package;
@@ -31,6 +34,7 @@ namespace CoAInstaller
         public static int Run(string[] args)
         {
             L.Init();
+            LastError = null;
             Options o = Parse(args);
             if (o.Help)
             {
@@ -43,6 +47,7 @@ namespace CoAInstaller
             }
             catch (Exception ex)
             {
+                LastError = ex.Message;
                 Console.Error.WriteLine("ERROR: " + ex.Message);
                 return 1;
             }
@@ -217,7 +222,9 @@ namespace CoAInstaller
             }
 
             Console.WriteLine(L.T("Copying client_root (CoA64, Xvid, Esteria, Retail) ..."));
-            CopyTree(clientRoot, o.Client, o.NoBackup, ref copied, ref skipped);
+            // Keep an already installed native CoA64.exe; NativeHd.Install below
+            // only writes it when it is missing or still the official build.
+            CopyTree(clientRoot, o.Client, o.NoBackup, ref copied, ref skipped, "CoA64.exe");
 
             Console.WriteLine(L.T("Installing native HD CoA64 (no x64 DXVK needed) ..."));
             int nativeHd = NativeHd.Install(o.Client);
@@ -632,12 +639,13 @@ namespace CoAInstaller
             }
         }
 
-        static void CopyTree(string source, string target, bool noBackup, ref int copied, ref int skipped)
+        static void CopyTree(string source, string target, bool noBackup, ref int copied, ref int skipped, string skipFile = null)
         {
             if (!Directory.Exists(source)) return;
             string root = Path.GetFullPath(source).TrimEnd('\\', '/') + Path.DirectorySeparatorChar;
             foreach (string file in Directory.GetFiles(source, "*", SearchOption.AllDirectories).OrderBy(x => x))
             {
+                if (skipFile != null && string.Equals(Path.GetFileName(file), skipFile, StringComparison.OrdinalIgnoreCase)) continue;
                 string rel = file.Substring(root.Length);
                 string dest = Path.Combine(target, rel);
                 if (CopyFile(file, dest, noBackup)) copied++;
