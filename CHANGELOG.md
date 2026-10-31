@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.13
+
+- **Hardware cursor for CoA64/DXVK cold starts.** `WTF\Config.wtf` now gets `SET gxCursor "1"` (the old file is kept as `.coa-patcher-backup`). This matches the user reports: removing x64 fixed the launch but broke the software cursor, while hardware cursor fixed both.
+- **Old custom-race racial SQL is removed.** `Server\configs\modules\custom-races-racials` is synchronised before setup; generated `.sql` files of races no longer active are deleted. The Custom races page now saves/synchronises even when no visible page change is pending.
+- No need to delete the `x64` folder; the hardware cursor avoids the DXVK software-cursor path.
+
 ## 1.2.12
 
 - **Stable DXVK config for CoA64.** The CoA setup writes `dxvk.enableGraphicsPipelineLibrary = False` and `dxvk.trackPipelineLifetime = False`; an existing `dxvk.conf` is backed up as `.coa-patcher-backup`. This addresses the cold-start access violation where running Ascension first made CoA64 start.

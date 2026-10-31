@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Text;
 
 namespace CoAInstaller
 {
@@ -268,6 +269,7 @@ namespace CoAInstaller
             Console.WriteLine(L.T("Writing client settings ..."));
             WriteRaceDefaults(inst, files);
             WriteClientSettings(inst, clientRoot, clientSource);
+            EnsureHardwareCursor(o.Client);
 
             // The module add-ons are part of the client build too. Installing them here means
             // the user no longer has to run Modules > Game client after the CoA setup.
@@ -335,6 +337,46 @@ namespace CoAInstaller
             catch (Exception ex)
             {
                 throw new InvalidOperationException(L.F("Data\\patch-Z.MPQ could not be disabled. Close the game and run the setup again. ({0})", ex.Message), ex);
+            }
+        }
+
+        /// <summary>
+        /// DXVK + the software cursor can make CoA64 fail on the first start. Hardware cursor
+        /// avoids that path; keep the old Config.wtf as a CoA backup.
+        /// </summary>
+        static void EnsureHardwareCursor(string client)
+        {
+            string path = Path.Combine(client, "WTF", "Config.wtf");
+            if (!File.Exists(path)) return;
+            try
+            {
+                string[] lines = File.ReadAllLines(path);
+                bool found = false, changed = false;
+                for (int i = 0; i < lines.Length; i++)
+                {
+                    if (!lines[i].TrimStart().StartsWith("SET gxCursor", StringComparison.OrdinalIgnoreCase)) continue;
+                    found = true;
+                    if (lines[i].Trim() == "SET gxCursor \"1\"") continue;
+                    lines[i] = "SET gxCursor \"1\"";
+                    changed = true;
+                }
+                if (!found)
+                {
+                    Array.Resize(ref lines, lines.Length + 1);
+                    lines[lines.Length - 1] = "SET gxCursor \"1\"";
+                    changed = true;
+                }
+                if (!changed) return;
+
+                CoaUninstall.Capture(path);
+                string backup = path + ".coa-patcher-backup";
+                if (!File.Exists(backup)) File.Copy(path, backup, false);
+                File.WriteAllLines(path, lines, new UTF8Encoding(false));
+                Console.WriteLine(L.T("Enabled the hardware cursor for CoA64 (DXVK software-cursor fix)."));
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(L.T("The hardware cursor could not be set:") + " " + ex.Message);
             }
         }
 

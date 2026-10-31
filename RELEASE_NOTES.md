@@ -1,3 +1,11 @@
+# AFK Realm 1.2.13
+
+## Fixed in 1.2.13
+
+- **The CoA64 cold-start crash is narrowed to the software cursor.** Users reported that removing the x64 DXVK folder fixed the first start but broke the software cursor, while enabling the **Hardware Cursor** fixed both. The CoA setup now sets `SET gxCursor "1"` in `WTF\Config.wtf` (with a `.coa-patcher-backup`) so DXVK uses the hardware cursor on the first start.
+- **Stale generated racial files are cleaned up.** `Server\configs\modules\custom-races-racials` is synchronised again before the setup; old `.sql` files of races that are no longer active are removed instead of being executed by the server.
+- If the user still has the old `WTF` file, the next **CoA Custom > Install / update** writes the hardware-cursor setting. No x64 folder deletion is needed.
+
 # AFK Realm 1.2.12
 
 ## Fixed in 1.2.12

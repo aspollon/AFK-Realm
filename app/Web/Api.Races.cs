@@ -45,7 +45,9 @@ namespace CoAInstaller.Web
                 lock (racesLock)
                 {
                     var m = new RacesModel(inst);
-                    if (m.Unsaved > 0) m.Save();
+                    // Always write the generated race files: this also removes files of races that
+                    // were active in an older client but are no longer part of this installation.
+                    m.Save();
                     racesModel = null;
                 }
             }

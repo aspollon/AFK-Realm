@@ -160,6 +160,20 @@ namespace CoAInstaller
             foreach (var race in races) foreach (var id in race.Rows.Keys) wantedIds.Remove(id);
             var fromClient = wantedIds.Count > 0 ? ClientRows(client, wantedIds) : new Dictionary<uint, object[]>();
             Directory.CreateDirectory(outDir);
+            // Remove generated files of races that are no longer active. The folder is dedicated to
+            // generated SQL; only files with the generated header are touched.
+            var activeFiles = new HashSet<string>(races.Select(r => r.Key + ".sql"), StringComparer.OrdinalIgnoreCase);
+            foreach (string old in Directory.GetFiles(outDir, "*.sql"))
+            {
+                if (activeFiles.Contains(Path.GetFileName(old))) continue;
+                try
+                {
+                    string first;
+                    using (var reader = new StreamReader(old, Encoding.UTF8, true)) first = reader.ReadLine();
+                    if (first != null && first.StartsWith("-- spells", StringComparison.OrdinalIgnoreCase)) File.Delete(old);
+                }
+                catch { }
+            }
             foreach (var race in races)
             {
                 var all = WithHelpers(ClientSpells(serverDataFolder, race.Name, race.CoaRace));
