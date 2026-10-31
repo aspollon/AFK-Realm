@@ -452,6 +452,18 @@ namespace CoAInstaller.Web
                 try { pending = ClientAddons.Pending(inst); } catch { }
                 if (Inst != inst) return;
                 ClientPending = pending; ClientChecking = false;
+                if (pending.Length == 0)
+                {
+                    // A setup can finish while the page still holds the old offer flag. Clear it
+                    // on every check, not only when the offer parameter is set.
+                    OfferClient = false;
+                    try
+                    {
+                        string offered = Path.Combine(inst.Root, "Dependencies", "client-offered.txt");
+                        if (File.Exists(offered)) File.Delete(offered);
+                    }
+                    catch { }
+                }
                 if (offer)
                 {
                     string offered = Path.Combine(inst.Root, "Dependencies", "client-offered.txt");

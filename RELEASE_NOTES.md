@@ -1,3 +1,10 @@
+# AFK Realm 1.2.11
+
+## Fixed in 1.2.11
+
+- **The repeated client-patch prompt is gone.** After a successful CoA/client setup, AFK Realm now clears the previous "the game client needs the patch" offer as well as the pending state. Reloading the manager page no longer shows the same prompt again.
+- Verified against an installed server and client: `ClientPatch.StateOf` is **Current**, the module add-ons are **Current**, and `ClientAddons.Pending` is empty. The client patch does not need to be rebuilt again.
+
 # AFK Realm 1.2.10
 
 ## CoA64 HD compatibility

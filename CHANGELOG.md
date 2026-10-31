@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.11
+
+- **The client-patch prompt no longer comes back after a successful setup.** `Manager.CheckClient(false)` now clears the old `OfferClient` flag and `client-offered.txt` when `ClientAddons.Pending` is empty. The Next check therefore reports the client as current instead of asking for the same patch again.
+- This is a follow-up to 1.2.10 (x64 DXVK, patch-Z quarantine, full patch-T validation).
+
 ## 1.2.10
 
 - **CoA64 HD setup.** The CoA installer now embeds and installs the x64 DXVK files `d3d9.dll` and `dxgi.dll` when they are missing from the game's `x64` folder. These are the two wrappers CoA64 uses. Existing files are not overwritten.
