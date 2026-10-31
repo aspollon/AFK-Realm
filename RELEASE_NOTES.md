@@ -1,4 +1,10 @@
-# AFK Realm 1.2.17
+# AFK Realm 1.2.18
+
+## Fixed in 1.2.18
+
+- **The CoA setup verification accepts the native `CoA64.exe`.** 1.2.16/1.2.17 correctly kept the native exe, but the final package check still compared its size with the official package exe and reported: `The CoA package file is incomplete after the copy: ...\CoA64.exe`. That one file is now excluded from the final copy check when the native build is active.
+- This is the final fix for the CoA Custom setup failure after 1.2.15; the exact error message from 1.2.16 made it visible.
+- 1.2.17's version guard remains: a newer CoA package uses its official `CoA64.exe` instead of keeping an older native build.
 
 ## Fixed in 1.2.17
 

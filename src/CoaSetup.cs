@@ -291,7 +291,9 @@ namespace CoAInstaller
             VerifyCopied(clientSource, Path.Combine(o.Client, "Data"), "*.MPQ");
             if (File.Exists(Path.Combine(clientSource, "dinput8.dll")))
                 VerifyFile(Path.Combine(clientSource, "dinput8.dll"), Path.Combine(o.Client, "dinput8.dll"));
-            VerifyTree(clientRoot, o.Client);
+            // CoA64.exe is deliberately replaced by the native build for a supported package;
+            // do not compare it with the package's official size afterwards.
+            VerifyTree(clientRoot, o.Client, nativeSupported ? "CoA64.exe" : null);
             if (Directory.Exists(addons)) VerifyTree(addons, Path.Combine(o.Client, "Interface", "AddOns"));
             VerifyCopied(Path.Combine(files, "dbc"), Path.Combine(inst.DataDir, "dbc"), "*.dbc");
             if (File.Exists(clientDbc)) VerifyFile(clientDbc, Path.Combine(inst.DataDir, "dbc_clientset", "CreatureDisplayInfo.dbc"));
@@ -684,12 +686,13 @@ namespace CoAInstaller
                 VerifyFile(file, Path.Combine(target, Path.GetFileName(file)));
         }
 
-        static void VerifyTree(string source, string target)
+        static void VerifyTree(string source, string target, string skipFile = null)
         {
             if (!Directory.Exists(source)) return;
             string root = Path.GetFullPath(source).TrimEnd('\\', '/') + Path.DirectorySeparatorChar;
             foreach (string file in Directory.GetFiles(source, "*", SearchOption.AllDirectories))
             {
+                if (skipFile != null && string.Equals(Path.GetFileName(file), skipFile, StringComparison.OrdinalIgnoreCase)) continue;
                 string rel = file.Substring(root.Length);
                 VerifyFile(file, Path.Combine(target, rel));
             }

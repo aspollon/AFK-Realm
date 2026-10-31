@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.18
+
+- **Final CoA copy check handles the native CoA64.exe.** `VerifyTree` no longer compares the intentionally native client exe with the package's official size. This fixes the 1.2.16/1.2.17 error "The CoA package file is incomplete after the copy: ...\CoA64.exe".
+- 1.2.17's package-version hash guard and all native HD/BOM/patch-T fixes remain.
+
 ## 1.2.17
 
 - **Native HD is version-gated against the CoA package.** The setup hashes the package's official `CoA64.exe`; the native build is used only for the supported CoA Custom 1.9.5 exe builds. A newer package's official exe is copied instead, so new race data cannot run on an old native client. The client ZIP follows the same rule.
