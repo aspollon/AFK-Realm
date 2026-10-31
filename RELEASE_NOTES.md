@@ -1,3 +1,10 @@
+# AFK Realm 1.2.1
+
+## Fixed in 1.2.1
+
+- **The old race switches are gone.** 1.2.0 still opened the old Custom races page through the secondary **Base races** entry. 1.2.1 opens a base-only page: no race on/off switches, no importer, no stock-client races, no race-number tools.
+- Only the CoA custom races and their base-race selection are shown. Visibility and class choice stay in the CoA UI.
+
 # AFK Realm 1.2.0
 
 Build, run and tweak your own Conquest of Azeroth server on Windows 10/11 and Linux.

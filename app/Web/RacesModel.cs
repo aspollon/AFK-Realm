@@ -743,9 +743,25 @@ namespace CoAInstaller.Web
                     text = L.T("The game can only show a certain number of races. Switch off the races you want least; their characters keep playing as the race they start like until you switch them on again."),
                     answers = new object[0]
                 });
+            var baseRaces = races
+                .Where(r => r.Pack == null && !r.Virtual && !ClientRaces.Stock.Contains(r.Source))
+                .OrderBy(r => r.Name, StringComparer.CurrentCultureIgnoreCase)
+                .Select(r =>
+                {
+                    string b = Raw("CustomRaces." + r.Key + ".Base", DefaultBase(r));
+                    if (!ClientRaces.BaseFitsSide(ClientRaces.SideOf(r), b)) b = DefaultBase(r);
+                    int at = bases.FindIndex(x => x.Equals(b, StringComparison.OrdinalIgnoreCase));
+                    return new
+                    {
+                        key = r.Key,
+                        name = L.Outside(r.Name),
+                        @base = at < 0 ? DefaultBase(r) : bases[at],
+                        side = ClientRaces.SideOf(r) == 0 ? "alliance" : ClientRaces.SideOf(r) == 1 ? "horde" : ""
+                    };
+                }).ToArray();
             return new
             {
-                list = simple, conflicts, capacity, onCount = on, clientFolder = ClientAddons.ClientFolder ?? "",
+                list = simple, baseRaces, conflicts, capacity, onCount = on, clientFolder = ClientAddons.ClientFolder ?? "",
                 hasCoa = Raw("CustomRaces.ClientRootFolder", "").Length > 0,
                 coaSource = CoaSource(),
                 setupNeeded = chosen.Count == 0 && !races.Any(r => r.Pack != null || r.Alt != null),

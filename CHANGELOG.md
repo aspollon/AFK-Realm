@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.1
+
+- **Base races page fixed.** Modules > CoA Custom > Base races now shows only the CoA custom races and only their base-race selection. The old race switches, stock-client races, importer and race-number tools are no longer reachable; visibility remains in the CoA UI.
+- **Release check:** 1.2.0 still exposed the old Custom races page through its secondary entry. 1.2.1 replaces that entry with the base-only page.
+
 ## 1.2.0
 
 - **CoA Custom setup in AFK Realm.** Modules > CoA Custom installs or updates a CoA Custom 1.9.3 package by copying its finished client files and settings. The setup is part of AFK Realm; there is no separate patcher EXE. The old race importer is no longer part of this path: the CoA UI owns race and class selection. The CoA server DBCs and SQL are copied too (the racial spells live in `Spell.dbc` and the other server DBCs); `worldserver.exe` is never replaced, so the AFK core and `mod-classic-classes` remain authoritative.

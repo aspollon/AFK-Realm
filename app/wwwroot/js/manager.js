@@ -196,7 +196,7 @@ export function manager() {
     sectionEls.clientBtn = clientBtn;
     const coaBtn = primary(st.coaButton || T('Install / update CoA Custom ...'), () => import('./coa.js').then(x => x.coaDialog()), 'client');
     sectionEls.coaBtn = coaBtn;
-    const racesBtn = secondary(st.racesButton || T('Base races …'), () => import('./races.js').then(x => x.racesDialog()));
+    const racesBtn = secondary(st.racesButton || T('Base races …'), () => import('./base.js').then(x => x.baseRacesDialog()));
     sectionEls.racesBtn = racesBtn;
     const out = [
       card(T('Manage modules'), T('Add or remove modules: those made for this server and the AzerothCore module catalog. The server is backed up and rebuilt; database changes of modules installed here are recorded, so removing a module undoes them.'), 'modules',
