@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.5
+
+- **AFK Realm can run from the game folder.** The "game or launcher is running" check now ignores AFK Realm's own process, so the manager does not block its own CoA setup when its exe is next to `Ascension.exe`.
+
 ## 1.2.4
 
 - **Missing race config is recreated.** On a fresh or reset server, `mod_custom_races.conf` can be absent. The CoA setup now creates it from the module's `.conf.dist` before writing the race settings. Without this, `CustomRaces.UseCoAUI` could not be set to 1 and the client patch still contained the old `CustomRaces.lua` race selector.

@@ -1,3 +1,9 @@
+# AFK Realm 1.2.5
+
+## Fixed in 1.2.5
+
+- **No false "game is running" message when AFK Realm itself is in the game folder.** The check now ignores the AFK Realm manager process and only looks for the game or its launcher.
+
 # AFK Realm 1.2.4
 
 ## Fixed in 1.2.4

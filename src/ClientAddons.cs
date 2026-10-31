@@ -198,9 +198,17 @@ namespace CoAInstaller
         public static bool ClientRunning(string client)
         {
             string root = Path.GetFullPath(client).TrimEnd('\\', '/') + Path.DirectorySeparatorChar;
+            int self = Process.GetCurrentProcess().Id;
             foreach (var p in Process.GetProcesses())
             {
-                try { var mm = p.MainModule; if (mm != null && mm.FileName != null && mm.FileName.StartsWith(root, StringComparison.OrdinalIgnoreCase)) return true; }
+                try
+                {
+                    // AFK Realm itself may be started from the game folder. It is the manager,
+                    // not the game or launcher, and must not block its own install.
+                    if (p.Id == self || p.ProcessName.StartsWith(Product.FileStem, StringComparison.OrdinalIgnoreCase)) continue;
+                    var mm = p.MainModule;
+                    if (mm != null && mm.FileName != null && mm.FileName.StartsWith(root, StringComparison.OrdinalIgnoreCase)) return true;
+                }
                 catch { }
                 finally { p.Dispose(); }
             }
