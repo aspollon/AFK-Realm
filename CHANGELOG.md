@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.20
+
+- **`patch-4.MPQ` and `patch-5.MPQ` are now disabled with `patch-Z.MPQ`.** The CoA setup moves all three to `.coa-patcher-backup`; the uninstaller restores them. This removes the placeholder HD archives from the CoA64 archive chain.
+- The native-client ZIP README names all three archives.
+- 1.2.19's CoA 1.9.5 manifest detection and native download/copy fixes remain.
+
 ## 1.2.19
 
 - **Accept every CoA Custom 1.9.5 package variant.** The native HD build is selected from the package's `manifest.json` version, not only two exact CoA64.exe hashes. A 1.9.5 package with another official CoA64 build keeps the native Direct3D9 client and restores it if 1.2.18 replaced it. Newer package versions still use their official exe.

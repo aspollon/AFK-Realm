@@ -1,4 +1,10 @@
-# AFK Realm 1.2.19
+# AFK Realm 1.2.20
+
+## Fixed in 1.2.20
+
+- **`patch-4.MPQ` and `patch-5.MPQ` are disabled by the CoA setup, like `patch-Z.MPQ`.** These placeholder HD archives should not sit in the CoA64 archive chain. Existing files are kept as `.coa-patcher-backup` and restored by the uninstaller.
+- **The CoA archive cleanup is now consistent:** `patch-Z.MPQ`, `patch-4.MPQ` and `patch-5.MPQ` are all quarantined by **CoA Custom > Install / update**.
+- All 1.2.19 fixes remain, including the native 1.9.5 detection and the native HD download/copy handling.
 
 ## Fixed in 1.2.19
 

@@ -209,7 +209,7 @@ namespace CoAInstaller
             if (nativeHd)
             {
                 text.AppendLine(L.T("CoA64.exe in this ZIP is the native HD build. It uses the normal Direct3D9 renderer and does not need the x64 DXVK folder; an existing x64 folder is ignored."));
-                text.AppendLine(L.T("Keep Data\\patch-Z.MPQ disabled (patch-Z.MPQ.coa-patcher-backup is fine)."));
+                text.AppendLine(L.T("Keep Data\\patch-Z.MPQ, patch-4.MPQ and patch-5.MPQ disabled (their .coa-patcher-backup files are fine)."));
             }
             else
             {
@@ -360,12 +360,21 @@ namespace CoAInstaller
         }
 
         /// <summary>
-        /// CoA64 1.9.5 crashes in the Ascension HD world archive. Keep the player's file next
-        /// to the client as a normal CoA backup so uninstalling restores it.
+        /// CoA64 1.9.5 is unstable with the Ascension HD world archives. Keep the player's
+        /// files next to the client as normal CoA backups so uninstalling restores them.
+        /// patch-4 and patch-5 are placeholders in several client packages and should not
+        /// sit in the archive chain either.
         /// </summary>
         static void DisableHdWorldArchive(string client)
         {
-            string archive = Path.Combine(client, "Data", "patch-Z.MPQ");
+            DisableArchive(client, "patch-Z.MPQ");
+            DisableArchive(client, "patch-4.MPQ");
+            DisableArchive(client, "patch-5.MPQ");
+        }
+
+        static void DisableArchive(string client, string name)
+        {
+            string archive = Path.Combine(client, "Data", name);
             if (!File.Exists(archive)) return;
 
             CoaUninstall.Capture(archive);
@@ -374,11 +383,11 @@ namespace CoAInstaller
             {
                 if (File.Exists(backup)) File.Delete(archive);
                 else File.Move(archive, backup);
-                Console.WriteLine(L.T("Disabled Data\\patch-Z.MPQ for CoA64 HD compatibility; the original stays as .coa-patcher-backup."));
+                Console.WriteLine(L.F("Disabled Data\\{0} for CoA64 compatibility; the original stays as .coa-patcher-backup.", name));
             }
             catch (Exception ex)
             {
-                throw new InvalidOperationException(L.F("Data\\patch-Z.MPQ could not be disabled. Close the game and run the setup again. ({0})", ex.Message), ex);
+                throw new InvalidOperationException(L.F("Data\\{0} could not be disabled. Close the game and run the setup again. ({1})", name, ex.Message), ex);
             }
         }
 
@@ -430,7 +439,7 @@ namespace CoAInstaller
             Console.WriteLine(L.F("  - addons from {0}", Path.Combine(files, "addons")));
             Console.WriteLine("  - native HD CoA64.exe (no x64 DXVK needed)");
             Console.WriteLine("  - full Data\\patch-T.MPQ (about 346 MB)");
-            Console.WriteLine("  - disable Data\\patch-Z.MPQ for CoA64 HD compatibility");
+            Console.WriteLine("  - disable Data\\patch-Z.MPQ, patch-4.MPQ and patch-5.MPQ for CoA64 compatibility");
             Console.WriteLine(L.F("  - server DBCs to {0}", Path.Combine(inst.DataDir, "dbc")));
             Console.WriteLine(L.F("  - server SQL to {0}", Path.Combine(inst.Root, "CoA-Custom", "sql")));
             Console.WriteLine(L.F("  - settings in {0}", Path.Combine(inst.ConfigDir, "modules", "mod_custom_races.conf")));
