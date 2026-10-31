@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.15
+
+- **Native D3D9 HD for CoA64.** The CoA setup installs a CoA64 1.9.5 build that opens the HD archives and tables with the normal 64-bit Direct3D9 renderer. It needs no x64 DXVK folder, ignores an existing one by default (`-dxvk` remains available), and keeps the HD character models. This replaces the DXVK-only HD path that still failed to cold-start on some PCs.
+- **Native HD download.** The 8 MB build is kept as `CoA64.zip` in `%LOCALAPPDATA%\AFK Realm`; a copy next to `AFK-Realm.exe` works offline. The complete-client ZIP contains the native build too.
+- **UTF-8 BOM fix for module SQL.** `MySql.RunFile` skips a UTF-8 BOM; the `mod-custom-races` `2026_10_25_00_hide_armor.sql` install no longer fails with `ERROR 1064`.
+- **Full patch-T check.** A client with the old 19 MB patch-T now gets a clear setup error instead of missing custom-race models and portraits.
+- **patch-Z remains quarantined**; hardware cursor and stale racial SQL handling from 1.2.13/1.2.14 remain.
+
 ## 1.2.14
 
 - **DXVK 2.5.3 → 2.7.1.** The CoA setup now validates the existing x64 `d3d9.dll` and `dxgi.dll` and replaces an old version with the bundled 2.7.1 files (backup `.coa-patcher-backup`). This is for the remaining cold-start cases where deleting `Client\x64` fixed the launch.

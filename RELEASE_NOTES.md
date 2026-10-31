@@ -1,4 +1,13 @@
-# AFK Realm 1.2.14
+# AFK Realm 1.2.15
+
+## Fixed in 1.2.15
+
+- **CoA64 HD without DXVK or the x64 folder.** The CoA setup now installs a CoA64 1.9.5 build that uses the native 64-bit Direct3D9 renderer for HD character, creature, item and interface content. It does not need `Client\x64`; an existing x64 folder is ignored unless the client is started with `-dxvk`. Deleting x64 is no longer required, and a broken DXVK preload can no longer stop the start.
+- **The native HD build is downloaded once.** AFK Realm fetches the 8 MB `CoA64.zip` from the AFK Realm repository and keeps it in `%LOCALAPPDATA%\AFK Realm\CoA64.zip`. If the PC is offline, put `CoA64.zip` next to `AFK-Realm.exe` before running the CoA setup.
+- **No more module SQL failure from UTF-8 BOMs.** AFK Realm strips a UTF-8 BOM before passing a module SQL file to MySQL. This fixes the `mod-custom-races` error `ERROR 1064 ... near '-- .hidearmor ... CREATE TABLE'`; the module installation can be retried without editing the file.
+- **A stale 19 MB `patch-T.MPQ` is rejected with a clear message.** The setup requires the full package file (about 346 MB), so the old four-DBC copy can no longer silently remove custom-race models and portraits.
+- **`patch-Z.MPQ` remains disabled** for CoA64 1.9.5 HD compatibility; the setup keeps it as `.coa-patcher-backup`.
+- Run **CoA Custom > Install / update** once after updating. The game and launcher must be closed.
 
 ## Fixed in 1.2.14
 

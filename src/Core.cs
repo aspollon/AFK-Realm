@@ -23,7 +23,7 @@ namespace CoAInstaller
         public const string Name = "AFK Realm";                   // window titles, dialogs
         public const string ShortName = "AFK Realm";              // desktop shortcut, firewall rules
         public const string FileStem = "AFK-Realm";                // exe name, settings folder
-        public const string Version = "1.2.14";                   // a release; "-preview" marks a pre-release
+        public const string Version = "1.2.15";                   // a release; "-preview" marks a pre-release
         public const string Tagline = "build, run and tweak your own server the lazy way";
         public const string BuildsFor = "Conquest of AzerothCore";
         public const string WindowTitle = Name;
@@ -337,7 +337,16 @@ namespace CoAInstaller
                 {
                     var errTask = p.StandardError.ReadToEndAsync();
                     var outTask = p.StandardOutput.ReadToEndAsync();
-                    using (var src = File.OpenRead(file)) src.CopyTo(p.StandardInput.BaseStream);
+                    using (var src = File.OpenRead(file))
+                    {
+                        // A UTF-8 BOM makes mysql.exe treat the first "--" comment as SQL text;
+                        // some module files (mod-custom-races) are saved with one. Strip it.
+                        var head = new byte[3];
+                        int n = src.Read(head, 0, head.Length);
+                        if (!(n == 3 && head[0] == 0xEF && head[1] == 0xBB && head[2] == 0xBF))
+                            p.StandardInput.BaseStream.Write(head, 0, n);
+                        src.CopyTo(p.StandardInput.BaseStream);
+                    }
                     p.StandardInput.Close();
                     p.WaitForExit();
                     if (p.ExitCode != 0) throw new InvalidOperationException(errTask.Result.Trim());

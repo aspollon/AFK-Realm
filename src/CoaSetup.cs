@@ -129,7 +129,7 @@ namespace CoAInstaller
                 .SelectMany(a => Directory.GetFiles(a.Source, "*", SearchOption.AllDirectories)
                     .Select(path => new { Addon = a, Path = path }))
                 .ToList();
-            int total = rootFiles.Length + addonFiles.Length + moduleAddonFiles.Count + mpqs.Length + Dxvk.Count;
+            int total = rootFiles.Length + addonFiles.Length + moduleAddonFiles.Count + mpqs.Length + NativeHd.Count;
             int done = 0;
             using (var zip = ZipFile.Open(file, ZipArchiveMode.Create))
             {
@@ -139,17 +139,19 @@ namespace CoAInstaller
                     zip.CreateEntryFromFile(path, "Data/" + Path.GetFileName(path), CompressionLevel.NoCompression);
                     done++;
                 }
-                progress(L.T("Adding the x64 DXVK files ..."), done, total);
-                Dxvk.AddToZip(zip);
-                done += Dxvk.Count;
                 string rootPrefix = Path.GetFullPath(clientRoot).TrimEnd('\\', '/') + Path.DirectorySeparatorChar;
                 foreach (string path in rootFiles.OrderBy(x => x))
                 {
+                    // The package's CoA64.exe is replaced by the native HD build below.
+                    if (string.Equals(Path.GetFileName(path), "CoA64.exe", StringComparison.OrdinalIgnoreCase)) continue;
                     progress(L.F("Packing CoA client files ({0}/{1}) ...", done + 1, total), done, total);
                     string rel = path.Substring(rootPrefix.Length).Replace('\\', '/');
                     zip.CreateEntryFromFile(path, rel, CompressionLevel.NoCompression);
                     done++;
                 }
+                progress(L.T("Adding the native HD CoA64 ..."), done, total);
+                NativeHd.AddToZip(zip);
+                done += NativeHd.Count;
                 if (addonFiles.Length > 0)
                 {
                     string addonPrefix = Path.GetFullPath(Path.Combine(files, "addons")).TrimEnd('\\', '/') + Path.DirectorySeparatorChar;
@@ -194,6 +196,8 @@ namespace CoAInstaller
             text.AppendLine(L.T("4. Delete the folder \"Cache\" in your game folder if the game still shows old races or classes."));
             text.AppendLine();
             text.AppendLine(L.T("The ZIP contains the CoA Custom client files, its add-ons, the AFK Realm client patch and the add-ons of the installed modules."));
+            text.AppendLine(L.T("CoA64.exe in this ZIP is the native HD build. It uses the normal Direct3D9 renderer and does not need the x64 DXVK folder; an existing x64 folder is ignored."));
+            text.AppendLine(L.T("Keep Data\\patch-Z.MPQ disabled (patch-Z.MPQ.coa-patcher-backup is fine)."));
             return text.ToString();
         }
 
@@ -215,9 +219,9 @@ namespace CoAInstaller
             Console.WriteLine(L.T("Copying client_root (CoA64, Xvid, Esteria, Retail) ..."));
             CopyTree(clientRoot, o.Client, o.NoBackup, ref copied, ref skipped);
 
-            Console.WriteLine(L.T("Installing x64 DXVK ..."));
-            int dxvk = Dxvk.Install(o.Client);
-            if (dxvk > 0) copied += dxvk;
+            Console.WriteLine(L.T("Installing native HD CoA64 (no x64 DXVK needed) ..."));
+            int nativeHd = NativeHd.Install(o.Client);
+            if (nativeHd > 0) copied++;
 
             // The Ascension HD world archive crashes CoA64 1.9.5. Quarantine the existing
             // client file (not a CoA package file) until the upstream fix is available.
@@ -310,9 +314,17 @@ namespace CoAInstaller
         /// </summary>
         static void EnsurePatchT(string clientSource, string client)
         {
+            // The old client patch-T is about 19 MB. The full package file is about 346 MB.
+            // A size check catches both a stale package and a client where the copy was skipped.
+            const long MinimumPatchTBytes = 300000000;
+            string target = Path.Combine(client, "Data", "patch-T.MPQ");
+            if (File.Exists(target) && new FileInfo(target).Length < MinimumPatchTBytes)
+                throw new InvalidOperationException(L.F("The game client still has the old small patch-T.MPQ ({0} bytes). The CoA package must supply the full patch-T.MPQ (about 346 MB); update the CoA package and run the setup again.", new FileInfo(target).Length));
+
             string source = Path.Combine(clientSource, "patch-T.MPQ");
             if (!File.Exists(source)) return;
-            string target = Path.Combine(client, "Data", "patch-T.MPQ");
+            if (new FileInfo(source).Length < MinimumPatchTBytes)
+                throw new InvalidOperationException(L.F("The selected CoA package has the old small patch-T.MPQ ({0} bytes). Use a current CoA Custom package with the full patch-T.MPQ (about 346 MB).", new FileInfo(source).Length));
             if (!File.Exists(target) || new FileInfo(target).Length != new FileInfo(source).Length)
                 throw new InvalidOperationException(L.F("The CoA patch-T.MPQ was not copied completely. Expected {0} bytes in {1}; close the game and run the setup again.", new FileInfo(source).Length, target));
         }
@@ -386,7 +398,8 @@ namespace CoAInstaller
             Console.WriteLine(L.F("  - {0} MPQs from {1} to {2}", Count(clientSource, "*.MPQ"), clientSource, Path.Combine(o.Client, "Data")));
             Console.WriteLine(L.F("  - client_root files from {0} to {1}", clientRoot, o.Client));
             Console.WriteLine(L.F("  - addons from {0}", Path.Combine(files, "addons")));
-            Console.WriteLine("  - x64 DXVK files (d3d9, dxgi)");
+            Console.WriteLine("  - native HD CoA64.exe (no x64 DXVK needed)");
+            Console.WriteLine("  - full Data\\patch-T.MPQ (about 346 MB)");
             Console.WriteLine("  - disable Data\\patch-Z.MPQ for CoA64 HD compatibility");
             Console.WriteLine(L.F("  - server DBCs to {0}", Path.Combine(inst.DataDir, "dbc")));
             Console.WriteLine(L.F("  - server SQL to {0}", Path.Combine(inst.Root, "CoA-Custom", "sql")));
