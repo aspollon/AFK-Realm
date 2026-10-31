@@ -122,7 +122,13 @@ namespace CoAInstaller
             var rootFiles = Directory.GetFiles(clientRoot, "*", SearchOption.AllDirectories);
             var addonFiles = Directory.Exists(Path.Combine(files, "addons")) ? Directory.GetFiles(Path.Combine(files, "addons"), "*", SearchOption.AllDirectories) : new string[0];
             var mpqs = Directory.GetFiles(clientSource, "*.MPQ", SearchOption.TopDirectoryOnly);
-            int total = rootFiles.Length + addonFiles.Length + mpqs.Length;
+            // Add-ons from installed modules belong in the same ZIP as the CoA package.
+            var moduleAddons = ClientAddons.Find(inst, client);
+            var moduleAddonFiles = moduleAddons
+                .SelectMany(a => Directory.GetFiles(a.Source, "*", SearchOption.AllDirectories)
+                    .Select(path => new { Addon = a, Path = path }))
+                .ToList();
+            int total = rootFiles.Length + addonFiles.Length + moduleAddonFiles.Count + mpqs.Length;
             int done = 0;
             using (var zip = ZipFile.Open(file, ZipArchiveMode.Create))
             {
@@ -151,6 +157,14 @@ namespace CoAInstaller
                         done++;
                     }
                 }
+                foreach (var addonFile in moduleAddonFiles.OrderBy(x => x.Addon.Name).ThenBy(x => x.Path))
+                {
+                    progress(L.F("Packing module add-ons ({0}/{1}) ...", done + 1, total), done, total);
+                    string prefix = Path.GetFullPath(addonFile.Addon.Source).TrimEnd('\\', '/') + Path.DirectorySeparatorChar;
+                    string rel = addonFile.Path.Substring(prefix.Length).Replace('\\', '/');
+                    zip.CreateEntryFromFile(addonFile.Path, "Interface/AddOns/" + addonFile.Addon.Name + "/" + rel, CompressionLevel.Optimal);
+                    done++;
+                }
                 // The AFK client patch is generated from the chosen server and the installed client.
                 var plan = ClientPatch.Collect(inst);
                 if (plan != null && !plan.Empty)
@@ -175,7 +189,7 @@ namespace CoAInstaller
             text.AppendLine(L.T("3. Start CoA64.exe for the 64-bit client, or Ascension.exe for the 32-bit client."));
             text.AppendLine(L.T("4. Delete the folder \"Cache\" in your game folder if the game still shows old races or classes."));
             text.AppendLine();
-            text.AppendLine(L.T("The ZIP contains the CoA Custom client files, its add-ons and the AFK Realm client patch."));
+            text.AppendLine(L.T("The ZIP contains the CoA Custom client files, its add-ons, the AFK Realm client patch and the add-ons of the installed modules."));
             return text.ToString();
         }
 
@@ -241,6 +255,14 @@ namespace CoAInstaller
             Console.WriteLine(L.T("Writing client settings ..."));
             WriteRaceDefaults(inst, files);
             WriteClientSettings(inst, clientRoot, clientSource);
+
+            // The module add-ons are part of the client build too. Installing them here means
+            // the user no longer has to run Modules > Game client after the CoA setup.
+            Console.WriteLine(L.T("Installing module add-ons ..."));
+            var moduleAddons = ClientAddons.Find(inst, o.Client);
+            var leftovers = ClientAddons.Leftovers(inst, moduleAddons, o.Client);
+            string addonResult = ClientAddons.Install(inst, o.Client, moduleAddons, leftovers, false);
+            if (addonResult.Length > 0) Console.WriteLine(addonResult);
 
             if (o.ClientPatch)
             {

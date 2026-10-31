@@ -56,7 +56,7 @@ export async function coaDialog() {
   }
 
   async function install() {
-    if (!await confirm(T('Copy the CoA client files, the CoA server DBCs/SQL and the settings, and install the AFK client patch? Close the game and stop the server first.'))) return;
+    if (!await confirm(T('Copy the CoA client files, server DBCs/SQL and settings, install the module add-ons and build the AFK client patch? Close the game and stop the server first.'))) return;
     await rememberPaths();
     const job = await runProgress(() => post('/api/coa/install', { package: packagePath.value, server: serverPath.value, client: clientPath.value }), T('Installing CoA Custom ...'));
     if (job && job.message) await alert(job.message);
@@ -90,7 +90,7 @@ export async function coaDialog() {
     h('div.row.nowrap', {}, h('span', { style: { width: '120px' } }, T('Server folder')), serverPath, browse(serverPath, T('Choose the AFK Realm server folder'))),
     h('div.row.nowrap', {}, h('span', { style: { width: '120px' } }, T('Game client')), clientPath, browse(clientPath, T('Choose the game folder (it contains the "Data" folder)'))),
     status,
-    h('p.small.muted', {}, T('A newer CoA package replaces changed files and copies new MPQs, client_root files and add-ons. The client patch is rebuilt afterwards.')),
+    h('p.small.muted', {}, T('A newer CoA package replaces changed files and copies new MPQs, client_root files and add-ons. The module add-ons and the AFK client patch are installed in the same step. The player ZIP is the only ZIP you need to give to players; the Game client page is for AFK-only clients without CoA.')),
     h('div.row', {}, secondary(T('Change CoA GitHub key ...'), async () => { await askToken(false); })));
 
   return dialog({
@@ -100,8 +100,8 @@ export async function coaDialog() {
       { text: T('Close'), value: null },
       { text: T('Check'), onclick: async () => { await check(); return false; } },
       { text: T('Download CoA Custom ...'), onclick: async () => { await downloadCoa(); return false; } },
-      { text: T('Export client ZIP ...'), onclick: async () => { await exportZip(); return false; } },
-      { text: T('Install / update'), kind: 'primary', onclick: async () => { await install(); return false; } }
+      { text: T('Create player ZIP ...'), onclick: async () => { await exportZip(); return false; } },
+      { text: T('Install / update everything'), kind: 'primary', onclick: async () => { await install(); return false; } }
     ]
   });
 }

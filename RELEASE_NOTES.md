@@ -1,3 +1,10 @@
+# AFK Realm 1.2.3
+
+## Changed in 1.2.3
+
+- **One step for the CoA client.** **Install / update everything** now copies the CoA package, installs the module add-ons and builds the AFK client patch. The extra **Game client → Install** step is no longer needed after installing CoA.
+- **One ZIP for players.** **Create player ZIP** contains the CoA files, the module add-ons and the AFK client patch together. The AFK-only export is hidden while CoA is configured, so there is only one ZIP to hand out.
+
 # AFK Realm 1.2.2
 
 ## Fixed in 1.2.2

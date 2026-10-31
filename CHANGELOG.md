@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.3
+
+- **CoA setup installs the complete client in one step.** It now also installs the add-ons of the installed modules, then builds the AFK client patch. Running Modules > Game client afterwards is no longer required.
+- **One player ZIP for CoA servers.** The CoA player ZIP contains the CoA package, the module add-ons and the AFK client patch. The separate AFK-only export is hidden while a CoA package is configured.
+
 ## 1.2.2
 
 - **CoA Custom setup no longer copies silently.** A locked file, a running game or launcher, or a full drive now stops the setup with an error instead of reporting success while CoA files are missing. After copying, every package file is checked for presence and size.

@@ -8,7 +8,7 @@ export async function clientDialog(reason) {
   const state = h('div.small');
   const clearCache = toggle(T('Clear the game\'s cache (recommended: the game then forgets the old levels and values of items, creatures and quests)'), false);
   const installBtn = primary(T('Install add-ons'), () => install());
-  const exportBtn = secondary(T('Export as ZIP …'), () => exportZip());
+  const exportBtn = secondary(T('Export AFK-only ZIP …'), () => exportZip());
   const downloadBtn = secondary(T('Download / update client …'), () => downloadClient());
   let look = null, checked = null;
 
@@ -27,6 +27,7 @@ export async function clientDialog(reason) {
     clearCache.style.display = look.cacheShown ? '' : 'none';
     clearCache.checked = look.cacheChecked;
     exportBtn.disabled = !look.canExport;
+    exportBtn.style.display = look.coa ? 'none' : '';
     installBtn.disabled = !look.canInstall;
     installBtn.lastChild.textContent = look.installText;
     state.textContent = look.state;
@@ -71,7 +72,7 @@ export async function clientDialog(reason) {
 
   const body = h('div', {},
     reason ? h('p', { style: { fontWeight: '700', color: 'var(--accent-text)' } }, reason) : null,
-    h('p.muted', {}, F('Some modules bring an add-on for the game client, or change files of the client. {0} copies the add-ons into Interface\\AddOns of your game and builds the client patch (Data\\{1}) from your own game client, keeps both up to date and takes them out again when their module is removed. Other players can get everything as a ZIP.', meta.product, 'patch-ZZZZZ.MPQ')),
+    h('p.muted', {}, F('Some modules bring an add-on for the game client, or change files of the client. {0} copies the add-ons into Interface\\AddOns of your game and builds the client patch (Data\\{1}) from your own game client, keeps both up to date and takes them out again when their module is removed. On a CoA server use "Create player ZIP ..." in Modules > CoA Custom: that ZIP includes CoA, the module add-ons and the client patch. The export here is only for AFK servers without CoA.', meta.product, 'patch-ZZZZZ.MPQ')),
     meta.remote ? h('p.small.warn', {}, F('The game folder is a folder on the computer {0} runs on.', meta.product)) : null,
     h('div.row', { style: { alignItems: 'center' } }, h('span', {}, T('Game folder')), folder, secondary(T('Browse …'), () => browse()), downloadBtn),
     listBox, h('div', { style: { margin: '8px 0 4px' } }, clearCache), state);
