@@ -17,6 +17,7 @@ namespace CoAInstaller
         public bool MaleOnly;
         public bool FemaleOnly;             // women only: no man of its own (CoA Custom's Banshee, Harpy, Alpha Goblin)
         public bool Virtual;                // made from the row of another race, under its own name (the High Elf)
+        public bool Playable;               // the client's race table marks it for character creation (flags 4 and 8)
         public bool HasHelmets;             // the client has helmet models for its prefix (Item\ObjectComponents\Head\*_<prefix><sex>.m2)
         public RaceImport.Pack Pack;        // a race of the user's race folder, not of this client
         public RaceImport.Pack Alt;         // the same race in the race folder, for a race this client has too
@@ -232,7 +233,7 @@ namespace CoAInstaller
         static Scan Copy(Scan s)
         {
             return new Scan { Races = s.Races.Select(r => new ClientRace { Source = r.Source, Side = r.Side, Key = r.Key, Name = r.Name, Prefix = r.Prefix, File = r.File,
-                MaleDisplay = r.MaleDisplay, FemaleDisplay = r.FemaleDisplay, MaleOnly = r.MaleOnly, FemaleOnly = r.FemaleOnly, Virtual = r.Virtual, HasHelmets = r.HasHelmets }).ToList(),
+                MaleDisplay = r.MaleDisplay, FemaleDisplay = r.FemaleDisplay, MaleOnly = r.MaleOnly, FemaleOnly = r.FemaleOnly, Virtual = r.Virtual, Playable = r.Playable, HasHelmets = r.HasHelmets }).ToList(),
                 FreeNumbers = s.FreeNumbers.ToList(), MoreNumbers = s.MoreNumbers.ToList(), HighNumbers = s.HighNumbers.ToList(), ModelsChecked = s.ModelsChecked,
                 Reserved = new HashSet<int>(s.Reserved), StockCopies = new HashSet<int>(s.StockCopies),
                 HelmetPrefixes = new HashSet<string>(s.HelmetPrefixes, StringComparer.OrdinalIgnoreCase), HelmetStems = s.HelmetStems };
@@ -315,7 +316,7 @@ namespace CoAInstaller
                 {
                     var row = rows[id];
                     var r = new ClientRace { Source = id, Side = (int)races.Field(row, 13), Key = key, Name = name, Prefix = Str(races, row, 6), File = Str(races, row, 11),
-                        MaleDisplay = races.Field(row, 4), FemaleDisplay = races.Field(row, 5) };
+                        MaleDisplay = races.Field(row, 4), FemaleDisplay = races.Field(row, 5), Playable = (races.Field(row, 1) & 0xC) == 0xC };
                     // a race with a female body and at least one female section has a woman: some custom races
                     // bring only one plain row per section (the Esteria looks), not the ten rows of a stock race
                     r.MaleOnly = r.FemaleDisplay == r.MaleDisplay || r.FemaleDisplay == 0 || !hasModel(r.FemaleDisplay) ||

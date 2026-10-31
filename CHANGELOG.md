@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.9
+
+- **The Base races page lists only CoA's own playable races.** It no longer shows NPC rows such as Troglodyte, the Test Race, or old non-playable Tuskarr, Broken, Vrykul and Forgotten copies. Rows that an old race entry copied to a new number (Troglodyte 73, Forgotten 64) are hidden too.
+- **A CoA install now makes exactly the playable races of the CoA package active.** Stale keys from older client versions and client-only races are removed from `CustomRaces.Races`; missing race numbers of package races are repaired. There are no on/off switches: the package races are on, and the client's own NPC/test/legacy rows stay off. Base-race choices are kept.
+
 ## 1.2.8
 
 - **The client patch is no longer reported as outdated right after a CoA install.** The race settings are refreshed before the patch is built instead of afterwards, so the generated patch record still matches its inputs.

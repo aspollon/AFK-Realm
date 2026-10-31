@@ -26,6 +26,8 @@ namespace CoAInstaller.Web
         readonly HashSet<string> helmetPrefixes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         ClientRaces.Scan helmetScan;
         static readonly Dictionary<int, int> CoaExtraLooks = new Dictionary<int, int> { { 66, 1 }, { 68, 1 }, { 69, 1 }, { 70, 2 }, { 71, 2 } };
+        // Rows the CoA client carries for NPCs, test races and old versions, but which its race menu does not offer.
+        static readonly HashSet<int> CoaHiddenRaces = new HashSet<int> { 19, 27, 65, 72, 77, 80, 81 };
         static readonly Dictionary<string, string> BasePrefixes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             { "Human", "Hu" }, { "Orc", "Or" }, { "Dwarf", "Dw" }, { "NightElf", "Ni" }, { "Undead", "Sc" }, { "Tauren", "Ta" },
@@ -743,8 +745,17 @@ namespace CoAInstaller.Web
                     text = L.T("The game can only show a certain number of races. Switch off the races you want least; their characters keep playing as the race they start like until you switch them on again."),
                     answers = new object[0]
                 });
+            // Only the races CoA's own character creation offers: rows of NPCs and old clients
+            // (Troglodyte, Test Race, the old Tuskarr/Broken/Vrykul/Forgotten copies) are not
+            // custom races of the CoA UI and would otherwise appear twice or without a purpose.
+            // Rows that only exist because an old CustomRaces.Races entry copied a race to a new
+            // number (Troglodyte 73, Forgotten 64) are not in CoA's own race table either.
+            var coaRows = CoaRaceFiles();
             var baseRaces = races
-                .Where(r => r.Pack == null && !r.Virtual && !ClientRaces.Stock.Contains(r.Source))
+                .Where(r => r.Pack == null && !r.Virtual && !ClientRaces.Stock.Contains(r.Source) &&
+                    r.Playable && !CoaHiddenRaces.Contains(r.Source) &&
+                    !r.Name.Equals("Test Race", StringComparison.OrdinalIgnoreCase) &&
+                    (coaRows.Count == 0 || coaRows.ContainsKey(r.Source)))
                 .OrderBy(r => r.Name, StringComparer.CurrentCultureIgnoreCase)
                 .Select(r =>
                 {

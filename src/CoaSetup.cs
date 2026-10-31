@@ -324,9 +324,10 @@ namespace CoAInstaller
         };
 
         /// <summary>
-        /// Adds base-race entries for the playable races of CoA Custom to a fresh server config.
-        /// Existing entries and the user's base-race choice are left alone; the CoA UI decides
-        /// which of the races are visible in the game.
+        /// Makes the playable races of the CoA package active and adds their base-race entries.
+        /// Existing base-race choices are left alone. The CoA UI owns race visibility; there are
+        /// no on/off switches here, and stale keys of older client versions are removed from
+        /// CustomRaces.Races.
         /// </summary>
         /// <summary>
         /// The active race config is normally created by the module when the server first starts.
@@ -395,6 +396,10 @@ namespace CoAInstaller
                 }
                 else
                 {
+                    // A package race that used to have no number must get one, or the module
+                    // leaves it switched off even though the CoA UI expects it.
+                    string currentId = Has(conf, prefix + "Id") ? ConfigOption.Unquote(conf.ByKey[prefix + "Id"].CurrentRaw) : "";
+                    if (currentId.Length == 0 || currentId == "0") Set(conf, prefix + "Id", id.ToString());
                     // Repair old generated entries whose base race belongs to the other faction
                     // (for example Forest Troll 40 was set to the Horde's Orc).
                     int side = (int)table.Field(row, 13);
@@ -405,11 +410,10 @@ namespace CoAInstaller
             }
             if (keys.Count > 0)
             {
-                string current = Has(conf, "CustomRaces.Races") ? ConfigOption.Unquote(conf.ByKey["CustomRaces.Races"].CurrentRaw) : "";
-                var list = new List<string>(current.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries));
-                foreach (String key in keys)
-                    if (!list.Exists(x => x.Equals(key, StringComparison.OrdinalIgnoreCase))) list.Add(key);
-                Set(conf, "CustomRaces.Races", Quote(string.Join(" ", list.ToArray())));
+                // The CoA UI owns race selection: every playable race of the CoA package is on,
+                // and no stale key or client-only race from an older configuration survives in
+                // CustomRaces.Races. Base races stay as the user chose them.
+                Set(conf, "CustomRaces.Races", Quote(string.Join(" ", keys.ToArray())));
             }
             conf.Save();
         }
@@ -422,21 +426,35 @@ namespace CoAInstaller
 
         static string RaceKey(ConfigFile conf, int id, string file)
         {
-            string key = "";
-            foreach (char c in file ?? "")
-                if (char.IsLetterOrDigit(c)) key += c;
-            if (key.Length == 0) key = "Race" + id;
+            // Keep the section that already names this exact client row, whatever key it uses.
             foreach (var pair in conf.ByKey)
             {
                 if (!pair.Key.StartsWith("CustomRaces.", StringComparison.OrdinalIgnoreCase) ||
                     !pair.Key.EndsWith(".Source", StringComparison.OrdinalIgnoreCase)) continue;
-                string prefix = pair.Key.Substring("CustomRaces.".Length);
-                prefix = prefix.Substring(0, prefix.Length - ".Source".Length);
-                if (prefix.Equals(key, StringComparison.OrdinalIgnoreCase) &&
-                    ConfigOption.Unquote(pair.Value.CurrentRaw) == id.ToString())
-                    return prefix;
+                if (ConfigOption.Unquote(pair.Value.CurrentRaw) == id.ToString())
+                {
+                    string prefix = pair.Key.Substring("CustomRaces.".Length);
+                    return prefix.Substring(0, prefix.Length - ".Source".Length);
+                }
             }
-            return key;
+            string key = "";
+            foreach (char c in file ?? "")
+                if (char.IsLetterOrDigit(c)) key += c;
+            if (key.Length == 0) key = "Race" + id;
+            // The file name may belong to an old row of another number (ThinHuman 33 beside
+            // Forgotten 32). Do not let the new row take that section over.
+            string candidate = key;
+            for (int n = 2; KeyExists(conf, candidate); n++)
+                candidate = key + id + (n > 2 ? n.ToString() : "");
+            return candidate;
+        }
+
+        static bool KeyExists(ConfigFile conf, string key)
+        {
+            string prefix = "CustomRaces." + key + ".";
+            foreach (var pair in conf.ByKey)
+                if (pair.Key.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) return true;
+            return false;
         }
 
         static string BaseFor(int id, int side)
