@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.14
+
+- **DXVK 2.5.3 → 2.7.1.** The CoA setup now validates the existing x64 `d3d9.dll` and `dxgi.dll` and replaces an old version with the bundled 2.7.1 files (backup `.coa-patcher-backup`). This is for the remaining cold-start cases where deleting `Client\x64` fixed the launch.
+- Hardware cursor (`SET gxCursor "1"`) and the cleanup of stale `custom-races-racials\*.sql` from 1.2.13 stay included.
+
 ## 1.2.13
 
 - **Hardware cursor for CoA64/DXVK cold starts.** `WTF\Config.wtf` now gets `SET gxCursor "1"` (the old file is kept as `.coa-patcher-backup`). This matches the user reports: removing x64 fixed the launch but broke the software cursor, while hardware cursor fixed both.

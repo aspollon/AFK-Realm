@@ -10,7 +10,7 @@ namespace CoAInstaller
     /// <summary>
     /// The x64 Direct3D wrapper files that CoA64 needs for its HD path. They are embedded into
     /// AFK Realm so a CoA setup does not depend on the player having installed DXVK by hand.
-    /// Only missing files are written; a player's own wrapper files are left alone.
+    /// The known DXVK files are checked and replaced when they differ; the old copy is kept.
     /// </summary>
     static class Dxvk
     {
@@ -51,7 +51,11 @@ namespace CoAInstaller
                 writer.Write(StableConfig);
         }
 
-        /// <summary>Writes the missing x64 DLLs to &lt;client&gt;\x64 and returns how many were written.</summary>
+        /// <summary>
+        /// Writes the bundled x64 DLLs to &lt;client&gt;\x64 and returns how many were written.
+        /// An old DXVK copy is replaced and kept as .coa-patcher-backup; an identical copy is
+        /// left alone.
+        /// </summary>
         public static int Install(string client)
         {
             string folder = Path.Combine(client, "x64");
@@ -64,16 +68,38 @@ namespace CoAInstaller
                     string name = Path.GetFileName(file.FullName);
                     if (Array.IndexOf(Files, name) < 0) continue;
                     string target = Path.Combine(folder, name);
-                    if (File.Exists(target) && new FileInfo(target).Length > 0) continue;
-                    CoaUninstall.Capture(target);
+                    byte[] wanted;
                     using (Stream source = file.Open())
-                    using (FileStream output = File.Create(target))
-                        source.CopyTo(output);
+                    using (MemoryStream memory = new MemoryStream())
+                    {
+                        source.CopyTo(memory);
+                        wanted = memory.ToArray();
+                    }
+                    if (File.Exists(target))
+                    {
+                        byte[] present = File.ReadAllBytes(target);
+                        if (Same(present, wanted)) continue;
+                        CoaUninstall.Capture(target);
+                        string backup = target + ".coa-patcher-backup";
+                        try { if (!File.Exists(backup)) File.Copy(target, backup, false); } catch { }
+                    }
+                    else
+                    {
+                        CoaUninstall.Capture(target);
+                    }
+                    File.WriteAllBytes(target, wanted);
                     written++;
                 }
             }
             Configure(client);
             return written;
+        }
+
+        static bool Same(byte[] a, byte[] b)
+        {
+            if (a == null || b == null || a.Length != b.Length) return false;
+            for (int i = 0; i < a.Length; i++) if (a[i] != b[i]) return false;
+            return true;
         }
 
         /// <summary>

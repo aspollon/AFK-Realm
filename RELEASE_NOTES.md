@@ -1,3 +1,11 @@
+# AFK Realm 1.2.14
+
+## Fixed in 1.2.14
+
+- **DXVK 2.7.1 replaces DXVK 2.5.3.** The x64 files in `Client\x64` are now checked against the bundled version and replaced when they differ; the old copy stays as `.coa-patcher-backup`. This directly covers the remaining CoA64 cold-start cases where deleting the x64 folder fixed the launch: the x64 files are no longer left stale by an older install.
+- **Hardware cursor workaround remains.** The setup still sets `SET gxCursor "1"` in `WTF\Config.wtf`.
+- **Stale custom-race racial SQL remains cleaned up**, and the generated files are synchronised before the setup.
+
 # AFK Realm 1.2.13
 
 ## Fixed in 1.2.13
