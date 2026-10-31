@@ -2,6 +2,8 @@ using System;
 using System.IO;
 using System.IO.Compression;
 using System.Reflection;
+using System.Text;
+using System.Text.RegularExpressions;
 
 namespace CoAInstaller
 {
@@ -16,6 +18,11 @@ namespace CoAInstaller
         // come with it. The other DXVK wrappers are not loaded by this client.
         static readonly string[] Files = { "d3d9.dll", "dxgi.dll" };
         const string Resource = "CoAInstaller.dxvk.zip";
+        const string StableConfig =
+            "dxvk.enableGraphicsPipelineLibrary = False\r\n" +
+            "dxvk.trackPipelineLifetime = False\r\n" +
+            "d3d9.floatEmulation = False\r\n" +
+            "d3d9.textureMemory = 0\r\n";
 
         public static int Count { get { return Files.Length; } }
 
@@ -38,6 +45,10 @@ namespace CoAInstaller
                     using (Stream output = entry.Open()) source.CopyTo(output);
                 }
             }
+            ZipArchiveEntry config = zip.CreateEntry("dxvk.conf", CompressionLevel.Optimal);
+            using (Stream output = config.Open())
+            using (StreamWriter writer = new StreamWriter(output, new UTF8Encoding(false)))
+                writer.Write(StableConfig);
         }
 
         /// <summary>Writes the missing x64 DLLs to &lt;client&gt;\x64 and returns how many were written.</summary>
@@ -61,7 +72,39 @@ namespace CoAInstaller
                     written++;
                 }
             }
+            Configure(client);
             return written;
+        }
+
+        /// <summary>
+        /// CoA64 can crash on a cold start with DXVK's experimental graphics-pipeline
+        /// library. Keep the stable settings while preserving every other line.
+        /// </summary>
+        static void Configure(string client)
+        {
+            string path = Path.Combine(client, "dxvk.conf");
+            string text = File.Exists(path) ? File.ReadAllText(path) : "";
+            bool risky = Regex.IsMatch(text, @"(?im)^\s*dxvk\.(enableGraphicsPipelineLibrary|trackPipelineLifetime)\s*=\s*True\s*$");
+            if (File.Exists(path) && !risky) return;
+
+            if (File.Exists(path))
+            {
+                CoaUninstall.Capture(path);
+                string backup = path + ".coa-patcher-backup";
+                try { if (!File.Exists(backup)) File.Copy(path, backup, false); } catch { }
+                text = Regex.Replace(text, @"(?im)^\s*dxvk\.enableGraphicsPipelineLibrary\s*=.*$", "dxvk.enableGraphicsPipelineLibrary = False");
+                text = Regex.Replace(text, @"(?im)^\s*dxvk\.trackPipelineLifetime\s*=.*$", "dxvk.trackPipelineLifetime = False");
+                if (!Regex.IsMatch(text, @"(?im)^\s*dxvk\.enableGraphicsPipelineLibrary\s*="))
+                    text += (text.EndsWith("\n") ? "" : "\r\n") + "dxvk.enableGraphicsPipelineLibrary = False\r\n";
+                if (!Regex.IsMatch(text, @"(?im)^\s*dxvk\.trackPipelineLifetime\s*="))
+                    text += "dxvk.trackPipelineLifetime = False\r\n";
+                File.WriteAllText(path, text, new UTF8Encoding(false));
+            }
+            else
+            {
+                CoaUninstall.Capture(path);
+                File.WriteAllText(path, StableConfig, new UTF8Encoding(false));
+            }
         }
 
         /// <summary>True when every wrapper file is present in the client.</summary>

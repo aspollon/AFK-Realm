@@ -1,3 +1,14 @@
+# AFK Realm 1.2.12
+
+## Fixed in 1.2.12
+
+- **The CoA64 cold-start crash is addressed at its DXVK setting.** The CoA setup now writes a stable `dxvk.conf` and changes these known crash-causing options to `False`:
+  - `dxvk.enableGraphicsPipelineLibrary = False`
+  - `dxvk.trackPipelineLifetime = False`
+  An existing `dxvk.conf` is backed up as `.coa-patcher-backup`; other settings are kept. This is the configuration seen in the user crash where CoA64 only started after running Ascension first.
+- **The x64 files and the stable config are also included in the complete client ZIP.**
+- This release includes the client-patch prompt fix from 1.2.11.
+
 # AFK Realm 1.2.11
 
 ## Fixed in 1.2.11

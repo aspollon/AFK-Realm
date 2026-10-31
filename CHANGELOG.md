@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.12
+
+- **Stable DXVK config for CoA64.** The CoA setup writes `dxvk.enableGraphicsPipelineLibrary = False` and `dxvk.trackPipelineLifetime = False`; an existing `dxvk.conf` is backed up as `.coa-patcher-backup`. This addresses the cold-start access violation where running Ascension first made CoA64 start.
+- The complete client ZIP also contains the stable `dxvk.conf` and the x64 `d3d9.dll`/`dxgi.dll`.
+- Includes the 1.2.11 fix that clears the stale client-patch offer.
+
 ## 1.2.11
 
 - **The client-patch prompt no longer comes back after a successful setup.** `Manager.CheckClient(false)` now clears the old `OfferClient` flag and `client-offered.txt` when `ClientAddons.Pending` is empty. The Next check therefore reports the client as current instead of asking for the same patch again.
