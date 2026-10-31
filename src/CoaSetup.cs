@@ -128,7 +128,7 @@ namespace CoAInstaller
                 .SelectMany(a => Directory.GetFiles(a.Source, "*", SearchOption.AllDirectories)
                     .Select(path => new { Addon = a, Path = path }))
                 .ToList();
-            int total = rootFiles.Length + addonFiles.Length + moduleAddonFiles.Count + mpqs.Length;
+            int total = rootFiles.Length + addonFiles.Length + moduleAddonFiles.Count + mpqs.Length + Dxvk.Count;
             int done = 0;
             using (var zip = ZipFile.Open(file, ZipArchiveMode.Create))
             {
@@ -138,6 +138,9 @@ namespace CoAInstaller
                     zip.CreateEntryFromFile(path, "Data/" + Path.GetFileName(path), CompressionLevel.NoCompression);
                     done++;
                 }
+                progress(L.T("Adding the x64 DXVK files ..."), done, total);
+                Dxvk.AddToZip(zip);
+                done += Dxvk.Count;
                 string rootPrefix = Path.GetFullPath(clientRoot).TrimEnd('\\', '/') + Path.DirectorySeparatorChar;
                 foreach (string path in rootFiles.OrderBy(x => x))
                 {
@@ -199,6 +202,7 @@ namespace CoAInstaller
             int copied = 0, skipped = 0;
             Console.WriteLine(L.T("Copying client MPQs ..."));
             CopyFiles(clientSource, Path.Combine(o.Client, "Data"), "*.MPQ", o.NoBackup, ref copied, ref skipped);
+            EnsurePatchT(clientSource, o.Client);
 
             string dinput = Path.Combine(clientSource, "dinput8.dll");
             if (File.Exists(dinput))
@@ -209,6 +213,14 @@ namespace CoAInstaller
 
             Console.WriteLine(L.T("Copying client_root (CoA64, Xvid, Esteria, Retail) ..."));
             CopyTree(clientRoot, o.Client, o.NoBackup, ref copied, ref skipped);
+
+            Console.WriteLine(L.T("Installing x64 DXVK ..."));
+            int dxvk = Dxvk.Install(o.Client);
+            if (dxvk > 0) copied += dxvk;
+
+            // The Ascension HD world archive crashes CoA64 1.9.5. Quarantine the existing
+            // client file (not a CoA package file) until the upstream fix is available.
+            DisableHdWorldArchive(o.Client);
 
             string addons = Path.Combine(files, "addons");
             if (Directory.Exists(addons))
@@ -290,12 +302,50 @@ namespace CoAInstaller
             return 0;
         }
 
+        /// <summary>
+        /// The package's patch-T carries the custom-race models and the race portraits. A stale
+        /// 19 MB client patch-T with only four DBCs makes them disappear, so verify the copy.
+        /// </summary>
+        static void EnsurePatchT(string clientSource, string client)
+        {
+            string source = Path.Combine(clientSource, "patch-T.MPQ");
+            if (!File.Exists(source)) return;
+            string target = Path.Combine(client, "Data", "patch-T.MPQ");
+            if (!File.Exists(target) || new FileInfo(target).Length != new FileInfo(source).Length)
+                throw new InvalidOperationException(L.F("The CoA patch-T.MPQ was not copied completely. Expected {0} bytes in {1}; close the game and run the setup again.", new FileInfo(source).Length, target));
+        }
+
+        /// <summary>
+        /// CoA64 1.9.5 crashes in the Ascension HD world archive. Keep the player's file next
+        /// to the client as a normal CoA backup so uninstalling restores it.
+        /// </summary>
+        static void DisableHdWorldArchive(string client)
+        {
+            string archive = Path.Combine(client, "Data", "patch-Z.MPQ");
+            if (!File.Exists(archive)) return;
+
+            CoaUninstall.Capture(archive);
+            string backup = archive + ".coa-patcher-backup";
+            try
+            {
+                if (File.Exists(backup)) File.Delete(archive);
+                else File.Move(archive, backup);
+                Console.WriteLine(L.T("Disabled Data\\patch-Z.MPQ for CoA64 HD compatibility; the original stays as .coa-patcher-backup."));
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException(L.F("Data\\patch-Z.MPQ could not be disabled. Close the game and run the setup again. ({0})", ex.Message), ex);
+            }
+        }
+
         static void PrintCheck(Options o, Install inst, string files, string clientSource, string clientRoot)
         {
             Console.WriteLine(L.T("Check only. Would copy:"));
             Console.WriteLine(L.F("  - {0} MPQs from {1} to {2}", Count(clientSource, "*.MPQ"), clientSource, Path.Combine(o.Client, "Data")));
             Console.WriteLine(L.F("  - client_root files from {0} to {1}", clientRoot, o.Client));
             Console.WriteLine(L.F("  - addons from {0}", Path.Combine(files, "addons")));
+            Console.WriteLine("  - x64 DXVK files (d3d9, dxgi)");
+            Console.WriteLine("  - disable Data\\patch-Z.MPQ for CoA64 HD compatibility");
             Console.WriteLine(L.F("  - server DBCs to {0}", Path.Combine(inst.DataDir, "dbc")));
             Console.WriteLine(L.F("  - server SQL to {0}", Path.Combine(inst.Root, "CoA-Custom", "sql")));
             Console.WriteLine(L.F("  - settings in {0}", Path.Combine(inst.ConfigDir, "modules", "mod_custom_races.conf")));

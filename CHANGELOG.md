@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.10
+
+- **CoA64 HD setup.** The CoA installer now embeds and installs the x64 DXVK files `d3d9.dll` and `dxgi.dll` when they are missing from the game's `x64` folder. These are the two wrappers CoA64 uses. Existing files are not overwritten.
+- **HD crash workaround.** `Data\patch-Z.MPQ` is moved to `patch-Z.MPQ.coa-patcher-backup` during CoA setup and restored by the uninstaller. CoA64 1.9.5 currently crashes with this Ascension HD world archive; character, creature, item and interface HD remain enabled.
+- **Portrait fix.** The setup verifies the full package `patch-T.MPQ`; the stale 19 MB client copy (four DBCs) removed the custom-race models and race portrait icons.
+- The release requires a new **CoA Custom > Install / update** run so the x64 files and the patch-Z quarantine reach the game folder.
+
 ## 1.2.9
 
 - **The Base races page lists only CoA's own playable races.** It no longer shows NPC rows such as Troglodyte, the Test Race, or old non-playable Tuskarr, Broken, Vrykul and Forgotten copies. Rows that an old race entry copied to a new number (Troglodyte 73, Forgotten 64) are hidden too.

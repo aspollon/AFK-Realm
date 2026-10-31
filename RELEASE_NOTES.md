@@ -1,3 +1,12 @@
+# AFK Realm 1.2.10
+
+## CoA64 HD compatibility
+
+- **x64 DXVK is installed with CoA.** The CoA setup now writes the missing x64 `d3d9` and `dxgi` DLLs into the game's `x64` folder. These are the two DXVK files CoA64 uses; they are embedded in AFK Realm (official DXVK 2.5.3), so no manual DXVK download is needed. Existing player DLLs are left alone.
+- **The Ascension HD world archive is disabled safely.** CoA64 1.9.5 crashes with `Data\patch-Z.MPQ` (`0xC0000374`). The setup now moves the existing file to `patch-Z.MPQ.coa-patcher-backup`; uninstalling CoA restores it. Character, creature, item and interface HD from the other archives stay active. World HD textures and models from Z are reduced until CoA64 has an upstream fix.
+- **The race portraits stay intact.** The setup now verifies that the large CoA `patch-T.MPQ` (the one with the custom-race models and `CoA_Race_*` portraits) was copied completely. A stale 19 MB client patch-T was the cause of missing portraits.
+- **No extra step for users.** These files are handled by the normal **Modules > CoA Custom > Install / update** action. The game and launcher must be closed while the setup runs.
+
 # AFK Realm 1.2.9
 
 ## Fixed in 1.2.9
