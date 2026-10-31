@@ -1,4 +1,10 @@
-# AFK Realm 1.2.18
+# AFK Realm 1.2.19
+
+## Fixed in 1.2.19
+
+- **CoA 1.9.5 variants keep the native HD build.** 1.2.18 recognised only two exact official `CoA64.exe` hashes. Packages with another 1.9.5 build were treated as newer and the official exe replaced the native one, which removed the native Direct3D9 HD path. The setup now reads the package's `manifest.json`; any CoA Custom 1.9.5 package keeps the native build. A later package version still uses its official exe.
+- **Existing official exe is upgraded again.** Running CoA Custom > Install / update with 1.2.19 restores the native `CoA64.exe`, even if 1.2.18 had put the official one back.
+- All 1.2.18 copy-check, 1.2.16 error and 1.2.15 native/BOM/patch-T fixes remain.
 
 ## Fixed in 1.2.18
 

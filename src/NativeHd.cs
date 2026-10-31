@@ -3,6 +3,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Net;
 using System.Security.Cryptography;
+using System.Text.RegularExpressions;
 
 namespace CoAInstaller
 {
@@ -95,6 +96,21 @@ namespace CoAInstaller
         {
             string official = Path.Combine(clientRoot ?? "", "CoA64.exe");
             if (!File.Exists(official)) return true; // the package does not replace the client exe
+
+            // The package version is the stable rule. 1.9.5 had several CoA64.exe
+            // builds; they are all the same client line. A later package (1.9.6+)
+            // must use its own official exe until a matching native build exists.
+            try
+            {
+                string manifest = Path.GetFullPath(Path.Combine(clientRoot, "..", "..", "manifest.json"));
+                if (File.Exists(manifest))
+                {
+                    string text = File.ReadAllText(manifest);
+                    if (Regex.IsMatch(text, "\"version\"\\s*:\\s*\"1\\.9\\.5\"")) return true;
+                }
+            }
+            catch { }
+
             string hash = FileSha256(official);
             if (string.IsNullOrEmpty(hash)) return false;
             if (hash.Equals(ExeSha256, StringComparison.OrdinalIgnoreCase)) return true;

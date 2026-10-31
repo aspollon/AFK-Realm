@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.19
+
+- **Accept every CoA Custom 1.9.5 package variant.** The native HD build is selected from the package's `manifest.json` version, not only two exact CoA64.exe hashes. A 1.9.5 package with another official CoA64 build keeps the native Direct3D9 client and restores it if 1.2.18 replaced it. Newer package versions still use their official exe.
+- 1.2.18's final copy check remains; 1.2.16's error display and 1.2.15's native/BOM/patch-T fixes remain.
+
 ## 1.2.18
 
 - **Final CoA copy check handles the native CoA64.exe.** `VerifyTree` no longer compares the intentionally native client exe with the package's official size. This fixes the 1.2.16/1.2.17 error "The CoA package file is incomplete after the copy: ...\CoA64.exe".
