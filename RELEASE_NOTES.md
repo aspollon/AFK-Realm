@@ -1,4 +1,10 @@
-# AFK Realm 1.2.16
+# AFK Realm 1.2.17
+
+## Fixed in 1.2.17
+
+- **Native HD is matched to the CoA64 version.** The native CoA64 build is made from CoA Custom 1.9.5. On every setup AFK Realm now hashes the package's official `CoA64.exe` first. If a newer CoA Custom package ships a different `CoA64.exe`, the setup uses that official exe instead of keeping an old native build next to new race data. The warning is in the setup output; the complete-client ZIP then keeps the official exe too.
+- **No silent client/server mismatch after a CoA update.** A native exe from an older package is no longer preserved across a package update.
+- All 1.2.15/1.2.16 fixes remain: native D3D9 HD for the supported CoA 1.9.5 builds, UTF-8 BOM handling, full patch-T check, native download cache, and the exact CoA setup error message.
 
 ## Fixed in 1.2.16
 

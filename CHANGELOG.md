@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.17
+
+- **Native HD is version-gated against the CoA package.** The setup hashes the package's official `CoA64.exe`; the native build is used only for the supported CoA Custom 1.9.5 exe builds. A newer package's official exe is copied instead, so new race data cannot run on an old native client. The client ZIP follows the same rule.
+- 1.2.16's native-download shortcut and exact error message remain; 1.2.15's native D3D9 HD, BOM fix and patch-T check remain for supported packages.
+
 ## 1.2.16
 
 - **CoA setup accepts an already-installed native CoA64.exe without downloading.** The native build is recognised by hash before `CoA64.zip` is fetched. This fixes the 1.2.15 setup failure on clients where a test build was already in place.

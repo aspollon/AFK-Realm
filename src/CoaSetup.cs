@@ -134,7 +134,8 @@ namespace CoAInstaller
                 .SelectMany(a => Directory.GetFiles(a.Source, "*", SearchOption.AllDirectories)
                     .Select(path => new { Addon = a, Path = path }))
                 .ToList();
-            int total = rootFiles.Length + addonFiles.Length + moduleAddonFiles.Count + mpqs.Length + NativeHd.Count;
+            bool nativeSupported = NativeHd.SupportsPackage(clientRoot);
+            int total = rootFiles.Length + addonFiles.Length + moduleAddonFiles.Count + mpqs.Length + (nativeSupported ? NativeHd.Count : 0);
             int done = 0;
             using (var zip = ZipFile.Open(file, ZipArchiveMode.Create))
             {
@@ -147,16 +148,20 @@ namespace CoAInstaller
                 string rootPrefix = Path.GetFullPath(clientRoot).TrimEnd('\\', '/') + Path.DirectorySeparatorChar;
                 foreach (string path in rootFiles.OrderBy(x => x))
                 {
-                    // The package's CoA64.exe is replaced by the native HD build below.
-                    if (string.Equals(Path.GetFileName(path), "CoA64.exe", StringComparison.OrdinalIgnoreCase)) continue;
+                    // The package's CoA64.exe is replaced by the native HD build below,
+                    // but only for a CoA package version this native build supports.
+                    if (nativeSupported && string.Equals(Path.GetFileName(path), "CoA64.exe", StringComparison.OrdinalIgnoreCase)) continue;
                     progress(L.F("Packing CoA client files ({0}/{1}) ...", done + 1, total), done, total);
                     string rel = path.Substring(rootPrefix.Length).Replace('\\', '/');
                     zip.CreateEntryFromFile(path, rel, CompressionLevel.NoCompression);
                     done++;
                 }
-                progress(L.T("Adding the native HD CoA64 ..."), done, total);
-                NativeHd.AddToZip(zip);
-                done += NativeHd.Count;
+                if (nativeSupported)
+                {
+                    progress(L.T("Adding the native HD CoA64 ..."), done, total);
+                    NativeHd.AddToZip(zip);
+                    done += NativeHd.Count;
+                }
                 if (addonFiles.Length > 0)
                 {
                     string addonPrefix = Path.GetFullPath(Path.Combine(files, "addons")).TrimEnd('\\', '/') + Path.DirectorySeparatorChar;
@@ -185,12 +190,12 @@ namespace CoAInstaller
                 }
                 var entry = zip.CreateEntry("READ ME FIRST.txt");
                 using (var writer = new StreamWriter(entry.Open(), new System.Text.UTF8Encoding(false)))
-                    writer.Write(ClientZipReadMe());
+                    writer.Write(ClientZipReadMe(nativeSupported));
             }
             return file;
         }
 
-        static string ClientZipReadMe()
+        static string ClientZipReadMe(bool nativeHd)
         {
             var text = new System.Text.StringBuilder();
             text.AppendLine(L.T("CoA Custom client files for AFK Realm"));
@@ -201,8 +206,15 @@ namespace CoAInstaller
             text.AppendLine(L.T("4. Delete the folder \"Cache\" in your game folder if the game still shows old races or classes."));
             text.AppendLine();
             text.AppendLine(L.T("The ZIP contains the CoA Custom client files, its add-ons, the AFK Realm client patch and the add-ons of the installed modules."));
-            text.AppendLine(L.T("CoA64.exe in this ZIP is the native HD build. It uses the normal Direct3D9 renderer and does not need the x64 DXVK folder; an existing x64 folder is ignored."));
-            text.AppendLine(L.T("Keep Data\\patch-Z.MPQ disabled (patch-Z.MPQ.coa-patcher-backup is fine)."));
+            if (nativeHd)
+            {
+                text.AppendLine(L.T("CoA64.exe in this ZIP is the native HD build. It uses the normal Direct3D9 renderer and does not need the x64 DXVK folder; an existing x64 folder is ignored."));
+                text.AppendLine(L.T("Keep Data\\patch-Z.MPQ disabled (patch-Z.MPQ.coa-patcher-backup is fine)."));
+            }
+            else
+            {
+                text.AppendLine(L.T("This CoA Custom package ships a newer CoA64.exe than the native HD build. The ZIP keeps the official CoA64.exe; the native HD startup fix is not available for this package version yet."));
+            }
             return text.ToString();
         }
 
@@ -222,13 +234,22 @@ namespace CoAInstaller
             }
 
             Console.WriteLine(L.T("Copying client_root (CoA64, Xvid, Esteria, Retail) ..."));
-            // Keep an already installed native CoA64.exe; NativeHd.Install below
-            // only writes it when it is missing or still the official build.
-            CopyTree(clientRoot, o.Client, o.NoBackup, ref copied, ref skipped, "CoA64.exe");
+            bool nativeSupported = NativeHd.SupportsPackage(clientRoot);
+            // Keep an already installed native CoA64.exe only when this native build
+            // belongs to the package's official CoA64. A new CoA Custom package must
+            // not run an old native exe against new race data.
+            CopyTree(clientRoot, o.Client, o.NoBackup, ref copied, ref skipped, nativeSupported ? "CoA64.exe" : null);
 
-            Console.WriteLine(L.T("Installing native HD CoA64 (no x64 DXVK needed) ..."));
-            int nativeHd = NativeHd.Install(o.Client);
-            if (nativeHd > 0) copied++;
+            if (nativeSupported)
+            {
+                Console.WriteLine(L.T("Installing native HD CoA64 (no x64 DXVK needed) ..."));
+                int nativeHd = NativeHd.Install(o.Client);
+                if (nativeHd > 0) copied++;
+            }
+            else
+            {
+                Console.WriteLine(L.T("The CoA package has a newer CoA64.exe; keeping the official exe and skipping the native HD build."));
+            }
 
             // The Ascension HD world archive crashes CoA64 1.9.5. Quarantine the existing
             // client file (not a CoA package file) until the upstream fix is available.

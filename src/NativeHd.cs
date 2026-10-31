@@ -22,6 +22,13 @@ namespace CoAInstaller
         public const string AssetName = "CoA64.zip";
         const string Sha256 = "6B175B8BFE4C4405D37DC89DD7B04E63F0BE0D2DBFB3866618A1DCAA49B5424B";
         const string ExeSha256 = "20729A372708D81D8B48F35D661095E4341B9E8DCB1A2A8D16B8C6C80B3DEA99";
+        // CoA64.exe builds of CoA Custom 1.9.5 that this native build was tested
+        // against. A newer package must not keep an old native exe next to new data.
+        static readonly string[] SupportedOfficialSha256 =
+        {
+            "1911B1D5023EA906F51D7C90B555060F9ACD351CFD8A24BAA9A2287C3A05B376",
+            "DC5562875C09FAD7195366E4A8E2FDC50771ABE93EB2496CFBA16EB98462B6A2"
+        };
         static readonly string[] DownloadUrls =
         {
             "https://raw.githubusercontent.com/" + Product.GitHubRepo + "/main/assets/coa64-native/CoA64.zip",
@@ -66,6 +73,34 @@ namespace CoAInstaller
                     return BitConverter.ToString(sha.ComputeHash(stream)).Replace("-", "").Equals(ExeSha256, StringComparison.OrdinalIgnoreCase);
             }
             catch { return false; }
+        }
+
+        static string FileSha256(string path)
+        {
+            try
+            {
+                using (var sha = SHA256.Create())
+                using (var stream = File.OpenRead(path))
+                    return BitConverter.ToString(sha.ComputeHash(stream)).Replace("-", "").ToLowerInvariant();
+            }
+            catch { return null; }
+        }
+
+        /// <summary>
+        /// Whether this native build belongs to the official CoA64.exe in the chosen
+        /// package. A CoA Custom update with a different CoA64.exe must use the official
+        /// exe instead of keeping an old native build next to new race data.
+        /// </summary>
+        public static bool SupportsPackage(string clientRoot)
+        {
+            string official = Path.Combine(clientRoot ?? "", "CoA64.exe");
+            if (!File.Exists(official)) return true; // the package does not replace the client exe
+            string hash = FileSha256(official);
+            if (string.IsNullOrEmpty(hash)) return false;
+            if (hash.Equals(ExeSha256, StringComparison.OrdinalIgnoreCase)) return true;
+            foreach (string supported in SupportedOfficialSha256)
+                if (hash.Equals(supported, StringComparison.OrdinalIgnoreCase)) return true;
+            return false;
         }
 
         static byte[] Read()
