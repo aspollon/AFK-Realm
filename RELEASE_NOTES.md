@@ -1,3 +1,9 @@
+# AFK Realm 1.2.8
+
+## Fixed in 1.2.8
+
+- **No repeated "install the client patch" after CoA setup.** The race configuration is saved before the patch is built, not after. The patch now stays current instead of being marked outdated immediately.
+
 # AFK Realm 1.2.7
 
 ## Changed in 1.2.7

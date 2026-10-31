@@ -108,13 +108,16 @@ namespace CoAInstaller.Web
                 RememberPaths(a, package, client, server);
                 return Jobs.Run(L.T("Installing CoA Custom ..."), (job, st) =>
                 {
+                    // Bring the race settings up to date BEFORE the client patch is built.
+                    // Saving them afterwards changes the patch inputs and makes AFK Realm
+                    // report the freshly built patch as outdated again.
+                    try { RefreshRaces(inst); } catch { }
                     st(L.T("Copying the CoA package and building the client patch ..."));
                     int code = CoaSetup.Run(new[] { "--package", package, "--server", server, "--client", client });
                     if (code != 0) throw new UserError(L.T("CoA Custom setup failed. See the AFK Realm log."));
                     job.Message = L.T("CoA Custom is installed.");
                 }, (job, error) =>
                 {
-                    try { RefreshRaces(inst); } catch { }
                     Manager.CheckClient(false);
                 }).Snapshot();
             });

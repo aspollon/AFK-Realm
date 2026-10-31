@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.8
+
+- **The client patch is no longer reported as outdated right after a CoA install.** The race settings are refreshed before the patch is built instead of afterwards, so the generated patch record still matches its inputs.
+
 ## 1.2.7
 
 - **Classic Classes use the CoA switch again.** `mod-classic-classes` no longer adds the extra classic row or hides `CharCreateSwapClassesButton`; the CoA button now switches from the CoA classes to the classic classes, keeping the module's Reborn class functions.
