@@ -317,8 +317,28 @@ namespace CoAInstaller
         /// Existing entries and the user's base-race choice are left alone; the CoA UI decides
         /// which of the races are visible in the game.
         /// </summary>
+        /// <summary>
+        /// The active race config is normally created by the module when the server first starts.
+        /// A fresh or reset server can reach the CoA setup before that has happened; without the
+        /// file the setup cannot write UseCoAUI=1 and the old AFK race selector is built into the
+        /// client patch. Create it from the module's .dist in that case.
+        /// </summary>
+        static void EnsureRaceConfig(Install inst)
+        {
+            string confPath = Path.Combine(inst.ConfigDir, "modules", "mod_custom_races.conf");
+            if (File.Exists(confPath)) return;
+            string dist = confPath + ".dist";
+            if (!File.Exists(dist))
+            {
+                string moduleDist = Path.Combine(inst.SourceDir, "modules", "mod-custom-races", "conf", "mod_custom_races.conf.dist");
+                if (File.Exists(moduleDist)) dist = moduleDist;
+            }
+            if (File.Exists(dist)) File.Copy(dist, confPath, false);
+        }
+
         static void WriteRaceDefaults(Install inst, string files)
         {
+            EnsureRaceConfig(inst);
             string dbc = Path.Combine(files, "dbc", "ChrRaces.dbc");
             if (!File.Exists(dbc)) return;
             string confPath = Path.Combine(inst.ConfigDir, "modules", "mod_custom_races.conf");

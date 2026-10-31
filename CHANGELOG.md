@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.4
+
+- **Missing race config is recreated.** On a fresh or reset server, `mod_custom_races.conf` can be absent. The CoA setup now creates it from the module's `.conf.dist` before writing the race settings. Without this, `CustomRaces.UseCoAUI` could not be set to 1 and the client patch still contained the old `CustomRaces.lua` race selector.
+
 ## 1.2.3
 
 - **CoA setup installs the complete client in one step.** It now also installs the add-ons of the installed modules, then builds the AFK client patch. Running Modules > Game client afterwards is no longer required.

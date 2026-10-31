@@ -1,3 +1,10 @@
+# AFK Realm 1.2.4
+
+## Fixed in 1.2.4
+
+- **The old race selector can no longer come back on a fresh server.** If `mod_custom_races.conf` is missing, the CoA setup now creates it from the module's `.conf.dist` before writing the settings. Previously the setup skipped its race configuration, `CustomRaces.UseCoAUI` stayed at its default, and the generated client patch still contained `CustomRaces.lua`.
+- This is the missing piece behind a small, old-looking client patch and the old race UI after a fresh CoA installation.
+
 # AFK Realm 1.2.3
 
 ## Changed in 1.2.3
