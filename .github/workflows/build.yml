@@ -67,3 +67,9 @@ jobs:
           fail_on_unmatched_files: false
           body_path: RELEASE_NOTES.md
           prerelease: ${{ contains(github.ref_name, '-') }}
+      - name: Attach native CoA64 archive
+        if: startsWith(github.ref, 'refs/tags/') && matrix.rid == 'win-x64'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: assets/coa64-native/CoA64.zip
+          fail_on_unmatched_files: true

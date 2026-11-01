@@ -1,4 +1,12 @@
-# AFK Realm 1.2.22
+# AFK Realm 1.2.23
+
+## Fixed in 1.2.23
+
+- **CoA64 1.9.6 HD starts reliably again.** The official 1.9.6 client only reserves **127 archive handles**. With HD enabled, the eight HD archives and the new `patch-ZZZZS/T/W` archives exceeded that limit during startup; the result was heap corruption (`0xC0000374`) before the login screen. The native 1.9.6 build now reserves **512 handles** and is the version AFK installs for 1.9.6.
+- **The full HD archive set stays enabled.** `patch-Z.MPQ`, `patch-4.MPQ`, `patch-5.MPQ` and `patch-ZZZZS/T/W.MPQ` are no longer quarantined for the native 1.9.6 build. The setup restores archives that older AFK versions had moved to `.coa-patcher-backup`, `.off` or `.disabled`.
+- **No installer files are missing.** A full comparison of the CoA Custom 1.9.6 package and the installed client showed every client MPQ (including `patch-ZZZZS/T/W`) and every `client_root` file (including `Data\Retail`) present. The crash was the archive-handle limit, not a partial copy.
+- **Verified:** native 1.9.6 with S/T/W and full `patch-4/5/Z`, three cold starts; two starts with full `patch-4/5/Z`; and one start with x64 DXVK 2.7.1 and `-dxvk`. All stayed running.
+- All 1.2.22 fixes remain.
 
 ## Fixed in 1.2.22
 

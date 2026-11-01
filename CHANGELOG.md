@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.23
+
+- **CoA64 1.9.6 native HD build with 512 archive handles.** The official 127-handle limit overflowed during startup when the HD archives and `patch-ZZZZS/T/W` were active, causing `0xC0000374` heap corruption. The new native 1.9.6 build removes that limit, uses native Direct3D9 HD (DXVK optional with `-dxvk`), and keeps the full `patch-Z/4/5` and `patch-ZZZZS/T/W` set enabled.
+- **Previously quarantined HD archives are restored** by CoA Custom > Install / update for the native 1.9.6 build. Packages without the native build keep the old quarantine.
+- The client ZIP README and setup check now describe the full HD archive set instead of recommending disabled archives.
+
 ## 1.2.22
 
 - **Create map data writes its whole run to `logs\map-data.log`** (part of the Get help ZIP), and a failed CoA DBC extraction names its last error line in the message instead of only "see the messages above". The help ZIP of a player whose extraction failed had no trace of the run.

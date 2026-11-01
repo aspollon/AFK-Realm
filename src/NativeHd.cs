@@ -8,11 +8,15 @@ using System.Text.RegularExpressions;
 namespace CoAInstaller
 {
     /// <summary>
-    /// CoA64 1.9.5 with HD on the native 64-bit Direct3D9 renderer. The normal CoA64
+    /// CoA64 1.9.6 with HD on the native 64-bit Direct3D9 renderer. The normal CoA64
     /// only opens the HD archives when its Vulkan (DXVK) renderer is active; machines
     /// where the x64 DXVK preload crashes therefore fall back to the old models. This
     /// build loads HD with system D3D9 and ignores an existing x64 DXVK folder unless it
     /// is started with -dxvk, so a bad x64 folder can no longer stop the client.
+    ///
+    /// The 1.9.6 archive set needs more than the official 127 archive handles: opening
+    /// the HD archives together with patch-ZZZZS/T/W overflowed the handle array during
+    /// startup (heap corruption, exit code 0xC0000374). This build reserves 512 handles.
     ///
     /// The 8 MB ZIP is kept out of AFK-Realm.exe: the Windows release has to stay below
     /// GitHub's 50 MiB update limit. It is downloaded from the repository once and kept
@@ -21,14 +25,13 @@ namespace CoAInstaller
     static class NativeHd
     {
         public const string AssetName = "CoA64.zip";
-        const string Sha256 = "6B175B8BFE4C4405D37DC89DD7B04E63F0BE0D2DBFB3866618A1DCAA49B5424B";
-        const string ExeSha256 = "20729A372708D81D8B48F35D661095E4341B9E8DCB1A2A8D16B8C6C80B3DEA99";
-        // CoA64.exe builds of CoA Custom 1.9.5 that this native build was tested
+        const string Sha256 = "976DB8726AC79FFF521D27DB436B0B450676E8E6C6ED4C2376F63253C6FC6205";
+        const string ExeSha256 = "254D4C59D27D245FB5D958A89FE870CA925D1C8CAF21BAF9DAB328815D25AF1B";
+        // CoA64.exe builds of CoA Custom 1.9.6 that this native build was tested
         // against. A newer package must not keep an old native exe next to new data.
         static readonly string[] SupportedOfficialSha256 =
         {
-            "1911B1D5023EA906F51D7C90B555060F9ACD351CFD8A24BAA9A2287C3A05B376",
-            "DC5562875C09FAD7195366E4A8E2FDC50771ABE93EB2496CFBA16EB98462B6A2"
+            "9E7C396D73727470ADC4D26603452CCF829E1C0F5E22FD116C5C1F1F7E11DFF4"
         };
         static readonly string[] DownloadUrls =
         {
@@ -97,8 +100,8 @@ namespace CoAInstaller
             string official = Path.Combine(clientRoot ?? "", "CoA64.exe");
             if (!File.Exists(official)) return true; // the package does not replace the client exe
 
-            // The package version is the stable rule. 1.9.5 had several CoA64.exe
-            // builds; they are all the same client line. A later package (1.9.6+)
+            // The package version is the stable rule. 1.9.6 had several CoA64.exe
+            // builds; they are all the same client line. A later package (1.9.7+)
             // must use its own official exe until a matching native build exists.
             try
             {
@@ -106,7 +109,7 @@ namespace CoAInstaller
                 if (File.Exists(manifest))
                 {
                     string text = File.ReadAllText(manifest);
-                    if (Regex.IsMatch(text, "\"version\"\\s*:\\s*\"1\\.9\\.5\"")) return true;
+                    if (Regex.IsMatch(text, "\"version\"\\s*:\\s*\"1\\.9\\.6\"")) return true;
                 }
             }
             catch { }

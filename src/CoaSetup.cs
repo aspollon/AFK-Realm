@@ -220,8 +220,8 @@ namespace CoAInstaller
             text.AppendLine(L.T("The ZIP contains the CoA Custom client files, its add-ons, the AFK Realm client patch and the add-ons of the installed modules."));
             if (nativeHd)
             {
-                text.AppendLine(L.T("CoA64.exe in this ZIP is the native HD build. It uses the normal Direct3D9 renderer and does not need the x64 DXVK folder; an existing x64 folder is ignored."));
-                text.AppendLine(L.T("Keep Data\\patch-Z.MPQ, patch-4.MPQ and patch-5.MPQ disabled (their .coa-patcher-backup files are fine)."));
+                text.AppendLine(L.T("CoA64.exe in this ZIP is the native HD 1.9.6 build. It uses the normal Direct3D9 renderer and does not need the x64 DXVK folder; an existing x64 folder is ignored."));
+                text.AppendLine(L.T("Keep the full HD archive set enabled: patch-Z.MPQ, patch-4.MPQ, patch-5.MPQ and patch-ZZZZS/T/W.MPQ. The native build has room for all of them."));
             }
             else
             {
@@ -275,9 +275,18 @@ namespace CoAInstaller
             Console.WriteLine(L.T("Installing x64 DXVK ..."));
             copied += Dxvk.Install(o.Client);
 
-            // The Ascension HD world archive crashes CoA64 1.9.5. Quarantine the existing
-            // client file (not a CoA package file) until the upstream fix is available.
-            DisableHdWorldArchive(o.Client);
+            // CoA64 1.9.6 needs the full HD archive set. Older AFK versions disabled
+            // patch-Z/4/5 because the official 127-handle limit overflowed with the new
+            // patch-ZZZZS/T/W archives; the native build reserves 512 handles, so put
+            // them back. For a package without the native build, keep the old quarantine.
+            if (nativeSupported)
+            {
+                EnableHdWorldArchives(o.Client);
+            }
+            else
+            {
+                DisableHdWorldArchive(o.Client);
+            }
 
             string addons = Path.Combine(files, "addons");
             if (Directory.Exists(addons))
@@ -384,10 +393,42 @@ namespace CoAInstaller
         }
 
         /// <summary>
-        /// CoA64 1.9.5 is unstable with the Ascension HD world archives. Keep the player's
-        /// files next to the client as normal CoA backups so uninstalling restores them.
-        /// patch-4 and patch-5 are placeholders in several client packages and should not
-        /// sit in the archive chain either.
+        /// Puts the HD world archives back after an older AFK install quarantined them.
+        /// The native 1.9.6 build has enough archive-handle room for the full chain.
+        /// </summary>
+        static void EnableHdWorldArchives(string client)
+        {
+            EnableArchive(client, "patch-Z.MPQ");
+            EnableArchive(client, "patch-4.MPQ");
+            EnableArchive(client, "patch-5.MPQ");
+        }
+
+        static void EnableArchive(string client, string name)
+        {
+            string archive = Path.Combine(client, "Data", name);
+            if (File.Exists(archive)) return;
+
+            string[] suffixes = { ".coa-patcher-backup", ".off", ".disabled" };
+            foreach (string suffix in suffixes)
+            {
+                string backup = archive + suffix;
+                if (!File.Exists(backup)) continue;
+                try
+                {
+                    File.Move(backup, archive);
+                    Console.WriteLine(L.F("Enabled Data\\{0} for the native CoA64 HD build.", name));
+                }
+                catch (Exception ex)
+                {
+                    throw new InvalidOperationException(L.F("Data\\{0} could not be enabled. Close the game and run the setup again. ({1})", name, ex.Message), ex);
+                }
+                return;
+            }
+        }
+
+        /// <summary>
+        /// CoA64 packages without the native 1.9.6 build keep the old quarantine. The
+        /// player's files stay next to the client as CoA backups so uninstall restores them.
         /// </summary>
         static void DisableHdWorldArchive(string client)
         {
@@ -464,7 +505,9 @@ namespace CoAInstaller
             Console.WriteLine("  - native HD CoA64.exe, or the package's CoA64.exe changed to load HD without DXVK");
             Console.WriteLine("  - x64 DXVK files (d3d9, dxgi)");
             Console.WriteLine("  - full Data\\patch-T.MPQ (about 346 MB)");
-            Console.WriteLine("  - disable Data\\patch-Z.MPQ, patch-4.MPQ and patch-5.MPQ for CoA64 compatibility");
+            Console.WriteLine(NativeHd.SupportsPackage(clientRoot)
+                ? "  - keep Data\\patch-Z.MPQ, patch-4.MPQ, patch-5.MPQ and patch-ZZZZS/T/W.MPQ enabled (native 1.9.6 HD)"
+                : "  - disable Data\\patch-Z.MPQ, patch-4.MPQ and patch-5.MPQ for CoA64 compatibility");
             Console.WriteLine(L.F("  - server DBCs to {0}", Path.Combine(inst.DataDir, "dbc")));
             Console.WriteLine(L.F("  - server SQL to {0}", Path.Combine(inst.Root, "CoA-Custom", "sql")));
             Console.WriteLine(L.F("  - settings in {0}", Path.Combine(inst.ConfigDir, "modules", "mod_custom_races.conf")));
