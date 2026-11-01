@@ -238,16 +238,26 @@ namespace CoAInstaller.Web
                     if (!onlyDbc && Os.Windows)
                         foreach (var dll in Directory.GetFiles(inst.ServerDir, "*.dll")) { string dst = Path.Combine(dir, Path.GetFileName(dll)); File.Copy(dll, dst, true); copied.Add(dst); }
 
+                    // The whole run also goes to logs\map-data.log, so a Get help ZIP shows why it failed.
+                    string mapLog = Path.Combine(inst.LogDir, "map-data.log");
+                    var lastLines = new List<string>();
+                    Action<string> note = line =>
+                    {
+                        job.Log(line);
+                        lock (lastLines) { lastLines.Add(line); if (lastLines.Count > 8) lastLines.RemoveAt(0); }
+                        try { File.AppendAllText(mapLog, DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + " " + line + Environment.NewLine); } catch { }
+                    };
+                    try { Directory.CreateDirectory(inst.LogDir); File.WriteAllText(mapLog, "Create map data from " + dir + Environment.NewLine); } catch { }
                     Func<string, string, string, int> run = (title, program, arguments) =>
                     {
                         st(title);
-                        job.Log("== " + title);
+                        note("== " + title);
                         var psi = new ProcessStartInfo(program, arguments)
                         { UseShellExecute = false, CreateNoWindow = true, WorkingDirectory = dir, RedirectStandardOutput = true, RedirectStandardError = true, StandardOutputEncoding = Encoding.UTF8 };
                         using (var p = Process.Start(psi))
                         {
-                            p.OutputDataReceived += (s, e) => { if (e.Data != null) job.Log(e.Data); };
-                            p.ErrorDataReceived += (s, e) => { if (e.Data != null) job.Log(e.Data); };
+                            p.OutputDataReceived += (s, e) => { if (e.Data != null) note(e.Data); };
+                            p.ErrorDataReceived += (s, e) => { if (e.Data != null) note(e.Data); };
                             p.BeginOutputReadLine(); p.BeginErrorReadLine();
                             p.WaitForExit();
                             return p.ExitCode;
@@ -264,7 +274,13 @@ namespace CoAInstaller.Web
                         if (Directory.Exists(coa)) Directory.Delete(coa, true);
                         int code = run(L.T("CoA DBC tables from the client archives ..."), python,
                             MySql.Arg(inst.DbcScript) + " extract " + MySql.Arg(clientData) + " coa-dbc --original --mpqcli " + MySql.Arg(inst.MpqCliExe));
-                        if (code != 0) throw new InvalidOperationException(L.T("The CoA DBC tables could not be extracted (see the messages above). Is this the CoA client folder, and are the game and its launcher closed?"));
+                        if (code != 0)
+                        {
+                            string why;
+                            lock (lastLines) why = lastLines.LastOrDefault(l => !l.StartsWith("== ")) ?? "";
+                            throw new InvalidOperationException(L.T("The CoA DBC tables could not be extracted (see the messages above). Is this the CoA client folder, and are the game and its launcher closed?") +
+                                (why.Length > 0 ? "\n\n" + why : ""));
+                        }
                         string dbc = Path.Combine(dir, "dbc");
                         if (Directory.Exists(dbc)) Directory.Delete(dbc, true);
                         Directory.Move(coa, dbc);

@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.22
+
+- **Create map data writes its whole run to `logs\map-data.log`** (part of the Get help ZIP), and a failed CoA DBC extraction names its last error line in the message instead of only "see the messages above". The help ZIP of a player whose extraction failed had no trace of the run.
+
 ## 1.2.21
 
 - **HD for every CoA64.exe, not only CoA Custom 1.9.5.** The official CoA64 opens its HD archives (patch-4, 5, X, U, Z, Q, R, V) and sets up the HD characters only after `x64\d3d9.dll` (DXVK) loaded: one flag, set next to "DXVK loaded:", is checked in the archive filter and in the HD character setup. Where DXVK did not load, the client fell back to system D3D9 without a word and the races were back on the old models. For a package the native HD build was not made for, AFK Realm now changes the package's own CoA64.exe instead of keeping it as it is: both checks are found by their code (both must name the same flag), the filter's `jne` becomes a `jmp` and the setup's `je` is removed - the same thing the native build does in its source. The unchanged exe is kept as `.coa-patcher-backup`; a build without these checks is left alone and reported. The client ZIP carries the changed exe as well.

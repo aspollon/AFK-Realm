@@ -1,4 +1,8 @@
-# AFK Realm 1.2.21
+# AFK Realm 1.2.22
+
+## Fixed in 1.2.22
+
+- **Create map data:** when the CoA DBC tables cannot be extracted, the message now says why, and the Get help ZIP contains the full map data log.
 
 ## Fixed in 1.2.21
 
