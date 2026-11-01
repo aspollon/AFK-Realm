@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.27
+
+- **Two Forms after customize, race change and faction change.** The native CoA64 client now prepares and sends both Dracthyr/Worgen looks after these three replies, not only after character creation. Without it a changed character kept the server's default second form. New `CoA64.zip`; users update and run **CoA Custom > Install / update** once.
+
 ## 1.2.26
 
 - **Textures the races ask for under a path no archive has are copied from the same race's other folder.** CoA Custom's `EsteriaSethrak.bin` wants armor colors 2-4 under `custom\sethrak\animated\textures\creature\sethrak_melee\`, the files lie in `Creature\sethrak_melee\`: the game drew color 1 for all four (green). CharSections rows of the Worgen beards, the ThinHuman male faces and the female Blood elf scalps 13-26 point one folder above their files the same way. A copy is made only with the same file name, a folder named after the same race in both paths, and for a CharSections row a male/female folder that matches the row; a race that reuses another race's paths (the blank Darkfallen scalps) and look-alike names of other things are left alone. Every copy and every gap is listed in `logs\client-texture-fill.log`.

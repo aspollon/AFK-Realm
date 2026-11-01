@@ -161,7 +161,7 @@ namespace CoAInstaller
                     foreach (var bin in Directory.GetFiles(client, "Esteria*.bin"))
                     {
                         string text;
-                        try { text = Encoding.Latin1.GetString(File.ReadAllBytes(bin)); } catch { continue; }
+                        try { text = Encoding.GetEncoding(28591).GetString(File.ReadAllBytes(bin)); } catch { continue; }
                         foreach (Match m in BlpPath.Matches(text))
                         {
                             string t = m.Value.Replace('/', '\\');

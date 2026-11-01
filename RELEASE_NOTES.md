@@ -1,4 +1,10 @@
-# AFK Realm 1.2.26
+# AFK Realm 1.2.27
+
+## Fixed in 1.2.27
+
+- **Two Forms after customize, race change and faction change.** CoA64 only sent both Dracthyr/Worgen looks after creating a character. A character changed or customized later kept the server's default second form. The native CoA64 build now prepares the two-form commit for those three cases and sends it as soon as the server confirms the change.
+- **New native CoA64 1.9.6 build.** The fix is in the EXE; no new MPQs or DBCs are needed. Run **CoA Custom > Install / update** once after updating so the new native exe is installed.
+- This is a separate fix from the 512 archive-handle and InventoryType fixes; all earlier AFK fixes remain.
 
 ## Fixed in 1.2.26
 

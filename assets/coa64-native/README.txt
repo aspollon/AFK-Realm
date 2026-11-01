@@ -26,6 +26,18 @@ Changes from the tag
    of patch-ZZZZS/T/W was enough to cross the limit. With 512 handles the full
    set starts, including patch-4/5/Z.
 
+4. Item inventory-type guard
+   Item_C.h, Item_C.cpp, Tooltip.cpp, GameUI.cpp, GameUI_Scripts.cpp and
+   TradeSkillFrame.cpp. A negative or out-of-range InventoryType (for example
+   -1 from a bad item row) no longer indexes the 29-entry slot/token tables.
+
+5. Two Forms after customize / race change / faction change
+   RetailRace.h/.cpp and CGlueMgr.cpp. The client now prepares the two-form
+   commit for customize, race change and faction change as well, and sends both
+   looks as soon as the server confirms the change. Before this, only character
+   creation committed the parked form; a character changed to Dracthyr or
+   Worgen kept the server's default second form.
+
 Build
 -----
 Use the repository's BuildCoA64.bat / CMake target Wow (x64, RelWithDebInfo).
@@ -35,15 +47,16 @@ CoA64.zip. No PDB or map is shipped.
 Checksums of this build
 -----------------------
 CoA64.exe SHA-256:
-CDDC6F28DA9567BCCA584E571C946D8A6320E8B235BAB31102A342AA7BAAD5B8
+FC989DDA3C0A219882A870F7130CE1BB2123B544AADC2E06BA53CA6229035BDC
 
 CoA64.zip SHA-256:
-5751DC146A0C5AB9361A411C2CDB2D49B69A93C3C6B7CF0A0B795BF3EB938289
+34B8D8E5FC6E756F8A4793754677BAA44F236A6FBEC7C4C77C24ABFE5FF21EFB
 
 Tests
 -----
 - native Direct3D9 HD, patch-ZZZZS/T/W enabled: three cold starts
 - same with patch-4/5/Z enabled: two cold starts
 - x64 DXVK 2.7.1 with "-dxvk": one start
-All stayed running past 30 seconds and reached the login connection.
+- current 1.2.27 build: startup with the full HD set reaches the login connection
+- two-form race/faction/customize needs an in-game test with a changed Dracthyr/Worgen character
 
