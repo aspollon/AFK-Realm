@@ -1,4 +1,9 @@
-# AFK Realm 1.2.20
+# AFK Realm 1.2.21
+
+## Fixed in 1.2.21
+
+- **HD models with every CoA Custom version, not just 1.9.5.** The official CoA64.exe only loads HD when its Vulkan renderer (DXVK) starts; otherwise everyone is back on the old models. AFK Realm now changes the package's own CoA64.exe so HD no longer depends on DXVK (the original is kept as `.coa-patcher-backup`). For 1.9.5 the native HD build is used as before.
+- **The x64 DXVK folder is installed again** by **CoA Custom > Install / update** and included in the client ZIP.
 
 ## Fixed in 1.2.20
 

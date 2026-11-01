@@ -135,7 +135,7 @@ namespace CoAInstaller
                     .Select(path => new { Addon = a, Path = path }))
                 .ToList();
             bool nativeSupported = NativeHd.SupportsPackage(clientRoot);
-            int total = rootFiles.Length + addonFiles.Length + moduleAddonFiles.Count + mpqs.Length + (nativeSupported ? NativeHd.Count : 0);
+            int total = rootFiles.Length + addonFiles.Length + moduleAddonFiles.Count + mpqs.Length + (nativeSupported ? NativeHd.Count : 0) + Dxvk.Count;
             int done = 0;
             using (var zip = ZipFile.Open(file, ZipArchiveMode.Create))
             {
@@ -153,7 +153,15 @@ namespace CoAInstaller
                     if (nativeSupported && string.Equals(Path.GetFileName(path), "CoA64.exe", StringComparison.OrdinalIgnoreCase)) continue;
                     progress(L.F("Packing CoA client files ({0}/{1}) ...", done + 1, total), done, total);
                     string rel = path.Substring(rootPrefix.Length).Replace('\\', '/');
-                    zip.CreateEntryFromFile(path, rel, CompressionLevel.NoCompression);
+                    if (string.Equals(Path.GetFileName(path), "CoA64.exe", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Any other CoA64 build: HD without DXVK, patched by its code (Coa64HdPatch).
+                        byte[] exe = File.ReadAllBytes(path);
+                        Coa64HdPatch.Apply(exe);
+                        ZipArchiveEntry exeEntry = zip.CreateEntry(rel, CompressionLevel.NoCompression);
+                        using (Stream output = exeEntry.Open()) output.Write(exe, 0, exe.Length);
+                    }
+                    else zip.CreateEntryFromFile(path, rel, CompressionLevel.NoCompression);
                     done++;
                 }
                 if (nativeSupported)
@@ -162,6 +170,10 @@ namespace CoAInstaller
                     NativeHd.AddToZip(zip);
                     done += NativeHd.Count;
                 }
+                // The x64 DXVK files: the official CoA64 uses them when they load; HD no longer depends on them.
+                progress(L.T("Adding the x64 DXVK files ..."), done, total);
+                Dxvk.AddToZip(zip);
+                done += Dxvk.Count;
                 if (addonFiles.Length > 0)
                 {
                     string addonPrefix = Path.GetFullPath(Path.Combine(files, "addons")).TrimEnd('\\', '/') + Path.DirectorySeparatorChar;
@@ -213,7 +225,8 @@ namespace CoAInstaller
             }
             else
             {
-                text.AppendLine(L.T("This CoA Custom package ships a newer CoA64.exe than the native HD build. The ZIP keeps the official CoA64.exe; the native HD startup fix is not available for this package version yet."));
+                text.AppendLine(L.T("CoA64.exe in this ZIP is the package's own build, changed so that it loads HD without DXVK. The x64 folder (DXVK) is included; if the game does not start on your PC, rename the x64 folder and try again."));
+                text.AppendLine(L.T("Keep Data\\patch-Z.MPQ, patch-4.MPQ and patch-5.MPQ disabled (their .coa-patcher-backup files are fine)."));
             }
             return text.ToString();
         }
@@ -248,8 +261,19 @@ namespace CoAInstaller
             }
             else
             {
-                Console.WriteLine(L.T("The CoA package has a newer CoA64.exe; keeping the official exe and skipping the native HD build."));
+                // A CoA64 build the native HD exe was not made for: its own exe, changed so that HD no
+                // longer depends on DXVK (Coa64HdPatch finds the two checks by their code).
+                var patched = Coa64HdPatch.ApplyToFile(Path.Combine(o.Client, "CoA64.exe"));
+                Console.WriteLine(patched == Coa64HdPatch.Result.NotFound
+                    ? L.T("CoA64.exe: the HD check was not found in this build; HD needs the x64 DXVK folder to load.")
+                    : L.T("CoA64.exe: HD no longer depends on DXVK."));
+                if (patched == Coa64HdPatch.Result.Patched) copied++;
             }
+
+            // The x64 DXVK files. The native build ignores them unless started with -dxvk; the official
+            // CoA64 uses them when they load (and needs them for HD where the patch above did not fit).
+            Console.WriteLine(L.T("Installing x64 DXVK ..."));
+            copied += Dxvk.Install(o.Client);
 
             // The Ascension HD world archive crashes CoA64 1.9.5. Quarantine the existing
             // client file (not a CoA package file) until the upstream fix is available.
@@ -437,7 +461,8 @@ namespace CoAInstaller
             Console.WriteLine(L.F("  - {0} MPQs from {1} to {2}", Count(clientSource, "*.MPQ"), clientSource, Path.Combine(o.Client, "Data")));
             Console.WriteLine(L.F("  - client_root files from {0} to {1}", clientRoot, o.Client));
             Console.WriteLine(L.F("  - addons from {0}", Path.Combine(files, "addons")));
-            Console.WriteLine("  - native HD CoA64.exe (no x64 DXVK needed)");
+            Console.WriteLine("  - native HD CoA64.exe, or the package's CoA64.exe changed to load HD without DXVK");
+            Console.WriteLine("  - x64 DXVK files (d3d9, dxgi)");
             Console.WriteLine("  - full Data\\patch-T.MPQ (about 346 MB)");
             Console.WriteLine("  - disable Data\\patch-Z.MPQ, patch-4.MPQ and patch-5.MPQ for CoA64 compatibility");
             Console.WriteLine(L.F("  - server DBCs to {0}", Path.Combine(inst.DataDir, "dbc")));
