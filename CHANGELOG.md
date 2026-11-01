@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.28
+
+- **Play button in the top bar.** It sets the game client's realm list to this PC and starts the 64-bit `CoA64.exe` from the game folder (`Ascension.exe` only when the client has no CoA64.exe). The address is written in both places the client reads it: every `Data\<locale>\realmlist.wtf` (other lines such as a patchlist are kept) and the `SET realmList` line of `WTF\Config.wtf`, which wins over realmlist.wtf when it is there - changing only realmlist.wtf often did nothing. The address is always 127.0.0.1: this PC plays through it even with "Play with others" set. Without a known game folder the button asks for it; a game already running from the folder is reported; when the game world is not running it asks first. Hidden on Linux and when managing a remote server.
+- **Player ZIPs carry the realm address.** With an address set in "Play with others", the CoA player ZIP and the module ZIP contain `Data\enUS\realmlist.wtf` with it, and their READ ME says to change a `SET realmList` line in `WTF\Config.wtf` as well.
+
 ## 1.2.27
 
 - **Two Forms after customize, race change and faction change.** The native CoA64 client now prepares and sends both Dracthyr/Worgen looks after these three replies, not only after character creation. Without it a changed character kept the server's default second form. New `CoA64.zip`; users update and run **CoA Custom > Install / update** once.

@@ -200,9 +200,10 @@ namespace CoAInstaller
                     progress(L.T("Adding the AFK client patch ..."), done, total);
                     ClientPatch.AddPatchToZip(zip, inst, client, plan, progress);
                 }
+                string realm = GameLaunch.AddToZip(zip, inst);
                 var entry = zip.CreateEntry("READ ME FIRST.txt");
                 using (var writer = new StreamWriter(entry.Open(), new System.Text.UTF8Encoding(false)))
-                    writer.Write(ClientZipReadMe(nativeSupported));
+                    writer.Write(ClientZipReadMe(nativeSupported) + (realm != null ? Environment.NewLine + realm + Environment.NewLine : ""));
             }
             return file;
         }

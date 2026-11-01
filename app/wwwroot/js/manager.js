@@ -40,11 +40,24 @@ export function manager() {
     runTask(() => post('/api/server/restart'));
   }, 'restart');
   const consolesBtn = secondary(T('Open server consoles …'), () => import('./consoles.js').then(m => m.consoles()), 'console');
+  // Play: the realm list of the game set to this PC (realmlist.wtf and WTF\Config.wtf), then CoA64.exe started
+  const playBtn = secondary(T('Play'), () => playGame(), 'client');
+  if (meta.remote || !meta.windows) playBtn.style.display = 'none';
+  async function playGame(folder) {
+    if (folder === undefined && !s().world && !await confirm(T('The game world is not running yet. Start the game anyway? You can log in once the server is up.'))) return;
+    let r;
+    try { r = await post('/api/client/play', folder ? { folder } : {}); }
+    catch (e) { return alert(e.message); }
+    if (r.needFolder) {
+      const p = await choose({ title: T('Choose your game folder (it contains the "Data" folder)') });
+      if (p) playGame(p);
+    }
+  }
   const uptime = h('div.hint', { style: { margin: '6px 0 0' } });
   const notice = h('div.notice.pre');
   const banners = h('div');
   const bar = h('div.statusbar', {}, h('div.pills', {}, pills.db.el, pills.auth.el, pills.world.el),
-    h('div.row', { style: { marginTop: '12px' } }, startBtn, stopBtn, restartBtn, consolesBtn), uptime, notice, banners);
+    h('div.row', { style: { marginTop: '12px' } }, startBtn, stopBtn, restartBtn, consolesBtn, playBtn), uptime, notice, banners);
 
   const main = h('div.main', {}, bar, content);
   const el = h('div.frame', {}, sidebar, main);

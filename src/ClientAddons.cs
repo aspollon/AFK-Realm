@@ -268,8 +268,10 @@ namespace CoAInstaller
                 foreach (var addon in addons)
                     foreach (var path in Directory.GetFiles(addon.Source, "*", SearchOption.AllDirectories))
                         zip.CreateEntryFromFile(path, "Interface/AddOns/" + addon.Name + "/" + path.Substring(addon.Source.Length).TrimStart('\\', '/').Replace('\\', '/'), CompressionLevel.Optimal);
+                string realm = GameLaunch.AddToZip(zip, inst);
                 // In the language of the server owner, and in English below it for players who speak another one.
                 var note = new StringBuilder(ReadMe(addons, patch, withPatch, false));
+                if (realm != null) note.AppendLine().AppendLine(realm);
                 if (L.Code != "en") note.AppendLine().AppendLine("----------------------------------------------------------------").AppendLine().Append(ReadMe(addons, patch, withPatch, true));
                 var entry = zip.CreateEntry("READ ME FIRST.txt");
                 using (var w = new StreamWriter(entry.Open(), new UTF8Encoding(false))) w.Write(note.ToString().Replace("\r\n", "\n").Replace("\n", "\r\n"));

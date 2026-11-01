@@ -1,4 +1,10 @@
-# AFK Realm 1.2.27
+# AFK Realm 1.2.28
+
+## New in 1.2.28
+
+- **Play button:** next to the server buttons. It sets your game's realm list to this PC (both `realmlist.wtf` and the `SET realmList` line in `WTF\Config.wtf`, which otherwise wins) and starts the 64-bit `CoA64.exe` (or `Ascension.exe` if there is no CoA64). The first time it asks for your game folder if AFK Realm doesn't know it yet.
+- **Player ZIPs:** with an address set under **Settings > Play with others**, the ZIP for other players contains a `realmlist.wtf` with that address, and its READ ME explains the `Config.wtf` line.
+- All 1.2.27 fixes remain.
 
 ## Fixed in 1.2.27
 

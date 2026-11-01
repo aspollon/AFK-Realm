@@ -87,6 +87,21 @@ namespace CoAInstaller.Web
                 return ClientJson(LookAtClient(inst, folder));
             });
 
+            // "Play": the realm list set to this PC, then CoA64.exe (Ascension.exe without it) started.
+            Post(app, "/api/client/play", a =>
+            {
+                string client = ClientAddons.ClientFolder;
+                if (a.Has("folder"))
+                {
+                    client = ClientAddons.GameRoot(a.Str("folder"));
+                    if (client == null) throw new UserError(L.T("This is not a game folder: it needs a \"Data\" folder with the game's .MPQ archives."));
+                    ClientAddons.ClientFolder = client;
+                }
+                if (client == null || !ClientAddons.IsClientFolder(client)) return new { needFolder = true };
+                string exe = GameLaunch.Play(client);
+                return new { ok = true, exe = Path.GetFileName(exe) };
+            });
+
             // The button text: a newer client version, or download / repair.
             Post(app, "/api/client/version", a =>
             {

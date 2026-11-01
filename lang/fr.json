@@ -2079,6 +2079,11 @@
     "Copying server DBCs ...": "Copie des DBC serveur ...",
     "Copying SQL to {0} ...": "Copie du SQL vers {0} ...",
     "SQL files copied. Automatic execution is disabled; the included module data is used.": "Fichiers SQL copiés. L'exécution automatique est désactivée ; les données du module incluses sont utilisées.",
-    "This copies the CoA client files, the CoA server DBCs/SQL and the settings, and installs the AFK client patch (Classic Classes).\r\n\r\nClose the game and stop the server first. Continue?": "Ceci copie les fichiers client CoA, les DBC/SQL du serveur CoA et les réglages, et installe le patch client AFK (Classic Classes).\r\n\r\nFerme le jeu et arrête le serveur d'abord. Continuer ?"
+    "This copies the CoA client files, the CoA server DBCs/SQL and the settings, and installs the AFK client patch (Classic Classes).\r\n\r\nClose the game and stop the server first. Continue?": "Ceci copie les fichiers client CoA, les DBC/SQL du serveur CoA et les réglages, et installe le patch client AFK (Classic Classes).\r\n\r\nFerme le jeu et arrête le serveur d'abord. Continuer ?",
+    "Play": "Jouer",
+    "The game world is not running yet. Start the game anyway? You can log in once the server is up.": "Le monde du jeu ne tourne pas encore. Lancer le jeu quand même ? Tu pourras te connecter dès que le serveur sera prêt.",
+    "The game folder {0} has neither CoA64.exe nor Ascension.exe.": "Le dossier du jeu {0} ne contient ni CoA64.exe ni Ascension.exe.",
+    "The game is already running.": "Le jeu est déjà lancé.",
+    "The realm address of this server is {0}; Data\\enUS\\realmlist.wtf in this ZIP is set to it. If your WTF\\Config.wtf has a line SET realmList, change it to SET realmList \"{0}\" as well (that line wins).": "L'adresse du royaume de ce serveur est {0} ; Data\\enUS\\realmlist.wtf de ce ZIP l'utilise. Si ton WTF\\Config.wtf contient une ligne SET realmList, change-la aussi en SET realmList \"{0}\" (cette ligne est prioritaire)."
   }
 }
