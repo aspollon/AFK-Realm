@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.26
+
+- **Textures the races ask for under a path no archive has are copied from the same race's other folder.** CoA Custom's `EsteriaSethrak.bin` wants armor colors 2-4 under `custom\sethrak\animated\textures\creature\sethrak_melee\`, the files lie in `Creature\sethrak_melee\`: the game drew color 1 for all four (green). CharSections rows of the Worgen beards, the ThinHuman male faces and the female Blood elf scalps 13-26 point one folder above their files the same way. A copy is made only with the same file name, a folder named after the same race in both paths, and for a CharSections row a male/female folder that matches the row; a race that reuses another race's paths (the blank Darkfallen scalps) and look-alike names of other things are left alone. Every copy and every gap is listed in `logs\client-texture-fill.log`.
+- **The male Sethrak head follows the skin color.** The head comes from `custom\sethrak\equipment\skin-male-0..4.blp`, one per skin color, but the package ships the five as the same grey picture while the body layers in `EsteriaSethrakTextures.bin` are grey, tan, pink, green and beige. While the five files are identical, the client patch carries four new ones: `skin-male-0` recolored with a gradient map of the matching body layer (LZNT1 layers read, DXT5 written like the original); the cyan marks and the eyes keep their colors. A package with its own head colors is left alone.
+
 ## 1.2.25
 
 - **Guard invalid `InventoryType` values in the native CoA64 build.** Negative/out-of-range item inventory types no longer index `s_inventoryTypeSlots` or `s_inventoryTypeTokens`; they are treated as unknown. This fixes the in-game access violation where `0xFFFFFFFF` indexed the 29-entry slot table. New `CoA64.zip`; users update to 1.2.25 and run **CoA Custom > Install / update** once.

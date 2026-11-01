@@ -438,6 +438,7 @@ namespace CoAInstaller
             }
             if (lend.Count > 0) RaceImport.LendFactions(load, save, lend, notes == null ? null : new Action<string>(notes.Add));
             SortSections(files);
+            TextureFill.Apply(inst, client, files, load, notes);
             FillHeights(files, client, plan, load);
             if (files.Count > 0) files[StampName] = Encoding.UTF8.GetBytes(Stamp(files) + string.Concat(plan.Imports.Select(w => "race " + w.Race + " " + w.Pack.Key + "\r\n")));
             return files;

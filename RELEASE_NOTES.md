@@ -1,4 +1,12 @@
-# AFK Realm 1.2.25
+# AFK Realm 1.2.26
+
+## Fixed in 1.2.26
+
+- **Sethrak armor colors 2-4 are no longer green.** CoA Custom asks for these textures in a folder where they don't exist; the client patch now copies them from the folder they are in.
+- **The Sethrak head (male) matches the skin color.** CoA Custom ships the same grey head texture for all five skin colors; AFK Realm now makes the four missing colors from the body colors of the package.
+- **Worgen beards, ThinHuman male faces and the female Blood elf scalps 13-26** show their textures: they were asked for one folder above where they are.
+- After updating, run **Client > Install** once. What was copied is listed in `logs\client-texture-fill.log`.
+- All 1.2.25 fixes remain.
 
 ## Fixed in 1.2.25
 
