@@ -1,4 +1,10 @@
-# AFK Realm 1.2.23
+# AFK Realm 1.2.24
+
+## Fixed in 1.2.24
+
+- **The AFK client patch no longer replaces the native CoA64 1.9.6 build.** In 1.2.23, running **Client > Install** after **CoA Custom > Install / update** copied the package's official `CoA64.exe` over the native HD build again. The official 1.9.6 exe has the 127-handle crash with `patch-ZZZZS/T/W`, so the game stopped starting. `CoA64.exe` is now owned by the CoA setup; the client patch skips it and removes an old client-root record for it.
+- **Existing 1.2.23 users:** update to 1.2.24, then run **CoA Custom > Install / update** once. That restores the native `CoA64.exe`; no manual copying is needed.
+- All 1.2.23 fixes remain, including the 512 archive handles and the full HD archive set.
 
 ## Fixed in 1.2.23
 

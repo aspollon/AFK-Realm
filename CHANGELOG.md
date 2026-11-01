@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.24
+
+- **The client patch no longer overwrites the native CoA64 1.9.6 build.** `ClientPatch` now skips `CoA64.exe` from the CoA `client_root` and drops an old root-file record for it. 1.2.23 could replace the native exe with the official 127-handle build during **Client > Install**, which made the game crash again. Existing users update to 1.2.24 and run **CoA Custom > Install / update** once.
+
 ## 1.2.23
 
 - **CoA64 1.9.6 native HD build with 512 archive handles.** The official 127-handle limit overflowed during startup when the HD archives and `patch-ZZZZS/T/W` were active, causing `0xC0000374` heap corruption. The new native 1.9.6 build removes that limit, uses native Direct3D9 HD (DXVK optional with `-dxvk`), and keeps the full `patch-Z/4/5` and `patch-ZZZZS/T/W` set enabled.

@@ -112,6 +112,9 @@ namespace CoAInstaller
                     foreach (var one in Directory.GetFiles(top, "*", SearchOption.AllDirectories).OrderBy(x => x, StringComparer.OrdinalIgnoreCase))
                     {
                         string to = one.Substring(top.Length).Replace('/', '\\');
+                        // CoA64.exe belongs to the CoA setup: it installs the native HD build for a
+                        // supported package. Copying the package's official exe here would undo it.
+                        if (Path.GetFileName(to).Equals("CoA64.exe", StringComparison.OrdinalIgnoreCase)) continue;
                         // The folder is the user's own choice: it may bring the game's exe too (CoA Custom 1.8 ships its Ascension.exe).
                         // When the setup page chose the exe separately, only that one goes next to the game.
                         if (plan.RootFiles.Any(r => r.GameExe) &&
@@ -1185,6 +1188,9 @@ namespace CoAInstaller
                 {
                     var parts = line.Split('\t');
                     if (parts.Length < 2) continue;
+                    // CoA64.exe is managed by the CoA setup (native HD build); never let an
+                    // old client-root record put the official exe back over it.
+                    if (parts[0].Equals("CoA64.exe", StringComparison.OrdinalIgnoreCase)) continue;
                     placed[parts[0]] = parts[1];
                     if (parts.Length > 2 && parts[2] == "found") found.Add(parts[0]);
                 }
