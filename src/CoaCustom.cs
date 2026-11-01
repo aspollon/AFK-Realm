@@ -114,6 +114,49 @@ namespace CoAInstaller
             return null;
         }
 
+        static string InstalledRecord(Install inst) { return Path.Combine(inst.Root, "Dependencies", "coa-custom-installed.txt"); }
+
+        /// <summary>Written after "CoA Custom > Install / update" copied a package into this server's client.</summary>
+        public static void RecordInstalled(Install inst, string version)
+        {
+            if (inst == null || string.IsNullOrEmpty(version)) return;
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(InstalledRecord(inst)));
+                File.WriteAllText(InstalledRecord(inst), version.Trim(), new UTF8Encoding(false));
+            }
+            catch { }
+        }
+
+        /// <summary>
+        /// The CoA Custom version this server has, for the update notice: the newest of the version the setup last
+        /// installed, the version AFK Realm downloaded into the race folder, and the package chosen on the setup page.
+        /// Only the download was counted before, so a package downloaded by hand (or into another folder) kept the
+        /// notice up after it was installed ("1.9.6 available, installed 1.9.2").
+        /// </summary>
+        public static string Installed(Install inst, string raceFolder)
+        {
+            var found = new List<string>();
+            try { if (inst != null && File.Exists(InstalledRecord(inst))) found.Add(File.ReadAllText(InstalledRecord(inst)).Trim()); } catch { }
+            found.Add(Installed(raceFolder));
+            try
+            {
+                string package = Settings.CoaPackage;
+                if (!string.IsNullOrEmpty(package)) found.Add(CoaSetup.ReadVersion(Path.Combine(package, "manifest.json")));
+            }
+            catch { }
+            string best = null;
+            foreach (string v in found)
+                if (!string.IsNullOrEmpty(v) && (best == null || UpdateCheck.IsNewer(v, best))) best = v;
+            return best;
+        }
+
+        /// <summary>A newer release than the installed version: "1.9.6-x64" is the same as "1.9.6".</summary>
+        public static bool IsUpdate(string latest, string installed)
+        {
+            return !string.IsNullOrEmpty(latest) && !string.IsNullOrEmpty(installed) && UpdateCheck.IsNewer(latest, installed);
+        }
+
         /// <summary>The version previously downloaded into a race folder, or null.</summary>
         public static string Installed(string raceFolder)
         {

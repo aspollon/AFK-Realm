@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.29
+
+- **The CoA Custom update notice knows what is installed.** It compared the newest release only with the version AFK Realm had downloaded into the race folder (`.afk-coa-custom-version`), so a package downloaded by hand, into another folder, or a race folder that changed kept the notice up after the new version was installed ("1.9.6-x64 available (installed 1.9.2)"). **CoA Custom > Install / update** now records the version it installed (`Dependencies\coa-custom-installed.txt`); the notice takes the newest of that, the downloaded version and the package chosen on the setup page, and compares versions by their numbers ("1.9.6-x64" is the same as "1.9.6").
+
 ## 1.2.28
 
 - **Play button in the top bar.** It sets the game client's realm list to this PC and starts the 64-bit `CoA64.exe` from the game folder (`Ascension.exe` only when the client has no CoA64.exe). The address is written in both places the client reads it: every `Data\<locale>\realmlist.wtf` (other lines such as a patchlist are kept) and the `SET realmList` line of `WTF\Config.wtf`, which wins over realmlist.wtf when it is there - changing only realmlist.wtf often did nothing. The address is always 127.0.0.1: this PC plays through it even with "Play with others" set. Without a known game folder the button asks for it; a game already running from the folder is reported; when the game world is not running it asks first. Hidden on Linux and when managing a remote server.

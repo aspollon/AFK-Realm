@@ -103,7 +103,9 @@ namespace CoAInstaller
                 return 0;
             }
 
-            return CopyPackage(o, inst, files, clientSource, clientRoot);
+            int copied = CopyPackage(o, inst, files, clientSource, clientRoot);
+            if (copied == 0) CoaCustom.RecordInstalled(inst, manifestVersion);
+            return copied;
         }
 
         /// <summary>
@@ -849,7 +851,7 @@ namespace CoAInstaller
             return null;
         }
 
-        static string ReadVersion(string manifest)
+        internal static string ReadVersion(string manifest)
         {
             try
             {

@@ -1,4 +1,9 @@
-# AFK Realm 1.2.28
+# AFK Realm 1.2.29
+
+## Fixed in 1.2.29
+
+- **"CoA Custom update available" no longer stays after updating.** The notice only looked at the version AFK Realm had downloaded itself, so a package you downloaded or installed another way kept showing the old version. It now uses the version **CoA Custom > Install / update** installed and the package you picked.
+- All 1.2.28 features remain, including the Play button.
 
 ## New in 1.2.28
 

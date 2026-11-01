@@ -425,8 +425,8 @@ namespace CoAInstaller.Web
                 {
                     var release = CoaCustom.Latest();
                     coaVersion = release.Version;
-                    installedCoa = CoaCustom.Installed(RaceFolderForUpdate(inst));
-                    if (installedCoa != null && installedCoa != coaVersion)
+                    installedCoa = CoaCustom.Installed(inst, RaceFolderForUpdate(inst));
+                    if (CoaCustom.IsUpdate(coaVersion, installedCoa))
                         coaNews = L.F("CoA Custom update available: {0} (installed {1}) — click to update", coaVersion, installedCoa);
                 }
                 catch { }

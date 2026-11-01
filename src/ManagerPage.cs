@@ -638,10 +638,10 @@ namespace CoAInstaller
                 {
                     var release = CoaCustom.Latest();
                     coaVersion = release.Version;
-                    installedCoa = CoaCustom.Installed(RaceFolderForUpdate());
+                    installedCoa = CoaCustom.Installed(inst, RaceFolderForUpdate());
                     // Only an existing CoA Custom installation gets an update notice. Without one this is not a
                     // "download it now" prompt; the CoA Custom page still offers the download when the user opens it.
-                    if (installedCoa != null && installedCoa != coaVersion)
+                    if (CoaCustom.IsUpdate(coaVersion, installedCoa))
                         coaNewsText = L.F("CoA Custom update available: {0} (installed {1}) — click to update", coaVersion, installedCoa);
                 }
                 catch { }
