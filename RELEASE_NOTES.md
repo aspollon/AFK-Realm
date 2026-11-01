@@ -1,4 +1,11 @@
-# AFK Realm 1.2.29
+# AFK Realm 1.2.30
+
+## Fixed in 1.2.30
+
+- **Race settings are made anew at every CoA Custom install.** The old `mod_custom_races.conf` is kept as a backup (`.before-coa-<time>`); the new one has every race of the package, the racials and the paths of this computer. Races you imported, the base races you chose, the race folder and "bots use custom races" are carried over. A file copied from another computer no longer leaves the racials broken.
+- **"Bots use custom races" stays as you set it** when CoA Custom is installed again.
+- **Warning when the race settings are empty**, e.g. after deleting `mod_custom_races.conf`: click it and run **CoA Custom > Install / update**. Update **mod-custom-races** too: it no longer turns characters of custom races into their base race when the settings are empty.
+- All 1.2.29 fixes remain.
 
 ## Fixed in 1.2.29
 

@@ -2065,6 +2065,8 @@
     "The game world is not running yet. Start the game anyway? You can log in once the server is up.": "",
     "The game folder {0} has neither CoA64.exe nor Ascension.exe.": "",
     "The game is already running.": "",
-    "The realm address of this server is {0}; Data\\enUS\\realmlist.wtf in this ZIP is set to it. If your WTF\\Config.wtf has a line SET realmList, change it to SET realmList \"{0}\" as well (that line wins).": ""
+    "The realm address of this server is {0}; Data\\enUS\\realmlist.wtf in this ZIP is set to it. If your WTF\\Config.wtf has a line SET realmList, change it to SET realmList \"{0}\" as well (that line wins).": "",
+    "Race settings made anew (the old file is kept as mod_custom_races.conf.before-coa-...).": "",
+    "The race settings (mod_custom_races.conf) contain no races. Click here and run CoA Custom > Install / update to set them up again.": ""
   }
 }

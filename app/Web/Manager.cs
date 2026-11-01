@@ -401,6 +401,19 @@ namespace CoAInstaller.Web
             return configured.Length > 0 ? configured : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", "AFK-Rassen");
         }
 
+        static bool CoaRacesMissing(Install inst)
+        {
+            string modules = Path.Combine(inst.ConfigDir, "modules");
+            bool coa = File.Exists(Path.Combine(inst.Root, "Dependencies", "coa-custom-installed.txt")) ||
+                File.Exists(Path.Combine(modules, "coa_custom_races.conf.dist"));
+            if (!coa || !Directory.Exists(Path.Combine(inst.SourceDir, "modules", "mod-custom-races"))) return false;
+            string conf = Path.Combine(modules, "mod_custom_races.conf");
+            if (!File.Exists(conf)) return true;
+            foreach (string line in File.ReadAllLines(conf))
+                if (System.Text.RegularExpressions.Regex.IsMatch(line, @"^\s*CustomRaces\.[^.\s]+\.Source\s*=\s*\d")) return false;
+            return true;
+        }
+
         public static void CheckDownloadUpdates()
         {
             var inst = Inst;
@@ -429,6 +442,10 @@ namespace CoAInstaller.Web
                     if (CoaCustom.IsUpdate(coaVersion, installedCoa))
                         coaNews = L.F("CoA Custom update available: {0} (installed {1}) — click to update", coaVersion, installedCoa);
                 }
+                catch { }
+                // CoA Custom is installed, but the race settings name no race (the file was deleted or made again from
+                // its .dist): nobody can create or play a custom race until the setup writes them again.
+                try { if (CoaRacesMissing(inst)) coaNews = L.T("The race settings (mod_custom_races.conf) contain no races. Click here and run CoA Custom > Install / update to set them up again."); }
                 catch { }
                 if (Inst != inst) return;
                 ClientNews = clientNews; CoaNews = coaNews; ClientVersion = clientVersion; InstalledClient = installedClient; CoaVersion = coaVersion; InstalledCoa = installedCoa;

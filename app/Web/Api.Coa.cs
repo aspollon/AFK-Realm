@@ -71,6 +71,7 @@ namespace CoAInstaller.Web
 
         static void MapCoa(WebApplication app)
         {
+            CoaSetup.AfterRaceSettings = RefreshRaces;
             Post(app, "/api/coa/state", a => CoaState(Inst));
 
             Post(app, "/api/coa/paths", a =>

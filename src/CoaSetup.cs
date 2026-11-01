@@ -337,8 +337,12 @@ namespace CoAInstaller
             if (Directory.Exists(sqlSource)) VerifyCopied(sqlSource, Path.Combine(inst.Root, "CoA-Custom", "sql"), "*.sql");
 
             Console.WriteLine(L.T("Writing client settings ..."));
+            var carried = ResetRaceConfig(inst);
             WriteRaceDefaults(inst, files);
+            ApplyCarried(inst, carried);
             WriteClientSettings(inst, clientRoot, clientSource);
+            // the racials, the racial rows and the paths of this computer, from the new settings (AFK Realm's races page)
+            if (AfterRaceSettings != null) try { AfterRaceSettings(inst); } catch { }
             EnsureHardwareCursor(o.Client);
 
             // The module add-ons are part of the client build too. Installing them here means
@@ -550,6 +554,92 @@ namespace CoAInstaller
         /// file the setup cannot write UseCoAUI=1 and the old AFK race selector is built into the
         /// client patch. Create it from the module's .dist in that case.
         /// </summary>
+        /// <summary>Called after the setup wrote the race settings, before the client patch is built: the web app brings
+        /// the racials, their rows and the paths of this computer into them (its races page).</summary>
+        public static Action<Install> AfterRaceSettings;
+
+        sealed class CarriedRaces
+        {
+            public readonly Dictionary<string, string> Globals = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            public readonly Dictionary<string, string> Imported = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            public readonly List<string> ImportedKeys = new List<string>();
+            public readonly Dictionary<string, string> Bases = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
+        /// The race settings are made anew from the module's .dist at every CoA Custom install: only adding to an old
+        /// file kept stale numbers, paths of another computer (a file copied from someone else: its RacialsFolder and
+        /// client paths) and old entries, and the racials did not work until something wrote them again. The old file
+        /// is kept as mod_custom_races.conf.before-coa-&lt;time&gt;. Carried over: races imported from a race folder, the
+        /// base race chosen for each race, the race folder and whether bots use custom races.
+        /// </summary>
+        static CarriedRaces ResetRaceConfig(Install inst)
+        {
+            var carried = new CarriedRaces();
+            string confPath = Path.Combine(inst.ConfigDir, "modules", "mod_custom_races.conf");
+            if (!File.Exists(confPath)) return carried;
+            ConfigFile old;
+            try { old = ConfigFile.Load(confPath, "modules\\mod_custom_races.conf"); }
+            catch { return carried; }
+            Func<string, string> raw = key => { ConfigOption o; return old.ByKey.TryGetValue(key, out o) ? o.CurrentRaw : null; };
+            foreach (string key in new[] { "CustomRaces.ImportFolder", "CoACustomRaces.BotsEnable" })
+            {
+                string v = raw(key);
+                if (!string.IsNullOrEmpty(v)) carried.Globals[key] = v;
+            }
+            foreach (var pair in old.ByKey)
+            {
+                if (!pair.Key.StartsWith("CustomRaces.", StringComparison.OrdinalIgnoreCase) || !pair.Key.EndsWith(".Source", StringComparison.OrdinalIgnoreCase)) continue;
+                string race = pair.Key.Substring("CustomRaces.".Length, pair.Key.Length - "CustomRaces.".Length - ".Source".Length);
+                if (race.Length == 0 || race.IndexOf('.') >= 0) continue;
+                string prefix = "CustomRaces." + race + ".";
+                if (ConfigOption.Unquote(raw(prefix + "Import") ?? "") == "1")
+                {
+                    carried.ImportedKeys.Add(race);
+                    foreach (var option in old.ByKey)
+                        if (option.Key.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) && option.Value.CurrentRaw.Length > 0)
+                            carried.Imported[option.Key] = option.Value.CurrentRaw;
+                }
+                else
+                {
+                    string b = raw(prefix + "Base");
+                    if (!string.IsNullOrEmpty(b)) carried.Bases[race] = b;
+                }
+            }
+            try
+            {
+                File.Copy(confPath, confPath + ".before-coa-" + DateTime.Now.ToString("yyyyMMdd-HHmmss"), true);
+                File.Delete(confPath);
+            }
+            catch { return new CarriedRaces(); }
+            Console.WriteLine(L.T("Race settings made anew (the old file is kept as mod_custom_races.conf.before-coa-...)."));
+            return carried;
+        }
+
+        static void ApplyCarried(Install inst, CarriedRaces carried)
+        {
+            string confPath = Path.Combine(inst.ConfigDir, "modules", "mod_custom_races.conf");
+            EnsureRaceConfig(inst);
+            if (!File.Exists(confPath) || (carried.Globals.Count == 0 && carried.Imported.Count == 0 && carried.Bases.Count == 0)) return;
+            ConfigFile conf = ConfigFile.Load(confPath, "modules\\mod_custom_races.conf");
+            foreach (var pair in carried.Globals) Set(conf, pair.Key, pair.Value);
+            foreach (var pair in carried.Imported) Set(conf, pair.Key, pair.Value);
+            foreach (var pair in carried.Bases)
+                if (Has(conf, "CustomRaces." + pair.Key + ".Source")) Set(conf, "CustomRaces." + pair.Key + ".Base", pair.Value);
+            if (carried.ImportedKeys.Count > 0)
+            {
+                ConfigOption list;
+                string current = conf.ByKey.TryGetValue("CustomRaces.Races", out list) ? ConfigOption.Unquote(list.CurrentRaw) : "";
+                string pending;
+                if (conf.Pending.TryGetValue("CustomRaces.Races", out pending)) current = ConfigOption.Unquote(pending);
+                var keys = current.Split(new[] { ' ', ',' }, StringSplitOptions.RemoveEmptyEntries).ToList();
+                foreach (string key in carried.ImportedKeys)
+                    if (!keys.Contains(key, StringComparer.OrdinalIgnoreCase)) keys.Add(key);
+                Set(conf, "CustomRaces.Races", Quote(string.Join(" ", keys.ToArray())));
+            }
+            conf.Save();
+        }
+
         static void EnsureRaceConfig(Install inst)
         {
             string confPath = Path.Combine(inst.ConfigDir, "modules", "mod_custom_races.conf");
@@ -704,7 +794,8 @@ namespace CoAInstaller
             Set(conf, "CustomRaces.UseCoAUI", "1");
             string patch = Path.Combine(clientSource, "dinput8.dll");
             if (File.Exists(patch)) Set(conf, "CustomRaces.MoreRacesFile", Quote(patch));
-            Set(conf, "CoACustomRaces.BotsEnable", "0");
+            // off on a first install only: the user's choice (or the one carried into new settings) stays
+            if (!Has(conf, "CoACustomRaces.BotsEnable") && !conf.Pending.ContainsKey("CoACustomRaces.BotsEnable")) Set(conf, "CoACustomRaces.BotsEnable", "0");
             conf.Save();
         }
 

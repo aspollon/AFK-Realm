@@ -2084,6 +2084,8 @@
     "The game world is not running yet. Start the game anyway? You can log in once the server is up.": "游戏世界尚未运行。仍要启动游戏吗？服务器启动后即可登录。",
     "The game folder {0} has neither CoA64.exe nor Ascension.exe.": "游戏文件夹 {0} 中既没有 CoA64.exe 也没有 Ascension.exe。",
     "The game is already running.": "游戏已在运行。",
-    "The realm address of this server is {0}; Data\\enUS\\realmlist.wtf in this ZIP is set to it. If your WTF\\Config.wtf has a line SET realmList, change it to SET realmList \"{0}\" as well (that line wins).": "此服务器的服务器列表地址为 {0}；本 ZIP 中的 Data\\enUS\\realmlist.wtf 已设为该地址。如果你的 WTF\\Config.wtf 中有 SET realmList 这一行，也请改为 SET realmList \"{0}\"（以该行为准）。"
+    "The realm address of this server is {0}; Data\\enUS\\realmlist.wtf in this ZIP is set to it. If your WTF\\Config.wtf has a line SET realmList, change it to SET realmList \"{0}\" as well (that line wins).": "此服务器的服务器列表地址为 {0}；本 ZIP 中的 Data\\enUS\\realmlist.wtf 已设为该地址。如果你的 WTF\\Config.wtf 中有 SET realmList 这一行，也请改为 SET realmList \"{0}\"（以该行为准）。",
+    "Race settings made anew (the old file is kept as mod_custom_races.conf.before-coa-...).": "已重新创建种族设置（旧文件保存为 mod_custom_races.conf.before-coa-...）。",
+    "The race settings (mod_custom_races.conf) contain no races. Click here and run CoA Custom > Install / update to set them up again.": "种族设置（mod_custom_races.conf）中没有任何种族。点击此处并运行 CoA Custom > Install / update 重新设置。"
   }
 }

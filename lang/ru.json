@@ -2084,6 +2084,8 @@
     "The game world is not running yet. Start the game anyway? You can log in once the server is up.": "Игровой мир ещё не запущен. Всё равно запустить игру? Войти можно будет, когда сервер заработает.",
     "The game folder {0} has neither CoA64.exe nor Ascension.exe.": "В папке игры {0} нет ни CoA64.exe, ни Ascension.exe.",
     "The game is already running.": "Игра уже запущена.",
-    "The realm address of this server is {0}; Data\\enUS\\realmlist.wtf in this ZIP is set to it. If your WTF\\Config.wtf has a line SET realmList, change it to SET realmList \"{0}\" as well (that line wins).": "Адрес реалма этого сервера: {0}; файл Data\\enUS\\realmlist.wtf в этом ZIP уже настроен на него. Если в вашем WTF\\Config.wtf есть строка SET realmList, измените и её на SET realmList \"{0}\" (эта строка важнее)."
+    "The realm address of this server is {0}; Data\\enUS\\realmlist.wtf in this ZIP is set to it. If your WTF\\Config.wtf has a line SET realmList, change it to SET realmList \"{0}\" as well (that line wins).": "Адрес реалма этого сервера: {0}; файл Data\\enUS\\realmlist.wtf в этом ZIP уже настроен на него. Если в вашем WTF\\Config.wtf есть строка SET realmList, измените и её на SET realmList \"{0}\" (эта строка важнее).",
+    "Race settings made anew (the old file is kept as mod_custom_races.conf.before-coa-...).": "Настройки рас созданы заново (старый файл сохранён как mod_custom_races.conf.before-coa-...).",
+    "The race settings (mod_custom_races.conf) contain no races. Click here and run CoA Custom > Install / update to set them up again.": "В настройках рас (mod_custom_races.conf) нет ни одной расы. Нажмите здесь и запустите CoA Custom > Install / update, чтобы настроить их заново."
   }
 }

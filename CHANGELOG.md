@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.30
+
+- **CoA Custom > Install / update makes the race settings anew.** `mod_custom_races.conf` was only added to: old numbers, entries and the paths of another computer stayed (a file copied from someone else kept that computer's `CustomRaces.RacialsFolder` and client paths), and the racials of a fresh file were only written the next time something saved the races. The setup now keeps the old file as `mod_custom_races.conf.before-coa-<time>`, starts again from the module's `.dist`, writes the races of the package, and carries over only what is the user's own: races imported from a race folder (and kept in `CustomRaces.Races`), the base race chosen for each race, the race folder and `CoACustomRaces.BotsEnable`. Right after, before the client patch is built, the races page writes the racials, their rows and this computer's paths into it.
+- **"Bots use custom races" is no longer switched off by every CoA install** (`CoACustomRaces.BotsEnable` is set to 0 on a first install only).
+- **Notice for empty race settings.** With CoA Custom installed and `mod_custom_races.conf` naming no race (deleted, or made again from its `.dist`), the top bar says so; a click opens the CoA Custom setup. (mod-custom-races 0299192 also no longer turns the characters of the custom races into their base race when that happens.)
+
 ## 1.2.29
 
 - **The CoA Custom update notice knows what is installed.** It compared the newest release only with the version AFK Realm had downloaded into the race folder (`.afk-coa-custom-version`), so a package downloaded by hand, into another folder, or a race folder that changed kept the notice up after the new version was installed ("1.9.6-x64 available (installed 1.9.2)"). **CoA Custom > Install / update** now records the version it installed (`Dependencies\coa-custom-installed.txt`); the notice takes the newest of that, the downloaded version and the package chosen on the setup page, and compares versions by their numbers ("1.9.6-x64" is the same as "1.9.6").

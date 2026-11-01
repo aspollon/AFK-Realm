@@ -2084,6 +2084,8 @@
     "The game world is not running yet. Start the game anyway? You can log in once the server is up.": "O mundo do jogo ainda não está rodando. Iniciar o jogo mesmo assim? Você poderá entrar quando o servidor estiver no ar.",
     "The game folder {0} has neither CoA64.exe nor Ascension.exe.": "A pasta do jogo {0} não tem CoA64.exe nem Ascension.exe.",
     "The game is already running.": "O jogo já está rodando.",
-    "The realm address of this server is {0}; Data\\enUS\\realmlist.wtf in this ZIP is set to it. If your WTF\\Config.wtf has a line SET realmList, change it to SET realmList \"{0}\" as well (that line wins).": "O endereço do reino deste servidor é {0}; o Data\\enUS\\realmlist.wtf deste ZIP já usa esse endereço. Se o seu WTF\\Config.wtf tiver uma linha SET realmList, mude-a também para SET realmList \"{0}\" (essa linha tem prioridade)."
+    "The realm address of this server is {0}; Data\\enUS\\realmlist.wtf in this ZIP is set to it. If your WTF\\Config.wtf has a line SET realmList, change it to SET realmList \"{0}\" as well (that line wins).": "O endereço do reino deste servidor é {0}; o Data\\enUS\\realmlist.wtf deste ZIP já usa esse endereço. Se o seu WTF\\Config.wtf tiver uma linha SET realmList, mude-a também para SET realmList \"{0}\" (essa linha tem prioridade).",
+    "Race settings made anew (the old file is kept as mod_custom_races.conf.before-coa-...).": "Configurações de raças criadas de novo (o arquivo antigo fica salvo como mod_custom_races.conf.before-coa-...).",
+    "The race settings (mod_custom_races.conf) contain no races. Click here and run CoA Custom > Install / update to set them up again.": "As configurações de raças (mod_custom_races.conf) não têm nenhuma raça. Clique aqui e execute CoA Custom > Install / update para configurá-las de novo."
   }
 }
