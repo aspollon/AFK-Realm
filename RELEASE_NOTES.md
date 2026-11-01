@@ -1,4 +1,11 @@
-# AFK Realm 1.2.24
+# AFK Realm 1.2.25
+
+## Fixed in 1.2.25
+
+- **In-game crash with an invalid item inventory type fixed.** A client dump showed `InventoryType = -1` being used as an index into the 29-entry `s_inventoryTypeSlots` table. The value became `0xFFFFFFFF`, so the client read at `table + 0xFFFFFFFF * 4` and crashed with an access violation. All item tooltip, inventory-slot and inventory-type-token lookups now treat negative or out-of-range values as unknown.
+- **New native CoA64 1.9.6 build.** The guarded client is shipped as the new `CoA64.zip`; the item-slot crash fix is in the EXE, not in the MPQs. Existing users update to 1.2.25 and run **CoA Custom > Install / update** once so the new native exe is installed.
+- This is a separate crash from the 1.9.6 startup `0xC0000374` archive-handle bug fixed in 1.2.23.
+- The 1.2.24 client-patch protection and all earlier fixes remain.
 
 ## Fixed in 1.2.24
 

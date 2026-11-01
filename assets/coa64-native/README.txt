@@ -1,4 +1,4 @@
-CoA64 1.9.6 native HD build
+﻿CoA64 1.9.6 native HD build
 ================================
 
 Source
@@ -35,10 +35,10 @@ CoA64.zip. No PDB or map is shipped.
 Checksums of this build
 -----------------------
 CoA64.exe SHA-256:
-254D4C59D27D245FB5D958A89FE870CA925D1C8CAF21BAF9DAB328815D25AF1B
+CDDC6F28DA9567BCCA584E571C946D8A6320E8B235BAB31102A342AA7BAAD5B8
 
 CoA64.zip SHA-256:
-976DB8726AC79FFF521D27DB436B0B450676E8E6C6ED4C2376F63253C6FC6205
+5751DC146A0C5AB9361A411C2CDB2D49B69A93C3C6B7CF0A0B795BF3EB938289
 
 Tests
 -----
@@ -46,3 +46,4 @@ Tests
 - same with patch-4/5/Z enabled: two cold starts
 - x64 DXVK 2.7.1 with "-dxvk": one start
 All stayed running past 30 seconds and reached the login connection.
+

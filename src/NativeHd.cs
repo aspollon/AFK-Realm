@@ -25,8 +25,8 @@ namespace CoAInstaller
     static class NativeHd
     {
         public const string AssetName = "CoA64.zip";
-        const string Sha256 = "976DB8726AC79FFF521D27DB436B0B450676E8E6C6ED4C2376F63253C6FC6205";
-        const string ExeSha256 = "254D4C59D27D245FB5D958A89FE870CA925D1C8CAF21BAF9DAB328815D25AF1B";
+        const string Sha256 = "5751DC146A0C5AB9361A411C2CDB2D49B69A93C3C6B7CF0A0B795BF3EB938289";
+        const string ExeSha256 = "CDDC6F28DA9567BCCA584E571C946D8A6320E8B235BAB31102A342AA7BAAD5B8";
         // CoA64.exe builds of CoA Custom 1.9.6 that this native build was tested
         // against. A newer package must not keep an old native exe next to new data.
         static readonly string[] SupportedOfficialSha256 =

@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.25
+
+- **Guard invalid `InventoryType` values in the native CoA64 build.** Negative/out-of-range item inventory types no longer index `s_inventoryTypeSlots` or `s_inventoryTypeTokens`; they are treated as unknown. This fixes the in-game access violation where `0xFFFFFFFF` indexed the 29-entry slot table. New `CoA64.zip`; users update to 1.2.25 and run **CoA Custom > Install / update** once.
+- The 1.2.24 client-patch protection (never overwrite the native CoA64 exe) remains.
+
 ## 1.2.24
 
 - **The client patch no longer overwrites the native CoA64 1.9.6 build.** `ClientPatch` now skips `CoA64.exe` from the CoA `client_root` and drops an old root-file record for it. 1.2.23 could replace the native exe with the official 127-handle build during **Client > Install**, which made the game crash again. Existing users update to 1.2.24 and run **CoA Custom > Install / update** once.
