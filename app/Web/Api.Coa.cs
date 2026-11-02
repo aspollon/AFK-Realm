@@ -138,16 +138,30 @@ namespace CoAInstaller.Web
                     // are replaced), the worldserver stopped (it reads the race settings and DBCs only at its start), and
                     // the database running - the race settings ask it which race numbers have characters; without it
                     // they could not put the numbers right (the races "only worked with the server on").
-                    if (closeGame) { st(L.T("Closing the game ...")); ClientAddons.CloseClient(client); }
+                    // everything the install prints goes to logs\coa-install.log as well (for the help ZIP)
+                    StreamWriter logFile = null;
+                    try
+                    {
+                        Directory.CreateDirectory(inst.LogDir);
+                        logFile = new StreamWriter(Path.Combine(inst.LogDir, "coa-install.log"), false, new System.Text.UTF8Encoding(false)) { AutoFlush = true };
+                        logFile.WriteLine(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + "  " + Product.Name + " " + Product.Version + " - CoA Custom install");
+                    }
+                    catch { logFile = null; }
+                    SafeConsole.Install();
+                    SafeConsole.Tee = logFile;
+                    Action<string> step = text => { st(text); Console.WriteLine(DateTime.Now.ToString("HH:mm:ss") + "  " + text); };
+                    try
+                    {
+                    if (closeGame) { step(L.T("Closing the game ...")); ClientAddons.CloseClient(client); }
                     var ctl = Manager.Inst != null && string.Equals(Manager.Inst.Root, inst.Root, StringComparison.OrdinalIgnoreCase) && Manager.Ctl != null ? Manager.Ctl : new ServerControl(inst);
                     bool wasRunning = ctl.World != null;
-                    if (wasRunning || ctl.Auth != null) ctl.StopAll(st, false);
-                    ctl.StartDatabase(st);
+                    if (wasRunning || ctl.Auth != null) ctl.StopAll(step, false);
+                    ctl.StartDatabase(step);
                     // Bring the race settings up to date BEFORE the client patch is built.
                     // Saving them afterwards changes the patch inputs and makes AFK Realm
                     // report the freshly built patch as outdated again.
                     try { RefreshRaces(inst); } catch { }
-                    st(L.T("Copying the CoA package and building the client patch ..."));
+                    step(L.T("Copying the CoA package and building the client patch ..."));
                     int code = CoaSetup.Run(new[] { "--package", package, "--server", server, "--client", client });
                     if (code != 0)
                         throw new UserError(L.F("CoA Custom setup failed: {0}", string.IsNullOrEmpty(CoaSetup.LastError) ? L.T("See the AFK Realm log.") : CoaSetup.LastError));
@@ -155,9 +169,17 @@ namespace CoAInstaller.Web
                     // the server starts with the new races (again, if it ran before)
                     if (inst.HasMapData && inst.HasClientDbc)
                     {
-                        st(wasRunning ? L.T("Starting the server again ...") : L.T("Starting the server ..."));
-                        try { StartWork(inst, ctl, st); job.Message += " " + L.T("The server is starting with the new races."); }
+                        step(wasRunning ? L.T("Starting the server again ...") : L.T("Starting the server ..."));
+                        try { StartWork(inst, ctl, step); job.Message += " " + L.T("The server is starting with the new races."); }
                         catch (Exception ex) { job.Message += " " + L.T("The server could not be started:") + " " + ex.Message; }
+                    }
+                    Console.WriteLine(DateTime.Now.ToString("HH:mm:ss") + "  " + job.Message);
+                    }
+                    catch (Exception ex) { Console.WriteLine(DateTime.Now.ToString("HH:mm:ss") + "  ERROR: " + ex.Message); throw; }
+                    finally
+                    {
+                        SafeConsole.Tee = null;
+                        try { if (logFile != null) logFile.Dispose(); } catch { }
                     }
                 }, (job, error) =>
                 {

@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.36
+
+- **A console that is gone no longer fails a task.** On Linux, AFK Realm started from a desktop icon or restarted by its update (it keeps the old terminal) gets EIO on every console write; the CoA Custom install prints each step, so it ended with "Input/output error" (and its own error report failed the same way). `SafeConsole` wraps Console.Out and Console.Error from the start and drops writes once they fail.
+- **logs/coa-install.log:** the CoA Custom install tees what it prints, with each step and its time (closing the game, stopping and starting the server, the result), into a log the help ZIP takes along.
+
 ## 1.2.35
 
 - **Game detection counted the server as the game.** `ClientRunning` took every program below the game folder; with the server installed inside it (`G:\Games\AscensionWoW\Server\...`) the worldserver, authserver and mysqld made "Play" answer "The game is already running", made the CoA Custom install refuse while the server ran, and 1.2.34's "close the game" would have ended the server. Only programs started from the game folder itself count now (`GameProcesses`, shared by `ClientRunning` and `CloseClient`).

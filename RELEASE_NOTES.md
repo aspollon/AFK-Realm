@@ -1,4 +1,9 @@
-# AFK Realm 1.2.35
+# AFK Realm 1.2.36
+
+## Fixed in 1.2.36
+
+- **Linux: "Input/output error" when installing CoA Custom** (and possibly in other tasks), when AFK Realm was started without a terminal or restarted by its own update: writing a line to a console that no longer exists failed the whole task. Such lines are dropped now.
+- The CoA Custom install writes every step to **logs/coa-install.log** (in the help ZIP).
 
 ## Fixed in 1.2.35
 

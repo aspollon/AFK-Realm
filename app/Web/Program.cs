@@ -99,6 +99,7 @@ namespace CoAInstaller.Web
             catch { }
             StartLog(Product.Name + " " + Product.Version + " started: " + Environment.ProcessPath + " " + string.Join(" ", args) + " (" + Environment.OSVersion + ")");
             AppDomain.CurrentDomain.UnhandledException += (s, e) => { if (e.ExceptionObject is Exception ex) Fatal(ex); };
+            SafeConsole.Install();
             try { return Start(args); }
             catch (Exception ex) { Fatal(ex); return 1; }
         }
