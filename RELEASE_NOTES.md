@@ -1,4 +1,9 @@
-# AFK Realm 1.2.32
+# AFK Realm 1.2.33
+
+## New in 1.2.33
+
+- **AFK Realm finds races the game offers but your server cannot create.** When the race settings leave out races of CoA Custom (High elf, Murloc, ...), players only got "Error creating character". A notice at the top now names them; one click switches them on (the races you have stay as they are), then restart the server. If you left them off on purpose, choose "Keep them off".
+- All 1.2.32 changes remain.
 
 ## New in 1.2.32
 

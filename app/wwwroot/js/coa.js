@@ -119,3 +119,22 @@ export async function coaDialog() {
     ]
   });
 }
+
+// Races the game client offers that the server's race settings leave off: switch them on, or keep them off.
+export async function missingRacesDialog(banner) {
+  const v = await dialog({
+    title: T('Races the server cannot create'), icon: 'warn', once: 'missing-races',
+    body: h('div.pre', {}, banner.text.replace(T('Click here to switch them on.'), '').trim() + '\n\n' +
+      T('Switch them on in the race settings? Each race gets its settings as the CoA Custom install writes them; the races you have stay as they are. The server uses them after its next start.')),
+    buttons: [
+      { text: T('Keep them off'), value: 'leave' },
+      { text: T('Not now'), value: null },
+      { text: T('Switch them on'), kind: 'primary', value: 'add', default: true }]
+  });
+  if (v === 'leave') { await post('/api/coa/races/leave', {}); return; }
+  if (v !== 'add') return;
+  const r = await post('/api/coa/races/add', {});
+  if (!r.ok) return;
+  await alert(T('Switched on:') + ' ' + (r.added || []).join(', ') + '\n\n' +
+    (r.running ? T('Restart the server (Stop server, then Start server) so the new races can be created.') : T('The new races can be created the next time the server starts.')));
+}

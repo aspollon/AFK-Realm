@@ -2100,6 +2100,17 @@
     "CoA Custom's races need the module mod-custom-races on the server (it brings mod-classic-classes along). Without it nobody can create them.": "Расам CoA Custom нужен модуль mod-custom-races на сервере (он подтянет mod-classic-classes). Без него их никто не сможет создать.",
     "Install it ...": "Установить ...",
     "CoA Custom needs these modules on the server.": "CoA Custom нужны эти модули на сервере.",
-    "Required for CoA Custom: makes its races (Dracthyr, Worgen, Vulpera, Sethrak, High elves and more) playable on your server, for players and bots. Brings mod-classic-classes along.": "Обязателен для CoA Custom: делает его расы (драктиры, ворген, вульперы, сетраки, высшие эльфы и другие) играбельными на вашем сервере для игроков и ботов. Подтягивает mod-classic-classes."
+    "Required for CoA Custom: makes its races (Dracthyr, Worgen, Vulpera, Sethrak, High elves and more) playable on your server, for players and bots. Brings mod-classic-classes along.": "Обязателен для CoA Custom: делает его расы (драктиры, ворген, вульперы, сетраки, высшие эльфы и другие) играбельными на вашем сервере для игроков и ботов. Подтягивает mod-classic-classes.",
+    "The game offers races your server cannot create: {0}. Players get \"Error creating character\" for them. Click here to switch them on.": "Игра предлагает расы, которые ваш сервер не может создать: {0}. Игроки получают для них \"Error creating character\". Нажмите здесь, чтобы включить их.",
+    "The game offers races your server cannot create: {0}. Players get \"Error creating character\" for them.": "Игра предлагает расы, которые ваш сервер не может создать: {0}. Игроки получают для них \"Error creating character\".",
+    "Click here to switch them on.": "Нажмите здесь, чтобы включить их.",
+    "Races the server cannot create": "Расы, которые сервер не может создать",
+    "Switch them on in the race settings? Each race gets its settings as the CoA Custom install writes them; the races you have stay as they are. The server uses them after its next start.": "Включить их в настройках рас? Каждая раса получит настройки так, как их записывает установка CoA Custom; ваши текущие расы останутся как есть. Сервер использует их после следующего запуска.",
+    "Keep them off": "Оставить выключенными",
+    "Not now": "Не сейчас",
+    "Switch them on": "Включить",
+    "Switched on:": "Включено:",
+    "Restart the server (Stop server, then Start server) so the new races can be created.": "Перезапустите сервер (Остановить сервер, затем Запустить сервер), чтобы новые расы можно было создавать.",
+    "The new races can be created the next time the server starts.": "Новые расы можно будет создавать после следующего запуска сервера."
   }
 }

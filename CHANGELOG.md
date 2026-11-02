@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.33
+
+- **Races the game client offers but the server cannot create.** The races of CoA Custom (by the server's ChrRaces.dbc, as the CoA Custom install reads them) that `CustomRaces.Races` leaves off are named in a notice in the top bar: the character creation offers them, the server refused them with "invalid race/class pair" and the player saw "Error creating character" (seen with race settings written by hand, sent along by another player or made before 1.2.30). A click switches them on: each gets its section as the install writes it if it has none, and joins the list; the races already on and their settings stay. "Keep them off" hides the notice for these races until the next CoA Custom install. logs\race-check.txt names them as well.
+
 ## 1.2.32
 
 - **Modules can require other modules** (`"requires": ["mod-classic-classes"]` in `afk-realm.json`). Installing such a module installs the ones it needs together with it (shown under "NEEDED AS WELL" before applying); removing a module another installed one needs warns about it. mod-custom-races requires mod-classic-classes: without it the human-based races (Jinyu, High elves, ...) could not be druids, though the CoA creator offers it, and the server only answered "Error creating character".

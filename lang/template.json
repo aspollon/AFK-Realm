@@ -2081,6 +2081,17 @@
     "CoA Custom's races need the module mod-custom-races on the server (it brings mod-classic-classes along). Without it nobody can create them.": "",
     "Install it ...": "",
     "CoA Custom needs these modules on the server.": "",
-    "Required for CoA Custom: makes its races (Dracthyr, Worgen, Vulpera, Sethrak, High elves and more) playable on your server, for players and bots. Brings mod-classic-classes along.": ""
+    "Required for CoA Custom: makes its races (Dracthyr, Worgen, Vulpera, Sethrak, High elves and more) playable on your server, for players and bots. Brings mod-classic-classes along.": "",
+    "The game offers races your server cannot create: {0}. Players get \"Error creating character\" for them. Click here to switch them on.": "",
+    "The game offers races your server cannot create: {0}. Players get \"Error creating character\" for them.": "",
+    "Click here to switch them on.": "",
+    "Races the server cannot create": "",
+    "Switch them on in the race settings? Each race gets its settings as the CoA Custom install writes them; the races you have stay as they are. The server uses them after its next start.": "",
+    "Keep them off": "",
+    "Not now": "",
+    "Switch them on": "",
+    "Switched on:": "",
+    "Restart the server (Stop server, then Start server) so the new races can be created.": "",
+    "The new races can be created the next time the server starts.": ""
   }
 }

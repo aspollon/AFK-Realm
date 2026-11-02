@@ -2100,6 +2100,17 @@
     "CoA Custom's races need the module mod-custom-races on the server (it brings mod-classic-classes along). Without it nobody can create them.": "Les races de CoA Custom ont besoin du module mod-custom-races sur le serveur (il apporte mod-classic-classes). Sans lui personne ne peut les créer.",
     "Install it ...": "L'installer ...",
     "CoA Custom needs these modules on the server.": "CoA Custom a besoin de ces modules sur le serveur.",
-    "Required for CoA Custom: makes its races (Dracthyr, Worgen, Vulpera, Sethrak, High elves and more) playable on your server, for players and bots. Brings mod-classic-classes along.": "Requis pour CoA Custom : rend ses races (Dracthyr, Worgen, Vulpérin, Sethrak, hauts-elfes et plus) jouables sur ton serveur, pour les joueurs et les bots. Apporte mod-classic-classes."
+    "Required for CoA Custom: makes its races (Dracthyr, Worgen, Vulpera, Sethrak, High elves and more) playable on your server, for players and bots. Brings mod-classic-classes along.": "Requis pour CoA Custom : rend ses races (Dracthyr, Worgen, Vulpérin, Sethrak, hauts-elfes et plus) jouables sur ton serveur, pour les joueurs et les bots. Apporte mod-classic-classes.",
+    "The game offers races your server cannot create: {0}. Players get \"Error creating character\" for them. Click here to switch them on.": "Le jeu propose des races que ton serveur ne peut pas créer : {0}. Les joueurs obtiennent \"Error creating character\" avec elles. Clique ici pour les activer.",
+    "The game offers races your server cannot create: {0}. Players get \"Error creating character\" for them.": "Le jeu propose des races que ton serveur ne peut pas créer : {0}. Les joueurs obtiennent \"Error creating character\" avec elles.",
+    "Click here to switch them on.": "Clique ici pour les activer.",
+    "Races the server cannot create": "Races que le serveur ne peut pas créer",
+    "Switch them on in the race settings? Each race gets its settings as the CoA Custom install writes them; the races you have stay as they are. The server uses them after its next start.": "Les activer dans les réglages des races ? Chaque race reçoit les réglages qu'écrit l'installation de CoA Custom ; tes races actuelles restent telles quelles. Le serveur les utilise à son prochain démarrage.",
+    "Keep them off": "Les laisser désactivées",
+    "Not now": "Pas maintenant",
+    "Switch them on": "Les activer",
+    "Switched on:": "Activées :",
+    "Restart the server (Stop server, then Start server) so the new races can be created.": "Redémarre le serveur (Arrêter le serveur, puis Démarrer le serveur) pour pouvoir créer les nouvelles races.",
+    "The new races can be created the next time the server starts.": "Les nouvelles races pourront être créées au prochain démarrage du serveur."
   }
 }

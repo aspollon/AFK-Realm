@@ -34,6 +34,8 @@ namespace CoAInstaller.Web
         /// <summary>Modules that are needed and missing: a module's "requires", or mod-custom-races for CoA Custom.</summary>
         public static string ModuleNews;
         public static string[] ModuleNewsInstall = new string[0];
+        public static string RacesNews;
+        public static int[] RacesNewsIds = new int[0];
         public static string ClientPending = "";
         public static bool ClientChecking;
         public static List<KeyValuePair<string, string>> BotOffer = new List<KeyValuePair<string, string>>();
@@ -65,7 +67,7 @@ namespace CoAInstaller.Web
                 Plan = RestartPlan.Load(inst);
                 restartAt = null; restartTold.Clear(); restartSnooze = DateTime.MinValue; memoryOver = 0; lastAutoRestart = "";
                 tickText = null; tickAsked = DateTime.MinValue;
-                Updates = null; ClientNews = CoaNews = ModuleNews = null; ModuleNewsInstall = new string[0]; ClientPending = ""; OfferClient = false; BotOffer = new List<KeyValuePair<string, string>>();
+                Updates = null; ClientNews = CoaNews = ModuleNews = RacesNews = null; ModuleNewsInstall = new string[0]; RacesNewsIds = new int[0]; ClientPending = ""; OfferClient = false; BotOffer = new List<KeyValuePair<string, string>>();
                 Notice = ""; lastSent = null;
             }
             Settings.LastInstall = inst.Root;
@@ -168,6 +170,7 @@ namespace CoAInstaller.Web
                 serverBanner, toolBanner,
                 clientBanner = ClientNews, coaBanner = CoaNews,
                 moduleBanner = ModuleNews == null ? null : new { text = ModuleNews, install = ModuleNewsInstall },
+                racesBanner = RacesNews == null ? null : new { text = RacesNews, ids = RacesNewsIds },
                 clientButton = InstalledClient != null && InstalledClient != ClientVersion ? L.F("Update game client to {0} …", ClientVersion) : L.T("Game client …"),
                 racesButton = InstalledCoa != null && InstalledCoa != CoaVersion ? L.F("Update custom races to {0} …", CoaVersion) : L.T("Set up the races …"),
                 clientState = ClientChecking ? L.T("Checking the game client …") : ClientPending.Length == 0 ? "" : L.T("Not everything the installed modules bring for the game client is in your game yet."),
@@ -474,7 +477,24 @@ namespace CoAInstaller.Web
                     }
                 }
                 catch { }
+                // races the game client offers but the server cannot create ("Error creating character")
+                string racesNews = null; int[] racesIds = new int[0];
+                try
+                {
+                    if (Directory.Exists(Path.Combine(inst.SourceDir, "modules", "mod-custom-races")))
+                    {
+                        var missingRaces = CoaSetup.MissingServerRaces(inst);
+                        if (missingRaces.Count > 0)
+                        {
+                            racesIds = missingRaces.Select(r => r.Key).ToArray();
+                            racesNews = L.F("The game offers races your server cannot create: {0}. Players get \"Error creating character\" for them. Click here to switch them on.",
+                                string.Join(", ", missingRaces.Select(r => r.Value + " (" + r.Key + ")")));
+                        }
+                    }
+                }
+                catch { }
                 if (Inst != inst) return;
+                RacesNews = racesNews; RacesNewsIds = racesIds;
                 ModuleNews = moduleNews; ModuleNewsInstall = moduleInstall;
                 ClientNews = clientNews; CoaNews = coaNews; ClientVersion = clientVersion; InstalledClient = installedClient; CoaVersion = coaVersion; InstalledCoa = installedCoa;
                 Poke();

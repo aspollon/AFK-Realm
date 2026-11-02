@@ -57,6 +57,14 @@ namespace CoAInstaller
                 foreach (var r in repaired ?? Enumerable.Empty<string>()) text.AppendLine("* " + r);
                 if (problems.Count == 0) text.AppendLine(L.T("No problems found."));
                 foreach (var p in problems) text.AppendLine("- " + p);
+                try
+                {
+                    var off = CoaSetup.MissingServerRaces(inst);
+                    if (off.Count > 0)
+                        text.AppendLine("- " + L.F("The game offers races your server cannot create: {0}. Players get \"Error creating character\" for them.",
+                            string.Join(", ", off.Select(r => r.Value + " (" + r.Key + ")"))));
+                }
+                catch { }
                 // the race settings as the patch read them, for whoever helps with a problem
                 text.AppendLine();
                 text.AppendLine("CustomRaces.Races = " + (ClientPatch.ConfValue(inst, Conf, "CustomRaces.Races") ?? ""));

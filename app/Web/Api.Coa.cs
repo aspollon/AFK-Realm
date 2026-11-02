@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Microsoft.AspNetCore.Builder;
 
 namespace CoAInstaller.Web
@@ -76,6 +77,26 @@ namespace CoAInstaller.Web
         {
             CoaSetup.AfterRaceSettings = RefreshRaces;
             Post(app, "/api/coa/state", a => CoaState(Inst));
+
+            // races the game client offers that the race settings leave off (Manager's racesBanner)
+            Post(app, "/api/coa/races/add", a =>
+            {
+                var inst = Inst;
+                if (inst == null) return (object)new { ok = false };
+                var added = CoaSetup.AddMissingServerRaces(inst);
+                Manager.CheckDownloadUpdates();
+                Manager.CheckClient(false);
+                return (object)new { ok = true, added = added.Select(r => r.Value + " (" + r.Key + ")").ToArray(), running = Ctl.World != null };
+            });
+
+            Post(app, "/api/coa/races/leave", a =>
+            {
+                var inst = Inst;
+                if (inst == null) return (object)new { ok = false };
+                CoaSetup.LeaveRacesOff(inst, Manager.RacesNewsIds);
+                Manager.CheckDownloadUpdates();
+                return new { ok = true };
+            });
 
             Post(app, "/api/coa/paths", a =>
             {

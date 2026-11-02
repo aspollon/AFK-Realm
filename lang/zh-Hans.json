@@ -2100,6 +2100,17 @@
     "CoA Custom's races need the module mod-custom-races on the server (it brings mod-classic-classes along). Without it nobody can create them.": "CoA Custom 的种族需要服务器上安装 mod-custom-races 模块（会一并安装 mod-classic-classes）。没有它，谁都无法创建这些种族。",
     "Install it ...": "安装 ...",
     "CoA Custom needs these modules on the server.": "CoA Custom 需要服务器上安装这些模块。",
-    "Required for CoA Custom: makes its races (Dracthyr, Worgen, Vulpera, Sethrak, High elves and more) playable on your server, for players and bots. Brings mod-classic-classes along.": "CoA Custom 必需：让其种族（龙希尔、狼人、狐人、沙怒、高等精灵等）在你的服务器上对玩家和机器人可玩。会一并安装 mod-classic-classes。"
+    "Required for CoA Custom: makes its races (Dracthyr, Worgen, Vulpera, Sethrak, High elves and more) playable on your server, for players and bots. Brings mod-classic-classes along.": "CoA Custom 必需：让其种族（龙希尔、狼人、狐人、沙怒、高等精灵等）在你的服务器上对玩家和机器人可玩。会一并安装 mod-classic-classes。",
+    "The game offers races your server cannot create: {0}. Players get \"Error creating character\" for them. Click here to switch them on.": "游戏提供了你的服务器无法创建的种族：{0}。玩家创建时会得到 \"Error creating character\"。点击这里启用它们。",
+    "The game offers races your server cannot create: {0}. Players get \"Error creating character\" for them.": "游戏提供了你的服务器无法创建的种族：{0}。玩家创建时会得到 \"Error creating character\"。",
+    "Click here to switch them on.": "点击这里启用它们。",
+    "Races the server cannot create": "服务器无法创建的种族",
+    "Switch them on in the race settings? Each race gets its settings as the CoA Custom install writes them; the races you have stay as they are. The server uses them after its next start.": "在种族设置中启用它们？每个种族都会获得 CoA Custom 安装时写入的设置；你现有的种族保持不变。服务器在下次启动后使用它们。",
+    "Keep them off": "保持关闭",
+    "Not now": "暂不",
+    "Switch them on": "启用",
+    "Switched on:": "已启用：",
+    "Restart the server (Stop server, then Start server) so the new races can be created.": "重启服务器（停止服务器，然后启动服务器），以便可以创建新种族。",
+    "The new races can be created the next time the server starts.": "新种族将在服务器下次启动后可以创建。"
   }
 }

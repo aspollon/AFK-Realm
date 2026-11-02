@@ -679,7 +679,105 @@ namespace CoAInstaller
         static void WriteRaceDefaults(Install inst, string files)
         {
             EnsureRaceConfig(inst);
-            string dbc = Path.Combine(files, "dbc", "ChrRaces.dbc");
+            WriteRaceRows(inst, Path.Combine(files, "dbc", "ChrRaces.dbc"), null);
+        }
+
+        /// <summary>The playable races of CoA Custom by the server's race table (the package's, copied at the install):
+        /// number and name. These are the races the game client offers in the character creation.</summary>
+        public static List<KeyValuePair<int, string>> PackageRaces(Install inst)
+        {
+            var list = new List<KeyValuePair<int, string>>();
+            string dbc = Path.Combine(inst.DataDir, "dbc", "ChrRaces.dbc");
+            if (!File.Exists(dbc)) return list;
+            DbcTable table;
+            try { table = DbcTable.Parse(File.ReadAllBytes(dbc), "ChrRaces.dbc"); }
+            catch { return list; }
+            foreach (var row in table.Records)
+            {
+                int id = (int)table.Field(row, 0);
+                uint flags = table.Field(row, 1);
+                if (id <= 11 || id > 127 || (flags & 0xC) != 0xC || HiddenCoaRaces.Contains(id)) continue;
+                string name = ClientRaces.Str(table, row, 14);
+                if (name.Length == 0) name = ClientRaces.Str(table, row, 11);
+                list.Add(new KeyValuePair<int, string>(id, name));
+            }
+            return list;
+        }
+
+        static string LeftOffFile(Install inst) { return Path.Combine(inst.Root, "Dependencies", "races-left-off.txt"); }
+
+        static HashSet<int> LeftOff(Install inst)
+        {
+            var set = new HashSet<int>();
+            try
+            {
+                if (File.Exists(LeftOffFile(inst)))
+                    foreach (string line in File.ReadAllLines(LeftOffFile(inst)))
+                    {
+                        int n;
+                        if (int.TryParse(line.Trim(), out n)) set.Add(n);
+                    }
+            }
+            catch { }
+            return set;
+        }
+
+        /// <summary>The races the game client offers (CoA Custom) that the server cannot create, because the race settings
+        /// do not switch them on (CustomRaces.Races): a player gets "Error creating character" for them, the server log says
+        /// "invalid race/class pair". Seen after race settings that were written by hand, sent along by another player, or
+        /// made by an AFK Realm before 1.2.30. Races the user chose to leave off are not listed.</summary>
+        public static List<KeyValuePair<int, string>> MissingServerRaces(Install inst)
+        {
+            var missing = new List<KeyValuePair<int, string>>();
+            string confPath = Path.Combine(inst.ConfigDir, "modules", "mod_custom_races.conf");
+            if (!File.Exists(confPath)) return missing;
+            var offered = PackageRaces(inst);
+            if (offered.Count == 0) return missing;
+            ConfigFile conf;
+            try { conf = ConfigFile.Load(confPath, "modules\\mod_custom_races.conf"); }
+            catch { return missing; }
+            ConfigOption option;
+            string list = conf.ByKey.TryGetValue("CustomRaces.Races", out option) ? ConfigOption.Unquote(option.CurrentRaw) : "";
+            var on = new HashSet<int>();
+            foreach (string key in list.Split(new[] { ' ', ',', ';', '\t' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                int n;
+                if (conf.ByKey.TryGetValue("CustomRaces." + key + ".Id", out option) && int.TryParse(ConfigOption.Unquote(option.CurrentRaw), out n) && n > 0) on.Add(n);
+                else if (conf.ByKey.TryGetValue("CustomRaces." + key + ".Source", out option) && int.TryParse(ConfigOption.Unquote(option.CurrentRaw), out n)) on.Add(n);
+            }
+            if (on.Count == 0) return missing;   // no races at all: the notice for empty race settings covers it
+            var leftOff = LeftOff(inst);
+            foreach (var race in offered)
+                if (!on.Contains(race.Key) && !leftOff.Contains(race.Key)) missing.Add(race);
+            return missing;
+        }
+
+        /// <summary>Switches the missing races on (MissingServerRaces): each gets its section as the CoA Custom install
+        /// writes it, if it has none, and joins CustomRaces.Races; the races already on stay as they are. The racials and
+        /// race files are written again after. The server reads it at its next start. Returns the races switched on.</summary>
+        public static List<KeyValuePair<int, string>> AddMissingServerRaces(Install inst)
+        {
+            var missing = MissingServerRaces(inst);
+            if (missing.Count == 0) return missing;
+            WriteRaceRows(inst, Path.Combine(inst.DataDir, "dbc", "ChrRaces.dbc"), new HashSet<int>(missing.Select(m => m.Key)));
+            if (AfterRaceSettings != null) try { AfterRaceSettings(inst); } catch { }
+            return missing;
+        }
+
+        /// <summary>The user keeps these races off: no notice about them any more (until the CoA Custom install, which
+        /// switches every race of the package on again).</summary>
+        public static void LeaveRacesOff(Install inst, IEnumerable<int> ids)
+        {
+            var set = LeftOff(inst);
+            foreach (int id in ids) set.Add(id);
+            Directory.CreateDirectory(Path.GetDirectoryName(LeftOffFile(inst)));
+            File.WriteAllLines(LeftOffFile(inst), set.OrderBy(n => n).Select(n => n.ToString()).ToArray());
+        }
+
+        /// <summary>Writes the sections of the package's races and the race list. only == null: every playable race of
+        /// the package, and the list becomes exactly these (the install). Otherwise only these races, added to the list.</summary>
+        static void WriteRaceRows(Install inst, string dbc, HashSet<int> only)
+        {
             if (!File.Exists(dbc)) return;
             string confPath = Path.Combine(inst.ConfigDir, "modules", "mod_custom_races.conf");
             if (!File.Exists(confPath)) return;
@@ -694,6 +792,7 @@ namespace CoAInstaller
                 int id = (int)table.Field(row, 0);
                 uint flags = table.Field(row, 1);
                 if (id <= 11 || id > 127 || (flags & 0xC) != 0xC || HiddenCoaRaces.Contains(id)) continue;
+                if (only != null && !only.Contains(id)) continue;
                 string file = ClientRaces.Str(table, row, 11);
                 string name = ClientRaces.Str(table, row, 14);
                 if (name.Length == 0) name = file;
@@ -736,12 +835,22 @@ namespace CoAInstaller
                 }
                 keys.Add(key);
             }
-            if (keys.Count > 0)
+            if (keys.Count > 0 && only != null)
+            {
+                ConfigOption current;
+                var list = (conf.ByKey.TryGetValue("CustomRaces.Races", out current) ? ConfigOption.Unquote(current.CurrentRaw) : "")
+                    .Split(new[] { ' ', ',', ';', '\t' }, StringSplitOptions.RemoveEmptyEntries).ToList();
+                foreach (string k in keys)
+                    if (!list.Contains(k, StringComparer.OrdinalIgnoreCase)) list.Add(k);
+                Set(conf, "CustomRaces.Races", Quote(string.Join(" ", list.ToArray())));
+            }
+            else if (keys.Count > 0)
             {
                 // The CoA UI owns race selection: every playable race of the CoA package is on,
                 // and no stale key or client-only race from an older configuration survives in
                 // CustomRaces.Races. Base races stay as the user chose them.
                 Set(conf, "CustomRaces.Races", Quote(string.Join(" ", keys.ToArray())));
+                try { if (File.Exists(LeftOffFile(inst))) File.Delete(LeftOffFile(inst)); } catch { }
             }
             conf.Save();
         }
