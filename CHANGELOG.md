@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.35
+
+- **Game detection counted the server as the game.** `ClientRunning` took every program below the game folder; with the server installed inside it (`G:\Games\AscensionWoW\Server\...`) the worldserver, authserver and mysqld made "Play" answer "The game is already running", made the CoA Custom install refuse while the server ran, and 1.2.34's "close the game" would have ended the server. Only programs started from the game folder itself count now (`GameProcesses`, shared by `ClientRunning` and `CloseClient`).
+- **The CoA Custom card is always on the Modules page.** It was only shown with mod-custom-races installed, so new users never found the CoA Custom install. Without the module the card explains it and its button installs mod-custom-races (which brings mod-classic-classes).
+
 ## 1.2.34
 
 - **The race page undid the CoA Custom install.** The races of the game client are keyed by their name (High Elf -> `HighElf`), the CoA Custom install keys its sections by the row's file name (`BloodElf`, `Troglodyte30`, `SethrakAlliance`). Every refresh of the race settings (right after the install, before each client patch, on the races page) took the install's sections for leftovers: `ClearOrphanNumbers` removed their `Id`, `PruneChosen` took them out of `CustomRaces.Races` - about 30 races of CoA Custom were off on every setup without a race folder, and the server refused them ("invalid race/class pair"). A client race now takes the key of the section that names its row (Source, not a copy); its own section, also one with `Copy = 1`, stays its own. The install checks at its end that every playable race of the package is on and switches missing ones on again (logged).

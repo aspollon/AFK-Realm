@@ -2101,6 +2101,8 @@
     "The server could not be started:": "",
     "Race settings: {0} race(s) of the package were missing and are switched on again: {1}": "",
     "The race settings could not be checked:": "",
-    "Copy the CoA client files, server DBCs/SQL and settings, install the module add-ons and build the AFK client patch? AFK Realm closes the game if it runs, stops the server, keeps the database running for the race settings and starts the server again afterwards.": ""
+    "Copy the CoA client files, server DBCs/SQL and settings, install the module add-ons and build the AFK client patch? AFK Realm closes the game if it runs, stops the server, keeps the database running for the race settings and starts the server again afterwards.": "",
+    "The CoA Custom races (Dracthyr, Worgen, Vulpera, Sethrak, High elves and more) need the server module mod-custom-races, which brings mod-classic-classes along. Install it first; the server is rebuilt. Then this card installs CoA Custom.": "",
+    "Install mod-custom-races …": ""
   }
 }

@@ -220,6 +220,8 @@ export function manager() {
         primary(T('Set up the auction house bots …'), setup('setups.js', 'auctionSetup'))),
       moduleCard(m.classic, T('Classic classes'), T('Which classic classes - Warrior to Druid - can be played next to the classes of Conquest of Azeroth, by players and bots.'), 'gamemaster',
         primary(T('Set up the classic classes …'), setup('setups.js', 'classicSetup'))),
+      m.races ? null : (() => { const c = card(T('CoA Custom'), T('The CoA Custom races (Dracthyr, Worgen, Vulpera, Sethrak, High elves and more) need the server module mod-custom-races, which brings mod-classic-classes along. Install it first; the server is rebuilt. Then this card installs CoA Custom.'), 'races',
+        primary(T('Install mod-custom-races …'), () => import('./modules.js').then(x => x.installModules(['mod-custom-races'], T('CoA Custom needs these modules on the server.'))))); c.classList.add('stripe'); return h('div', {}, c); })(),
       moduleCard(m.races, T('CoA Custom'), T('Install or update the CoA Custom client and server package. The CoA UI owns race and class selection; only the base race of each CoA custom race is configured here.'), 'races', h('div', { class: 'row' }, coaBtn, racesBtn)),
       moduleCard(m.flying, T('Azeroth flying'), T('Optional flying mounts in Eastern Kingdoms and Kalimdor: off by default, with a configurable no-fly list for the old capitals. Old Azeroth was not built for flying; use it at your own risk.'), 'journey',
         primary(T('Set up Azeroth flying …'), setup('setups.js', 'flyingSetup'))),

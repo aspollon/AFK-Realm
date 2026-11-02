@@ -195,43 +195,44 @@ namespace CoAInstaller
         }
 
         /// <summary>True while a program from the client folder runs (the game or its launcher).</summary>
-        public static bool ClientRunning(string client)
+        public static bool ClientRunning(string client) { return GameProcesses(client, true).Count > 0; }
+
+        /// <summary>
+        /// The game and its launcher: programs started from the game folder itself. Programs in its subfolders do not
+        /// count - many put the server into the game folder (G:\Games\AscensionWoW\Server\...), and its worldserver,
+        /// authserver and database counted as "the game is running": Play refused to start, the CoA Custom install
+        /// refused while the server ran (and would have closed the server). AFK Realm itself never counts.
+        /// </summary>
+        static List<Process> GameProcesses(string client, bool dispose)
         {
-            string root = Path.GetFullPath(client).TrimEnd('\\', '/') + Path.DirectorySeparatorChar;
+            var found = new List<Process>();
+            string root = Path.GetFullPath(client).TrimEnd('\\', '/');
             int self = Process.GetCurrentProcess().Id;
             foreach (var p in Process.GetProcesses())
             {
+                bool keep = false;
                 try
                 {
                     // AFK Realm itself may be started from the game folder. It is the manager,
                     // not the game or launcher, and must not block its own install.
-                    if (p.Id == self || p.ProcessName.StartsWith(Product.FileStem, StringComparison.OrdinalIgnoreCase)) continue;
-                    var mm = p.MainModule;
-                    if (mm != null && mm.FileName != null && mm.FileName.StartsWith(root, StringComparison.OrdinalIgnoreCase)) return true;
+                    if (p.Id != self && !p.ProcessName.StartsWith(Product.FileStem, StringComparison.OrdinalIgnoreCase))
+                    {
+                        var mm = p.MainModule;
+                        string dir = mm != null && mm.FileName != null ? Path.GetDirectoryName(mm.FileName) : null;
+                        keep = dir != null && string.Equals(dir.TrimEnd('\\', '/'), root, StringComparison.OrdinalIgnoreCase);
+                    }
                 }
                 catch { }
-                finally { p.Dispose(); }
+                if (keep) found.Add(p);
+                if (!keep || dispose) p.Dispose();
             }
-            return false;
+            return found;
         }
 
         /// <summary>Closes the game and its launcher started from this folder (asked to close, ended after 10 seconds).</summary>
         public static void CloseClient(string client)
         {
-            string root = Path.GetFullPath(client).TrimEnd('\\', '/') + Path.DirectorySeparatorChar;
-            int self = Process.GetCurrentProcess().Id;
-            var found = new List<Process>();
-            foreach (var p in Process.GetProcesses())
-            {
-                try
-                {
-                    if (p.Id == self || p.ProcessName.StartsWith(Product.FileStem, StringComparison.OrdinalIgnoreCase)) { p.Dispose(); continue; }
-                    var mm = p.MainModule;
-                    if (mm != null && mm.FileName != null && mm.FileName.StartsWith(root, StringComparison.OrdinalIgnoreCase)) { found.Add(p); continue; }
-                }
-                catch { }
-                p.Dispose();
-            }
+            var found = GameProcesses(client, false);
             foreach (var p in found) try { p.CloseMainWindow(); } catch { }
             foreach (var p in found)
             {

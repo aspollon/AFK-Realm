@@ -1,4 +1,9 @@
-# AFK Realm 1.2.34
+# AFK Realm 1.2.35
+
+## Fixed in 1.2.35
+
+- **"The game is already running" although it was closed**, when the server folder lies inside the game folder: AFK Realm took the worldserver, authserver and database for the game. "Play" refused to start and the CoA Custom install refused while the server ran. Only programs in the game folder itself count now.
+- **CoA Custom can be found without mod-custom-races:** the Modules page always shows the CoA Custom card; without the module its button installs mod-custom-races (with Classic Classes) first.
 
 ## Fixed in 1.2.34
 
