@@ -213,3 +213,23 @@ export async function modulesDialog() {
   load(false);
   await shown;
 }
+
+// Installs modules by repository name (a module's "requires", CoA Custom's races module): the same plan and
+// confirmation as the module manager, without opening it.
+export async function installModules(names, reason) {
+  let data;
+  try { data = await get('/api/modules'); } catch (e) { return alert(e.message); }
+  const wanted = (names || []).map(n => n.toLowerCase());
+  const found = data.modules.filter(m => m.state === 'Available' && wanted.includes((m.name || '').toLowerCase()))
+    .sort((a, b) => (b.own ? 1 : 0) - (a.own ? 1 : 0));
+  const add = [];
+  for (const n of wanted) { const m = found.find(x => x.name.toLowerCase() === n); if (m) add.push(m.id); }
+  if (!add.length) return alert(F('{0} is not in the module list. Open Modules > Manage modules and add it by its address.', names.join(', ')));
+  let plan;
+  try { plan = await post('/api/modules/plan', { add, remove: [] }); } catch (e) { return alert(e.message); }
+  const ok = await dialog({ title: T('Apply module changes'), icon: plan.blocking ? 'warn' : 'info', wide: true,
+    body: h('div', {}, reason ? h('p', { style: { fontWeight: '700' } }, reason) : null, h('div.pre.small', { style: { maxHeight: '60vh', overflow: 'auto' } }, plan.text)),
+    buttons: [{ text: T('Cancel'), value: false }, { text: plan.blocking ? T('Install anyway') : T('Apply changes'), kind: plan.blocking ? 'danger' : 'primary', value: true }] });
+  if (!ok) return;
+  (await import('./manager.js')).engine('Modules', null, { add: plan.add, remove: plan.remove });
+}

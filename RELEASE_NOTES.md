@@ -1,4 +1,11 @@
-# AFK Realm 1.2.31
+# AFK Realm 1.2.32
+
+## New in 1.2.32
+
+- **mod-custom-races brings mod-classic-classes along.** Modules can now name modules they need; AFK Realm installs them together. Without Classic Classes the human-based races could not be druids ("Error creating character").
+- **AFK Realm tells you when a needed module is missing**, e.g. CoA Custom installed without mod-custom-races: a notice at the top, one click installs it. The CoA Custom setup shows the same with a button.
+- **Clearer module description:** mod-custom-races now says it is required for CoA Custom.
+- All 1.2.31 fixes remain.
 
 ## Fixed in 1.2.31
 

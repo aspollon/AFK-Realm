@@ -35,6 +35,18 @@ namespace CoAInstaller.Web
             };
         }
 
+        /// <summary>(installed module, module it requires) for every installed module.</summary>
+        static List<KeyValuePair<string, string>> InstalledRequirements(Install inst)
+        {
+            var list = new List<KeyValuePair<string, string>>();
+            string dir = ModuleCatalog.ModulesDir(inst);
+            if (!System.IO.Directory.Exists(dir)) return list;
+            foreach (string folder in System.IO.Directory.GetDirectories(dir))
+                foreach (string need in ModuleCatalog.RequiresOf(folder))
+                    list.Add(new KeyValuePair<string, string>(System.IO.Path.GetFileName(folder), need));
+            return list;
+        }
+
         static void MapModules(WebApplication app)
         {
             Get(app, "/api/modules", c =>
@@ -113,7 +125,34 @@ namespace CoAInstaller.Web
                 var found = new Dictionary<ModuleEntry, ModuleAnalysis>();
                 var failed = new Dictionary<ModuleEntry, string>();
                 foreach (var m in add) { try { found[m] = ModuleCatalog.Analyze(m); } catch (Exception ex) { failed[m] = ex.Message; } }
+                // the modules the chosen ones need ("requires" in their afk-realm.json) come along
+                var together = new List<KeyValuePair<ModuleEntry, string>>();
+                var unknown = new List<KeyValuePair<string, string>>();
+                List<ModuleEntry> all;
+                lock (modulesLock) all = modules.ToList();
+                for (int i = 0; i < add.Count; i++)
+                {
+                    ModuleAnalysis an;
+                    if (!found.TryGetValue(add[i], out an)) continue;
+                    foreach (string need in an.Requires)
+                    {
+                        Func<ModuleEntry, bool> named = x => x.Name.Equals(need, StringComparison.OrdinalIgnoreCase) || ModuleCatalog.ShortName(x.FullName).Equals(need, StringComparison.OrdinalIgnoreCase);
+                        if (all.Any(x => named(x) && (x.Installed || x.State == ModuleState.PartOfCoA)) || add.Any(named)) continue;
+                        var entry = all.Where(x => named(x) && x.State == ModuleState.Available).OrderByDescending(x => x.Own).FirstOrDefault();
+                        if (entry == null) { unknown.Add(new KeyValuePair<string, string>(add[i].Name, need)); continue; }
+                        add.Add(entry);
+                        together.Add(new KeyValuePair<ModuleEntry, string>(entry, add[i].Name));
+                        try { found[entry] = ModuleCatalog.Analyze(entry); } catch (Exception ex) { failed[entry] = ex.Message; }
+                    }
+                }
                 var b = new StringBuilder();
+                if (together.Count > 0 || unknown.Count > 0)
+                {
+                    b.AppendLine(L.T("NEEDED AS WELL")); b.AppendLine();
+                    foreach (var t in together) b.AppendLine("  " + L.F("{0} - {1} does not work without it; it is installed together with it.", t.Key.Name, t.Value));
+                    foreach (var u in unknown) b.AppendLine("  ⚠ " + L.F("{0} needs {1}, which is not in the module list. Add it by its address.", u.Key, u.Value));
+                    b.AppendLine();
+                }
                 bool blocking = false;
                 if (add.Count > 0)
                 {
@@ -142,6 +181,9 @@ namespace CoAInstaller.Web
                             if (m.ManualTables.Length > 0) b.AppendLine("     ⚠ " + L.F("Not undoable automatically: {0} (a backup restores them)", string.Join(", ", m.ManualTables)));
                         }
                         b.AppendLine("     " + L.T("Items or spells that players got from the module may disappear or stop working."));
+                        foreach (var other in Inst == null ? new List<KeyValuePair<string, string>>() : InstalledRequirements(Inst))
+                            if (other.Value.Equals(m.Name, StringComparison.OrdinalIgnoreCase) && !remove.Any(r => r.Name.Equals(other.Key, StringComparison.OrdinalIgnoreCase)))
+                                b.AppendLine("     ⚠ " + L.F("{0} needs it and does not work properly without it.", other.Key));
                         b.AppendLine();
                     }
                 }

@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.32
+
+- **Modules can require other modules** (`"requires": ["mod-classic-classes"]` in `afk-realm.json`). Installing such a module installs the ones it needs together with it (shown under "NEEDED AS WELL" before applying); removing a module another installed one needs warns about it. mod-custom-races requires mod-classic-classes: without it the human-based races (Jinyu, High elves, ...) could not be druids, though the CoA creator offers it, and the server only answered "Error creating character".
+- **Notice for missing modules.** Installed modules whose required modules are missing, and a CoA Custom installation without mod-custom-races, show a notice in the top bar; a click installs what is missing (same summary as the module manager). The CoA Custom setup says it too, with a button.
+- **mod-custom-races is described as what it is for CoA Custom** in the module list ("Required for CoA Custom: makes its races playable on your server …").
+
 ## 1.2.31
 
 - **No more CharSections textures copied from other folders (High elf faces).** 1.2.26 filled missing CharSections textures with the same file from a folder of the same race with a male/female folder in between (`Character\BloodElf\Female\...`, Tauren, Worgen, ThinHuman). Those are the HD textures of the HD models; on the old models they gave the High elves (and others) wrong faces in the creator and in the game. Only the texture lists of EsteriaAppearance.dll are still filled (the Sethrak armor colors). Run **Client > Install** once to build the client patch without them.

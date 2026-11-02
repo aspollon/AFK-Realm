@@ -291,6 +291,7 @@ export function manager() {
     if (st.toolBanner) banners.appendChild(h('button.banner', { type: 'button', onclick: () => toolUpdate(st.toolBanner) }, st.toolBanner.text));
     if (st.clientBanner) banners.appendChild(h('button.banner', { type: 'button', onclick: () => import('./client.js').then(x => x.clientDialog()) }, st.clientBanner));
     if (st.coaBanner) banners.appendChild(h('button.banner', { type: 'button', onclick: () => import('./coa.js').then(x => x.coaDialog()) }, st.coaBanner));
+    if (st.moduleBanner) banners.appendChild(h('button.banner', { type: 'button', onclick: () => import('./modules.js').then(x => x.installModules(st.moduleBanner.install, st.moduleBanner.text)) }, st.moduleBanner.text));
     drawNav();
     paintServer(); paintModules();
     offers();

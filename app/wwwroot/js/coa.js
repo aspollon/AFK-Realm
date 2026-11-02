@@ -100,6 +100,9 @@ export async function coaDialog() {
     h('div.row.nowrap', {}, h('span', { style: { width: '120px' } }, T('Server folder')), serverPath, browse(serverPath, T('Choose the AFK Realm server folder'))),
     h('div.row.nowrap', {}, h('span', { style: { width: '120px' } }, T('Game client')), clientPath, browse(clientPath, T('Choose the game folder (it contains the "Data" folder)'))),
     status,
+    (state.missingModules || []).length ? h('div.row', { style: { alignItems: 'center' } },
+      h('span.warn', { style: { flex: '1' } }, T('CoA Custom\'s races need the module mod-custom-races on the server (it brings mod-classic-classes along). Without it nobody can create them.')),
+      primary(T('Install it ...'), () => import('./modules.js').then(x => x.installModules(state.missingModules, T('CoA Custom needs these modules on the server.'))))) : null,
     h('p.small.muted', {}, T('A newer CoA package replaces changed files and copies new MPQs, client_root files and add-ons. The module add-ons and the AFK client patch are installed in the same step. The player ZIP is the only ZIP you need to give to players; the Game client page is for AFK-only clients without CoA.')),
     h('div.row', {}, secondary(T('Change CoA GitHub key ...'), async () => { await askToken(false); })));
 

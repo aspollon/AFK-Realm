@@ -31,6 +31,9 @@ namespace CoAInstaller.Web
         // what is new
         public static UpdateCheck.Result Updates;
         public static string ClientNews, CoaNews, ClientVersion, CoaVersion, InstalledClient, InstalledCoa;
+        /// <summary>Modules that are needed and missing: a module's "requires", or mod-custom-races for CoA Custom.</summary>
+        public static string ModuleNews;
+        public static string[] ModuleNewsInstall = new string[0];
         public static string ClientPending = "";
         public static bool ClientChecking;
         public static List<KeyValuePair<string, string>> BotOffer = new List<KeyValuePair<string, string>>();
@@ -62,7 +65,7 @@ namespace CoAInstaller.Web
                 Plan = RestartPlan.Load(inst);
                 restartAt = null; restartTold.Clear(); restartSnooze = DateTime.MinValue; memoryOver = 0; lastAutoRestart = "";
                 tickText = null; tickAsked = DateTime.MinValue;
-                Updates = null; ClientNews = CoaNews = null; ClientPending = ""; OfferClient = false; BotOffer = new List<KeyValuePair<string, string>>();
+                Updates = null; ClientNews = CoaNews = ModuleNews = null; ModuleNewsInstall = new string[0]; ClientPending = ""; OfferClient = false; BotOffer = new List<KeyValuePair<string, string>>();
                 Notice = ""; lastSent = null;
             }
             Settings.LastInstall = inst.Root;
@@ -164,6 +167,7 @@ namespace CoAInstaller.Web
                 autoRestarting = AutoRestarting,
                 serverBanner, toolBanner,
                 clientBanner = ClientNews, coaBanner = CoaNews,
+                moduleBanner = ModuleNews == null ? null : new { text = ModuleNews, install = ModuleNewsInstall },
                 clientButton = InstalledClient != null && InstalledClient != ClientVersion ? L.F("Update game client to {0} …", ClientVersion) : L.T("Game client …"),
                 racesButton = InstalledCoa != null && InstalledCoa != CoaVersion ? L.F("Update custom races to {0} …", CoaVersion) : L.T("Set up the races …"),
                 clientState = ClientChecking ? L.T("Checking the game client …") : ClientPending.Length == 0 ? "" : L.T("Not everything the installed modules bring for the game client is in your game yet."),
@@ -401,6 +405,17 @@ namespace CoAInstaller.Web
             return configured.Length > 0 ? configured : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", "AFK-Rassen");
         }
 
+        /// <summary>(who needs it, missing module): the "requires" of installed modules, and CoA Custom's races module.</summary>
+        public static List<KeyValuePair<string, string>> MissingModules(Install inst)
+        {
+            var missing = ModuleCatalog.MissingRequirements(inst);
+            bool coa = File.Exists(Path.Combine(inst.Root, "Dependencies", "coa-custom-installed.txt")) ||
+                File.Exists(Path.Combine(inst.ConfigDir, "modules", "coa_custom_races.conf.dist"));
+            if (coa && Directory.Exists(ModuleCatalog.ModulesDir(inst)) && !Directory.Exists(Path.Combine(ModuleCatalog.ModulesDir(inst), "mod-custom-races")))
+                missing.Add(new KeyValuePair<string, string>("CoA Custom", "mod-custom-races"));
+            return missing;
+        }
+
         static bool CoaRacesMissing(Install inst)
         {
             string modules = Path.Combine(inst.ConfigDir, "modules");
@@ -447,7 +462,20 @@ namespace CoAInstaller.Web
                 // its .dist): nobody can create or play a custom race until the setup writes them again.
                 try { if (CoaRacesMissing(inst)) coaNews = L.T("The race settings (mod_custom_races.conf) contain no races. Click here and run CoA Custom > Install / update to set them up again."); }
                 catch { }
+                string moduleNews = null; string[] moduleInstall = new string[0];
+                try
+                {
+                    var missing = MissingModules(inst);
+                    if (missing.Count > 0)
+                    {
+                        moduleInstall = missing.Select(x => x.Value).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+                        moduleNews = string.Join(" ", missing.GroupBy(x => x.Key).Select(g => L.F("{0} needs {1}, which is not installed.", g.Key, string.Join(", ", g.Select(x => x.Value))))) +
+                            " " + L.T("Click here to install it.");
+                    }
+                }
+                catch { }
                 if (Inst != inst) return;
+                ModuleNews = moduleNews; ModuleNewsInstall = moduleInstall;
                 ClientNews = clientNews; CoaNews = coaNews; ClientVersion = clientVersion; InstalledClient = installedClient; CoaVersion = coaVersion; InstalledCoa = installedCoa;
                 Poke();
             });

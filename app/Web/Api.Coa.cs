@@ -65,6 +65,9 @@ namespace CoAInstaller.Web
                 client = ClientAddons.ClientFolder ?? "",
                 canUninstall = CoaUninstall.HasManifest(ClientAddons.ClientFolder),
                 tokenSet = !string.IsNullOrEmpty(Settings.CoaGitHubToken),
+                // CoA Custom's races are only playable with mod-custom-races (and what it requires) on the server
+                missingModules = inst == null || !System.IO.Directory.Exists(ModuleCatalog.ModulesDir(inst)) ? new string[0] :
+                    System.IO.Directory.Exists(System.IO.Path.Combine(ModuleCatalog.ModulesDir(inst), "mod-custom-races")) ? new string[0] : new[] { "mod-custom-races" },
                 repository = CoaCustom.Repo
             };
         }

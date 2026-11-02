@@ -2069,6 +2069,18 @@
     "Race settings made anew (the old file is kept as mod_custom_races.conf.before-coa-...).": "",
     "The race settings (mod_custom_races.conf) contain no races. Click here and run CoA Custom > Install / update to set them up again.": "",
     "Your race {0} has number {1}, which a race of the package has now; it is not carried over.": "",
-    "The MySQL client library installed is MariaDB's (or none), and the core cannot be built with it (it needs mysql_ssl_mode and mysql_stmt_bind_named_param of MySQL 8). Install MySQL's client library instead - Arch: yay -S libmysqlclient (AUR); Debian/Ubuntu: libmysqlclient-dev (on Debian from MySQL's APT repository); Fedora: community-mysql-devel; openSUSE: mysql-community-devel from MySQL's repository - then build again.": ""
+    "The MySQL client library installed is MariaDB's (or none), and the core cannot be built with it (it needs mysql_ssl_mode and mysql_stmt_bind_named_param of MySQL 8). Install MySQL's client library instead - Arch: yay -S libmysqlclient (AUR); Debian/Ubuntu: libmysqlclient-dev (on Debian from MySQL's APT repository); Fedora: community-mysql-devel; openSUSE: mysql-community-devel from MySQL's repository - then build again.": "",
+    "It needs {0}; {1} installs it together with it.": "",
+    "NEEDED AS WELL": "",
+    "{0} - {1} does not work without it; it is installed together with it.": "",
+    "{0} needs {1}, which is not in the module list. Add it by its address.": "",
+    "{0} needs it and does not work properly without it.": "",
+    "{0} needs {1}, which is not installed.": "",
+    "Click here to install it.": "",
+    "{0} is not in the module list. Open Modules > Manage modules and add it by its address.": "",
+    "CoA Custom's races need the module mod-custom-races on the server (it brings mod-classic-classes along). Without it nobody can create them.": "",
+    "Install it ...": "",
+    "CoA Custom needs these modules on the server.": "",
+    "Required for CoA Custom: makes its races (Dracthyr, Worgen, Vulpera, Sethrak, High elves and more) playable on your server, for players and bots. Brings mod-classic-classes along.": ""
   }
 }

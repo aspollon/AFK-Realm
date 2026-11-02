@@ -34,6 +34,8 @@ namespace CoAInstaller
     {
         public readonly List<KeyValuePair<int, string>> Checks = new List<KeyValuePair<int, string>>();   // 0 ok, 1 warning, 2 problem
         public string ReadmeText = "";
+        /// <summary>The modules its afk-realm.json names under "requires" (repository names).</summary>
+        public List<string> Requires = new List<string>();
         public void Add(int level, string text) { Checks.Add(new KeyValuePair<int, string>(level, text)); }
         public int Worst { get { return Checks.Count == 0 ? 0 : Checks.Max(c => c.Key); } }
     }
@@ -69,7 +71,7 @@ namespace CoAInstaller
                     Description = L.N("The classic classes - Warrior to Druid, as Warcraft Reborn plays them - next to the classes of CoA, for players and bots") },
                 new ModuleEntry { Name = "mod-custom-races", FullName = "aspollon/mod-custom-races", Branch = "main", Own = true,
                     Url = "https://github.com/aspollon/mod-custom-races", CloneUrl = "https://github.com/aspollon/mod-custom-races.git",
-                    Description = L.N("The races the game client carries - Goblin, Worgen, Pandaren, Vrykul and more - playable for players and bots") },
+                    Description = L.N("Required for CoA Custom: makes its races (Dracthyr, Worgen, Vulpera, Sethrak, High elves and more) playable on your server, for players and bots. Brings mod-classic-classes along.") },
                 new ModuleEntry { Name = "mod-azeroth-flying", FullName = "aspollon/mod-azeroth-flying", Branch = "main", Own = true,
                     Url = "https://github.com/aspollon/mod-azeroth-flying", CloneUrl = "https://github.com/aspollon/mod-azeroth-flying.git",
                     Description = L.N("Flying mounts in Eastern Kingdoms and Kalimdor - an optional, experimental setting for old Azeroth") },
@@ -79,6 +81,55 @@ namespace CoAInstaller
 
         static string CacheFile(Install inst) { return Path.Combine(inst.Root, "Dependencies", "Cache", "module-catalog.txt"); }
         public static string ModulesDir(Install inst) { return Path.Combine(inst.SourceDir, "modules"); }
+
+        /// <summary>A repository name from "owner/name", an address or a plain name ("mod-classic-classes").</summary>
+        public static string ShortName(string name)
+        {
+            string n = (name ?? "").Trim().TrimEnd('/');
+            if (n.EndsWith(".git", StringComparison.OrdinalIgnoreCase)) n = n.Substring(0, n.Length - 4);
+            int slash = n.LastIndexOf('/');
+            return slash >= 0 ? n.Substring(slash + 1) : n;
+        }
+
+        /// <summary>"requires" of an afk-realm.json: the modules a module does not work without (repository names).</summary>
+        public static List<string> ParseRequires(string json)
+        {
+            var list = new List<string>();
+            try
+            {
+                var data = new JavaScriptSerializer().DeserializeObject(json ?? "") as Dictionary<string, object>;
+                object v;
+                if (data != null && data.TryGetValue("requires", out v) && v is object[])
+                    foreach (var item in (object[])v)
+                    {
+                        string name = ShortName(Convert.ToString(item));
+                        if (Regex.IsMatch(name, @"^[\w.\-]+$") && !list.Contains(name, StringComparer.OrdinalIgnoreCase)) list.Add(name);
+                    }
+            }
+            catch { }
+            return list;
+        }
+
+        /// <summary>The "requires" of an installed module (its folder below modules).</summary>
+        public static List<string> RequiresOf(string folder)
+        {
+            string file = Path.Combine(folder, ManifestName);
+            try { return File.Exists(file) ? ParseRequires(File.ReadAllText(file)) : new List<string>(); }
+            catch { return new List<string>(); }
+        }
+
+        /// <summary>Installed modules whose "requires" names a module that is not installed: (module, missing).</summary>
+        public static List<KeyValuePair<string, string>> MissingRequirements(Install inst)
+        {
+            var missing = new List<KeyValuePair<string, string>>();
+            string dir = ModulesDir(inst);
+            if (!Directory.Exists(dir)) return missing;
+            var installed = new HashSet<string>(Directory.GetDirectories(dir).Select(d => Path.GetFileName(d)), StringComparer.OrdinalIgnoreCase);
+            foreach (string folder in Directory.GetDirectories(dir))
+                foreach (string need in RequiresOf(folder))
+                    if (!installed.Contains(need)) missing.Add(new KeyValuePair<string, string>(Path.GetFileName(folder), need));
+            return missing;
+        }
 
         static string Get(string url, string accept = "application/vnd.github+json")
         {
@@ -334,6 +385,11 @@ namespace CoAInstaller
                 try { readmeText = Get("https://raw.githubusercontent.com/" + full + "/" + m.Branch + "/" + readmePath, "text/plain"); } catch { }
             }
             a = Check(m, paths, readmeText);
+            if (paths.Any(p => p.Equals(ManifestName, StringComparison.OrdinalIgnoreCase)))
+            {
+                try { a.Requires = ParseRequires(Get("https://raw.githubusercontent.com/" + full + "/" + m.Branch + "/" + ManifestName, "text/plain")); } catch { }
+                if (a.Requires.Count > 0) a.Add(0, L.F("It needs {0}; {1} installs it together with it.", string.Join(", ", a.Requires), Product.Name));
+            }
             lock (analyses) analyses[key] = a;
             return a;
         }
