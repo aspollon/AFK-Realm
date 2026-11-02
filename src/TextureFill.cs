@@ -11,8 +11,8 @@ namespace CoAInstaller
     /// Textures the races ask for under a path no archive has, while the same file lies in the client under another
     /// folder of the same race. CoA Custom's EsteriaSethrak.bin wants its armor colors 2 to 4 under
     /// custom\sethrak\animated\textures\creature\sethrak_melee\, the files are in Creature\sethrak_caster\: without
-    /// them the game draws the first color for all four. CharSections rows of the Worgen beards and of the ThinHuman
-    /// faces point one folder above their files in the same way.
+    /// them the game draws the first color for all four. Only the texture lists of EsteriaAppearance.dll are filled:
+    /// files for CharSections rows found that way were HD textures, wrong on the old models (see Run).
     ///
     /// A copy is made only where nothing can be mixed up: the same file name, a folder named after the same race in
     /// both paths, and for a CharSections row a male or female folder that matches the row. Dwarf beards for a Blood
@@ -131,30 +131,10 @@ namespace CoAInstaller
                 };
                 var wanted = new Dictionary<string, Wanted>(StringComparer.OrdinalIgnoreCase);
 
-                // the skin, face, hair and underwear rows of every race
-                byte[] races = load("DBFilesClient\\ChrRaces.dbc"), sections = load("DBFilesClient\\CharSections.dbc");
-                if (races != null && sections != null)
-                {
-                    var rt = DbcTable.Parse(races, "ChrRaces.dbc");
-                    var names = new Dictionary<uint, string>();
-                    foreach (var row in rt.Records) names[rt.Field(row, 0)] = DbcString(rt, row, 11);
-                    var st = DbcTable.Parse(sections, "CharSections.dbc");
-                    foreach (var row in st.Records)
-                    {
-                        string race;
-                        if (!names.TryGetValue(st.Field(row, 1), out race) || race.Length == 0) continue;
-                        for (int f = 4; f <= 6; f++)
-                        {
-                            string t = DbcString(st, row, f).Replace('/', '\\');
-                            if (!t.EndsWith(".blp", StringComparison.OrdinalIgnoreCase)) continue;
-                            Wanted w;
-                            if (!wanted.TryGetValue(t, out w)) wanted[t] = w = new Wanted { Path = t, From = "CharSections.dbc" };
-                            if (Folders(t).Any(p => p.Equals(race, StringComparison.OrdinalIgnoreCase))) w.Races.Add(race);
-                            else w.RowOfOtherRace = true;
-                            w.Sexes.Add(st.Field(row, 2));
-                        }
-                    }
-                }
+                // CharSections rows are not filled any more (1.2.31): the files found under the race's own folder with a male
+                // or female folder in between are the HD textures of the HD models (Character\BloodElf\Female\..., the Tauren
+                // and Worgen ones too), and on the old models they gave the High elves wrong faces. A missing CharSections
+                // texture stays missing, as in the package.
 
                 // the texture lists of CoA Custom's EsteriaAppearance.dll, next to the game's exe
                 if (Directory.Exists(client))

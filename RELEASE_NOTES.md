@@ -1,4 +1,13 @@
-# AFK Realm 1.2.30
+# AFK Realm 1.2.31
+
+## Fixed in 1.2.31
+
+- **High elves (and some other races) had wrong faces** since 1.2.26: textures of the HD models were copied in for the old models. That is undone; run **Client > Install** once after updating. The Sethrak armor colors stay fixed.
+- **"Class scripts find the Reborn spells could not be applied"** (mod-classic-classes): the CoA core does this itself now; with the updated module the patch is left out without a warning.
+- **Races that could no longer be created after reinstalling CoA Custom** (e.g. High elves set up with an older AFK Realm as a copy of the Blood elf): 1.2.30 dropped such races when it made the race settings anew. They are kept now.
+- **Linux (Arch, Debian, openSUSE): "use of undeclared identifier 'mysql_ssl_mode'" while compiling.** These systems install MariaDB's client library instead of MySQL's. AFK Realm now builds with the MySQL library of its own portable database, or says exactly which package to install.
+- **"Show the logs" opened a new window with every click**; it and the server consoles now open only once.
+- All 1.2.30 fixes remain.
 
 ## Fixed in 1.2.30
 

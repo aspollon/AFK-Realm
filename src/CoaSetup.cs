@@ -570,8 +570,9 @@ namespace CoAInstaller
         /// The race settings are made anew from the module's .dist at every CoA Custom install: only adding to an old
         /// file kept stale numbers, paths of another computer (a file copied from someone else: its RacialsFolder and
         /// client paths) and old entries, and the racials did not work until something wrote them again. The old file
-        /// is kept as mod_custom_races.conf.before-coa-&lt;time&gt;. Carried over: races imported from a race folder, the
-        /// base race chosen for each race, the race folder and whether bots use custom races.
+        /// is kept as mod_custom_races.conf.before-coa-&lt;time&gt;. Carried over: the user's own races (imported from a race
+        /// folder, or copies of a client race under a number of their own) and whether they were on, the base race chosen
+        /// for each race, the race folder and whether bots use custom races.
         /// </summary>
         static CarriedRaces ResetRaceConfig(Install inst)
         {
@@ -587,15 +588,18 @@ namespace CoAInstaller
                 string v = raw(key);
                 if (!string.IsNullOrEmpty(v)) carried.Globals[key] = v;
             }
+            var listed = new HashSet<string>(ConfigOption.Unquote(raw("CustomRaces.Races") ?? "").Split(new[] { ' ', ',' }, StringSplitOptions.RemoveEmptyEntries), StringComparer.OrdinalIgnoreCase);
             foreach (var pair in old.ByKey)
             {
                 if (!pair.Key.StartsWith("CustomRaces.", StringComparison.OrdinalIgnoreCase) || !pair.Key.EndsWith(".Source", StringComparison.OrdinalIgnoreCase)) continue;
                 string race = pair.Key.Substring("CustomRaces.".Length, pair.Key.Length - "CustomRaces.".Length - ".Source".Length);
                 if (race.Length == 0 || race.IndexOf('.') >= 0) continue;
                 string prefix = "CustomRaces." + race + ".";
-                if (ConfigOption.Unquote(raw(prefix + "Import") ?? "") == "1")
+                // the user's own races: imported from a race folder, or a copy of a client race under a number of its own
+                // (the High elf of older setups: a copy of the Blood elf as race 15)
+                if (ConfigOption.Unquote(raw(prefix + "Import") ?? "") == "1" || ConfigOption.Unquote(raw(prefix + "Copy") ?? "") == "1")
                 {
-                    carried.ImportedKeys.Add(race);
+                    if (listed.Contains(race)) carried.ImportedKeys.Add(race);
                     foreach (var option in old.ByKey)
                         if (option.Key.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) && option.Value.CurrentRaw.Length > 0)
                             carried.Imported[option.Key] = option.Value.CurrentRaw;
@@ -623,7 +627,26 @@ namespace CoAInstaller
             if (!File.Exists(confPath) || (carried.Globals.Count == 0 && carried.Imported.Count == 0 && carried.Bases.Count == 0)) return;
             ConfigFile conf = ConfigFile.Load(confPath, "modules\\mod_custom_races.conf");
             foreach (var pair in carried.Globals) Set(conf, pair.Key, pair.Value);
-            foreach (var pair in carried.Imported) Set(conf, pair.Key, pair.Value);
+            // a race of the user's whose number a race of the package has now is not carried over: two races with one
+            // number leave one of them off, maybe the package's
+            var taken = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var pair in conf.ByKey)
+                if (pair.Key.StartsWith("CustomRaces.", StringComparison.OrdinalIgnoreCase) && pair.Key.EndsWith(".Id", StringComparison.OrdinalIgnoreCase))
+                    taken.Add(ConfigOption.Unquote(pair.Value.CurrentRaw));
+            var dropped = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var pair in carried.Imported)
+                if (pair.Key.EndsWith(".Id", StringComparison.OrdinalIgnoreCase) && taken.Contains(ConfigOption.Unquote(pair.Value)))
+                {
+                    string race = pair.Key.Substring("CustomRaces.".Length, pair.Key.Length - "CustomRaces.".Length - ".Id".Length);
+                    dropped.Add(race);
+                    Console.WriteLine(L.F("Your race {0} has number {1}, which a race of the package has now; it is not carried over.", race, ConfigOption.Unquote(pair.Value)));
+                }
+            foreach (var pair in carried.Imported)
+            {
+                string rest = pair.Key.Substring("CustomRaces.".Length);
+                if (!dropped.Contains(rest.Substring(0, rest.IndexOf('.')))) Set(conf, pair.Key, pair.Value);
+            }
+            carried.ImportedKeys.RemoveAll(k => dropped.Contains(k));
             foreach (var pair in carried.Bases)
                 if (Has(conf, "CustomRaces." + pair.Key + ".Source")) Set(conf, "CustomRaces." + pair.Key + ".Base", pair.Value);
             if (carried.ImportedKeys.Count > 0)

@@ -31,7 +31,13 @@ function follower(what) {
   return el;
 }
 
+let consolesOpen = false;
 export async function consoles() {
+  if (consolesOpen) return;
+  consolesOpen = true;
+  try { await consolesInner(); } finally { consolesOpen = false; }
+}
+async function consolesInner() {
   const world = follower('server'), auth = follower('auth');
   const input = h('input.mono', { type: 'text', style: { flex: '1' }, placeholder: '.server info', autocomplete: 'off', spellcheck: false });
   const history = []; let at = 0, busy = false;
@@ -87,7 +93,7 @@ export async function logsDialog() {
   const body = h('div', { style: { display: 'flex', flexDirection: 'column', height: '100%', minHeight: '0', gap: '6px' } }, bar, view, path);
   show(0);
   await dialog({
-    title: meta.product + ' – ' + T('Logs'), icon: 'file', full: true, body, enter: false,
+    title: meta.product + ' – ' + T('Logs'), icon: 'file', full: true, body, enter: false, once: 'logs',
     left: [secondary(T('Refresh'), () => show(current))],
     buttons: [{ text: T('Close'), value: null }],
     onopen: b => { const d = b.querySelector('.db'); d.style.display = 'flex'; d.style.flexDirection = 'column'; d.firstChild.style.flex = '1'; }

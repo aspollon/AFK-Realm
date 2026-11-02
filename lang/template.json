@@ -2067,6 +2067,8 @@
     "The game is already running.": "",
     "The realm address of this server is {0}; Data\\enUS\\realmlist.wtf in this ZIP is set to it. If your WTF\\Config.wtf has a line SET realmList, change it to SET realmList \"{0}\" as well (that line wins).": "",
     "Race settings made anew (the old file is kept as mod_custom_races.conf.before-coa-...).": "",
-    "The race settings (mod_custom_races.conf) contain no races. Click here and run CoA Custom > Install / update to set them up again.": ""
+    "The race settings (mod_custom_races.conf) contain no races. Click here and run CoA Custom > Install / update to set them up again.": "",
+    "Your race {0} has number {1}, which a race of the package has now; it is not carried over.": "",
+    "The MySQL client library installed is MariaDB's (or none), and the core cannot be built with it (it needs mysql_ssl_mode and mysql_stmt_bind_named_param of MySQL 8). Install MySQL's client library instead - Arch: yay -S libmysqlclient (AUR); Debian/Ubuntu: libmysqlclient-dev (on Debian from MySQL's APT repository); Fedora: community-mysql-devel; openSUSE: mysql-community-devel from MySQL's repository - then build again.": ""
   }
 }

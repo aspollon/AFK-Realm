@@ -556,7 +556,9 @@ function Resolve-VisualStudio {
 $LinuxPackages = [ordered]@{
     apt    = 'git cmake make ninja-build g++ clang libssl-dev libbz2-dev libreadline-dev libncurses-dev libboost-all-dev default-libmysqlclient-dev libjemalloc-dev python3 curl xz-utils libaio-dev libnuma1'
     dnf    = 'git cmake make ninja-build gcc-c++ clang openssl-devel bzip2-devel readline-devel ncurses-devel boost-devel community-mysql-devel jemalloc-devel python3 curl xz libaio numactl-libs'
-    pacman = 'git cmake make ninja gcc clang openssl bzip2 readline ncurses boost mariadb-libs jemalloc python curl xz libaio numactl'
+    # Arch has only MariaDB's client library in its repositories, and the core cannot be built with it (no mysql_ssl_mode,
+    # no mysql_stmt_bind_named_param); MySQL's comes from the AUR (libmysqlclient), see Get-LinuxPackageCommand
+    pacman = 'git cmake make ninja gcc clang openssl bzip2 readline ncurses boost jemalloc python curl xz libaio numactl'
     zypper = 'git cmake make ninja gcc-c++ clang libopenssl-devel libbz2-devel readline-devel ncurses-devel boost-devel libmysqlclient-devel jemalloc-devel python3 curl xz libaio1 libnuma1'
 }
 
@@ -571,7 +573,7 @@ function Get-LinuxPackageCommand {
     switch ($pm) {
         'apt'    { return "sudo apt install $($LinuxPackages.apt)" }
         'dnf'    { return "sudo dnf install $($LinuxPackages.dnf)" }
-        'pacman' { return "sudo pacman -S --needed $($LinuxPackages.pacman)" }
+        'pacman' { return "sudo pacman -S --needed $($LinuxPackages.pacman)  +  MySQL's client library from the AUR: yay -S libmysqlclient (or paru -S libmysqlclient)" }
         'zypper' { return "sudo zypper install $($LinuxPackages.zypper)" }
         default  { return "install: git, cmake, ninja or make, a C++ compiler (g++ or clang), and the development files of OpenSSL, Boost (1.74 or newer), the MySQL client library, readline, bzip2, ncurses and jemalloc" }
     }
@@ -1172,6 +1174,23 @@ function Find-Updates([string]$Git) {
 # =============================================================================
 # Linux: the same build with the compiler and libraries of the distribution. The programs go to Server/bin (where
 # AzerothCore puts them on Linux), the config files to Server/configs as on Windows.
+# The MySQL client library the build links: the system's when it is MySQL's, otherwise the one of the portable MySQL
+# AFK Realm downloads for the database (with its headers and libmysqlclient.so; the server finds it by its rpath).
+# MariaDB's library, which several distributions install under the name of MySQL's (Arch's mariadb-libs, Debian's
+# default-libmysqlclient-dev, openSUSE's libmysqlclient-devel), lacks what the core uses (MYSQL_OPT_SSL_MODE,
+# mysql_stmt_bind_named_param): the build failed with "use of undeclared identifier 'mysql_ssl_mode'".
+function Resolve-LinuxMySqlClient {
+    $header = Find-Header 'mysql/mysql.h'
+    if ($header -and ([IO.File]::ReadAllText($header).Contains('MYSQL_OPT_SSL_MODE'))) { return $null }
+    $portableHeader = Join-Path $Paths.MySql 'include/mysql.h'
+    $portableLib = @(Get-ChildItem (Join-Path $Paths.MySql 'lib') -Filter 'libmysqlclient.so*' -File -ErrorAction SilentlyContinue | Sort-Object { $_.Name.Length }) | Select-Object -First 1
+    if ((Test-Path $portableHeader) -and $portableLib -and ([IO.File]::ReadAllText($portableHeader).Contains('MYSQL_OPT_SSL_MODE'))) {
+        Write-Log "The system's MySQL client library is MariaDB's, which cannot build the core; using the one of the portable MySQL ($($portableLib.FullName))." Yellow
+        return [pscustomobject]@{ Include = (Join-Path $Paths.MySql 'include'); Library = $portableLib.FullName; LibDir = (Join-Path $Paths.MySql 'lib') }
+    }
+    throw (Tr "The MySQL client library installed is MariaDB's (or none), and the core cannot be built with it (it needs mysql_ssl_mode and mysql_stmt_bind_named_param of MySQL 8). Install MySQL's client library instead - Arch: yay -S libmysqlclient (AUR); Debian/Ubuntu: libmysqlclient-dev (on Debian from MySQL's APT repository); Fedora: community-mysql-devel; openSUSE: mysql-community-devel from MySQL's repository - then build again.")
+}
+
 function Invoke-ConfigureLinux([string]$CMake, $Toolchain, [switch]$Clean) {
     $cache = Join-Path $Paths.Build 'CMakeCache.txt'
     $samePlace = $true
@@ -1200,6 +1219,11 @@ function Invoke-ConfigureLinux([string]$CMake, $Toolchain, [switch]$Clean) {
         '-DTOOLS_BUILD=all', '-DSCRIPTS=static', '-DMODULES=static',
         "-DGIT_EXECUTABLE=$script:GitExe")
     if (-not $Toolchain.Jemalloc) { $arguments += '-DNOJEM=1' }
+    $mysql = Resolve-LinuxMySqlClient
+    if ($mysql) {
+        $arguments += @('-U', 'MYSQL_*', "-DMYSQL_INCLUDE_DIR=$($mysql.Include)", "-DMYSQL_LIBRARY=$($mysql.Library)",
+                        "-DCMAKE_BUILD_RPATH=$($mysql.LibDir)", "-DCMAKE_INSTALL_RPATH=$($mysql.LibDir)")
+    }
     [void](Invoke-Program $CMake $arguments)
 }
 
@@ -1882,6 +1906,7 @@ function Sync-ModuleFolders([string]$Git, [string]$Root, [string[]]$Before) {
 # update - and settings the module needs in other config files:
 #
 #   { "patches":  [ { "name": "...", "target": "mod-playerbots" | "core", "file": "patches/x.patch", "why": "..." } ],
+#     (optional per patch: "notNeededWhen": "path/in/target|text" - left out quietly once the target contains the text)
 #     "settings": [ { "file": "playerbots.conf", "key": "...", "value": "...", "why": "..." } ] }
 #
 # Patches are applied to the fresh source before every build. One that no longer fits
@@ -2071,6 +2096,17 @@ function Invoke-ModulePatches([string]$Git, [switch]$Quiet) {
             }
             $file = Join-Path $manifest.Folder $relative.Replace('/', '\')
             if (-not (Test-Path $file) -or -not (Test-Path (Join-Path $target '.git'))) { Write-Log "$label - the patch file or its target is missing; ignored." Yellow; continue }
+            # "notNeededWhen": "path/in/target|text" - the target does the same thing itself now (an upstream change made
+            # the patch unnecessary): left out without the notice that a patch could not be applied.
+            $notNeeded = Get-ManifestText $patch 'notNeededWhen'
+            if ($notNeeded -and $notNeeded.Contains('|')) {
+                $probe = $notNeeded.Substring(0, $notNeeded.IndexOf('|')).Replace('/', '\'); $needle = $notNeeded.Substring($notNeeded.IndexOf('|') + 1)
+                $probeFile = Join-Path $target $probe
+                if ($probe -notmatch '\.\.' -and $needle.Length -gt 0 -and (Test-Path $probeFile) -and ([IO.File]::ReadAllText($probeFile).Contains($needle))) {
+                    Write-Log "$label - $targetName does this itself now, not needed any more."
+                    continue
+                }
+            }
             $tempPatch = $null
             try {
                 # A Git checkout with core.autocrlf can turn a patch into CRLF, which git apply

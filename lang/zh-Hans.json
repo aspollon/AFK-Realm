@@ -2086,6 +2086,8 @@
     "The game is already running.": "游戏已在运行。",
     "The realm address of this server is {0}; Data\\enUS\\realmlist.wtf in this ZIP is set to it. If your WTF\\Config.wtf has a line SET realmList, change it to SET realmList \"{0}\" as well (that line wins).": "此服务器的服务器列表地址为 {0}；本 ZIP 中的 Data\\enUS\\realmlist.wtf 已设为该地址。如果你的 WTF\\Config.wtf 中有 SET realmList 这一行，也请改为 SET realmList \"{0}\"（以该行为准）。",
     "Race settings made anew (the old file is kept as mod_custom_races.conf.before-coa-...).": "已重新创建种族设置（旧文件保存为 mod_custom_races.conf.before-coa-...）。",
-    "The race settings (mod_custom_races.conf) contain no races. Click here and run CoA Custom > Install / update to set them up again.": "种族设置（mod_custom_races.conf）中没有任何种族。点击此处并运行 CoA Custom > Install / update 重新设置。"
+    "The race settings (mod_custom_races.conf) contain no races. Click here and run CoA Custom > Install / update to set them up again.": "种族设置（mod_custom_races.conf）中没有任何种族。点击此处并运行 CoA Custom > Install / update 重新设置。",
+    "Your race {0} has number {1}, which a race of the package has now; it is not carried over.": "你的种族 {0} 使用编号 {1}，该编号现已属于资源包中的种族；它不会被保留。",
+    "The MySQL client library installed is MariaDB's (or none), and the core cannot be built with it (it needs mysql_ssl_mode and mysql_stmt_bind_named_param of MySQL 8). Install MySQL's client library instead - Arch: yay -S libmysqlclient (AUR); Debian/Ubuntu: libmysqlclient-dev (on Debian from MySQL's APT repository); Fedora: community-mysql-devel; openSUSE: mysql-community-devel from MySQL's repository - then build again.": "已安装的 MySQL 客户端库是 MariaDB 的（或没有安装），无法用它编译核心（需要 MySQL 8 的 mysql_ssl_mode 和 mysql_stmt_bind_named_param）。请改为安装 MySQL 的客户端库——Arch：yay -S libmysqlclient（AUR）；Debian/Ubuntu：libmysqlclient-dev（Debian 需使用 MySQL 的 APT 仓库）；Fedora：community-mysql-devel；openSUSE：MySQL 仓库中的 mysql-community-devel——然后重新编译。"
   }
 }

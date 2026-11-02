@@ -117,12 +117,20 @@ const layer = () => document.getElementById('layer');
  * A dialog: dialog({title, icon, body, buttons:[{text, kind, value|onclick}], wide, full, onclose}) - resolves with the
  * value of the button pressed (or null when closed). A button's onclick may return false to keep the dialog open.
  */
+// dialogs that may be open only once (opts.once): the same button clicked again while it is open opens no second one
+const openOnce = new Set();
+
 export function dialog(opts) {
   return new Promise(resolve => {
+    if (opts.once) {
+      if (openOnce.has(opts.once)) return resolve(null);
+      openOnce.add(opts.once);
+    }
     let done = false;
     const close = v => {
       if (done) return;
       done = true;
+      if (opts.once) openOnce.delete(opts.once);
       back.remove();
       document.removeEventListener('keydown', key);
       if (opts.onclose) opts.onclose(v);
