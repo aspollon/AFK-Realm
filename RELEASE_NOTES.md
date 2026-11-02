@@ -1,4 +1,10 @@
-# AFK Realm 1.2.33
+# AFK Realm 1.2.34
+
+## Fixed in 1.2.34
+
+- **Races disappeared from the race settings after the CoA Custom install** (High elf, Murloc, Sethrak, Gnoll, Kyrian and about 30 more): the next save of the race settings took the install's entries for leftovers, removed their numbers and switched them off, so players got "Error creating character". Fixed; the install also checks at the end that every race of CoA Custom is on.
+- **The CoA Custom install does everything it needs by itself:** it closes the game if it runs (after asking), stops the server, starts the database (the race settings need it) and starts the server again with the new races afterwards. No more "run it with the server on".
+- After updating: run **CoA Custom > Install / update** once, or click the notice about missing races.
 
 ## New in 1.2.33
 

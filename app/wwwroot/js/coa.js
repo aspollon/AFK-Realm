@@ -1,6 +1,6 @@
 // CoA Custom: copy the finished package into the game client and server, build the client patch,
 // download a newer package and export the complete client ZIP for other computers.
-import { h, T, F, post, download } from './core.js';
+import { h, T, F, post, download, ApiError } from './core.js';
 import { dialog, alert, confirm, choose, input, primary, secondary, runProgress } from './ui.js';
 
 export async function coaDialog() {
@@ -56,9 +56,17 @@ export async function coaDialog() {
   }
 
   async function install() {
-    if (!await confirm(T('Copy the CoA client files, server DBCs/SQL and settings, install the module add-ons and build the AFK client patch? Close the game and stop the server first.'))) return;
+    if (!await confirm(T('Copy the CoA client files, server DBCs/SQL and settings, install the module add-ons and build the AFK client patch? AFK Realm closes the game if it runs, stops the server, keeps the database running for the race settings and starts the server again afterwards.'))) return;
     await rememberPaths();
-    const job = await runProgress(() => post('/api/coa/install', { package: packagePath.value, server: serverPath.value, client: clientPath.value }), T('Installing CoA Custom ...'));
+    const args = { package: packagePath.value, server: serverPath.value, client: clientPath.value };
+    const job = await runProgress(async () => {
+      try { return await post('/api/coa/install', args); }
+      catch (e) {
+        if (e instanceof ApiError && e.confirm && await confirm(e.confirm)) return post('/api/coa/install', Object.assign({ force: true }, args));
+        if (e instanceof ApiError && e.confirm) return null;
+        throw e;
+      }
+    }, T('Installing CoA Custom ...'));
     if (job && job.message) await alert(job.message);
     status.textContent = job && job.ok ? T('CoA Custom installed.') : status.textContent;
   }

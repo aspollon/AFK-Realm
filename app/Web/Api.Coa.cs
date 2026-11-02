@@ -126,13 +126,23 @@ namespace CoAInstaller.Web
                 if (!Directory.Exists(package)) throw new UserError(L.F("Package folder not found: {0}", package));
                 if (!Directory.Exists(client)) throw new UserError(L.F("Game client folder not found: {0}", client));
                 if (!Directory.Exists(server)) throw new UserError(L.F("Server folder not found: {0}", server));
-                if (ClientAddons.ClientRunning(client))
-                    throw new UserError(L.T("The game or its launcher is running from this folder. Close it first, then run the setup again."));
                 var inst = new Install(server);
                 if (!inst.IsInstalled) throw new UserError(L.F("No complete AFK Realm server in: {0}", server));
+                bool closeGame = ClientAddons.ClientRunning(client);
+                if (closeGame && !a.Bool("force"))
+                    throw new NeedsConfirmation(L.T("The game or its launcher is running from this folder. Close it and go on with the install?"));
                 RememberPaths(a, package, client, server);
                 return Jobs.Run(L.T("Installing CoA Custom ..."), (job, st) =>
                 {
+                    // Everything the install needs, done here instead of asked of the user: the game closed (its files
+                    // are replaced), the worldserver stopped (it reads the race settings and DBCs only at its start), and
+                    // the database running - the race settings ask it which race numbers have characters; without it
+                    // they could not put the numbers right (the races "only worked with the server on").
+                    if (closeGame) { st(L.T("Closing the game ...")); ClientAddons.CloseClient(client); }
+                    var ctl = Manager.Inst != null && string.Equals(Manager.Inst.Root, inst.Root, StringComparison.OrdinalIgnoreCase) && Manager.Ctl != null ? Manager.Ctl : new ServerControl(inst);
+                    bool wasRunning = ctl.World != null;
+                    if (wasRunning || ctl.Auth != null) ctl.StopAll(st, false);
+                    ctl.StartDatabase(st);
                     // Bring the race settings up to date BEFORE the client patch is built.
                     // Saving them afterwards changes the patch inputs and makes AFK Realm
                     // report the freshly built patch as outdated again.
@@ -142,6 +152,13 @@ namespace CoAInstaller.Web
                     if (code != 0)
                         throw new UserError(L.F("CoA Custom setup failed: {0}", string.IsNullOrEmpty(CoaSetup.LastError) ? L.T("See the AFK Realm log.") : CoaSetup.LastError));
                     job.Message = L.T("CoA Custom is installed.");
+                    // the server starts with the new races (again, if it ran before)
+                    if (inst.HasMapData && inst.HasClientDbc)
+                    {
+                        st(wasRunning ? L.T("Starting the server again ...") : L.T("Starting the server ..."));
+                        try { StartWork(inst, ctl, st); job.Message += " " + L.T("The server is starting with the new races."); }
+                        catch (Exception ex) { job.Message += " " + L.T("The server could not be started:") + " " + ex.Message; }
+                    }
                 }, (job, error) =>
                 {
                     Manager.CheckClient(false);

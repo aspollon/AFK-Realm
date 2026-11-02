@@ -2111,6 +2111,15 @@
     "Switch them on": "Включить",
     "Switched on:": "Включено:",
     "Restart the server (Stop server, then Start server) so the new races can be created.": "Перезапустите сервер (Остановить сервер, затем Запустить сервер), чтобы новые расы можно было создавать.",
-    "The new races can be created the next time the server starts.": "Новые расы можно будет создавать после следующего запуска сервера."
+    "The new races can be created the next time the server starts.": "Новые расы можно будет создавать после следующего запуска сервера.",
+    "The game or its launcher is running from this folder. Close it and go on with the install?": "Игра или её лаунчер запущены из этой папки. Закрыть и продолжить установку?",
+    "Closing the game ...": "Закрытие игры ...",
+    "Starting the server again ...": "Повторный запуск сервера ...",
+    "Starting the server ...": "Запуск сервера ...",
+    "The server is starting with the new races.": "Сервер запускается с новыми расами.",
+    "The server could not be started:": "Не удалось запустить сервер:",
+    "Race settings: {0} race(s) of the package were missing and are switched on again: {1}": "Настройки рас: {0} рас(а) пакета отсутствовали и снова включены: {1}",
+    "The race settings could not be checked:": "Не удалось проверить настройки рас:",
+    "Copy the CoA client files, server DBCs/SQL and settings, install the module add-ons and build the AFK client patch? AFK Realm closes the game if it runs, stops the server, keeps the database running for the race settings and starts the server again afterwards.": "Скопировать файлы клиента CoA, DBC/SQL и настройки сервера, установить аддоны модулей и собрать клиентский патч AFK? AFK Realm закроет игру, если она запущена, остановит сервер, оставит базу данных работать для настроек рас и затем снова запустит сервер."
   }
 }

@@ -2111,6 +2111,15 @@
     "Switch them on": "Les activer",
     "Switched on:": "Activées :",
     "Restart the server (Stop server, then Start server) so the new races can be created.": "Redémarre le serveur (Arrêter le serveur, puis Démarrer le serveur) pour pouvoir créer les nouvelles races.",
-    "The new races can be created the next time the server starts.": "Les nouvelles races pourront être créées au prochain démarrage du serveur."
+    "The new races can be created the next time the server starts.": "Les nouvelles races pourront être créées au prochain démarrage du serveur.",
+    "The game or its launcher is running from this folder. Close it and go on with the install?": "Le jeu ou son launcher tourne depuis ce dossier. Le fermer et continuer l'installation ?",
+    "Closing the game ...": "Fermeture du jeu ...",
+    "Starting the server again ...": "Redémarrage du serveur ...",
+    "Starting the server ...": "Démarrage du serveur ...",
+    "The server is starting with the new races.": "Le serveur démarre avec les nouvelles races.",
+    "The server could not be started:": "Le serveur n'a pas pu démarrer :",
+    "Race settings: {0} race(s) of the package were missing and are switched on again: {1}": "Réglages des races : {0} race(s) du paquet manquaient et sont réactivées : {1}",
+    "The race settings could not be checked:": "Les réglages des races n'ont pas pu être vérifiés :",
+    "Copy the CoA client files, server DBCs/SQL and settings, install the module add-ons and build the AFK client patch? AFK Realm closes the game if it runs, stops the server, keeps the database running for the race settings and starts the server again afterwards.": "Copier les fichiers du client CoA, les DBC/SQL et réglages du serveur, installer les add-ons des modules et construire le patch client d'AFK ? AFK Realm ferme le jeu s'il tourne, arrête le serveur, garde la base de données en marche pour les réglages des races et redémarre le serveur ensuite."
   }
 }

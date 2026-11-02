@@ -2111,6 +2111,15 @@
     "Switch them on": "Einschalten",
     "Switched on:": "Eingeschaltet:",
     "Restart the server (Stop server, then Start server) so the new races can be created.": "Starte den Server neu (Server stoppen, dann Server starten), damit die neuen Rassen erstellt werden können.",
-    "The new races can be created the next time the server starts.": "Die neuen Rassen können ab dem nächsten Serverstart erstellt werden."
+    "The new races can be created the next time the server starts.": "Die neuen Rassen können ab dem nächsten Serverstart erstellt werden.",
+    "The game or its launcher is running from this folder. Close it and go on with the install?": "Das Spiel oder sein Launcher läuft aus diesem Ordner. Schließen und mit der Installation weitermachen?",
+    "Closing the game ...": "Spiel wird geschlossen ...",
+    "Starting the server again ...": "Server wird wieder gestartet ...",
+    "Starting the server ...": "Server wird gestartet ...",
+    "The server is starting with the new races.": "Der Server startet mit den neuen Rassen.",
+    "The server could not be started:": "Der Server konnte nicht gestartet werden:",
+    "Race settings: {0} race(s) of the package were missing and are switched on again: {1}": "Rasseneinstellungen: {0} Rasse(n) des Pakets fehlten und sind wieder eingeschaltet: {1}",
+    "The race settings could not be checked:": "Die Rasseneinstellungen konnten nicht geprüft werden:",
+    "Copy the CoA client files, server DBCs/SQL and settings, install the module add-ons and build the AFK client patch? AFK Realm closes the game if it runs, stops the server, keeps the database running for the race settings and starts the server again afterwards.": "Die CoA-Client-Dateien, Server-DBCs/SQL und Einstellungen kopieren, die Modul-Add-ons installieren und den AFK-Client-Patch bauen? AFK Realm schließt das Spiel, falls es läuft, stoppt den Server, lässt die Datenbank für die Rasseneinstellungen laufen und startet den Server danach wieder."
   }
 }

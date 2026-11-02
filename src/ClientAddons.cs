@@ -215,6 +215,31 @@ namespace CoAInstaller
             return false;
         }
 
+        /// <summary>Closes the game and its launcher started from this folder (asked to close, ended after 10 seconds).</summary>
+        public static void CloseClient(string client)
+        {
+            string root = Path.GetFullPath(client).TrimEnd('\\', '/') + Path.DirectorySeparatorChar;
+            int self = Process.GetCurrentProcess().Id;
+            var found = new List<Process>();
+            foreach (var p in Process.GetProcesses())
+            {
+                try
+                {
+                    if (p.Id == self || p.ProcessName.StartsWith(Product.FileStem, StringComparison.OrdinalIgnoreCase)) { p.Dispose(); continue; }
+                    var mm = p.MainModule;
+                    if (mm != null && mm.FileName != null && mm.FileName.StartsWith(root, StringComparison.OrdinalIgnoreCase)) { found.Add(p); continue; }
+                }
+                catch { }
+                p.Dispose();
+            }
+            foreach (var p in found) try { p.CloseMainWindow(); } catch { }
+            foreach (var p in found)
+            {
+                try { if (!p.WaitForExit(10000)) { p.Kill(); p.WaitForExit(5000); } } catch { }
+                p.Dispose();
+            }
+        }
+
         static void CopyFolder(string from, string to)
         {
             Directory.CreateDirectory(to);

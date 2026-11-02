@@ -343,6 +343,15 @@ namespace CoAInstaller
             WriteClientSettings(inst, clientRoot, clientSource);
             // the racials, the racial rows and the paths of this computer, from the new settings (AFK Realm's races page)
             if (AfterRaceSettings != null) try { AfterRaceSettings(inst); } catch { }
+            // every playable race of the package must be on after the install, whatever changed the settings on the way
+            try
+            {
+                var restored = AddMissingServerRaces(inst);
+                if (restored.Count > 0)
+                    Console.WriteLine(L.F("Race settings: {0} race(s) of the package were missing and are switched on again: {1}", restored.Count,
+                        string.Join(", ", restored.Select(r => r.Value + " (" + r.Key + ")"))));
+            }
+            catch (Exception ex) { Console.WriteLine(L.T("The race settings could not be checked:") + " " + ex.Message); }
             EnsureHardwareCursor(o.Client);
 
             // The module add-ons are part of the client build too. Installing them here means
@@ -741,9 +750,13 @@ namespace CoAInstaller
             var on = new HashSet<int>();
             foreach (string key in list.Split(new[] { ' ', ',', ';', '\t' }, StringSplitOptions.RemoveEmptyEntries))
             {
-                int n;
-                if (conf.ByKey.TryGetValue("CustomRaces." + key + ".Id", out option) && int.TryParse(ConfigOption.Unquote(option.CurrentRaw), out n) && n > 0) on.Add(n);
-                else if (conf.ByKey.TryGetValue("CustomRaces." + key + ".Source", out option) && int.TryParse(ConfigOption.Unquote(option.CurrentRaw), out n)) on.Add(n);
+                // as mod-custom-races reads it: the Id, or without one the Source if it is below 32; 0 is off
+                int n, source = 0;
+                if (!conf.ByKey.TryGetValue("CustomRaces." + key + ".Source", out option) || !int.TryParse(ConfigOption.Unquote(option.CurrentRaw), out source)) continue;
+                if (conf.ByKey.TryGetValue("CustomRaces." + key + ".Id", out option) && ConfigOption.Unquote(option.CurrentRaw).Trim().Length > 0)
+                    n = int.TryParse(ConfigOption.Unquote(option.CurrentRaw), out n) ? n : 0;
+                else n = source < 32 ? source : 0;
+                if (n > 0) { on.Add(n); on.Add(source); }   // a race put at another number (Copy) is on as well
             }
             if (on.Count == 0) return missing;   // no races at all: the notice for empty race settings covers it
             var leftOff = LeftOff(inst);

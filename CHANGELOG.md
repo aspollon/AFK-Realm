@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.34
+
+- **The race page undid the CoA Custom install.** The races of the game client are keyed by their name (High Elf -> `HighElf`), the CoA Custom install keys its sections by the row's file name (`BloodElf`, `Troglodyte30`, `SethrakAlliance`). Every refresh of the race settings (right after the install, before each client patch, on the races page) took the install's sections for leftovers: `ClearOrphanNumbers` removed their `Id`, `PruneChosen` took them out of `CustomRaces.Races` - about 30 races of CoA Custom were off on every setup without a race folder, and the server refused them ("invalid race/class pair"). A client race now takes the key of the section that names its row (Source, not a copy); its own section, also one with `Copy = 1`, stays its own. The install checks at its end that every playable race of the package is on and switches missing ones on again (logged).
+- **The CoA Custom install prepares everything itself.** A running game is closed after one question; the worldserver and authserver are stopped; the database is started (the race settings ask it which race numbers have characters - without it they could not heal the numbers, which is why the install "only worked with the server on"); after the install the server is started (again) with the new races, when map data and DBCs are there.
+- `MissingServerRaces` reads the numbers as mod-custom-races does (the `Id`, else the `Source` below 32) and counts a race put at another number (`Copy = 1`) as on.
+
 ## 1.2.33
 
 - **Races the game client offers but the server cannot create.** The races of CoA Custom (by the server's ChrRaces.dbc, as the CoA Custom install reads them) that `CustomRaces.Races` leaves off are named in a notice in the top bar: the character creation offers them, the server refused them with "invalid race/class pair" and the player saw "Error creating character" (seen with race settings written by hand, sent along by another player or made before 1.2.30). A click switches them on: each gets its section as the install writes it if it has none, and joins the list; the races already on and their settings stay. "Keep them off" hides the notice for these races until the next CoA Custom install. logs\race-check.txt names them as well.

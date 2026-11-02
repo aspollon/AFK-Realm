@@ -43,6 +43,7 @@ namespace CoAInstaller.Web
             conf = ConfigFile.Load(path, "modules\\mod_custom_races.conf");
             ReadKnown();
             problem = ReadClient();
+            AdoptConfKeys();
             ApplyClientMoves();
             ReadFolder();
             HealNumbers();
@@ -348,6 +349,47 @@ namespace CoAInstaller.Web
             return (af.Length > 0 && af.Equals(bf, StringComparison.OrdinalIgnoreCase)) || (an.Length > 0 && an.Equals(bn, StringComparison.OrdinalIgnoreCase));
         }
 
+        /// <summary>
+        /// The races of the client are keyed by their name (High Elf -> HighElf); the CoA Custom install keys its sections
+        /// by the file name of the row (BloodElf, Troglodyte30, SethrakAlliance). Where the two differ, the page took the
+        /// install's sections for leftovers: it removed their numbers (ClearOrphanNumbers) and took them out of
+        /// CustomRaces.Races (PruneChosen), so every CoA Custom install was undone by the next save of the race settings,
+        /// and the game offered races the server refused ("Error creating character" for the High elf, the Murloc, the
+        /// Sethrak ...). A section that names a client row by its number (Source, not a copy) is that race: the race
+        /// takes the section's key. Races with a race folder pack keep theirs.
+        /// </summary>
+        readonly Dictionary<ClientRace, string> nameKeys = new Dictionary<ClientRace, string>();
+
+        void AdoptConfKeys()
+        {
+            var sections = conf.Options.Select(o => o.Key)
+                .Where(k => k.StartsWith("CustomRaces.", StringComparison.OrdinalIgnoreCase) && k.EndsWith(".Source", StringComparison.OrdinalIgnoreCase))
+                .Select(k => k.Substring("CustomRaces.".Length, k.Length - "CustomRaces.".Length - ".Source".Length))
+                .Where(k => k.Length > 0 && k.IndexOf('.') < 0)
+                .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            var chosen = new HashSet<string>(Chosen(), StringComparer.OrdinalIgnoreCase);
+            Func<string, string> sourceOf = k => Raw("CustomRaces." + k + ".Source", "");
+            // first what each race should be called, then all at once: two Haranir rows may swap their keys
+            var wanted = new Dictionary<ClientRace, string>();
+            foreach (var r in races)
+            {
+                if (r.Pack != null || r.Virtual || r.Source <= 0) continue;
+                // its own section (also one that puts it at another number on purpose: Copy = 1) stays its own
+                if (sections.Contains(r.Key, StringComparer.OrdinalIgnoreCase) && sourceOf(r.Key) == r.Source.ToString()) continue;
+                var mine = sections.Where(k => sourceOf(k) == r.Source.ToString() && Raw("CustomRaces." + k + ".Copy", "0") != "1").ToList();
+                if (mine.Count == 0) continue;
+                wanted[r] = mine.OrderByDescending(k => chosen.Contains(k)).First();
+            }
+            var keep = new HashSet<string>(races.Where(r => !wanted.ContainsKey(r)).Select(r => r.Key), StringComparer.OrdinalIgnoreCase);
+            var taken = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var w in wanted)
+            {
+                if (keep.Contains(w.Value) || !taken.Add(w.Value)) continue;
+                nameKeys[w.Key] = w.Key.Key;
+                w.Key.Key = w.Value;
+            }
+        }
+
         void ClearOrphanNumbers()
         {
             foreach (var o in conf.Options.Where(o => o.Key.StartsWith("CustomRaces.", StringComparison.OrdinalIgnoreCase) && o.Key.EndsWith(".Id", StringComparison.OrdinalIgnoreCase)).ToList())
@@ -457,7 +499,12 @@ namespace CoAInstaller.Web
 
         // ---------------------------------------------------------------- what a race is
 
-        Known KnownOf(ClientRace r) { Known k; return known.TryGetValue(r.Key, out k) ? k : null; }
+        Known KnownOf(ClientRace r)
+        {
+            Known k; string nameKey;
+            if (known.TryGetValue(r.Key, out k)) return k;
+            return nameKeys.TryGetValue(r, out nameKey) && known.TryGetValue(nameKey, out k) ? k : null;
+        }
 
         public static string BaseName(string key)
         {

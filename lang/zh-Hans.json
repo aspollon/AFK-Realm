@@ -2111,6 +2111,15 @@
     "Switch them on": "启用",
     "Switched on:": "已启用：",
     "Restart the server (Stop server, then Start server) so the new races can be created.": "重启服务器（停止服务器，然后启动服务器），以便可以创建新种族。",
-    "The new races can be created the next time the server starts.": "新种族将在服务器下次启动后可以创建。"
+    "The new races can be created the next time the server starts.": "新种族将在服务器下次启动后可以创建。",
+    "The game or its launcher is running from this folder. Close it and go on with the install?": "游戏或其启动器正在从此文件夹运行。关闭它并继续安装？",
+    "Closing the game ...": "正在关闭游戏 ...",
+    "Starting the server again ...": "正在重新启动服务器 ...",
+    "Starting the server ...": "正在启动服务器 ...",
+    "The server is starting with the new races.": "服务器正在以新种族启动。",
+    "The server could not be started:": "无法启动服务器：",
+    "Race settings: {0} race(s) of the package were missing and are switched on again: {1}": "种族设置：包中有 {0} 个种族缺失，已重新启用：{1}",
+    "The race settings could not be checked:": "无法检查种族设置：",
+    "Copy the CoA client files, server DBCs/SQL and settings, install the module add-ons and build the AFK client patch? AFK Realm closes the game if it runs, stops the server, keeps the database running for the race settings and starts the server again afterwards.": "复制 CoA 客户端文件、服务器 DBC/SQL 和设置，安装模块插件并构建 AFK 客户端补丁？如果游戏正在运行，AFK Realm 会将其关闭，停止服务器，保持数据库运行以处理种族设置，之后再次启动服务器。"
   }
 }

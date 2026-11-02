@@ -2092,6 +2092,15 @@
     "Switch them on": "",
     "Switched on:": "",
     "Restart the server (Stop server, then Start server) so the new races can be created.": "",
-    "The new races can be created the next time the server starts.": ""
+    "The new races can be created the next time the server starts.": "",
+    "The game or its launcher is running from this folder. Close it and go on with the install?": "",
+    "Closing the game ...": "",
+    "Starting the server again ...": "",
+    "Starting the server ...": "",
+    "The server is starting with the new races.": "",
+    "The server could not be started:": "",
+    "Race settings: {0} race(s) of the package were missing and are switched on again: {1}": "",
+    "The race settings could not be checked:": "",
+    "Copy the CoA client files, server DBCs/SQL and settings, install the module add-ons and build the AFK client patch? AFK Realm closes the game if it runs, stops the server, keeps the database running for the race settings and starts the server again afterwards.": ""
   }
 }
