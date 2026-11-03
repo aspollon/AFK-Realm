@@ -564,13 +564,35 @@ namespace CoAInstaller.Web
         {
             if (races.Count == 0) return;
             var chosen = Chosen();
+            // A copy of a base-client race (Copy=1, not imported from a race folder) is
+            // what the CoA Custom install deliberately leaves out. Older settings kept
+            // them (Troglodyte, a second Forgotten); remove them here as well, with
+            // their whole sections, so only the package's own races stay in the list.
+            var copies = chosen.Where(IsClientCopy).ToList();
+            if (copies.Count > 0)
+            {
+                foreach (var key in copies) DropRace(key);
+                chosen = chosen.Except(copies, StringComparer.OrdinalIgnoreCase).ToList();
+            }
             var valid = chosen.Where(k => races.Any(r => r.Key.Equals(k, StringComparison.OrdinalIgnoreCase))).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-            if (valid.Count != chosen.Count) Set("CustomRaces.Races", string.Join(" ", valid));
+            if (valid.Count != Chosen().Count) Set("CustomRaces.Races", string.Join(" ", valid));
             // Older AFK versions wrote this key beside Voidelf. The module ignores it, but it
             // looked like a second race and kept an empty racial list in the settings.
             if (races.Any(r => r.Key.Equals("Voidelf", StringComparison.OrdinalIgnoreCase)) &&
                 !races.Any(r => r.Key.Equals("VoidElf", StringComparison.OrdinalIgnoreCase)))
                 Unset("CustomRaces.VoidElf.Racials");
+        }
+
+        bool IsClientCopy(string key)
+        {
+            return ConfigOption.Unquote(Raw("CustomRaces." + key + ".Copy", "")) == "1" &&
+                   ConfigOption.Unquote(Raw("CustomRaces." + key + ".Import", "")) != "1";
+        }
+
+        void DropRace(string key)
+        {
+            foreach (var option in conf.ByKey.Keys.Where(k => k.StartsWith("CustomRaces." + key + ".", StringComparison.OrdinalIgnoreCase)).ToList())
+                Unset(option);
         }
 
         int CoaRaceOf(ClientRace r)

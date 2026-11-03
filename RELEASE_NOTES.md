@@ -1,3 +1,10 @@
+# AFK Realm 1.2.44
+
+## Fixed in 1.2.44
+
+- **Only CoA Custom's own races stay in the race settings.** Older settings kept copies of base-client races as `Copy=1`: `Troglodyte` (the body of the Murlocs) and a second `Forgotten` (`ThinHuman`). The 1.2.41 fix removed them only while installing CoA Custom; saving the race settings kept them. Saving the race page now removes every `Copy=1` entry that was not imported from a race folder, together with its whole section, so only the package's own races stay. Races imported from a race folder (`Import=1`) are kept, and the package's own races (`Troglodyte30/31` = Murloc Alliance/Horde, `ThinHuman32/96`, `ForestTroll40`, …) have `Copy=0` and stay.
+- **The 1.2.43 module-update fix is included:** a module whose local change is already in its new commit is fast-forwarded instead of being skipped, so the announced `mod-custom-races` update is really installed.
+
 # AFK Realm 1.2.43
 
 ## Fixed in 1.2.43

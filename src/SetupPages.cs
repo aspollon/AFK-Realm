@@ -1259,8 +1259,16 @@ namespace CoAInstaller
             try
             {
                 HealNumbers();
+                var chosen = Chosen();
+                var copies = chosen.Where(IsClientCopy).ToList();
+                if (copies.Count > 0)
+                {
+                    foreach (var key in copies) DropRace(key);
+                    chosen = chosen.Except(copies, StringComparer.OrdinalIgnoreCase).ToList();
+                    Set("CustomRaces.Races", string.Join(" ", chosen));
+                }
                 var on = new List<ServerRacials.Wanted>();
-                foreach (var key in Chosen())
+                foreach (var key in chosen)
                 {
                     var r = races.FirstOrDefault(x => x.Key.Equals(key, StringComparison.OrdinalIgnoreCase));
                     string name = Raw("CustomRaces." + key + ".Name", "");
@@ -1286,6 +1294,18 @@ namespace CoAInstaller
                 if (conf.Pending.Count + conf.Removed.Count > 0) conf.Save();
             }
             catch (Exception ex) { Ui.Error(this, L.T("The racial rows could not be written:") + "\n" + ex.Message); }
+        }
+
+        bool IsClientCopy(string key)
+        {
+            return ConfigOption.Unquote(Raw("CustomRaces." + key + ".Copy", "")) == "1" &&
+                   ConfigOption.Unquote(Raw("CustomRaces." + key + ".Import", "")) != "1";
+        }
+
+        void DropRace(string key)
+        {
+            foreach (var option in conf.ByKey.Keys.Where(k => k.StartsWith("CustomRaces." + key + ".", StringComparison.OrdinalIgnoreCase)).ToList())
+                Unset(option);
         }
 
         /// <summary>Where the racial rows of the races go for the server (CustomRaces.RacialsFolder).</summary>
