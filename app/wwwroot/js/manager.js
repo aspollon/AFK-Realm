@@ -323,6 +323,17 @@ export function manager() {
       (warnings.length === 1 ? T('You can update anyway - the server then runs without that change - or wait until the module is adapted.') : T('You can update anyway - the server then runs without these changes - or wait until the module is adapted.')) + '\n\n';
     if ((b.news || []).length) q += T('New:') + '\n  ' + b.news.join('\n  ') + '\n' + (b.limited ? b.limited + '\n' : '') + '\n';
     q += T('The current server is backed up first, then rebuilt with the newest code, which can take a while. A running server is stopped cleanly first.');
+    // only modules are new: the update is a modules-only one anyway (the core stays as it is)
+    if (b.modulesNew && !b.baseNew) return engine('Update', q, { modulesOnly: true });
+    // a new core and new modules: everything, or only the modules for now
+    if (b.modulesNew && b.baseNew) {
+      const v = await dialog({ title: T('Server update'), icon: 'info', wide: true, body: h('div.pre', {}, q + '\n\n' +
+          T('"Only the modules" brings your modules up to date and keeps the CoA core and Playerbots as they are; the new core can follow later.')),
+        buttons: [{ text: T('Cancel'), value: null }, { text: T('Only the modules'), value: 'modules' }, { text: T('Update everything'), kind: 'primary', value: 'all', default: true }] });
+      if (v === 'modules') return engine('Update', null, { modulesOnly: true });
+      if (v === 'all') return engine('Update', null);
+      return;
+    }
     engine('Update', q);
   }
 

@@ -144,7 +144,7 @@ namespace CoAInstaller.Web
                 {
                     text = L.F("Server update available: {0}  –  click to install", NewsSummary(u.Server)) +
                         (u.PatchWarnings.Count > 0 ? "  ·  ⚠ " + (u.PatchWarnings.Count == 1 ? L.T("1 module patch would not fit") : L.F("{0} module patches would not fit", u.PatchWarnings.Count)) : ""),
-                    news = u.Server, warnings = u.PatchWarnings,
+                    news = u.Server, warnings = u.PatchWarnings, baseNew = u.BaseNew, modulesNew = u.ModulesNew,
                     limited = u.LimitedUntil == null ? null : L.F("(GitHub counts the changes again from {0})", u.LimitedUntil.Value.ToString("HH:mm"))
                 };
             if (u != null && u.ToolVersion != null)

@@ -2129,6 +2129,10 @@
     "{0} could not be applied: the code it changes has changed. {1} needs it and is left out of this build; the server works without it, and the module comes back once it is adapted.": "无法应用 {0}：它修改的代码已经改变。{1} 需要它，因此本次构建不包含该模块；服务器没有它也能运行，模块适配后会自动回来。",
     "Update modules only": "仅更新模块",
     "Update only the modules and build the server again?\n\nThe CoA core and Playerbots stay at the versions your server has now. Use this for a module fix when you do not want a new core yet. The server is backed up first; a running server is stopped cleanly.": "只更新模块并重新构建服务器？\n\nCoA 核心和 Playerbots 保持服务器当前的版本。适用于暂时不想要新核心时的模块修复。会先备份服务器；正在运行的服务器会被正常停止。",
-    "The server has no source code yet; run a full update first.": "服务器还没有源代码；请先执行一次完整更新。"
+    "The server has no source code yet; run a full update first.": "服务器还没有源代码；请先执行一次完整更新。",
+    "Server update": "服务器更新",
+    "\"Only the modules\" brings your modules up to date and keeps the CoA core and Playerbots as they are; the new core can follow later.": "“仅模块”会更新你的模块，并保持 CoA 核心和 Playerbots 不变；新核心可以稍后再更新。",
+    "Only the modules": "仅模块",
+    "Update everything": "全部更新"
   }
 }

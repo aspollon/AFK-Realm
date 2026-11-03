@@ -5,8 +5,9 @@
 - **mod-subclass in the module list** (aspollon/mod-subclass): Stefan's mod-subclass from the CoA Custom 2.0 handover, with its core hooks as `patches/core-subclass.patch` against the current CoA core; it requires mod-custom-races.
 - **The modules a CoA Custom package needs** (`CoaSetup.ModulesForPackage`): mod-custom-races always, mod-subclass when the package brings subclassing (a `subclass` folder or `Apply-Subclass.bat`, CoA Custom 1.9.8 and newer). The missing-module notice and the CoA Custom setup offer them.
 
-## 1.2.39
+## 1.2.40
 
+- **Update notice:** `UpdateCheck.Result.BaseNew` / `ModulesNew` say whether the core/Playerbots or modules have news; the server banner updates only the modules when nothing else is new, and asks "Update everything" or "Only the modules" when both are.
 - **Update modules only** (engine `-Mode Update -ModulesOnly`, `/api/engine` `modulesOnly`): the module folders are fast-forwarded as in a normal update, the core and Playerbots stay at the revisions in `revisions.txt` (or their current checkout), and the server is rebuilt with the module patches applied again. Nothing new in a module: "up to date", nothing built.
 
 ## 1.2.38

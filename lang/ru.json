@@ -2129,6 +2129,10 @@
     "{0} could not be applied: the code it changes has changed. {1} needs it and is left out of this build; the server works without it, and the module comes back once it is adapted.": "Не удалось применить {0}: изменился код, который он меняет. {1} нужен этот патч, поэтому модуль не входит в эту сборку; сервер работает без него, и модуль вернётся, когда его адаптируют.",
     "Update modules only": "Обновить только модули",
     "Update only the modules and build the server again?\n\nThe CoA core and Playerbots stay at the versions your server has now. Use this for a module fix when you do not want a new core yet. The server is backed up first; a running server is stopped cleanly.": "Обновить только модули и пересобрать сервер?\n\nЯдро CoA и Playerbots останутся в текущих версиях вашего сервера. Для исправления модуля, когда новое ядро пока не нужно. Сначала создаётся резервная копия; работающий сервер корректно останавливается.",
-    "The server has no source code yet; run a full update first.": "У сервера ещё нет исходного кода; сначала выполните полное обновление."
+    "The server has no source code yet; run a full update first.": "У сервера ещё нет исходного кода; сначала выполните полное обновление.",
+    "Server update": "Обновление сервера",
+    "\"Only the modules\" brings your modules up to date and keeps the CoA core and Playerbots as they are; the new core can follow later.": "«Только модули» обновляет ваши модули и оставляет ядро CoA и Playerbots как есть; новое ядро можно установить позже.",
+    "Only the modules": "Только модули",
+    "Update everything": "Обновить всё"
   }
 }

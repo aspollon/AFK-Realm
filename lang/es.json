@@ -2129,6 +2129,10 @@
     "{0} could not be applied: the code it changes has changed. {1} needs it and is left out of this build; the server works without it, and the module comes back once it is adapted.": "No se pudo aplicar {0}: el código que cambia ha cambiado. {1} lo necesita y queda fuera de esta compilación; el servidor funciona sin él y el módulo vuelve en cuanto se adapte.",
     "Update modules only": "Actualizar solo los módulos",
     "Update only the modules and build the server again?\n\nThe CoA core and Playerbots stay at the versions your server has now. Use this for a module fix when you do not want a new core yet. The server is backed up first; a running server is stopped cleanly.": "¿Actualizar solo los módulos y compilar el servidor de nuevo?\n\nEl núcleo de CoA y Playerbots se quedan en las versiones que tiene tu servidor. Útil para una corrección de un módulo cuando aún no quieres un núcleo nuevo. Antes se hace una copia de seguridad; un servidor en marcha se detiene limpiamente.",
-    "The server has no source code yet; run a full update first.": "El servidor aún no tiene código fuente; haz primero una actualización completa."
+    "The server has no source code yet; run a full update first.": "El servidor aún no tiene código fuente; haz primero una actualización completa.",
+    "Server update": "Actualización del servidor",
+    "\"Only the modules\" brings your modules up to date and keeps the CoA core and Playerbots as they are; the new core can follow later.": "\"Solo los módulos\" actualiza tus módulos y deja el núcleo de CoA y Playerbots como están; el núcleo nuevo puede venir después.",
+    "Only the modules": "Solo los módulos",
+    "Update everything": "Actualizar todo"
   }
 }
