@@ -141,6 +141,8 @@ namespace CoAInstaller.Web
         /// <summary>The engine's arguments for a mode, from what the page sent.</summary>
         static string EngineArgs(string mode, Args a)
         {
+            // only the modules brought up to date; the CoA core and Playerbots stay where they are
+            if (mode == "Update" && a.Bool("modulesOnly")) return "-ModulesOnly";
             if (mode == "Restore")
             {
                 string name = a.Str("snapshot") ?? "";

@@ -2126,6 +2126,9 @@
     "For CoA Custom 1.9.8 and newer: the second class of the Two-Headed Ogre and the Thin Twins (Stefan's subclassing). Needs mod-custom-races.": "适用于 CoA Custom 1.9.8 及更新版本：双头食人魔和 Thin Twins 的第二职业（Stefan 的副职业系统）。需要 mod-custom-races。",
     "CoA Custom needs these modules on the server. AFK Realm installs them first and builds the server (this takes a while), then installs CoA Custom:": "CoA Custom 需要服务器上的这些模块。AFK Realm 会先安装它们并构建服务器（需要一些时间），然后安装 CoA Custom：",
     "Installing the modules CoA Custom needs ...": "正在安装 CoA Custom 需要的模块 ...",
-    "{0} could not be applied: the code it changes has changed. {1} needs it and is left out of this build; the server works without it, and the module comes back once it is adapted.": "无法应用 {0}：它修改的代码已经改变。{1} 需要它，因此本次构建不包含该模块；服务器没有它也能运行，模块适配后会自动回来。"
+    "{0} could not be applied: the code it changes has changed. {1} needs it and is left out of this build; the server works without it, and the module comes back once it is adapted.": "无法应用 {0}：它修改的代码已经改变。{1} 需要它，因此本次构建不包含该模块；服务器没有它也能运行，模块适配后会自动回来。",
+    "Update modules only": "仅更新模块",
+    "Update only the modules and build the server again?\n\nThe CoA core and Playerbots stay at the versions your server has now. Use this for a module fix when you do not want a new core yet. The server is backed up first; a running server is stopped cleanly.": "只更新模块并重新构建服务器？\n\nCoA 核心和 Playerbots 保持服务器当前的版本。适用于暂时不想要新核心时的模块修复。会先备份服务器；正在运行的服务器会被正常停止。",
+    "The server has no source code yet; run a full update first.": "服务器还没有源代码；请先执行一次完整更新。"
   }
 }

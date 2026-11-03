@@ -1,4 +1,8 @@
-# AFK Realm 1.2.38
+# AFK Realm 1.2.39
+
+## New in 1.2.39
+
+- **Update modules only:** a new button under Maintenance > Updates brings only your modules up to date and rebuilds the server; the CoA core and Playerbots stay at the versions you have. For a module fix without a new core.
 
 ## New in 1.2.38
 

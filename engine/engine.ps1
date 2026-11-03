@@ -39,6 +39,9 @@ param(
     [string]$Parts = '',
     [string]$AddModules = '',
     [string]$RemoveModules = '',
+    # Update only: the modules are brought up to date and the server is built again, the CoA core and Playerbots stay
+    # at the versions the server has (a module fix without the risk of a new core).
+    [switch]$ModulesOnly,
     [switch]$NonInteractive
 )
 
@@ -1129,8 +1132,20 @@ function Resolve-LatestRevisions([string]$Git) {
 # modules cloned by the user are fast-forwarded when that is safe.
 function Find-Updates([string]$Git) {
     $changes = New-Object Collections.Generic.List[string]
-    foreach ($entry in @(@{ Name = 'Core'; Item = $Project.Core; Folder = $Paths.Source },
-                         @{ Name = 'Playerbots'; Item = $Project.Playerbots; Folder = $Paths.Playerbots })) {
+    $pinned = @()
+    if ($ModulesOnly) {
+        Write-Log 'Modules only: the CoA core and Playerbots stay at the versions the server has.' Cyan
+        foreach ($keep in @(@{ Item = $Project.Core; Folder = $Paths.Source }, @{ Item = $Project.Playerbots; Folder = $Paths.Playerbots })) {
+            if (-not $keep.Item.Revision -and (Test-Path (Join-Path $keep.Folder '.git'))) {
+                $keep.Item.Revision = Get-ProgramOutput $Git @('-C', $keep.Folder, 'rev-parse', 'HEAD')
+            }
+            if (-not $keep.Item.Revision) { throw (Tr 'The server has no source code yet; run a full update first.') }
+        }
+    } else {
+        $pinned = @(@{ Name = 'Core'; Item = $Project.Core; Folder = $Paths.Source },
+                    @{ Name = 'Playerbots'; Item = $Project.Playerbots; Folder = $Paths.Playerbots })
+    }
+    foreach ($entry in $pinned) {
         $latest = Get-RemoteHead $Git $entry.Item
         $current = if (Test-Path (Join-Path $entry.Folder '.git')) { Get-ProgramOutput $Git @('-C', $entry.Folder, 'rev-parse', 'HEAD') } else { $null }
         if ($current -eq $latest) { Write-Log "$($entry.Name) is up to date."; continue }
