@@ -1,4 +1,8 @@
-# AFK Realm 1.2.40
+# AFK Realm 1.2.41
+
+## New in 1.2.41
+
+- **Fixed: races that do not belong to CoA Custom after its install.** Races you once made as copies for your old client (for example Troglodyte, a second Forgotten, a Haranir Horde without textures) were carried into the CoA Custom setup. Now CoA Custom brings exactly its own races; the Haranir Horde is its own again, with its textures. Races you imported from a race folder are still kept.
 
 ## New in 1.2.40
 

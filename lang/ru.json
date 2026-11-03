@@ -2142,6 +2142,7 @@
     "A newer module can need a newer core than yours; then the build can fail.": "Более новому модулю может понадобиться более новое ядро, чем ваше; тогда сборка может не пройти.",
     "If the build fails, your server stays as it is (the new programs are only used after a successful build), and a full update usually fixes it.": "Если сборка не пройдёт, сервер останется как есть (новые программы используются только после успешной сборки), а полное обновление обычно всё исправляет.",
     "Bleeding edge: an update builds the newest code of CoA, Playerbots and every module straight from their sources. They change independently of each other, so after an update something may work differently, a module may not fit and be left out, or the build may fail.": "Bleeding edge: обновление собирает самый новый код CoA, Playerbots и каждого модуля прямо из их исходников. Они меняются независимо друг от друга, поэтому после обновления что-то может работать иначе, модуль может не подойти и быть пропущен, или сборка может не пройти.",
-    "{0} backs the server up first: if something no longer works, Maintenance > Backups brings the previous state back.": "{0} сначала делает резервную копию сервера: если что-то перестанет работать, Обслуживание > Резервные копии вернёт прежнее состояние."
+    "{0} backs the server up first: if something no longer works, Maintenance > Backups brings the previous state back.": "{0} сначала делает резервную копию сервера: если что-то перестанет работать, Обслуживание > Резервные копии вернёт прежнее состояние.",
+    "Your copy {0} of a client race is left out: CoA Custom brings its own races.": "Твоя копия {0} расы клиента не переносится: CoA Custom приносит свои расы."
   }
 }

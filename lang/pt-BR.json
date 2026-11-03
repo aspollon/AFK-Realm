@@ -2142,6 +2142,7 @@
     "A newer module can need a newer core than yours; then the build can fail.": "Um módulo mais novo pode precisar de um núcleo mais novo que o seu; aí a compilação pode falhar.",
     "If the build fails, your server stays as it is (the new programs are only used after a successful build), and a full update usually fixes it.": "Se a compilação falhar, seu servidor fica como está (os programas novos só são usados após uma compilação bem-sucedida), e uma atualização completa costuma resolver.",
     "Bleeding edge: an update builds the newest code of CoA, Playerbots and every module straight from their sources. They change independently of each other, so after an update something may work differently, a module may not fit and be left out, or the build may fail.": "Bleeding edge: uma atualização compila o código mais novo do CoA, do Playerbots e de cada módulo direto das fontes. Eles mudam de forma independente, então depois de uma atualização algo pode funcionar diferente, um módulo pode não encaixar e ficar de fora, ou a compilação pode falhar.",
-    "{0} backs the server up first: if something no longer works, Maintenance > Backups brings the previous state back.": "O {0} faz um backup do servidor antes: se algo parar de funcionar, Manutenção > Backups traz o estado anterior de volta."
+    "{0} backs the server up first: if something no longer works, Maintenance > Backups brings the previous state back.": "O {0} faz um backup do servidor antes: se algo parar de funcionar, Manutenção > Backups traz o estado anterior de volta.",
+    "Your copy {0} of a client race is left out: CoA Custom brings its own races.": "Sua cópia {0} de uma raça do cliente fica de fora: o CoA Custom traz suas próprias raças."
   }
 }

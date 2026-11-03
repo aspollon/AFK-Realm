@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.41
+
+- **CoA Custom install: copies of client races are no longer carried over** (`CoaSetup.ResetRaceConfig`): only races imported from a race folder are. A carried copy took the section of the package's own race (`RaceKey` by Source: Haranir Horde 70 kept as the copy 76, `Appearance` 0) or came back beside it (the copy of ThinHuman 33 beside Forgotten 32, the copy of Troglodyte 46, the Murlocs' body).
+- **`WriteRaceRows`: a section that is a copy of a package row becomes that row** (Id, Copy 0, File, Prefix, displays, Appearance of the Esteria races).
+
 ## 1.2.40
 
 - **Update core only** (engine `-CoreOnly`, `/api/engine` `coreOnly`): the core and Playerbots move to their branch heads, the module folders are not fast-forwarded.

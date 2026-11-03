@@ -604,9 +604,18 @@ namespace CoAInstaller
                 string race = pair.Key.Substring("CustomRaces.".Length, pair.Key.Length - "CustomRaces.".Length - ".Source".Length);
                 if (race.Length == 0 || race.IndexOf('.') >= 0) continue;
                 string prefix = "CustomRaces." + race + ".";
-                // the user's own races: imported from a race folder, or a copy of a client race under a number of its own
-                // (the High elf of older setups: a copy of the Blood elf as race 15)
-                if (ConfigOption.Unquote(raw(prefix + "Import") ?? "") == "1" || ConfigOption.Unquote(raw(prefix + "Copy") ?? "") == "1")
+                // the user's own races: imported from a race folder. A copy of a client race under a number of its own
+                // (the High elf of older setups: a copy of the Blood elf as race 15) is not carried over: it was made for
+                // the client before the package, which brings its races at numbers of their own. Carried over, a copy
+                // took the place of the package's own race (Haranir Horde 70 kept as the copy 76, without the textures
+                // the package has for 70) or came back beside it (Forgotten 32 and the copy of 33, Troglodyte, the
+                // body of the Murlocs).
+                if (ConfigOption.Unquote(raw(prefix + "Copy") ?? "") == "1" && ConfigOption.Unquote(raw(prefix + "Import") ?? "") != "1")
+                {
+                    if (listed.Contains(race)) Console.WriteLine(L.F("Your copy {0} of a client race is left out: CoA Custom brings its own races.", race));
+                    continue;
+                }
+                if (ConfigOption.Unquote(raw(prefix + "Import") ?? "") == "1")
                 {
                     if (listed.Contains(race)) carried.ImportedKeys.Add(race);
                     foreach (var option in old.ByKey)
@@ -861,6 +870,21 @@ namespace CoAInstaller
                     // leaves it switched off even though the CoA UI expects it.
                     string currentId = Has(conf, prefix + "Id") ? ConfigOption.Unquote(conf.ByKey[prefix + "Id"].CurrentRaw) : "";
                     if (currentId.Length == 0 || currentId == "0") Set(conf, prefix + "Id", id.ToString());
+                    // A copy of this row under another number (made for an older client) becomes the package's own race:
+                    // the package's textures and looks belong to its number (Haranir Horde 70, not the copy 76).
+                    bool copy = Has(conf, prefix + "Copy") && ConfigOption.Unquote(conf.ByKey[prefix + "Copy"].CurrentRaw) == "1";
+                    bool imported = Has(conf, prefix + "Import") && ConfigOption.Unquote(conf.ByKey[prefix + "Import"].CurrentRaw) == "1";
+                    if (copy && !imported)
+                    {
+                        Set(conf, prefix + "Id", id.ToString());
+                        Set(conf, prefix + "Copy", "0");
+                        Set(conf, prefix + "File", Quote(file));
+                        Set(conf, prefix + "Prefix", Quote(ClientRaces.Str(table, row, 6)));
+                        Set(conf, prefix + "MaleDisplay", table.Field(row, 4).ToString());
+                        Set(conf, prefix + "FemaleDisplay", table.Field(row, 5).ToString());
+                        if (id == 66 || id == 68 || id == 69) Set(conf, prefix + "Appearance", "1");
+                        else if (id == 70 || id == 71) Set(conf, prefix + "Appearance", "2");
+                    }
                     // Repair old generated entries whose base race belongs to the other faction
                     // (for example Forest Troll 40 was set to the Horde's Orc).
                     int side = (int)table.Field(row, 13);

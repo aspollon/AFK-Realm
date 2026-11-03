@@ -2123,6 +2123,7 @@
     "A newer module can need a newer core than yours; then the build can fail.": "",
     "If the build fails, your server stays as it is (the new programs are only used after a successful build), and a full update usually fixes it.": "",
     "Bleeding edge: an update builds the newest code of CoA, Playerbots and every module straight from their sources. They change independently of each other, so after an update something may work differently, a module may not fit and be left out, or the build may fail.": "",
-    "{0} backs the server up first: if something no longer works, Maintenance > Backups brings the previous state back.": ""
+    "{0} backs the server up first: if something no longer works, Maintenance > Backups brings the previous state back.": "",
+    "Your copy {0} of a client race is left out: CoA Custom brings its own races.": ""
   }
 }
