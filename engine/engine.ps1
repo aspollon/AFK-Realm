@@ -1171,7 +1171,12 @@ function Find-Updates([string]$Git) {
             # forever: the update skips it every time, while the update check keeps announcing it.
             $aheadText = Get-ProgramOutput $Git @('-C', $dir.FullName, 'rev-list', '--count', '@{u}..HEAD')
             $ahead = if ($aheadText -match '^\d+$') { [int]$aheadText } else { -1 }
-            if ($ahead -eq 0 -and (Invoke-Program $Git @('-C', $dir.FullName, 'diff', '--quiet', '@{u}', '--') -AllowFailure) -eq 0) {
+            # Compare only the files changed locally: the new commit may add files the old
+            # checkout does not have yet, and those additions are not a local conflict.
+            $changedText = Get-ProgramOutput $Git @('-C', $dir.FullName, 'diff', '--name-only', 'HEAD')
+            $changedFiles = @($changedText -split "`n" | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+            $diffArgs = @('-C', $dir.FullName, 'diff', '--quiet', '@{u}', '--') + $changedFiles
+            if ($ahead -eq 0 -and $changedFiles.Count -gt 0 -and (Invoke-Program $Git $diffArgs -AllowFailure) -eq 0) {
                 Write-Log "$($dir.Name): the local changes are the new commit's contents already; only the recorded commit is behind, so it is moved forward." Gray
                 if ((Invoke-Program $Git @('-C', $dir.FullName, 'reset', '--hard', '@{u}') -AllowFailure) -ne 0) {
                     Write-Log "$($dir.Name): $behind new commit(s), but its local changes could not be set aside; skipped." Yellow; continue

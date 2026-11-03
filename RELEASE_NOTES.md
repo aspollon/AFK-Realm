@@ -1,3 +1,11 @@
+# AFK Realm 1.2.43
+
+## Fixed in 1.2.43
+
+- **A module update that is announced is now really installed.** The engine compared the whole working tree of the module with its upstream. The new module commit adds files (`afk-realm.json`, `patches/`, `client-patches/`) that the old checkout does not have yet, so the comparison failed and the engine skipped the module with "contains local changes"; the update check kept announcing it. The engine now compares only the files changed locally. A local change that is already in the module's commit no longer blocks the update; the module is fast-forwarded and the server is rebuilt.
+- **No more contradiction between update notice and update result.** If the update check announces `mod-custom-races`, the engine now applies it instead of answering "Everything is up to date". A real local change that is *not* upstream is still skipped, as before.
+- **The fixed engine is included in this release** and replaces the installed copy on the next update; the module update after it brings the racial cleanup and the core racial patch.
+
 # AFK Realm 1.2.42
 
 ## New in 1.2.42
