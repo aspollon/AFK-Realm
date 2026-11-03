@@ -566,16 +566,24 @@ namespace CoAInstaller.Web
             var chosen = Chosen();
             var valid = chosen.Where(k => races.Any(r => r.Key.Equals(k, StringComparison.OrdinalIgnoreCase))).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
             if (valid.Count != chosen.Count) Set("CustomRaces.Races", string.Join(" ", valid));
+            // Older AFK versions wrote this key beside Voidelf. The module ignores it, but it
+            // looked like a second race and kept an empty racial list in the settings.
+            if (races.Any(r => r.Key.Equals("Voidelf", StringComparison.OrdinalIgnoreCase)) &&
+                !races.Any(r => r.Key.Equals("VoidElf", StringComparison.OrdinalIgnoreCase)))
+                Unset("CustomRaces.VoidElf.Racials");
         }
 
         int CoaRaceOf(ClientRace r)
         {
             var pack = PackOf(r);
+            string names = (pack != null ? pack.Name + " " + pack.File + " " + pack.Key : r.Name + " " + r.File + " " + r.Key);
+            string n = (names ?? "").ToLowerInvariant();
+            if (n.Contains("voidelf") || n.Contains("void elf")) return 59;
+            if (n.Contains("foresttroll") || n.Contains("forest troll")) return 24;
             if (pack == null) return r.Virtual ? 0 : r.Source;
             int source = pack.SourceRace;
             if (pack.Source.Equals("CoA Custom", StringComparison.OrdinalIgnoreCase))
             {
-                string n = (pack.Name + " " + pack.File + " " + pack.Key).ToLowerInvariant();
                 if (n.Contains("pandaren")) return 20;
                 if (n.Contains("dracthyr")) return source == 54 || source == 58 ? source : (pack.Side == 0 ? 54 : 58);
                 if (n.Contains("vulperaesteria") || n.Contains("esteria")) return 74;
@@ -651,7 +659,7 @@ namespace CoAInstaller.Web
             { putText("HelmetPrefix", borrowed); put("OwnHelmets", "1"); }
             else putText("HelmetPrefix", "");
             put("Appearance", ExtraLooksOf(r, id).ToString());
-            var racials = ServerRacials.Spells("", pack != null ? pack.Name : r.Name, CoaRaceOf(r));
+            var racials = ServerRacials.Spells(Raw("CustomRaces.ServerDataFolder", ""), pack != null ? pack.Name : r.Name, CoaRaceOf(r));
             if (racials.Length > 0) putText("Racials", string.Join(" ", racials));
             else Unset("CustomRaces." + r.Key + ".Racials");
             string icon = null;
@@ -1128,6 +1136,7 @@ namespace CoAInstaller.Web
         public string Save()
         {
             HealNumbers(); PruneChosen();
+            foreach (var r in races) if (Raw("CustomRaces." + r.Key + ".Source", "").Length > 0) Describe(r, IdOf(r));
             string name = conf.Name;
             try { conf.Save(); }
             catch (Exception ex) { throw new UserError(L.T("The settings could not be saved:") + "\n" + ex.Message); }
@@ -1150,7 +1159,7 @@ namespace CoAInstaller.Web
                         }
                     on.Add(wanted);
                 }
-                ServerRacials.Sync("", RacialsFolder, ClientAddons.ClientFolder, on);
+                ServerRacials.Sync(Raw("CustomRaces.ServerDataFolder", ""), RacialsFolder, ClientAddons.ClientFolder, on);
                 if (Unsaved > 0) conf.Save();
             }
             catch (Exception ex) { warn = L.T("The racial rows could not be written:") + "\n" + ex.Message; }

@@ -153,12 +153,9 @@ namespace CoAInstaller
             if (races == null || string.IsNullOrEmpty(outDir)) return;
             var records = string.IsNullOrEmpty(serverDataFolder) || !Directory.Exists(serverDataFolder)
                 ? new Dictionary<uint, List<KeyValuePair<string, object>>>() : Records(serverDataFolder);
-            var wantedIds = new HashSet<uint>();
-            foreach (var race in races) wantedIds.UnionWith(ClientSpells(serverDataFolder, race.Name, race.CoaRace));
-            wantedIds.ExceptWith(records.Keys);
-            wantedIds.ExceptWith(coaSpellRows.Keys);
-            foreach (var race in races) foreach (var id in race.Rows.Keys) wantedIds.Remove(id);
-            var fromClient = wantedIds.Count > 0 ? ClientRows(client, wantedIds) : new Dictionary<uint, object[]>();
+            var allIds = new HashSet<uint>();
+            foreach (var race in races) allIds.UnionWith(WithHelpers(ClientSpells(serverDataFolder, race.Name, race.CoaRace)));
+            var clientRows = allIds.Count > 0 ? ClientRows(client, allIds) : new Dictionary<uint, object[]>();
             Directory.CreateDirectory(outDir);
             // Remove generated files of races that are no longer active. The folder is dedicated to
             // generated SQL; only files with the generated header are touched.
@@ -185,7 +182,7 @@ namespace CoAInstaller
                     string coa;
                     string insert = records.ContainsKey(spell) ? Insert("spell_dbc", records[spell])
                         : coaSpellRows.TryGetValue(spell, out coa) ? "INSERT INTO `spell_dbc` VALUES " + coa + ";"
-                        : race.Rows.TryGetValue(spell, out row) || fromClient.TryGetValue(spell, out row) ? InsertRow(row) : null;
+                        : race.Rows.TryGetValue(spell, out row) || clientRows.TryGetValue(spell, out row) ? InsertRow(row) : null;
                     if (insert == null) continue;
                     spells.Add(spell);
                     lines.Add("DELETE FROM `spell_dbc` WHERE `ID` = " + spell + ";");
@@ -217,6 +214,19 @@ namespace CoAInstaller
                     lines.Add("DELETE FROM `spell_script_names` WHERE `spell_id` = " + ported[1] + ";");
                     lines.Add("INSERT INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES (" + ported[1] + ",'" + ported[0] + "');");
                 }
+                // CoA's client shows a spell only when it has a row in this table; the package's
+                // client Spell.dbc carries the texts, and every CoA update brings its own.
+                foreach (uint spell in spells)
+                {
+                    object[] clientRow;
+                    if (!clientRows.TryGetValue(spell, out clientRow)) continue;
+                    string description = ClientText(clientRow, DescriptionField);
+                    if (description.Length == 0) description = ClientText(clientRow, NameField);
+                    string tooltip = ClientText(clientRow, ToolTipField);
+                    lines.Add("DELETE FROM `coa_client_spell_description` WHERE `ID` = " + spell + ";");
+                    lines.Add("INSERT INTO `coa_client_spell_description` (`ID`, `Description`, `ToolTip`) VALUES (" + spell + ", " +
+                        Literal(description) + ", " + (tooltip.Length > 0 ? Literal(tooltip) : "NULL") + ");");
+                }
                 File.WriteAllText(file, string.Join("\r\n", lines) + "\r\n", new UTF8Encoding(false));
             }
         }
@@ -231,6 +241,7 @@ namespace CoAInstaller
 
         // The columns of spell_dbc follow the fields of the client's Spell.dbc one to one (234 of them); these are floats,
         // these signed, the texts are named by RaceImport.SpellTextFields, every other one is unsigned.
+        const int NameField = 136, DescriptionField = 170, ToolTipField = 187;
         static readonly HashSet<int> FloatFields = new HashSet<int> { 47, 77, 78, 79, 101, 102, 103, 119, 120, 121, 216, 217, 218, 229, 230, 231 };
         static readonly HashSet<int> SignedFields = new HashSet<int> { 0, 13, 15, 41, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67,
             68, 69, 70, 74, 75, 76, 80, 81, 82, 110, 111, 112, 113, 114, 115, 224, 228 };
@@ -284,6 +295,12 @@ namespace CoAInstaller
             int end = (int)at;
             while (end < t.Strings.Length && t.Strings[end] != 0) end++;
             return Encoding.UTF8.GetString(t.Strings, (int)at, end - (int)at);
+        }
+
+        static string ClientText(object[] row, int field)
+        {
+            if (row == null || field < 0 || field >= row.Length) return "";
+            return Convert.ToString(row[field] ?? "").Trim();
         }
 
         /// <summary>A spell record as SQL writes it: it carries its own column names, whoever wrote the dump.</summary>

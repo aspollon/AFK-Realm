@@ -302,7 +302,14 @@ namespace CoAInstaller
             // SkillRaceClassInfo, ChrRaces, ...), so they are part of the CoA install, not an
             // optional extra. SQL files are copied for the matching server data setup.
             Console.WriteLine(L.T("Copying server DBCs ..."));
-            CopyFiles(Path.Combine(files, "dbc"), Path.Combine(inst.DataDir, "dbc"), "*.dbc", o.NoBackup, ref copied, ref skipped);
+            // The package's server Spell.dbc can lag behind its client: 1.9.8's client has
+            // 225,579 spell rows (including the 140xxxx racials), the package's file only
+            // 209,708. The server reads the same spell ids as the client, so the installed
+            // client's table is the right one and follows every CoA update.
+            CopyFiles(Path.Combine(files, "dbc"), Path.Combine(inst.DataDir, "dbc"), "*.dbc", o.NoBackup, ref copied, ref skipped, "Spell.dbc");
+            CopyClientSpellDbc(o.Client, Path.Combine(inst.DataDir, "dbc"), o.NoBackup, ref copied);
+            try { copied += ServerSpellDbc.Install(inst); }
+            catch (Exception ex) { Console.WriteLine(L.T("The complete server Spell.dbc could not be installed; the client's table stays:") + " " + ex.Message); }
             string clientDbc = Path.Combine(files, "dbc_clientset", "CreatureDisplayInfo.dbc");
             if (File.Exists(clientDbc))
             {
@@ -331,7 +338,7 @@ namespace CoAInstaller
             // do not compare it with the package's official size afterwards.
             VerifyTree(clientRoot, o.Client, nativeSupported ? "CoA64.exe" : null);
             if (Directory.Exists(addons)) VerifyTree(addons, Path.Combine(o.Client, "Interface", "AddOns"));
-            VerifyCopied(Path.Combine(files, "dbc"), Path.Combine(inst.DataDir, "dbc"), "*.dbc");
+            VerifyCopied(Path.Combine(files, "dbc"), Path.Combine(inst.DataDir, "dbc"), "*.dbc", "Spell.dbc");
             if (File.Exists(clientDbc)) VerifyFile(clientDbc, Path.Combine(inst.DataDir, "dbc_clientset", "CreatureDisplayInfo.dbc"));
             if (File.Exists(moduleConf)) VerifyFile(moduleConf, Path.Combine(inst.ConfigDir, "modules", "coa_custom_races.conf.dist"));
             if (Directory.Exists(sqlSource)) VerifyCopied(sqlSource, Path.Combine(inst.Root, "CoA-Custom", "sql"), "*.sql");
@@ -1007,7 +1014,7 @@ namespace CoAInstaller
             catch { return 0; }
         }
 
-        static void CopyFiles(string source, string target, string pattern, bool noBackup, ref int copied, ref int skipped)
+        static void CopyFiles(string source, string target, string pattern, bool noBackup, ref int copied, ref int skipped, params string[] skip)
         {
             if (!Directory.Exists(source)) return;
             Directory.CreateDirectory(target);
@@ -1015,7 +1022,8 @@ namespace CoAInstaller
             // suffix explicitly so CoA's upper-case client MPQs are copied there too.
             string suffix = pattern.StartsWith("*", StringComparison.Ordinal) ? pattern.Substring(1) : null;
             foreach (string file in Directory.GetFiles(source)
-                .Where(f => suffix == null || Path.GetFileName(f).EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
+                .Where(f => (suffix == null || Path.GetFileName(f).EndsWith(suffix, StringComparison.OrdinalIgnoreCase)) &&
+                    !skip.Any(s => string.Equals(Path.GetFileName(f), s, StringComparison.OrdinalIgnoreCase)))
                 .OrderBy(f => f))
             {
                 if (CopyFile(file, Path.Combine(target, Path.GetFileName(file)), noBackup)) copied++;
@@ -1038,12 +1046,13 @@ namespace CoAInstaller
         }
 
         /// <summary>Checks after a copy that every package file is present and complete.</summary>
-        static void VerifyCopied(string source, string target, string pattern)
+        static void VerifyCopied(string source, string target, string pattern, params string[] skip)
         {
             if (!Directory.Exists(source)) return;
             string suffix = pattern.StartsWith("*", StringComparison.Ordinal) ? pattern.Substring(1) : null;
             foreach (string file in Directory.GetFiles(source)
-                .Where(f => suffix == null || Path.GetFileName(f).EndsWith(suffix, StringComparison.OrdinalIgnoreCase)))
+                .Where(f => (suffix == null || Path.GetFileName(f).EndsWith(suffix, StringComparison.OrdinalIgnoreCase)) &&
+                    !skip.Any(s => string.Equals(Path.GetFileName(f), s, StringComparison.OrdinalIgnoreCase))))
                 VerifyFile(file, Path.Combine(target, Path.GetFileName(file)));
         }
 
@@ -1087,6 +1096,47 @@ namespace CoAInstaller
                 }
             }
             catch { return false; }
+        }
+
+        /// <summary>The 1.9.8 client's Spell.dbc is the server's spell table as well; the
+        /// package's server file can be older and then misses the races' 140xxxx spells.</summary>
+        static int CopyClientSpellDbc(string client, string targetDir, bool noBackup, ref int copied)
+        {
+            string temp = null;
+            try
+            {
+                string source;
+                byte[] bytes = ClientPatch.FromClient(client, "DBFilesClient\\Spell.dbc", out source);
+                if (bytes == null) return 0;
+                var table = DbcTable.Parse(bytes, "Spell.dbc");
+                if (table.Fields != RaceImport.SpellFields || table.Records.Count == 0) return 0;
+                string target = Path.Combine(targetDir, "Spell.dbc");
+                if (File.Exists(target))
+                {
+                    try
+                    {
+                        var existing = DbcTable.Parse(File.ReadAllBytes(target), "Spell.dbc");
+                        if (existing.Fields == RaceImport.SpellFields && existing.Records.Count >= table.Records.Count)
+                        {
+                            Console.WriteLine(L.T("Server Spell.dbc: the existing table is complete and is kept."));
+                            return 0;
+                        }
+                    }
+                    catch { }
+                }
+                temp = Path.Combine(Path.GetTempPath(), "afk-spell-" + Guid.NewGuid().ToString("N") + ".dbc");
+                File.WriteAllBytes(temp, bytes);
+                if (!CopyFile(temp, target, noBackup)) return 0;
+                copied++;
+                Console.WriteLine(L.T("Server Spell.dbc: the client's table (with the CoA races' spells) is used."));
+                return 1;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(L.T("The client's Spell.dbc could not be copied to the server; the package's table stays:") + " " + ex.Message);
+                return 0;
+            }
+            finally { try { if (temp != null) File.Delete(temp); } catch { } }
         }
 
         static bool CopyFile(string source, string target, bool noBackup)

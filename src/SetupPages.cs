@@ -1275,7 +1275,15 @@ namespace CoAInstaller
                         }
                     on.Add(wanted);
                 }
-                ServerRacials.Sync("", RacialsFolder, ClientAddons.ClientFolder, on);
+                string serverData = Raw("CustomRaces.ServerDataFolder", "");
+                ServerRacials.Sync(serverData, RacialsFolder, ClientAddons.ClientFolder, on);
+                foreach (var wanted in on)
+                {
+                    var spells = ServerRacials.ClientSpells(serverData, wanted.Name, wanted.CoaRace);
+                    if (spells.Length > 0) Set("CustomRaces." + wanted.Key + ".Racials", "\"" + string.Join(" ", spells) + "\"");
+                    else Unset("CustomRaces." + wanted.Key + ".Racials");
+                }
+                if (conf.Pending.Count + conf.Removed.Count > 0) conf.Save();
             }
             catch (Exception ex) { Ui.Error(this, L.T("The racial rows could not be written:") + "\n" + ex.Message); }
         }
@@ -1288,6 +1296,10 @@ namespace CoAInstaller
         int CoaRaceOf(ClientRace r)
         {
             var pack = PackOf(r);
+            string names = (pack != null ? pack.Name + " " + pack.File + " " + pack.Key : r.Name + " " + r.File + " " + r.Key);
+            string n = (names ?? "").ToLowerInvariant();
+            if (n.Contains("voidelf") || n.Contains("void elf")) return 59;
+            if (n.Contains("foresttroll") || n.Contains("forest troll")) return 24;
             if (pack == null)
                 return r.Virtual ? 0 : r.Source;
             int source = pack.SourceRace;
@@ -1296,7 +1308,6 @@ namespace CoAInstaller
             // carries rather than the row it was copied from.
             if (pack.Source.Equals("CoA Custom", StringComparison.OrdinalIgnoreCase))
             {
-                string n = (pack.Name + " " + pack.File + " " + pack.Key).ToLowerInvariant();
                 if (n.Contains("pandaren")) return 20;
                 if (n.Contains("dracthyr"))
                     return source == 54 || source == 58 ? source : (pack.Side == 0 ? 54 : 58);
