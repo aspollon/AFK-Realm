@@ -1,3 +1,11 @@
+# AFK Realm 1.2.45
+
+## Fixed in 1.2.45
+
+- **No non-playable leftovers in the race settings.** The old `Earthen` entry with `Id=0` and the name "Earthen Npc" was still in the list beside the package's playable `Earthen68` (Earthen Alliance) and `EarthenHorde`. Saving the race page now removes every entry with `Id=0`, together with its section, just as 1.2.44 removes the old `Copy=1` client copies.
+- **Only the CoA Custom package's races remain.** The verified list has no `Copy=1`, no `Import=1`, and no `Id=0` entries. `ForestTroll40` (Forest Troll Alliance), `Ogre85` (Two-Headed Ogre) and `ThinHuman96` (The Twins) are package races from `ChrRaces.dbc`; they are not in the separate `coaCustom.racials` table because they use the Forest Troll racials or the CoA Custom subclass.
+- **The 1.2.44 race cleanup and the 1.2.43 module-update engine fix are included.**
+
 # AFK Realm 1.2.44
 
 ## Fixed in 1.2.44

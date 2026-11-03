@@ -574,6 +574,15 @@ namespace CoAInstaller.Web
                 foreach (var key in copies) DropRace(key);
                 chosen = chosen.Except(copies, StringComparer.OrdinalIgnoreCase).ToList();
             }
+            // An entry with Id=0 is not playable on this realm (for example the old
+            // base-client "Earthen Npc"). The module never switches it on, so keep it
+            // out of the settings instead of carrying it beside the package's Earthen.
+            var idle = chosen.Where(k => ConfigOption.Unquote(Raw("CustomRaces." + k + ".Id", "")) == "0").ToList();
+            if (idle.Count > 0)
+            {
+                foreach (var key in idle) DropRace(key);
+                chosen = chosen.Except(idle, StringComparer.OrdinalIgnoreCase).ToList();
+            }
             var valid = chosen.Where(k => races.Any(r => r.Key.Equals(k, StringComparison.OrdinalIgnoreCase))).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
             if (valid.Count != Chosen().Count) Set("CustomRaces.Races", string.Join(" ", valid));
             // Older AFK versions wrote this key beside Voidelf. The module ignores it, but it

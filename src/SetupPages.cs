@@ -1267,6 +1267,13 @@ namespace CoAInstaller
                     chosen = chosen.Except(copies, StringComparer.OrdinalIgnoreCase).ToList();
                     Set("CustomRaces.Races", string.Join(" ", chosen));
                 }
+                var idle = chosen.Where(k => ConfigOption.Unquote(Raw("CustomRaces." + k + ".Id", "")) == "0").ToList();
+                if (idle.Count > 0)
+                {
+                    foreach (var key in idle) DropRace(key);
+                    chosen = chosen.Except(idle, StringComparer.OrdinalIgnoreCase).ToList();
+                    Set("CustomRaces.Races", string.Join(" ", chosen));
+                }
                 var on = new List<ServerRacials.Wanted>();
                 foreach (var key in chosen)
                 {
