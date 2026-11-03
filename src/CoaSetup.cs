@@ -713,6 +713,27 @@ namespace CoAInstaller
             return list;
         }
 
+        /// <summary>
+        /// The server modules a CoA Custom package needs on an AFK Realm server. CoA Custom ships a worldserver built from
+        /// its own core, which AFK Realm does not use: it builds the current Conquest of Azeroth core with modules instead,
+        /// and the code parts of a package come as those modules. mod-custom-races always (the races); mod-subclass when
+        /// the package brings Stefan's subclassing (1.9.8 and newer: a "subclass" folder or Apply-Subclass.bat), for the
+        /// Two-Headed Ogre and the Thin Twins.
+        /// </summary>
+        public static List<string> ModulesForPackage(Install inst)
+        {
+            var modules = new List<string> { "mod-custom-races" };
+            try
+            {
+                string picked = Settings.CoaPackage ?? "";
+                string root = picked.Length > 0 && Directory.Exists(picked) ? PackageRoot(picked) : null;
+                if (root != null && (Directory.Exists(Path.Combine(root, "subclass")) || File.Exists(Path.Combine(root, "Apply-Subclass.bat"))))
+                    modules.Add("mod-subclass");
+            }
+            catch { }
+            return modules;
+        }
+
         static string LeftOffFile(Install inst) { return Path.Combine(inst.Root, "Dependencies", "races-left-off.txt"); }
 
         static HashSet<int> LeftOff(Install inst)

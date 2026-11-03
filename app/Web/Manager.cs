@@ -414,8 +414,10 @@ namespace CoAInstaller.Web
             var missing = ModuleCatalog.MissingRequirements(inst);
             bool coa = File.Exists(Path.Combine(inst.Root, "Dependencies", "coa-custom-installed.txt")) ||
                 File.Exists(Path.Combine(inst.ConfigDir, "modules", "coa_custom_races.conf.dist"));
-            if (coa && Directory.Exists(ModuleCatalog.ModulesDir(inst)) && !Directory.Exists(Path.Combine(ModuleCatalog.ModulesDir(inst), "mod-custom-races")))
-                missing.Add(new KeyValuePair<string, string>("CoA Custom", "mod-custom-races"));
+            if (coa && Directory.Exists(ModuleCatalog.ModulesDir(inst)))
+                foreach (string module in CoaSetup.ModulesForPackage(inst))
+                    if (!Directory.Exists(Path.Combine(ModuleCatalog.ModulesDir(inst), module)))
+                        missing.Add(new KeyValuePair<string, string>("CoA Custom", module));
             return missing;
         }
 

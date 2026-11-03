@@ -2122,6 +2122,7 @@
     "The race settings could not be checked:": "无法检查种族设置：",
     "Copy the CoA client files, server DBCs/SQL and settings, install the module add-ons and build the AFK client patch? AFK Realm closes the game if it runs, stops the server, keeps the database running for the race settings and starts the server again afterwards.": "复制 CoA 客户端文件、服务器 DBC/SQL 和设置，安装模块插件并构建 AFK 客户端补丁？如果游戏正在运行，AFK Realm 会将其关闭，停止服务器，保持数据库运行以处理种族设置，之后再次启动服务器。",
     "The CoA Custom races (Dracthyr, Worgen, Vulpera, Sethrak, High elves and more) need the server module mod-custom-races, which brings mod-classic-classes along. Install it first; the server is rebuilt. Then this card installs CoA Custom.": "CoA Custom 的种族（Dracthyr、狼人、狐人、Sethrak、高等精灵等）需要服务器模块 mod-custom-races，它会一并带来 mod-classic-classes。请先安装它；服务器会重新构建。之后此卡片将安装 CoA Custom。",
-    "Install mod-custom-races …": "安装 mod-custom-races …"
+    "Install mod-custom-races …": "安装 mod-custom-races …",
+    "For CoA Custom 1.9.8 and newer: the second class of the Two-Headed Ogre and the Thin Twins (Stefan's subclassing). Needs mod-custom-races.": "适用于 CoA Custom 1.9.8 及更新版本：双头食人魔和 Thin Twins 的第二职业（Stefan 的副职业系统）。需要 mod-custom-races。"
   }
 }

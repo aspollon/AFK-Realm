@@ -2122,6 +2122,7 @@
     "The race settings could not be checked:": "Не удалось проверить настройки рас:",
     "Copy the CoA client files, server DBCs/SQL and settings, install the module add-ons and build the AFK client patch? AFK Realm closes the game if it runs, stops the server, keeps the database running for the race settings and starts the server again afterwards.": "Скопировать файлы клиента CoA, DBC/SQL и настройки сервера, установить аддоны модулей и собрать клиентский патч AFK? AFK Realm закроет игру, если она запущена, остановит сервер, оставит базу данных работать для настроек рас и затем снова запустит сервер.",
     "The CoA Custom races (Dracthyr, Worgen, Vulpera, Sethrak, High elves and more) need the server module mod-custom-races, which brings mod-classic-classes along. Install it first; the server is rebuilt. Then this card installs CoA Custom.": "Расам CoA Custom (Dracthyr, Worgen, Vulpera, Sethrak, высшие эльфы и другие) нужен серверный модуль mod-custom-races, который устанавливает и mod-classic-classes. Сначала установите его; сервер будет пересобран. Затем эта карточка установит CoA Custom.",
-    "Install mod-custom-races …": "Установить mod-custom-races …"
+    "Install mod-custom-races …": "Установить mod-custom-races …",
+    "For CoA Custom 1.9.8 and newer: the second class of the Two-Headed Ogre and the Thin Twins (Stefan's subclassing). Needs mod-custom-races.": "Для CoA Custom 1.9.8 и новее: второй класс двухголового огра и Thin Twins (сабклассы от Stefan). Требует mod-custom-races."
   }
 }

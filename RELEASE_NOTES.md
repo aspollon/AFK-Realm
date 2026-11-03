@@ -1,4 +1,8 @@
-# AFK Realm 1.2.36
+# AFK Realm 1.2.37
+
+## New in 1.2.37
+
+- **CoA Custom 1.9.8: the Two-Headed Ogre and the Thin Twins get their second class.** Stefan's subclassing comes as the new module **mod-subclass**, built into the current Conquest of Azeroth core (CoA Custom's own server, which lags behind, is still not needed). When the CoA Custom package brings subclassing, AFK Realm shows a notice to install mod-subclass; one click installs it.
 
 ## Fixed in 1.2.36
 
