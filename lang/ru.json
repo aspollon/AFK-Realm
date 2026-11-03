@@ -2137,6 +2137,9 @@
     "Update core only": "Обновить только ядро",
     "Update only the CoA core and Playerbots and build the server again?\n\nYour modules stay at the versions your server has now. The server is backed up first; a running server is stopped cleanly.": "Обновить только ядро CoA и Playerbots и пересобрать сервер?\n\nВаши модули останутся в текущих версиях. Сначала создаётся резервная копия; работающий сервер корректно останавливается.",
     "\"Only the core\" brings the CoA core and Playerbots up to date and keeps your modules as they are.": "«Только ядро» обновляет ядро CoA и Playerbots и оставляет ваши модули как есть.",
-    "Only the core": "Только ядро"
+    "Only the core": "Только ядро",
+    "A new core can change code your modules rely on; a module that does not fit it any more can make the build fail.": "Новое ядро может изменить код, на который опираются ваши модули; модуль, который больше не подходит, может сорвать сборку.",
+    "A newer module can need a newer core than yours; then the build can fail.": "Более новому модулю может понадобиться более новое ядро, чем ваше; тогда сборка может не пройти.",
+    "If the build fails, your server stays as it is (the new programs are only used after a successful build), and a full update usually fixes it.": "Если сборка не пройдёт, сервер останется как есть (новые программы используются только после успешной сборки), а полное обновление обычно всё исправляет."
   }
 }

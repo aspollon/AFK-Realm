@@ -2137,6 +2137,9 @@
     "Update core only": "仅更新核心",
     "Update only the CoA core and Playerbots and build the server again?\n\nYour modules stay at the versions your server has now. The server is backed up first; a running server is stopped cleanly.": "只更新 CoA 核心和 Playerbots 并重新构建服务器？\n\n你的模块保持当前版本。会先备份服务器；正在运行的服务器会被正常停止。",
     "\"Only the core\" brings the CoA core and Playerbots up to date and keeps your modules as they are.": "“仅核心”会更新 CoA 核心和 Playerbots，并保持你的模块不变。",
-    "Only the core": "仅核心"
+    "Only the core": "仅核心",
+    "A new core can change code your modules rely on; a module that does not fit it any more can make the build fail.": "新核心可能会修改你的模块所依赖的代码；不再适配的模块可能导致构建失败。",
+    "A newer module can need a newer core than yours; then the build can fail.": "较新的模块可能需要比你更新的核心；这时构建可能失败。",
+    "If the build fails, your server stays as it is (the new programs are only used after a successful build), and a full update usually fixes it.": "如果构建失败，服务器保持原样（新程序只有在构建成功后才会使用），通常执行一次完整更新即可解决。"
   }
 }

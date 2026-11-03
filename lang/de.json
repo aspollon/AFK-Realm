@@ -2137,6 +2137,9 @@
     "Update core only": "Nur Core aktualisieren",
     "Update only the CoA core and Playerbots and build the server again?\n\nYour modules stay at the versions your server has now. The server is backed up first; a running server is stopped cleanly.": "Nur CoA-Core und Playerbots aktualisieren und den Server neu bauen?\n\nDeine Module bleiben auf den Versionen, die dein Server jetzt hat. Der Server wird vorher gesichert; ein laufender Server wird sauber gestoppt.",
     "\"Only the core\" brings the CoA core and Playerbots up to date and keeps your modules as they are.": "„Nur den Core“ bringt CoA-Core und Playerbots auf den neuesten Stand und lässt deine Module, wie sie sind.",
-    "Only the core": "Nur den Core"
+    "Only the core": "Nur den Core",
+    "A new core can change code your modules rely on; a module that does not fit it any more can make the build fail.": "Ein neuer Core kann Code ändern, auf den deine Module bauen; ein Modul, das nicht mehr passt, kann den Build scheitern lassen.",
+    "A newer module can need a newer core than yours; then the build can fail.": "Ein neueres Modul kann einen neueren Core brauchen als deinen; dann kann der Build scheitern.",
+    "If the build fails, your server stays as it is (the new programs are only used after a successful build), and a full update usually fixes it.": "Scheitert der Build, bleibt dein Server, wie er ist (die neuen Programme werden erst nach einem erfolgreichen Build verwendet), und ein vollständiges Update behebt es meistens."
   }
 }

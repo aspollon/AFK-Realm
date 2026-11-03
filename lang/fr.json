@@ -2137,6 +2137,9 @@
     "Update core only": "Mettre à jour le cœur seulement",
     "Update only the CoA core and Playerbots and build the server again?\n\nYour modules stay at the versions your server has now. The server is backed up first; a running server is stopped cleanly.": "Mettre à jour seulement le cœur CoA et Playerbots et recompiler le serveur ?\n\nTes modules restent aux versions actuelles. Le serveur est sauvegardé avant ; un serveur en marche est arrêté proprement.",
     "\"Only the core\" brings the CoA core and Playerbots up to date and keeps your modules as they are.": "« Seulement le cœur » met le cœur CoA et Playerbots à jour et laisse tes modules tels quels.",
-    "Only the core": "Seulement le cœur"
+    "Only the core": "Seulement le cœur",
+    "A new core can change code your modules rely on; a module that does not fit it any more can make the build fail.": "Un nouveau cœur peut changer du code dont tes modules dépendent ; un module qui ne colle plus peut faire échouer la compilation.",
+    "A newer module can need a newer core than yours; then the build can fail.": "Un module plus récent peut avoir besoin d'un cœur plus récent que le tien ; la compilation peut alors échouer.",
+    "If the build fails, your server stays as it is (the new programs are only used after a successful build), and a full update usually fixes it.": "Si la compilation échoue, ton serveur reste tel quel (les nouveaux programmes ne servent qu'après une compilation réussie), et une mise à jour complète règle généralement le problème."
   }
 }

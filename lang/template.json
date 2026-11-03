@@ -2118,6 +2118,9 @@
     "Update core only": "",
     "Update only the CoA core and Playerbots and build the server again?\n\nYour modules stay at the versions your server has now. The server is backed up first; a running server is stopped cleanly.": "",
     "\"Only the core\" brings the CoA core and Playerbots up to date and keeps your modules as they are.": "",
-    "Only the core": ""
+    "Only the core": "",
+    "A new core can change code your modules rely on; a module that does not fit it any more can make the build fail.": "",
+    "A newer module can need a newer core than yours; then the build can fail.": "",
+    "If the build fails, your server stays as it is (the new programs are only used after a successful build), and a full update usually fixes it.": ""
   }
 }
