@@ -32,7 +32,7 @@ namespace CoAInstaller
         };
         static readonly string[] DownloadUrls =
         {
-            "https://raw.githubusercontent.com/" + Product.GitHubRepo + "/main/assets/coa64-native/CoA64.zip",
+            "https://raw.githubusercontent.com/" + Product.GitHubRepo + "/758dfb7/assets/coa64-native/CoA64.zip",
             "https://github.com/" + Product.GitHubRepo + "/releases/latest/download/CoA64.zip"
         };
 

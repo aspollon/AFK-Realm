@@ -25,7 +25,7 @@ namespace CoAInstaller
         const string DbcSha256 = "8F0A054309D6909D253DA4587F9CF2468AB340A49B947A79F513498F9ADED87C";
         static readonly string[] DownloadUrls =
         {
-            "https://raw.githubusercontent.com/" + Product.GitHubRepo + "/main/assets/coa-spell-dbc/Spell.dbc.zip",
+            "https://raw.githubusercontent.com/" + Product.GitHubRepo + "/758dfb7/assets/coa-spell-dbc/Spell.dbc.zip",
             "https://github.com/" + Product.GitHubRepo + "/releases/latest/download/Spell.dbc.zip"
         };
 
