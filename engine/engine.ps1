@@ -42,6 +42,8 @@ param(
     # Update only: the modules are brought up to date and the server is built again, the CoA core and Playerbots stay
     # at the versions the server has (a module fix without the risk of a new core).
     [switch]$ModulesOnly,
+    # Update only: the CoA core and Playerbots move to their newest versions, the modules stay at theirs.
+    [switch]$CoreOnly,
     [switch]$NonInteractive
 )
 
@@ -1154,6 +1156,7 @@ function Find-Updates([string]$Git) {
         $entry.Item.Revision = $latest
     }
     $modules = Join-Path $Paths.Source 'modules'
+    if ($CoreOnly) { Write-Log 'Core only: the modules stay at the versions the server has.' Cyan; return ,$changes }
     foreach ($dir in @(Get-ChildItem $modules -Directory -ErrorAction SilentlyContinue)) {
         if ($dir.FullName -eq $Paths.Playerbots -or -not (Test-Path (Join-Path $dir.FullName '.git'))) { continue }
         $upstream = Get-ProgramOutput $Git @('-C', $dir.FullName, 'rev-parse', '--abbrev-ref', '@{u}')

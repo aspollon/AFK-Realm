@@ -2114,6 +2114,10 @@
     "Server update": "",
     "\"Only the modules\" brings your modules up to date and keeps the CoA core and Playerbots as they are; the new core can follow later.": "",
     "Only the modules": "",
-    "Update everything": ""
+    "Update everything": "",
+    "Update core only": "",
+    "Update only the CoA core and Playerbots and build the server again?\n\nYour modules stay at the versions your server has now. The server is backed up first; a running server is stopped cleanly.": "",
+    "\"Only the core\" brings the CoA core and Playerbots up to date and keeps your modules as they are.": "",
+    "Only the core": ""
   }
 }

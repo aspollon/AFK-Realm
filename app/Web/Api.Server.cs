@@ -143,6 +143,8 @@ namespace CoAInstaller.Web
         {
             // only the modules brought up to date; the CoA core and Playerbots stay where they are
             if (mode == "Update" && a.Bool("modulesOnly")) return "-ModulesOnly";
+            // only the CoA core and Playerbots brought up to date; the modules stay where they are
+            if (mode == "Update" && a.Bool("coreOnly")) return "-CoreOnly";
             if (mode == "Restore")
             {
                 string name = a.Str("snapshot") ?? "";

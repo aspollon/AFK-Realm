@@ -2133,6 +2133,10 @@
     "Server update": "Обновление сервера",
     "\"Only the modules\" brings your modules up to date and keeps the CoA core and Playerbots as they are; the new core can follow later.": "«Только модули» обновляет ваши модули и оставляет ядро CoA и Playerbots как есть; новое ядро можно установить позже.",
     "Only the modules": "Только модули",
-    "Update everything": "Обновить всё"
+    "Update everything": "Обновить всё",
+    "Update core only": "Обновить только ядро",
+    "Update only the CoA core and Playerbots and build the server again?\n\nYour modules stay at the versions your server has now. The server is backed up first; a running server is stopped cleanly.": "Обновить только ядро CoA и Playerbots и пересобрать сервер?\n\nВаши модули останутся в текущих версиях. Сначала создаётся резервная копия; работающий сервер корректно останавливается.",
+    "\"Only the core\" brings the CoA core and Playerbots up to date and keeps your modules as they are.": "«Только ядро» обновляет ядро CoA и Playerbots и оставляет ваши модули как есть.",
+    "Only the core": "Только ядро"
   }
 }

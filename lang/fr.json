@@ -2133,6 +2133,10 @@
     "Server update": "Mise à jour du serveur",
     "\"Only the modules\" brings your modules up to date and keeps the CoA core and Playerbots as they are; the new core can follow later.": "« Seulement les modules » met tes modules à jour et laisse le cœur CoA et Playerbots tels quels ; le nouveau cœur peut suivre plus tard.",
     "Only the modules": "Seulement les modules",
-    "Update everything": "Tout mettre à jour"
+    "Update everything": "Tout mettre à jour",
+    "Update core only": "Mettre à jour le cœur seulement",
+    "Update only the CoA core and Playerbots and build the server again?\n\nYour modules stay at the versions your server has now. The server is backed up first; a running server is stopped cleanly.": "Mettre à jour seulement le cœur CoA et Playerbots et recompiler le serveur ?\n\nTes modules restent aux versions actuelles. Le serveur est sauvegardé avant ; un serveur en marche est arrêté proprement.",
+    "\"Only the core\" brings the CoA core and Playerbots up to date and keeps your modules as they are.": "« Seulement le cœur » met le cœur CoA et Playerbots à jour et laisse tes modules tels quels.",
+    "Only the core": "Seulement le cœur"
   }
 }

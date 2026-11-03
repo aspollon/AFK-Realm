@@ -266,6 +266,7 @@ export function manager() {
       card(T('Updates'), T('Checks the CoA core, Playerbots and your modules for new versions; the server is backed up first and rebuilt only when something changed.'), 'maintenance',
         h('div.row', {},
           primary(T('Check for updates and install'), () => engine('Update', T('Check for updates?\n\nIf there are new versions of CoA or Playerbots, the current server is backed up first and then recompiled, which can take a while. A running server is stopped cleanly first.'))),
+          secondary(T('Update core only'), () => engine('Update', T('Update only the CoA core and Playerbots and build the server again?\n\nYour modules stay at the versions your server has now. The server is backed up first; a running server is stopped cleanly.'), { coreOnly: true })),
           secondary(T('Update modules only'), () => engine('Update', T('Update only the modules and build the server again?\n\nThe CoA core and Playerbots stay at the versions your server has now. Use this for a module fix when you do not want a new core yet. The server is backed up first; a running server is stopped cleanly.'), { modulesOnly: true })))),
       card(T('Repair and reset'), T('"Repair setup" sets up the database and configuration again without recompiling; characters and accounts are kept. "Reset random bots" deletes every random bot and lets the server create new ones.'), 'maintenance',
         h('div.row', {},
@@ -328,9 +329,12 @@ export function manager() {
     // a new core and new modules: everything, or only the modules for now
     if (b.modulesNew && b.baseNew) {
       const v = await dialog({ title: T('Server update'), icon: 'info', wide: true, body: h('div.pre', {}, q + '\n\n' +
-          T('"Only the modules" brings your modules up to date and keeps the CoA core and Playerbots as they are; the new core can follow later.')),
-        buttons: [{ text: T('Cancel'), value: null }, { text: T('Only the modules'), value: 'modules' }, { text: T('Update everything'), kind: 'primary', value: 'all', default: true }] });
+          T('"Only the modules" brings your modules up to date and keeps the CoA core and Playerbots as they are; the new core can follow later.') + '\n' +
+          T('"Only the core" brings the CoA core and Playerbots up to date and keeps your modules as they are.')),
+        buttons: [{ text: T('Cancel'), value: null }, { text: T('Only the modules'), value: 'modules' }, { text: T('Only the core'), value: 'core' },
+          { text: T('Update everything'), kind: 'primary', value: 'all', default: true }] });
       if (v === 'modules') return engine('Update', null, { modulesOnly: true });
+      if (v === 'core') return engine('Update', null, { coreOnly: true });
       if (v === 'all') return engine('Update', null);
       return;
     }

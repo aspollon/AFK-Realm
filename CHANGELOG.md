@@ -1,12 +1,8 @@
 # Changelog
 
-## 1.2.37
-
-- **mod-subclass in the module list** (aspollon/mod-subclass): Stefan's mod-subclass from the CoA Custom 2.0 handover, with its core hooks as `patches/core-subclass.patch` against the current CoA core; it requires mod-custom-races.
-- **The modules a CoA Custom package needs** (`CoaSetup.ModulesForPackage`): mod-custom-races always, mod-subclass when the package brings subclassing (a `subclass` folder or `Apply-Subclass.bat`, CoA Custom 1.9.8 and newer). The missing-module notice and the CoA Custom setup offer them.
-
 ## 1.2.40
 
+- **Update core only** (engine `-CoreOnly`, `/api/engine` `coreOnly`): the core and Playerbots move to their branch heads, the module folders are not fast-forwarded.
 - **Update notice:** `UpdateCheck.Result.BaseNew` / `ModulesNew` say whether the core/Playerbots or modules have news; the server banner updates only the modules when nothing else is new, and asks "Update everything" or "Only the modules" when both are.
 - **Update modules only** (engine `-Mode Update -ModulesOnly`, `/api/engine` `modulesOnly`): the module folders are fast-forwarded as in a normal update, the core and Playerbots stay at the revisions in `revisions.txt` (or their current checkout), and the server is rebuilt with the module patches applied again. Nothing new in a module: "up to date", nothing built.
 
@@ -15,6 +11,11 @@
 - **mod-subclass is a hidden part** (`ModuleEntry.Hidden`): not listed in the module manager; the CoA Custom setup installs it when the package needs it, and it is taken out together with mod-custom-races.
 - **The CoA Custom install installs the modules its package needs first** (`/api/coa/state` missingModules from `CoaSetup.ModulesForPackage`): one question, the module build with progress, then the CoA Custom install.
 - **Required patches** (`"required": true` in a module's `afk-realm.json`): when such a patch does not fit the current target, the module is left out of that build (`-DMODULE_<NAME>=disabled`) instead of failing the whole server build, with a notice; it is built in again as soon as the patch fits. mod-subclass marks its core patch so.
+
+## 1.2.37
+
+- **mod-subclass in the module list** (aspollon/mod-subclass): Stefan's mod-subclass from the CoA Custom 2.0 handover, with its core hooks as `patches/core-subclass.patch` against the current CoA core; it requires mod-custom-races.
+- **The modules a CoA Custom package needs** (`CoaSetup.ModulesForPackage`): mod-custom-races always, mod-subclass when the package brings subclassing (a `subclass` folder or `Apply-Subclass.bat`, CoA Custom 1.9.8 and newer). The missing-module notice and the CoA Custom setup offer them.
 
 ## 1.2.36
 

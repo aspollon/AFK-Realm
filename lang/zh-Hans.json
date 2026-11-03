@@ -2133,6 +2133,10 @@
     "Server update": "服务器更新",
     "\"Only the modules\" brings your modules up to date and keeps the CoA core and Playerbots as they are; the new core can follow later.": "“仅模块”会更新你的模块，并保持 CoA 核心和 Playerbots 不变；新核心可以稍后再更新。",
     "Only the modules": "仅模块",
-    "Update everything": "全部更新"
+    "Update everything": "全部更新",
+    "Update core only": "仅更新核心",
+    "Update only the CoA core and Playerbots and build the server again?\n\nYour modules stay at the versions your server has now. The server is backed up first; a running server is stopped cleanly.": "只更新 CoA 核心和 Playerbots 并重新构建服务器？\n\n你的模块保持当前版本。会先备份服务器；正在运行的服务器会被正常停止。",
+    "\"Only the core\" brings the CoA core and Playerbots up to date and keeps your modules as they are.": "“仅核心”会更新 CoA 核心和 Playerbots，并保持你的模块不变。",
+    "Only the core": "仅核心"
   }
 }
