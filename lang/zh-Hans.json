@@ -2140,6 +2140,8 @@
     "Only the core": "仅核心",
     "A new core can change code your modules rely on; a module that does not fit it any more can make the build fail.": "新核心可能会修改你的模块所依赖的代码；不再适配的模块可能导致构建失败。",
     "A newer module can need a newer core than yours; then the build can fail.": "较新的模块可能需要比你更新的核心；这时构建可能失败。",
-    "If the build fails, your server stays as it is (the new programs are only used after a successful build), and a full update usually fixes it.": "如果构建失败，服务器保持原样（新程序只有在构建成功后才会使用），通常执行一次完整更新即可解决。"
+    "If the build fails, your server stays as it is (the new programs are only used after a successful build), and a full update usually fixes it.": "如果构建失败，服务器保持原样（新程序只有在构建成功后才会使用），通常执行一次完整更新即可解决。",
+    "Bleeding edge: an update builds the newest code of CoA, Playerbots and every module straight from their sources. They change independently of each other, so after an update something may work differently, a module may not fit and be left out, or the build may fail.": "前沿版本：更新会直接从源码构建 CoA、Playerbots 和每个模块的最新代码。它们彼此独立地变化，因此更新后某些功能可能表现不同，某个模块可能不再适配而被跳过，或者构建可能失败。",
+    "{0} backs the server up first: if something no longer works, Maintenance > Backups brings the previous state back.": "{0} 会先备份服务器：如果之后有功能失效，维护 › 备份可以恢复到之前的状态。"
   }
 }

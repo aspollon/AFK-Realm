@@ -5,6 +5,7 @@
 - **Update modules only:** a new button under Maintenance > Updates brings only your modules up to date and rebuilds the server; the CoA core and Playerbots stay at the versions you have. For a module fix without a new core.
 - **Update core only:** the other way round - the CoA core and Playerbots get their newest versions, your modules stay as they are.
 - Both say plainly that a new core and older modules (or the other way round) may not fit, so the build can fail; your server then stays as it is.
+- **Every update now says what it is before it starts:** bleeding edge - the newest code of CoA, Playerbots and every module, which change independently. Something may work differently afterwards, a module may be left out, or the build may fail; the backup made first brings the previous state back.
 - **The update notice knows it too:** when only modules have something new, a click updates just them. When the CoA core and modules both have news, you choose "Update everything", "Only the core" or "Only the modules".
 
 ## New in 1.2.38
