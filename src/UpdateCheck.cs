@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -58,6 +59,11 @@ namespace CoAInstaller
                         if (name.Equals("mod-playerbots", StringComparison.OrdinalIgnoreCase)) continue;
                         string branch, revision, repo = GitHubRepoOf(folder);
                         if (repo == null || !ReadHead(folder, out branch, out revision)) continue;
+                        // Fetch the module first: a local change that is already in the
+                        // module's repository must not hide the update. ModuleUpdateApplies
+                        // compares the working tree with the recorded upstream, and the
+                        // fetch moves that upstream to its current commit.
+                        try { RunGit(git, 60000, "-C", folder, "fetch", "--quiet", "origin", branch); } catch { }
                         if (!ModuleUpdateApplies(git, folder)) continue;
                         int before = r.Server.Count;
                         Ask(r, git, name, repo, branch, revision);
@@ -328,8 +334,9 @@ namespace CoAInstaller
 
         /// <summary>Whether Find-Updates can move this module to its upstream. It skips a module whose working tree has
         /// changes, unless those changes are the upstream commit's contents already (then only the recorded HEAD is
-        /// behind, and moving it loses nothing). Asking this before announcing an update keeps the banner from offering
-        /// something the update would always skip.</summary>
+        /// behind, and moving it loses nothing). Comparing only the locally changed files is important: the update
+        /// adds files the old checkout does not have yet, and those additions must not look like a conflict. Asking
+        /// this before announcing an update keeps the banner from offering something the update would always skip.</summary>
         static bool ModuleUpdateApplies(string git, string folder)
         {
             string changes = RunGit(git, "-C", folder, "status", "--porcelain", "--untracked-files=no");
@@ -337,7 +344,13 @@ namespace CoAInstaller
             if (changes.Trim().Length == 0) return true;
             string ahead = RunGit(git, "-C", folder, "rev-list", "--count", "@{u}..HEAD");
             if (ahead == null || ahead.Trim() != "0") return false;
-            return RunGit(git, "-C", folder, "diff", "--quiet", "@{u}", "--") != null;
+            string changed = RunGit(git, "-C", folder, "diff", "--name-only", "HEAD");
+            if (changed == null) return false;
+            var paths = changed.Split('\n').Select(p => p.Trim().TrimEnd('\r')).Where(p => p.Length > 0).ToList();
+            if (paths.Count == 0) return true;
+            var args = new List<string> { "-C", folder, "diff", "--quiet", "@{u}", "--" };
+            args.AddRange(paths);
+            return RunGit(git, args.ToArray()) != null;
         }
 
         /// <summary>"owner/repo" of the module's origin on GitHub, or null.</summary>

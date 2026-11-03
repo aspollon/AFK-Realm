@@ -1,3 +1,14 @@
+# AFK Realm 1.2.42
+
+## New in 1.2.42
+
+- **CoA 1.9.8: the complete racial data comes with the install.** The CoA package's server `Spell.dbc` has 209,708 rows and misses the 140xxxx racials; AFK Realm now takes the client table and then the complete 225,579-row server table from the AFK Realm assets. A complete server table that is already installed is left untouched (`14001006` and `110600` are verified).
+- **CoA 1.9.8: the patched client is installed.** The CoA installer ships the 1.9.8 `CoA64.exe` with the two model-sequence bounds checks (the `CM2Model::FindKey` underflow and the retail centaur sequence whose count exceeded its keys). The source fix is in `mod-custom-races/client-patches/coa64-sequence-bounds.patch` for a future client build.
+- **Racial descriptions are written automatically.** For every active race, the installer writes the race's `coa_client_spell_description` rows from the client `Spell.dbc`; no more empty or missing racial tooltips. `Voidelf` uses CoA race 59 and `ForestTroll40` uses the Forest Troll racials (24); the old `VoidElf` key is removed when the race settings are saved.
+- **No duplicated mounts or racials.** `mod-custom-races` now applies a small core patch that remembers the spells actually sent in the login stream and re-learns only the race's `custom_races_racials` afterwards. The spell stream no longer produces duplicate learned-spell messages.
+- **Custom-race module updates are announced again.** The update check now fetches the module first. A local change that is already in the module's repository (for example the racial cleanup) no longer hides the update; a module whose local changes are *not* upstream is still skipped as before.
+- **CoA Custom install with one click:** the installer applies these steps itself, including the existing server table check and the patched client, and leaves existing complete data alone.
+
 # AFK Realm 1.2.41
 
 ## New in 1.2.41
