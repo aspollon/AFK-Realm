@@ -31,7 +31,7 @@ namespace CoAInstaller.Web
                 stars = m.InCatalog ? m.Stars : 0, pushed = m.Pushed > DateTime.MinValue ? m.Pushed.ToLocalTime().ToString("yyyy-MM-dd") : "",
                 old = !(m.Pushed == DateTime.MinValue || m.Pushed > DateTime.UtcNow.AddYears(-2)),
                 own = m.Own, state = m.State.ToString(), status = m.Status, installedOn = m.InstalledOn, installed = m.Installed, playerbots = m.IsPlayerbots,
-                createdTables = m.CreatedTables, manualTables = m.ManualTables, inCatalog = m.InCatalog
+                createdTables = m.CreatedTables, manualTables = m.ManualTables, inCatalog = m.InCatalog, hidden = m.Hidden
             };
         }
 
@@ -122,6 +122,17 @@ namespace CoAInstaller.Web
                 var add = a.List("add").Select(FindModule).Where(m => m != null && m.State == ModuleState.Available).ToList();
                 var remove = a.List("remove").Select(FindModule).Where(m => m != null && m.Installed).ToList();
                 if (add.Count + remove.Count == 0) throw new UserError(L.T("No module was chosen."));
+                // a hidden part (mod-subclass) goes with the module it needs: it is not in the list to be taken out by hand
+                if (remove.Count > 0 && Inst != null)
+                {
+                    List<ModuleEntry> known;
+                    lock (modulesLock) known = modules.ToList();
+                    foreach (var dep in InstalledRequirements(Inst).Where(d => remove.Any(r => r.Name.Equals(d.Value, StringComparison.OrdinalIgnoreCase))).ToList())
+                    {
+                        var part = known.FirstOrDefault(x => x.Hidden && x.Installed && x.Name.Equals(dep.Key, StringComparison.OrdinalIgnoreCase));
+                        if (part != null && !remove.Contains(part)) remove.Add(part);
+                    }
+                }
                 var found = new Dictionary<ModuleEntry, ModuleAnalysis>();
                 var failed = new Dictionary<ModuleEntry, string>();
                 foreach (var m in add) { try { found[m] = ModuleCatalog.Analyze(m); } catch (Exception ex) { failed[m] = ex.Message; } }

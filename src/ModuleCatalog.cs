@@ -21,6 +21,9 @@ namespace CoAInstaller
         public bool Archived, InCatalog;
         /// <summary>Made for AFK Realm: listed first, in a section of its own.</summary>
         public bool Own;
+        /// <summary>Not shown in the module list: a part another feature installs by itself (mod-subclass comes with CoA
+        /// Custom when its package needs it, and does nothing on its own).</summary>
+        public bool Hidden;
         public ModuleState State;
         public string Status = "", InstalledOn = "";                      // from modules.txt
         public string[] CreatedTables = new string[0], ManualTables = new string[0];
@@ -72,7 +75,7 @@ namespace CoAInstaller
                 new ModuleEntry { Name = "mod-custom-races", FullName = "aspollon/mod-custom-races", Branch = "main", Own = true,
                     Url = "https://github.com/aspollon/mod-custom-races", CloneUrl = "https://github.com/aspollon/mod-custom-races.git",
                     Description = L.N("Required for CoA Custom: makes its races (Dracthyr, Worgen, Vulpera, Sethrak, High elves and more) playable on your server, for players and bots. Brings mod-classic-classes along.") },
-                new ModuleEntry { Name = "mod-subclass", FullName = "aspollon/mod-subclass", Branch = "main", Own = true,
+                new ModuleEntry { Name = "mod-subclass", FullName = "aspollon/mod-subclass", Branch = "main", Own = true, Hidden = true,
                     Url = "https://github.com/aspollon/mod-subclass", CloneUrl = "https://github.com/aspollon/mod-subclass.git",
                     Description = L.N("For CoA Custom 1.9.8 and newer: the second class of the Two-Headed Ogre and the Thin Twins (Stefan's subclassing). Needs mod-custom-races.") },
                 new ModuleEntry { Name = "mod-azeroth-flying", FullName = "aspollon/mod-azeroth-flying", Branch = "main", Own = true,
@@ -286,7 +289,7 @@ namespace CoAInstaller
             foreach (var own in OwnModules())
             {
                 var listed = result.FirstOrDefault(e => e.FullName.Equals(own.FullName, StringComparison.OrdinalIgnoreCase));
-                if (listed != null) { listed.Own = true; if (listed.Description.Length == 0) listed.Description = own.Description; }
+                if (listed != null) { listed.Own = true; listed.Hidden = own.Hidden; if (listed.Description.Length == 0) listed.Description = own.Description; }
                 else result.Insert(0, own);
             }
             var managed = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);

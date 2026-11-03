@@ -1217,7 +1217,7 @@ function Invoke-ConfigureLinux([string]$CMake, $Toolchain, [switch]$Clean) {
         "-DCMAKE_INSTALL_PREFIX=$($Paths.Server)",
         "-DCONF_DIR=$($Paths.Configs)",
         '-DTOOLS_BUILD=all', '-DSCRIPTS=static', '-DMODULES=static',
-        "-DGIT_EXECUTABLE=$script:GitExe")
+        "-DGIT_EXECUTABLE=$script:GitExe") + @(Get-ModuleLinkageArgs)
     if (-not $Toolchain.Jemalloc) { $arguments += '-DNOJEM=1' }
     $mysql = Resolve-LinuxMySqlClient
     if ($mysql) {
@@ -1262,7 +1262,7 @@ function Invoke-Configure([string]$CMake, $VisualStudio, [string]$OpenSsl, [stri
     # for a restart; naming the verified instance (path and version) avoids that.
     if ($VisualStudio.Version) { $instance += ",version=$($VisualStudio.Version)" }
     $forward = { param($p) $p.Replace('\', '/') }
-    [void](Invoke-Program $CMake @(
+    [void](Invoke-Program $CMake (@(
         '-S', $Paths.Source, '-B', $Paths.Build, '-G', 'Visual Studio 17 2022', '-A', 'x64',
         "-DCMAKE_GENERATOR_INSTANCE=$instance",
         "-DCMAKE_INSTALL_PREFIX=$(& $forward $Paths.Server)",
@@ -1274,7 +1274,7 @@ function Invoke-Configure([string]$CMake, $VisualStudio, [string]$OpenSsl, [stri
         "-DMYSQL_INCLUDE_DIR=$(& $forward (Join-Path $Paths.MySql 'include'))",
         "-DMYSQL_LIBRARY=$(& $forward (Join-Path $Paths.MySql 'lib\mysqlclient.lib'))",
         "-DMYSQL_EXECUTABLE=$(& $forward (Get-MySqlTool 'mysql.exe'))",
-        "-DGIT_EXECUTABLE=$(& $forward $script:GitExe)"))
+        "-DGIT_EXECUTABLE=$(& $forward $script:GitExe)") + @(Get-ModuleLinkageArgs)))
 }
 
 function Invoke-Compile([string]$CMake) {
@@ -2082,10 +2082,22 @@ function Invoke-ThreeWayPatch([string]$Git, [string]$Target, [object[]]$Apply, [
     return $false
 }
 
+# A module whose patch is marked "required": true cannot be built without it (mod-subclass: its core hooks). When such a
+# patch does not fit the current core, the module is left out of this build (CMake MODULE_<NAME>=disabled) instead of
+# making the whole server build fail; it comes back by itself once the patch fits again. Name -> 'static' or 'disabled'.
+$script:ModuleLinkage = @{}
+
+function Get-ModuleLinkageArgs {
+    foreach ($name in $script:ModuleLinkage.Keys) { "-DMODULE_$($name.ToUpperInvariant())=$($script:ModuleLinkage[$name])" }
+}
+
 function Invoke-ModulePatches([string]$Git, [switch]$Quiet) {
     Reset-PatchedSources $Git
+    $script:ModuleLinkage = @{}
     foreach ($manifest in @(Get-ModuleManifests)) {
         foreach ($patch in (Get-ManifestList $manifest.Data 'patches')) {
+            $required = (Get-ManifestText $patch 'required') -eq 'True'
+            if ($required -and -not $script:ModuleLinkage.ContainsKey($manifest.Name)) { $script:ModuleLinkage[$manifest.Name] = 'static' }
             $relative = (Get-ManifestText $patch 'file').Replace('\', '/')
             $targetName = Get-ManifestText $patch 'target'
             $why = Get-ManifestText $patch 'why'
@@ -2095,7 +2107,11 @@ function Invoke-ModulePatches([string]$Git, [switch]$Quiet) {
                 Write-Log "$label - not a valid patch entry (file inside the module, target core or mod-playerbots); ignored." Yellow; continue
             }
             $file = Join-Path $manifest.Folder $relative.Replace('/', '\')
-            if (-not (Test-Path $file) -or -not (Test-Path (Join-Path $target '.git'))) { Write-Log "$label - the patch file or its target is missing; ignored." Yellow; continue }
+            if (-not (Test-Path $file) -or -not (Test-Path (Join-Path $target '.git'))) {
+                Write-Log "$label - the patch file or its target is missing; ignored." Yellow
+                if ($required) { $script:ModuleLinkage[$manifest.Name] = 'disabled' }
+                continue
+            }
             # "notNeededWhen": "path/in/target|text" - the target does the same thing itself now (an upstream change made
             # the patch unnecessary): left out without the notice that a patch could not be applied.
             $notNeeded = Get-ManifestText $patch 'notNeededWhen'
@@ -2125,6 +2141,11 @@ function Invoke-ModulePatches([string]$Git, [switch]$Quiet) {
                     # The code still matches, but the surrounding lines moved (for example after a module update).
                     # A three-way merge uses the blobs Git already knows and keeps the change instead of dropping it.
                     Write-Log "$label - applied to $targetName with a three-way merge." Green
+                } elseif ($required) {
+                    # the module does not compile without this patch: it is left out of this build, the server builds
+                    $script:ModuleLinkage[$manifest.Name] = 'disabled'
+                    Write-Log "$label - does not fit the current $targetName any more; $($manifest.Name) needs it and is left out of this build." Yellow
+                    if (-not $Quiet) { Send-Event 'NOTE' (Tr '{0} could not be applied: the code it changes has changed. {1} needs it and is left out of this build; the server works without it, and the module comes back once it is adapted.' (Tr $label) $manifest.Name) }
                 } else {
                     Write-Log "$label - does not fit the current $targetName any more; the server is built without it." Yellow
                     if (-not $Quiet) { Send-Event 'NOTE' $(if ($why) { Tr '{0} could not be applied: the code it changes has changed. The server is built without it. ({1})' (Tr $label) (Tr $why) } else { Tr '{0} could not be applied: the code it changes has changed. The server is built without it.' (Tr $label) }) }

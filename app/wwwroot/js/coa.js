@@ -1,6 +1,6 @@
 // CoA Custom: copy the finished package into the game client and server, build the client patch,
 // download a newer package and export the complete client ZIP for other computers.
-import { h, T, F, post, download, ApiError } from './core.js';
+import { h, T, F, post, get, download, ApiError } from './core.js';
 import { dialog, alert, confirm, choose, input, primary, secondary, runProgress } from './ui.js';
 
 export async function coaDialog() {
@@ -58,6 +58,11 @@ export async function coaDialog() {
   async function install() {
     if (!await confirm(T('Copy the CoA client files, server DBCs/SQL and settings, install the module add-ons and build the AFK client patch? AFK Realm closes the game if it runs, stops the server, keeps the database running for the race settings and starts the server again afterwards.'))) return;
     await rememberPaths();
+    // the server modules this package needs (mod-custom-races with mod-classic-classes; mod-subclass for 1.9.8 and
+    // newer) come first: AFK Realm installs them and builds the server, then goes on with CoA Custom
+    let st = {};
+    try { st = await post('/api/coa/state'); } catch { st = {}; }
+    if ((st.missingModules || []).length && !await installNeededModules(st.missingModules)) return;
     const args = { package: packagePath.value, server: serverPath.value, client: clientPath.value };
     const job = await runProgress(async () => {
       try { return await post('/api/coa/install', args); }
@@ -145,4 +150,19 @@ export async function missingRacesDialog(banner) {
   if (!r.ok) return;
   await alert(T('Switched on:') + ' ' + (r.added || []).join(', ') + '\n\n' +
     (r.running ? T('Restart the server (Stop server, then Start server) so the new races can be created.') : T('The new races can be created the next time the server starts.')));
+}
+
+// Installs the server modules a CoA Custom package needs, with the modules they need in turn, and waits for the
+// server build. True when it went through.
+async function installNeededModules(names) {
+  let data;
+  try { data = await get('/api/modules'); } catch (e) { await alert(e.message); return false; }
+  const wanted = names.map(n => n.toLowerCase());
+  const add = data.modules.filter(m => m.state === 'Available' && wanted.includes((m.name || '').toLowerCase())).map(m => m.id);
+  if (!add.length) { await alert(F('{0} is not in the module list. Open Modules > Manage modules and add it by its address.', names.join(', '))); return false; }
+  let plan;
+  try { plan = await post('/api/modules/plan', { add, remove: [] }); } catch (e) { await alert(e.message); return false; }
+  if (!await confirm(T('CoA Custom needs these modules on the server. AFK Realm installs them first and builds the server (this takes a while), then installs CoA Custom:') + '\n\n' + plan.text)) return false;
+  const job = await runProgress(() => post('/api/engine', { mode: 'Modules', add: plan.add, remove: plan.remove }), T('Installing the modules CoA Custom needs ...'));
+  return !!(job && job.ok);
 }

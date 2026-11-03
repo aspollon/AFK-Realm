@@ -25,7 +25,7 @@ export async function modulesDialog() {
     replace(status, T('Loading the module list from GitHub …'));
     try { data = await get('/api/modules' + (refresh ? '?refresh=1' : '')); }
     catch (e) { status.textContent = e.message; status.className = 'small warn'; return; }
-    all = data.modules;
+    all = data.modules.filter(m => !m.hidden);   // parts other features install by themselves (mod-subclass)
     ticked = new Set(all.filter(m => m.installed || m.state === 'PartOfCoA').map(m => m.id));
     token.value = data.token || '';
     status.textContent = data.status; status.className = 'small ' + (data.warn ? 'warn' : 'muted');

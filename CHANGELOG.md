@@ -5,6 +5,12 @@
 - **mod-subclass in the module list** (aspollon/mod-subclass): Stefan's mod-subclass from the CoA Custom 2.0 handover, with its core hooks as `patches/core-subclass.patch` against the current CoA core; it requires mod-custom-races.
 - **The modules a CoA Custom package needs** (`CoaSetup.ModulesForPackage`): mod-custom-races always, mod-subclass when the package brings subclassing (a `subclass` folder or `Apply-Subclass.bat`, CoA Custom 1.9.8 and newer). The missing-module notice and the CoA Custom setup offer them.
 
+## 1.2.38
+
+- **mod-subclass is a hidden part** (`ModuleEntry.Hidden`): not listed in the module manager; the CoA Custom setup installs it when the package needs it, and it is taken out together with mod-custom-races.
+- **The CoA Custom install installs the modules its package needs first** (`/api/coa/state` missingModules from `CoaSetup.ModulesForPackage`): one question, the module build with progress, then the CoA Custom install.
+- **Required patches** (`"required": true` in a module's `afk-realm.json`): when such a patch does not fit the current target, the module is left out of that build (`-DMODULE_<NAME>=disabled`) instead of failing the whole server build, with a notice; it is built in again as soon as the patch fits. mod-subclass marks its core patch so.
+
 ## 1.2.36
 
 - **A console that is gone no longer fails a task.** On Linux, AFK Realm started from a desktop icon or restarted by its update (it keeps the old terminal) gets EIO on every console write; the CoA Custom install prints each step, so it ended with "Input/output error" (and its own error report failed the same way). `SafeConsole` wraps Console.Out and Console.Error from the start and drops writes once they fail.
