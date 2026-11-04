@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.56
+
+- **Gallop client crash fixed:** `ServerRacials` forces `SpellVisualID_1 = 0` for `14001006` in the generated race SQL and in the merged server/client `Spell.dbc`. The speed aura (31/226) is unchanged. In-game verified.
+- **Grummle Trail Snack:** `14001032` is bound to `spell_gen_cannibalize`.
+- **Audit:** 63 active races / 262 configured racial IDs checked; all IDs present in server and client, all DB overrides present. Remaining dummy rows are covered by `race_racials` code/data or belong to `mod-subclass` (races 85/96). Arakkoa is data-only.
+
 ## 1.2.55
 
 - **Kyrian/Venthyr server implementation:** the engine's built-in core patch adds `kyrian_hover.cpp`, `kyrian_racials.cpp` and `venthyr_racials.cpp` plus the shared headers and loader registrations. The compiled worldserver gets the same 1.9.8 scripts the CoA client data expects.

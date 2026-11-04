@@ -1,3 +1,16 @@
+# AFK Realm 1.2.56
+
+## Fixed in 1.2.56
+
+- **Centaur Gallop no longer crashes the client.** The server row `14001006` carried the custom centaur `SpellVisualID 1703`; playing it crashed the CoA client in `CM2Scene::Animate` on `custom\centaur\unknown\4036647.m2`. Gallop keeps its speed aura, but the broken visual is removed from the server row and the AFK client patch.
+- **Grummle Trail Snack now works.** `14001032` was a dummy spell without a script binding; it now uses `spell_gen_cannibalize` like the other cannibalize racials.
+- **Full racial audit:** all 63 active races were checked, including all 262 configured racial spell IDs, client/server rows, DB overrides and script bindings. No other missing racial scripts were found.
+  - The Twins (96) and Two-Headed Ogre (85) are `mod-subclass` races; their racials are handled by the `mod-subclass` scripts/spells, not by a CoA `CustomRaces.*.Racials` section.
+  - Arakkoa's racial rows are ordinary data spells (shadow reduction, safe fall, intellect, speed/feather fall, leap) and need no script.
+  - The remaining dummy-effect rows are handled by the existing `race_racials` player/aura code or are intentional markers/data auras.
+
+**What to do:** update to 1.2.56, run **Game client > Install** and restart the client. The Gallop fix is client-patch data; no server rebuild is required for it on an already built 1.9.8 server.
+
 # AFK Realm 1.2.55
 
 ## Fixed in 1.2.55

@@ -57,6 +57,7 @@ namespace CoAInstaller
             { 111207, "spell_venthyr_hover_height" },
             { 111209, "spell_venthyr_racial" },
             { 111210, "spell_venthyr_bat_form" },
+            { 14001032, "spell_gen_cannibalize" }, // Grummle Trail Snack, same corpse script as Cannibalize
         };
 
         /// <summary>The racials of CoA Custom's races (race number -> spells), those that need code of its server (none
@@ -304,9 +305,16 @@ namespace CoAInstaller
                 {
                     object[] row;
                     string coa;
-                    string insert = records.ContainsKey(spell) ? Insert("spell_dbc", records[spell])
-                        : coaSpellRows.TryGetValue(spell, out coa) ? "INSERT INTO `spell_dbc` VALUES " + coa + ";"
-                        : race.Rows.TryGetValue(spell, out row) || clientRows.TryGetValue(spell, out row) ? InsertRow(CorrectRow(spell, row)) : null;
+                    // These rows need a corrected client table. Prefer it over the package's own SQL
+                    // (14001006's package row carries the broken centaur gallop SpellVisual).
+                    bool corrected = spell == 111104 || spell == 14001006;
+                    string insert;
+                    if (corrected && clientRows.TryGetValue(spell, out row))
+                        insert = InsertRow(CorrectRow(spell, row));
+                    else
+                        insert = records.ContainsKey(spell) ? Insert("spell_dbc", records[spell])
+                            : coaSpellRows.TryGetValue(spell, out coa) ? "INSERT INTO `spell_dbc` VALUES " + coa + ";"
+                            : race.Rows.TryGetValue(spell, out row) || clientRows.TryGetValue(spell, out row) ? InsertRow(CorrectRow(spell, row)) : null;
                     if (insert == null) continue;
                     spells.Add(spell);
                     lines.Add("DELETE FROM `spell_dbc` WHERE `ID` = " + spell + ";");
@@ -363,6 +371,10 @@ namespace CoAInstaller
                     lines.Add("INSERT INTO `coa_client_spell_description` (`ID`, `Description`, `ToolTip`) VALUES (" + spell + ", " +
                         Literal(description) + ", " + (tooltip.Length > 0 ? Literal(tooltip) : "NULL") + ");");
                 }
+                // The centaur client model crashes in its M2 animation track when this
+                // SpellVisual is played. Keep the speed aura, but remove the visual.
+                if (spells.Contains(14001006))
+                    lines.Add("UPDATE `spell_dbc` SET `SpellVisualID_1` = 0 WHERE `ID` = 14001006;");
                 File.WriteAllText(file, string.Join("\r\n", lines) + "\r\n", new UTF8Encoding(false));
             }
             if (!string.IsNullOrEmpty(serverSpellDbc))
@@ -390,6 +402,7 @@ namespace CoAInstaller
                     if (fields == null || fields.Count != RaceImport.SpellFields) continue;
                     uint id;
                     if (!uint.TryParse(fields[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out id)) continue;
+                    if (id == 14001006 && fields.Count > 131) fields[131] = "0";
                     rows.Add(new KeyValuePair<uint, string[]>(id, fields.ToArray()));
                 }
             }
@@ -516,10 +529,19 @@ namespace CoAInstaller
         {
             // 111104 is a dummy marker in the client row. The server needs the safe-fall aura that
             // its tooltip promises; the other passive rows are already handled by the 1.9.8 scripts.
-            if (id == 111104 && row != null && row.Length == RaceImport.SpellFields)
+            if (row != null && row.Length == RaceImport.SpellFields)
             {
-                row[95] = 144u; // EFFECT_AURA_1 = SPELL_AURA_SAFE_FALL
-                row[80] = 5u;   // EFFECT_BASE_POINTS_1
+                if (id == 111104)
+                {
+                    row[95] = 144u; // EFFECT_AURA_1 = SPELL_AURA_SAFE_FALL
+                    row[80] = 5u;   // EFFECT_BASE_POINTS_1
+                }
+                else if (id == 14001006)
+                {
+                    // The custom centaur model crashes in Its M2 animation track when the
+                    // gallop SpellVisual (1703) is played. The speed aura works without it.
+                    row[131] = 0u; // SpellVisualID_1
+                }
             }
             return row;
         }
