@@ -1337,6 +1337,10 @@ function Copy-Runtime([string]$OpenSsl) {
     foreach ($dll in @(Get-ChildItem $OpenSsl -Recurse -Filter '*.dll' | Where-Object { $_.Name -match '^(libssl|libcrypto)-3' -or $_.Name -eq 'legacy.dll' })) {
         Copy-Item $dll.FullName $Paths.Server -Force
     }
+    # vmap4_extractor needs z.dll; it is built into the build output and was not
+    # copied into Server, so the CoA map extraction failed with a load error.
+    $z = @(Get-ChildItem (Join-Path $Paths.Build 'bin') -Recurse -Filter 'z.dll' -ErrorAction SilentlyContinue | Select-Object -First 1)
+    if ($z) { Copy-Item $z.FullName $Paths.Server -Force }
     if (-not (Get-ChildItem $Paths.Server -Filter 'libssl*.dll')) { throw (Tr 'The OpenSSL runtime DLLs were not found.') }
 }
 

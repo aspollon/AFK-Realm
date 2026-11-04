@@ -1,3 +1,13 @@
+# AFK Realm 1.2.46
+
+## Fixed in 1.2.46
+
+- **Map data without the z.dll failure:** `Create map data` now copies `z.dll` (and the other runtime DLLs) from the build output next to the extractors. Previously `vmap4_extractor.exe` stopped with a load error, so `vmaps` and `mmaps` stayed empty.
+- **CoA's test maps no longer kill the vmap extractor:** maps 1727, 1730 and 1731 are skipped after a printed notice. Map 1730 is the last `Map.dbc` row; its crash also stopped `ExtractGameobjectModels`, leaving `temp_gameobject_models` missing. `AFK_VMAP_SKIP_MAPS` overrides the list. The fix is a permanent core patch in `mod-custom-races`, so a server update/rebuild cannot lose it again.
+- **The mmaps page no longer eats gigabytes:** the job sends at most 3000 log lines to the browser; the full log still goes to `logs/map-data.log`. A finished `mmaps_generator` can no longer leave msedge growing for hours.
+- **“Only refresh the CoA DBC tables” really only refreshes the DBC tables:** it no longer falls back to the full map extraction. The server's `Data\dbc` is also no longer deleted before the new DBC files are ready, so a failed refresh cannot leave the server without DBC tables.
+- **`mod-subclass` note:** that warning is not a map or AFK Realm bug. The module's core patch does not fit the new CoA core `ea0a8fdc`; AFK Realm correctly leaves it out of the build. The server runs without the subclass feature until `mod-subclass` is updated.
+
 # AFK Realm 1.2.45
 
 ## Fixed in 1.2.45

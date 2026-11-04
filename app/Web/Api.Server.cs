@@ -219,9 +219,12 @@ namespace CoAInstaller.Web
             if (Manager.Ctl != null && Manager.Ctl.World != null) throw new UserError(L.T("Stop the server first."));
             string clientData = Path.Combine(dir, "Data");
             bool coaDbc = inst.NeedsClientDbc;
-            bool onlyDbc = coaDbc && dbcOnly;
+            // Ticking "Only refresh the CoA DBC tables" must never fall back to the
+            // full map extraction: that is what the users hit when the server already
+            // had maps but the DBC refresh failed and started the extractors.
+            bool onlyDbc = dbcOnly;
             string python = Os.Windows ? inst.PythonExe : FindOnPath("python3");
-            if (coaDbc && (python == null || !File.Exists(python) || !File.Exists(inst.MpqCliExe)))
+            if ((coaDbc || onlyDbc) && (python == null || !File.Exists(python) || !File.Exists(inst.MpqCliExe)))
                 throw new UserError(L.T("The tools for the CoA DBC extraction are missing. Run \"Repair\" once, then try again."));
             return Jobs.Run(L.T("Create map data"), (job, st) =>
             {
@@ -240,7 +243,19 @@ namespace CoAInstaller.Web
                         copied.Add(dst);
                     }
                     if (!onlyDbc && Os.Windows)
+                    {
                         foreach (var dll in Directory.GetFiles(inst.ServerDir, "*.dll")) { string dst = Path.Combine(dir, Path.GetFileName(dll)); File.Copy(dll, dst, true); copied.Add(dst); }
+                        // vmap4_extractor and the other tools need z.dll. It is built into
+                        // the build output, not into Server, and was missing from the first
+                        // CoA map extraction runs (the tools then died with a load error).
+                        if (Directory.Exists(inst.BinDir))
+                            foreach (var dll in Directory.GetFiles(inst.BinDir, "*.dll"))
+                            {
+                                string dst = Path.Combine(dir, Path.GetFileName(dll));
+                                File.Copy(dll, dst, true);
+                                copied.Add(dst);
+                            }
+                    }
 
                     // The whole run also goes to logs\map-data.log, so a Get help ZIP shows why it failed.
                     string mapLog = Path.Combine(inst.LogDir, "map-data.log");
@@ -272,7 +287,7 @@ namespace CoAInstaller.Web
                         run(L.T("Step 1: dbc, maps and cameras ..."), Path.Combine(dir, Os.Exe("map_extractor")), "");
                         if (!Directory.Exists(Path.Combine(dir, "maps"))) throw new InvalidOperationException(L.T("ERROR during extraction. Is this the right game folder, and is the game closed?"));
                     }
-                    if (coaDbc)
+                    if (coaDbc || onlyDbc)
                     {
                         string coa = Path.Combine(dir, "coa-dbc");
                         if (Directory.Exists(coa)) Directory.Delete(coa, true);
@@ -288,8 +303,9 @@ namespace CoAInstaller.Web
                         string dbc = Path.Combine(dir, "dbc");
                         if (Directory.Exists(dbc)) Directory.Delete(dbc, true);
                         Directory.Move(coa, dbc);
-                        string serverDbc = Path.Combine(inst.DataDir, "dbc");
-                        if (Directory.Exists(serverDbc)) Directory.Delete(serverDbc, true);
+                        // The final MoveMerge replaces the server's DBC files. Do not
+                        // delete Server/Data/dbc before the new DBC files are ready:
+                        // a failed refresh left the server without any DBC table.
                     }
                     if (!onlyDbc)
                     {

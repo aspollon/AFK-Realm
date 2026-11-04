@@ -38,12 +38,22 @@ namespace CoAInstaller.Web
         public string ServerRoot;
 
         readonly List<string> log = new List<string>();
+        int logSent;
         public IList<string> LogLines { get { lock (log) return log.ToList(); } }
 
         public void Log(string line)
         {
-            lock (log) { log.Add(line); if (log.Count > 3000) log.RemoveRange(0, 1000); }
-            Events.Send("joblog", new { id = Id, line });
+            bool send;
+            lock (log)
+            {
+                log.Add(line);
+                if (log.Count > 3000) log.RemoveRange(0, 1000);
+                // mmaps_generator can print hundreds of thousands of lines. Sending
+                // every one to the browser made msedge grow to several GB while the
+                // job itself was already done; the file still gets the full log.
+                send = ++logSent <= 3000;
+            }
+            if (send) Events.Send("joblog", new { id = Id, line });
         }
 
         public void SetStatus(string text)
