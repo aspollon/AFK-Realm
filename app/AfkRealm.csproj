@@ -11,7 +11,7 @@
     <OutputType>WinExe</OutputType>
     <AssemblyName>AFK-Realm</AssemblyName>
     <Product>AFK Realm</Product>
-    <Version>1.2.46</Version>
+    <Version>1.2.47</Version>
     <RootNamespace>CoAInstaller</RootNamespace>
     <Nullable>disable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
@@ -29,6 +29,7 @@
     <EmbeddedResource Include="../engine/engine.ps1" LogicalName="CoAInstaller.engine.ps1" />
     <EmbeddedResource Include="../engine/account-transfer.sql" LogicalName="CoAInstaller.account-transfer.sql" />
     <EmbeddedResource Include="../engine/module-journal.sql" LogicalName="CoAInstaller.module-journal.sql" />
+    <EmbeddedResource Include="../engine/patches/*.patch" LogicalName="CoAInstaller.engine.patches.%(Filename)%(Extension)" />
     <EmbeddedResource Include="../assets/dxvk/dxvk-x64.zip" LogicalName="CoAInstaller.dxvk.zip" />
     <EmbeddedResource Include="../assets/afk-realm-header.png" LogicalName="CoAInstaller.logo.png" />
     <EmbeddedResource Include="../lang/*.json" LogicalName="CoAInstaller.lang.%(Filename)%(Extension)" />

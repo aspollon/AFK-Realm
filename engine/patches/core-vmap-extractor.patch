@@ -1,0 +1,54 @@
+﻿diff --git a/src/tools/vmap4_extractor/vmapexport.cpp b/src/tools/vmap4_extractor/vmapexport.cpp
+index 919b80bcfb..41a9cdbfac 100644
+--- a/src/tools/vmap4_extractor/vmapexport.cpp
++++ b/src/tools/vmap4_extractor/vmapexport.cpp
+@@ -20,6 +20,7 @@
+ #include <cctype>
+ #include <cerrno>
+ #include <cstdio>
++#include <cstdlib>
+ #include <filesystem>
+ #include <list>
+ #include <map>
+@@ -208,12 +209,41 @@ bool ExtractSingleWmo(std::string& fname)
+     return true;
+ }
+ 
++static bool ShouldSkipMap(uint32 id)
++{
++    char const* setting = getenv("AFK_VMAP_SKIP_MAPS");
++    if (!setting)
++        return id == 1727 || id == 1730 || id == 1731;
++
++    std::string const list(setting);
++    std::size_t start = 0;
++    while (start <= list.size())
++    {
++        std::size_t const end = list.find_first_of(",; ", start);
++        std::string const value = list.substr(start, end == std::string::npos ? std::string::npos : end - start);
++        if (!value.empty() && strtoul(value.c_str(), nullptr, 10) == id)
++            return true;
++        if (end == std::string::npos)
++            break;
++        start = end + 1;
++    }
++    return false;
++}
++
+ void ParsMapFiles()
+ {
+     char fn[512];
+     //char id_filename[64];
+     for (unsigned int i = 0; i < map_count; ++i)
+     {
++        // CoA's test maps 1727/1730/1731 make the retail extractor crash. 1730 is
++        // the last Map.dbc row, so that crash also killed ExtractGameobjectModels
++        // and left vmaps/mmaps empty. Skip them (AFK_VMAP_SKIP_MAPS overrides).
++        if (ShouldSkipMap(map_ids[i].id))
++        {
++            printf("Skipping map %u (%s): known to crash the vmap extractor.\n", map_ids[i].id, map_ids[i].name);
++            continue;
++        }
+         sprintf(fn,"World\\Maps\\%s\\%s.wdt", map_ids[i].name, map_ids[i].name);
+         WDTFile WDT(fn,map_ids[i].name);
+         if (WDT.init(map_ids[i].id))

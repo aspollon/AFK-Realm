@@ -116,6 +116,17 @@ namespace CoAInstaller
             using (var s = Assembly.GetExecutingAssembly().GetManifestResourceStream("CoAInstaller.module-journal.sql"))
             using (var r = new StreamReader(s, Encoding.UTF8))
                 File.WriteAllText(Path.Combine(dir, "module-journal.sql"), r.ReadToEnd(), new UTF8Encoding(false));
+            // AFK's own core patches: the engine applies them after it resets the core and before the module patches.
+            foreach (string name in Assembly.GetExecutingAssembly().GetManifestResourceNames())
+            {
+                const string prefix = "CoAInstaller.engine.patches.";
+                if (!name.StartsWith(prefix, StringComparison.Ordinal)) continue;
+                string patches = Path.Combine(dir, "patches");
+                Directory.CreateDirectory(patches);
+                using (var s = Assembly.GetExecutingAssembly().GetManifestResourceStream(name))
+                using (var r = new StreamReader(s, Encoding.UTF8))
+                    File.WriteAllText(Path.Combine(patches, name.Substring(prefix.Length)), r.ReadToEnd(), new UTF8Encoding(false));
+            }
             return path;
         }
 

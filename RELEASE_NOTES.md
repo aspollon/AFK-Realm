@@ -1,3 +1,10 @@
+# AFK Realm 1.2.47
+
+## Fixed in 1.2.47
+
+- **The vmap extractor fix now belongs to AFK Realm itself.** The skip for CoA's test maps 1727, 1730 and 1731 is no longer part of `mod-custom-races`; it is an AFK core patch that the engine applies automatically after resetting the core and before the module patches. The map-data fix is therefore kept on every update or rebuild, even when modules change, are updated or are left out. `AFK_VMAP_SKIP_MAPS` still overrides the list.
+- **`mod-subclass` works with CoA core `ea0a8fdc` again.** Its core patch is rebased onto the current CoA core and the `mod-custom-races` baseline, so subclassing is built again instead of being left out of the server with the old warning. Existing subclass characters and settings stay as they are.
+
 # AFK Realm 1.2.46
 
 ## Fixed in 1.2.46

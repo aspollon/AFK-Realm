@@ -2118,8 +2118,41 @@ function Get-ModuleLinkageArgs {
     foreach ($name in $script:ModuleLinkage.Keys) { "-DMODULE_$($name.ToUpperInvariant())=$($script:ModuleLinkage[$name])" }
 }
 
+# AFK's own core patches (Builder\patches next to the engine, written from the copies embedded in AFK Realm).
+# They are applied after Reset-PatchedSources and before the module patches; one that no longer fits the CoA core is
+# left out with a notice instead of stopping the build, and comes back by itself once it fits again.
+function Invoke-BuiltInPatches([string]$Git, [switch]$Quiet) {
+    $folder = Join-Path $PSScriptRoot 'patches'
+    if (-not (Test-Path -LiteralPath $folder) -or -not (Test-Path (Join-Path $Paths.Source '.git'))) { return }
+    foreach ($patch in @(Get-ChildItem -LiteralPath $folder -Filter '*.patch' | Sort-Object Name)) {
+        $label = 'AFK Realm: ' + $patch.Name
+        $tempPatch = $null
+        try {
+            $text = [IO.File]::ReadAllText($patch.FullName)
+            if ($text.Length -gt 0 -and [int]$text[0] -eq 0xFEFF) { $text = $text.Substring(1) }
+            $text = $text.Replace("`r`n", "`n").Replace("`r", "`n")
+            $tempPatch = Join-Path ([IO.Path]::GetTempPath()) ('afk-core-patch-' + [guid]::NewGuid().ToString('N') + '.patch')
+            [IO.File]::WriteAllText($tempPatch, $text, (New-Object Text.UTF8Encoding($false)))
+            $apply = @('-C', $Paths.Source, 'apply', '--ignore-whitespace', '--whitespace=nowarn')
+            if ((Invoke-Program $Git ($apply + @('--check', $tempPatch)) -AllowFailure) -eq 0 -and (Invoke-Program $Git ($apply + @($tempPatch)) -AllowFailure) -eq 0) {
+                Write-Log "$label - applied to the CoA core." Green
+            } elseif ((Invoke-Program $Git ($apply + @('--reverse', '--check', '--quiet', $tempPatch)) -AllowFailure) -eq 0) {
+                Write-Log "$label - already part of the CoA core, not needed any more."
+            } elseif (Invoke-ThreeWayPatch $Git $Paths.Source $apply $tempPatch $text) {
+                Write-Log "$label - applied to the CoA core with a three-way merge." Green
+            } else {
+                Write-Log "$label - does not fit the current CoA core any more; the server is built without it." Yellow
+                if (-not $Quiet) { Send-Event 'NOTE' (Tr '{0} could not be applied: the code it changes has changed. The server is built without it.' (Tr $label)) }
+            }
+        } finally {
+            if ($tempPatch) { Remove-Item $tempPatch -Force -ErrorAction SilentlyContinue }
+        }
+    }
+}
+
 function Invoke-ModulePatches([string]$Git, [switch]$Quiet) {
     Reset-PatchedSources $Git
+    Invoke-BuiltInPatches $Git -Quiet:$Quiet
     $script:ModuleLinkage = @{}
     foreach ($manifest in @(Get-ModuleManifests)) {
         foreach ($patch in (Get-ManifestList $manifest.Data 'patches')) {
