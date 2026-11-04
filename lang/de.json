@@ -4,6 +4,13 @@
   "english": "German",
   "font": "",
   "strings": {
+    "The AFK Realm core patches changed; the server is rebuilt.": "Die AFK-Realm-Core-Patches haben sich geändert; der Server wird neu gebaut.",
+    "Building the server with the CoA racial scripts ...": "Server wird mit den CoA-Racial-Scripts neu gebaut ...",
+    "CoA Custom installed. Building the server ...": "CoA Custom installiert. Server wird gebaut ...",
+    "CoA Custom installed and the server was built.": "CoA Custom installiert und der Server wurde neu gebaut.",
+    "CoA Custom installed, but the server could not be built.": "CoA Custom installiert, aber der Server konnte nicht gebaut werden.",
+    "The server was not built: the racial patch {0} is missing. Update AFK Realm.": "Der Server wurde nicht gebaut: Der Racial-Patch {0} fehlt. Aktualisiere AFK Realm.",
+    "The server was not built: {0} could not be applied to the current CoA core. AFK Realm needs this change for the racial abilities. Update AFK Realm, or report this CoA version.": "Der Server wurde nicht gebaut: {0} konnte nicht auf den aktuellen CoA-Core angewendet werden. AFK Realm braucht diese Änderung für die Racial-Fähigkeiten. Aktualisiere AFK Realm oder melde diese CoA-Version.",
     "CoA Custom Setup": "CoA Custom einrichten",
     "CoA package": "CoA-Paket",
     "Server folder": "Serverordner",

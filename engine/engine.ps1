@@ -1089,7 +1089,19 @@ function Save-Revisions {
         ('core|{0}|{1}|{2}' -f $Project.Core.Repo, $Project.Core.Branch, $Project.Core.Revision),
         ('module|{0}|{1}|{2}' -f $Project.Playerbots.Repo, $Project.Playerbots.Branch, $Project.Playerbots.Revision)))
 }
-function Get-BuildStamp { return ('{0}|{1}' -f $Project.Core.Revision, $Project.Playerbots.Revision) }
+# The built-in patches are part of the compiled server, so their content belongs in the build stamp.
+# Without it, an app update with new racial scripts could report "up to date" while the old worldserver
+# (built before the patch) keeps running.
+function Get-PatchStamp {
+    $folder = Join-Path $PSScriptRoot 'patches'
+    if (-not (Test-Path -LiteralPath $folder)) { return '' }
+    $parts = foreach ($file in @(Get-ChildItem -LiteralPath $folder -Filter '*.patch' | Sort-Object Name)) {
+        $digest = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+        '{0}:{1}' -f $file.Name, $digest
+    }
+    return ($parts -join ';')
+}
+function Get-BuildStamp { return ('{0}|{1}|{2}' -f $Project.Core.Revision, $Project.Playerbots.Revision, (Get-PatchStamp)) }
 
 # Brings a repository to an exact revision. Additional module folders inside the
 # core's modules\ directory are never touched.
@@ -2121,8 +2133,16 @@ function Get-ModuleLinkageArgs {
 # AFK's own core patches (Builder\patches next to the engine, written from the copies embedded in AFK Realm).
 # They are applied after Reset-PatchedSources and before the module patches; one that no longer fits the CoA core is
 # left out with a notice instead of stopping the build, and comes back by itself once it fits again.
+# The racial patch is different: without it Kyrian, Venthyr and the other 1.9.8 races lose their abilities, so a build
+# that cannot apply it must stop instead of producing a worldserver that looks complete but has no racial scripts.
+$script:RequiredBuiltInPatches = @('afk-1.9.8-racials.patch')
 function Invoke-BuiltInPatches([string]$Git, [switch]$Quiet) {
     $folder = Join-Path $PSScriptRoot 'patches'
+    foreach ($required in $script:RequiredBuiltInPatches) {
+        if (-not (Test-Path -LiteralPath (Join-Path $folder $required))) {
+            throw (Tr 'The server was not built: the racial patch {0} is missing. Update AFK Realm.' $required)
+        }
+    }
     if (-not (Test-Path -LiteralPath $folder) -or -not (Test-Path (Join-Path $Paths.Source '.git'))) { return }
     foreach ($patch in @(Get-ChildItem -LiteralPath $folder -Filter '*.patch' | Sort-Object Name)) {
         $label = 'AFK Realm: ' + $patch.Name
@@ -2141,6 +2161,9 @@ function Invoke-BuiltInPatches([string]$Git, [switch]$Quiet) {
             } elseif (Invoke-ThreeWayPatch $Git $Paths.Source $apply $tempPatch $text) {
                 Write-Log "$label - applied to the CoA core with a three-way merge." Green
             } else {
+                if ($script:RequiredBuiltInPatches -contains $patch.Name) {
+                    throw (Tr 'The server was not built: {0} could not be applied to the current CoA core. AFK Realm needs this change for the racial abilities. Update AFK Realm, or report this CoA version.' $label)
+                }
                 Write-Log "$label - does not fit the current CoA core any more; the server is built without it." Yellow
                 if (-not $Quiet) { Send-Event 'NOTE' (Tr '{0} could not be applied: the code it changes has changed. The server is built without it.' (Tr $label)) }
             }
@@ -2657,7 +2680,9 @@ try {
             Send-Event 'DONE' 'uptodate'
             exit 0
         }
-        if ($changes.Count -eq 0) { $changes.Add((Tr 'The previous build did not finish; building again.')) }
+        if ($changes.Count -eq 0) {
+            $changes.Add($(if (Test-Path $Paths.BuildMarker) { Tr 'The AFK Realm core patches changed; the server is rebuilt.' } else { Tr 'The previous build did not finish; building again.' }))
+        }
         foreach ($change in $changes) { Write-Log "  $change" Cyan; Send-Event 'CHANGE' $change }
     } elseif ($compile -and $action -ne 'Modules') {
         Resolve-LatestRevisions $git

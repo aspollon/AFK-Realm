@@ -1,7 +1,7 @@
 // CoA Custom: copy the finished package into the game client and server, build the client patch,
 // download a newer package and export the complete client ZIP for other computers.
 import { h, T, F, post, get, download, ApiError } from './core.js';
-import { dialog, alert, confirm, choose, input, primary, secondary, toggle, runProgress } from './ui.js';
+import { dialog, alert, confirm, choose, input, primary, secondary, toggle, runProgress, runTask } from './ui.js';
 
 export async function coaDialog() {
   let state;
@@ -77,7 +77,19 @@ export async function coaDialog() {
       download(job.payload.url);
       await alert(T('The complete CoA Custom client ZIP is ready:') + ' ' + (job.payload.name || '') + '\n\n' + (job.message || ''));
     } else if (job && job.message) await alert(job.message);
-    status.textContent = job && job.ok ? T('CoA Custom installed.') : status.textContent;
+    if (!job || !job.ok) return;
+
+    // CoA Custom brings the client data and the module code, but not AFK's compiled worldserver.
+    // Rebuild it once after the install; the engine's build stamp includes the racial patches,
+    // so this is a quick no-op when the server already has them, and a real rebuild otherwise.
+    status.textContent = T('CoA Custom installed. Building the server ...');
+    const build = await runProgress(() => post('/api/engine', { mode: 'Update' }), T('Building the server with the CoA racial scripts ...'));
+    if (build && build.ok) {
+      await runTask(() => post('/api/server/start', { force: false }), T('Starting the server ...'));
+      status.textContent = T('CoA Custom installed and the server was built.');
+    } else {
+      status.textContent = T('CoA Custom installed, but the server could not be built.');
+    }
   }
 
   async function exportZip() {

@@ -4,6 +4,13 @@
   "english": "",
   "font": "",
   "strings": {
+    "The server was not built: the racial patch {0} is missing. Update AFK Realm.": "",
+    "The server was not built: {0} could not be applied to the current CoA core. AFK Realm needs this change for the racial abilities. Update AFK Realm, or report this CoA version.": "",
+    "The AFK Realm core patches changed; the server is rebuilt.": "",
+    "Building the server with the CoA racial scripts ...": "",
+    "CoA Custom installed. Building the server ...": "",
+    "CoA Custom installed and the server was built.": "",
+    "CoA Custom installed, but the server could not be built.": "",
     "CoA Custom Setup": "",
     "CoA package": "",
     "Server folder": "",

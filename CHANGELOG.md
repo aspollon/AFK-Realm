@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.57
+
+- **Required racial patch:** `afk-1.9.8-racials.patch` is checked and applied on every build; if it is missing or no longer fits, the build stops instead of silently omitting the Kyrian/Venthyr scripts.
+- **Patch-aware build stamp:** `Get-BuildStamp` includes the SHA-256 of all built-in patches. A changed racial patch triggers a server rebuild even when CoA/Playerbots revisions are unchanged, and the update reports that the AFK core patches changed.
+- **CoA Custom install:** the web flow now runs `Server > Update` automatically after a successful CoA Custom install and starts the server again. Existing servers therefore receive their one-time rebuild without a separate manual step.
+
 ## 1.2.56
 
 - **Gallop client crash fixed:** `ServerRacials` forces `SpellVisualID_1 = 0` for `14001006` in the generated race SQL and in the merged server/client `Spell.dbc`. The speed aura (31/226) is unchanged. In-game verified.

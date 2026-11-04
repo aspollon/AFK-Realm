@@ -1,3 +1,14 @@
+# AFK Realm 1.2.57
+
+## Fixed in 1.2.57
+
+- **The racial scripts can no longer be skipped silently.** `afk-1.9.8-racials.patch` is now a required built-in patch. If it no longer fits the current CoA core, the build stops with a clear error instead of producing a worldserver without Kyrian/Venthyr abilities.
+- **New racial patches force a rebuild.** The build stamp now includes the SHA-256 of every built-in core patch. Updating AFK Realm with new racial scripts therefore makes `Server > Update` rebuild the worldserver even when the CoA source revision itself did not change.
+- **CoA Custom install builds the server automatically.** After "Install / update everything", AFK Realm runs the server update and starts the server again. On the first run after this change the stamp differs once, so every existing server gets its one-time rebuild; later installs are a quick no-op when the server already has the current scripts.
+- **No more manual Rebuild needed for the racial scripts.** The 1.2.56 Gallop and Grummle fixes remain included. If the required patch cannot be applied, the error says so and the old server stays unchanged.
+
+**What to do:** update to 1.2.57 and let the CoA Custom install or `Server > Update` rebuild the server once. The Gallop client-patch fix still needs **Game client > Install** and a client restart.
+
 # AFK Realm 1.2.56
 
 ## Fixed in 1.2.56
