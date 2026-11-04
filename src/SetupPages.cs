@@ -1291,7 +1291,8 @@ namespace CoAInstaller
                     on.Add(wanted);
                 }
                 string serverData = Raw("CustomRaces.ServerDataFolder", "");
-                ServerRacials.Sync(serverData, RacialsFolder, ClientAddons.ClientFolder, on);
+                ServerRacials.Sync(serverData, RacialsFolder, ClientAddons.ClientFolder, on,
+                    Path.Combine(inst.DataDir, "dbc", "Spell.dbc"));
                 foreach (var wanted in on)
                 {
                     var spells = ServerRacials.ClientSpells(serverData, wanted.Name, wanted.CoaRace);

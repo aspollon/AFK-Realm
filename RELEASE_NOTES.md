@@ -1,3 +1,10 @@
+# AFK Realm 1.2.49
+
+## New in 1.2.49
+
+- **The installer generates the server spell data for custom racials itself.** After the CoA package and the active races are known, AFK Realm merges the generated `spell_dbc` racial rows into `Server/Data/dbc/Spell.dbc`. A future CoA Custom race or racial ability therefore no longer depends on a hand-updated `Spell.dbc.zip`; the rows come from the client and the race settings.
+- **The race page keeps the CoA package's race list.** Races that are not in the installed CoA package and were not imported from a race folder are dropped when the race page is saved. Old client-only copies such as the duplicate `Earthen`/`Trog` entries no longer survive a save.
+
 # AFK Realm 1.2.48
 
 ## Fixed in 1.2.48

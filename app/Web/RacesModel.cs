@@ -607,6 +607,25 @@ namespace CoAInstaller.Web
                 foreach (var key in idle) DropRace(key);
                 chosen = chosen.Except(idle, StringComparer.OrdinalIgnoreCase).ToList();
             }
+            // The CoA package owns the playable race list. Client-only test races (the old
+            // Troglodyte/ThinHuman copies and similar rows) must not survive a save, even when
+            // an older config gave them Copy=0. Races imported from a race folder stay.
+            var package = CoaSetup.PackageRaces(inst);
+            if (package.Count > 0)
+            {
+                var packageIds = new HashSet<int>(package.Select(p => p.Key));
+                var foreign = chosen.Where(k =>
+                {
+                    var race = races.FirstOrDefault(x => x.Key.Equals(k, StringComparison.OrdinalIgnoreCase));
+                    if (race == null || ConfigOption.Unquote(Raw("CustomRaces." + k + ".Import", "")) == "1") return false;
+                    return !packageIds.Contains(IdOf(race)) && !packageIds.Contains(CoaRaceOf(race));
+                }).ToList();
+                if (foreign.Count > 0)
+                {
+                    foreach (var key in foreign) DropRace(key);
+                    chosen = chosen.Except(foreign, StringComparer.OrdinalIgnoreCase).ToList();
+                }
+            }
             var valid = chosen.Where(k => races.Any(r => r.Key.Equals(k, StringComparison.OrdinalIgnoreCase))).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
             if (valid.Count != Chosen().Count) Set("CustomRaces.Races", string.Join(" ", valid));
             // Older AFK versions wrote this key beside Voidelf. The module ignores it, but it
@@ -1215,7 +1234,8 @@ namespace CoAInstaller.Web
                         }
                     on.Add(wanted);
                 }
-                ServerRacials.Sync(Raw("CustomRaces.ServerDataFolder", ""), RacialsFolder, ClientAddons.ClientFolder, on);
+                ServerRacials.Sync(Raw("CustomRaces.ServerDataFolder", ""), RacialsFolder, ClientAddons.ClientFolder, on,
+                    Path.Combine(inst.DataDir, "dbc", "Spell.dbc"));
                 if (Unsaved > 0) conf.Save();
             }
             catch (Exception ex) { warn = L.T("The racial rows could not be written:") + "\n" + ex.Message; }

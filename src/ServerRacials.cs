@@ -148,7 +148,7 @@ namespace CoAInstaller
         /// <summary>Writes the racial file of every race that is on into outDir, and takes the file of a race without racial
         /// rows away. A spell's row comes from the server data folder (its own dump), or else from the client's spell
         /// table: the race's pack, or the game client (client: its folder).</summary>
-        public static void Sync(string serverDataFolder, string outDir, string client, List<Wanted> races)
+        public static void Sync(string serverDataFolder, string outDir, string client, List<Wanted> races, string serverSpellDbc = null)
         {
             if (races == null || string.IsNullOrEmpty(outDir)) return;
             var records = string.IsNullOrEmpty(serverDataFolder) || !Directory.Exists(serverDataFolder)
@@ -229,6 +229,136 @@ namespace CoAInstaller
                 }
                 File.WriteAllText(file, string.Join("\r\n", lines) + "\r\n", new UTF8Encoding(false));
             }
+            if (!string.IsNullOrEmpty(serverSpellDbc))
+                MergeServerSpellDbc(serverSpellDbc, outDir);
+        }
+
+        /// <summary>The server's Spell.dbc must know the racial spells, not only the client spell stream: learnRacials
+        /// asks SpellMgr. The module writes the rows as spell_dbc SQL; those rows are copied into the server table here,
+        /// so a CoA update with new races or racials needs no hand-built DBC asset.</summary>
+        static void MergeServerSpellDbc(string serverSpellDbc, string sqlDir)
+        {
+            if (!File.Exists(serverSpellDbc) || !Directory.Exists(sqlDir)) return;
+            var rows = new List<KeyValuePair<uint, string[]>>();
+            foreach (string file in Directory.GetFiles(sqlDir, "*.sql"))
+            {
+                foreach (string raw in File.ReadLines(file, Encoding.UTF8))
+                {
+                    string line = raw.Trim();
+                    if (!line.StartsWith("INSERT INTO `spell_dbc`", StringComparison.OrdinalIgnoreCase)) continue;
+                    int at = line.IndexOf("VALUES", StringComparison.OrdinalIgnoreCase);
+                    if (at < 0) continue;
+                    string values = line.Substring(at + 6).Trim();
+                    if (!values.StartsWith("(")) continue;
+                    var fields = SqlValues(values);
+                    if (fields == null || fields.Count != RaceImport.SpellFields) continue;
+                    uint id;
+                    if (!uint.TryParse(fields[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out id)) continue;
+                    rows.Add(new KeyValuePair<uint, string[]>(id, fields.ToArray()));
+                }
+            }
+            if (rows.Count == 0) return;
+
+            DbcTable table;
+            try { table = DbcTable.Parse(File.ReadAllBytes(serverSpellDbc), "Spell.dbc"); }
+            catch { return; }
+            if (table.Fields != RaceImport.SpellFields || table.RecordSize != RaceImport.SpellFields * 4) return;
+
+            var byId = new Dictionary<uint, byte[]>();
+            foreach (var record in table.Records) byId[table.Field(record, 0)] = record;
+            bool changed = false;
+            foreach (var row in rows)
+            {
+                byte[] record;
+                if (!byId.TryGetValue(row.Key, out record))
+                {
+                    record = new byte[table.RecordSize];
+                    table.Records.Add(record);
+                    byId[row.Key] = record;
+                    changed = true;
+                }
+                for (int field = 0; field < row.Value.Length; ++field)
+                {
+                    string value = row.Value[field];
+                    uint bits = 0;
+                    if (RaceImport.SpellTextFields.Contains(field))
+                    {
+                        bits = table.AddString(value ?? "");
+                    }
+                    else if (!string.IsNullOrEmpty(value) && !value.Equals("NULL", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (FloatFields.Contains(field))
+                        {
+                            float number;
+                            if (float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out number))
+                                bits = BitConverter.ToUInt32(BitConverter.GetBytes(number), 0);
+                        }
+                        else if (SignedFields.Contains(field))
+                        {
+                            long number;
+                            if (long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out number))
+                                bits = unchecked((uint)number);
+                        }
+                        else
+                        {
+                            ulong number;
+                            if (ulong.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out number))
+                                bits = (uint)number;
+                        }
+                    }
+                    if (table.Field(record, field) != bits) changed = true;
+                    table.SetField(record, field, bits);
+                }
+            }
+            if (!changed) return;
+
+            string temp = serverSpellDbc + ".afk-racials";
+            File.WriteAllBytes(temp, table.ToBytes());
+            try { File.Copy(temp, serverSpellDbc, true); }
+            finally { try { File.Delete(temp); } catch { } }
+        }
+
+        /// <summary>The values of a SQL VALUES (...) row, with quoted texts unescaped; NULL stays null.</summary>
+        static List<string> SqlValues(string text)
+        {
+            var values = new List<string>();
+            int i = 0;
+            while (i < text.Length && char.IsWhiteSpace(text[i])) ++i;
+            if (i < text.Length && text[i] == '(') ++i;
+            while (i < text.Length)
+            {
+                while (i < text.Length && char.IsWhiteSpace(text[i])) ++i;
+                if (i >= text.Length || text[i] == ')') break;
+                if (text[i] == ',') { ++i; continue; }
+                if (text[i] == '\'')
+                {
+                    ++i;
+                    var value = new StringBuilder();
+                    while (i < text.Length)
+                    {
+                        char c = text[i++];
+                        if (c == '\'')
+                        {
+                            if (i < text.Length && text[i] == '\'') { value.Append('\''); ++i; continue; }
+                            break;
+                        }
+                        if (c == '\\' && i < text.Length)
+                        {
+                            char escaped = text[i++];
+                            value.Append(escaped == 'r' ? '\r' : escaped == 'n' ? '\n' : escaped == '0' ? '\0' : escaped);
+                            continue;
+                        }
+                        value.Append(c);
+                    }
+                    values.Add(value.ToString());
+                    continue;
+                }
+                int start = i;
+                while (i < text.Length && text[i] != ',' && text[i] != ')') ++i;
+                string token = text.Substring(start, i - start).Trim();
+                values.Add(token.Equals("NULL", StringComparison.OrdinalIgnoreCase) ? null : token);
+            }
+            return values;
         }
 
         /// <summary>The racials with the spells their code casts besides (CoA Custom numbers them next to the racial,
