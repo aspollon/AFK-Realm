@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.54
+
+- **All-race racial audit:** `ServerRacials.ClientRankGroups` reads every client `Spell.dbc` rank ending in `Racial`; `RacesModel.AutoDetectClientRacials` applies each group to the race whose name/key/file matches. This replaces the stale 1.9.2 Kyrian/Venthyr entries and follows future `<Race> Racial` additions.
+- **Kyrian:** `111100 111102 111104 111105 111106 111107 111108 111110` (Ascended Hover, Ascended Resolve, Ascended Wings, Purity of Bastion, Virtue of Courage, Soul Guide, Steward's Craft, Ascendant Charge). Helper rows such as Ascended Descent are skipped.
+- **Venthyr:** `111200 111201 111202 111203 111204 111206 111208 111209` (Crimson Feast, Blood Scent, Children of Revendreth, Anima Hunger, Courtly Artifice, Sanguine Hover, Sanguine Resolve, Vampire Bat Form).
+- **Void Elf:** `Voidelf`/`VoidElf` alias repaired; active race list uses `VoidElf` with `110520 110522 110523 110524 110525`.
+- **Verification:** every configured racial ID is present in the merged server `Spell.dbc` and the AFK client patch; only the inactive old `Voidelf` section remains empty and is no longer in `CustomRaces.Races`.
+
 ## 1.2.53
 
 - **Game client player ZIP on CoA:** `client.js` no longer hides the export button when `look.coa`; it labels it "Create player ZIP" and calls `/api/coa/export`. The CoA player ZIP includes CoA files, module add-ons and the AFK patch (merged Spell.dbc).

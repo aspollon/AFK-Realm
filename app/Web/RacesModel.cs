@@ -57,9 +57,11 @@ namespace CoAInstaller.Web
             string path = Path.Combine(inst.ConfigDir, "modules", "mod_custom_races.conf");
             conf = ConfigFile.Load(path, "modules\\mod_custom_races.conf");
             ReadKnown();
+            NormalizeAliases();
             problem = ReadClient();
             AdoptConfKeys();
             ApplyClientMoves();
+            AutoDetectClientRacials();
             ReadFolder();
             HealNumbers();
             PruneChosen();
@@ -150,6 +152,72 @@ namespace CoAInstaller.Web
             }
             catch (Exception ex) { knownError = L.F("What mod-custom-races knows of the races could not be read ({0}): {1}", file, ex.Message); }
             if (bases.Count == 0) bases.AddRange(new[] { "Human", "Orc", "Dwarf", "NightElf", "Undead", "Tauren", "Gnome", "Troll", "BloodElf", "Draenei" });
+        }
+
+        /// <summary>The old setup wrote the Void Elf racials under CustomRaces.VoidElf, while the race/All races
+        /// list uses the client key Voidelf. Copy them once so the module reads a non-empty list.</summary>
+        void NormalizeAliases()
+        {
+            string old = Raw("CustomRaces.VoidElf.Racials", "");
+            if (old.Length > 0 && Raw("CustomRaces.Voidelf.Racials", "").Length == 0)
+                Set("CustomRaces.Voidelf.Racials", old);
+        }
+
+        /// <summary>The client race is keyed VoidElf by the race reader, but an older install put Voidelf in
+        /// CustomRaces.Races with an empty section; the module then read no racials. Keep the key the race reader
+        /// writes (VoidElf) and remove the empty Voidelf key from the list.</summary>
+        void NormalizeVoidElfList()
+        {
+            var race = races.FirstOrDefault(r => r.Key.Equals("VoidElf", StringComparison.OrdinalIgnoreCase));
+            if (race == null) return;
+            var chosen = Chosen();
+            if (chosen.Any(k => k.Equals(race.Key, StringComparison.OrdinalIgnoreCase)) &&
+                !chosen.Any(k => k.Equals("Voidelf", StringComparison.OrdinalIgnoreCase))) return;
+            chosen.RemoveAll(k => k.Equals("Voidelf", StringComparison.OrdinalIgnoreCase));
+            if (!chosen.Any(k => k.Equals(race.Key, StringComparison.OrdinalIgnoreCase))) chosen.Add(race.Key);
+            Set("CustomRaces.Races", string.Join(" ", chosen));
+            // Remove the old, empty Voidelf section, but not the similarly named VoidElf section
+            // (ordinal comparison: the module ignores case, but these are two different section keys).
+            foreach (var option in conf.ByKey.Keys.Where(k => k.StartsWith("CustomRaces.Voidelf.", StringComparison.Ordinal)).ToList())
+                Unset(option);
+        }
+
+        /// <summary>CoA client Spell.dbc ranks that name their race ("Kyrian Racial", "Venthyr Racial",
+        /// eventually a new race) are applied to the matching race automatically. This is what keeps a CoA
+        /// update with a new racial set from silently falling back to the old races.json table.</summary>
+        void AutoDetectClientRacials()
+        {
+            var groups = ServerRacials.ClientRankGroups(ClientAddons.ClientFolder,
+                name => name.IndexOf("Descent", StringComparison.OrdinalIgnoreCase) >= 0);
+            if (groups.Count == 0) return;
+            Func<string, string> norm = text =>
+            {
+                if (string.IsNullOrEmpty(text)) return "";
+                var chars = text.Where(char.IsLetterOrDigit).ToArray();
+                return new string(chars).ToLowerInvariant();
+            };
+            foreach (var group in groups)
+            {
+                string bare = group.Key;
+                if (bare.EndsWith(" Racial", StringComparison.OrdinalIgnoreCase))
+                    bare = bare.Substring(0, bare.Length - " Racial".Length).Trim();
+                string label = norm(bare);
+                if (label.Length < 3) continue;
+                foreach (var race in races)
+                {
+                    string name = Raw("CustomRaces." + race.Key + ".Name", race.Name);
+                    string n = norm(name);
+                    string key = norm(race.Key);
+                    string file = norm(race.File);
+                    bool match = n.Length >= 3 && (n == label || n.StartsWith(label) || label.StartsWith(n)) ||
+                                 key.Length >= 3 && (key == label || key.StartsWith(label)) ||
+                                 file.Length >= 3 && file == label;
+                    if (!match) continue;
+                    int id = CoaRaceOf(race);
+                    if (id <= 0) id = race.Source;
+                    if (id > 0) ServerRacials.SetRacials(id, group.Value);
+                }
+            }
         }
 
         string ReadClient()
@@ -1249,7 +1317,7 @@ namespace CoAInstaller.Web
             Set("CoACustomRaces.Enable", "1");
             Set("CustomRaces.MoreRaces", "1");
             Set("CustomRaces.HighRaces", "1");
-            HealNumbers(); PruneChosen();
+            HealNumbers(); PruneChosen(); NormalizeVoidElfList();
             foreach (var r in races) if (Raw("CustomRaces." + r.Key + ".Source", "").Length > 0) Describe(r, IdOf(r));
             string name = conf.Name;
             try { conf.Save(); }

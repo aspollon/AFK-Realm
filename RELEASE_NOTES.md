@@ -1,3 +1,14 @@
+# AFK Realm 1.2.54
+
+## Fixed in 1.2.54
+
+- **All CoA races' racials are checked against the installed client, not only the old `races.json` copy.** The client's `Spell.dbc` ranks such as `Kyrian Racial` and `Venthyr Racial` are read automatically and the matching race gets its current spell set.
+- **Kyrian:** the old 1.9.2 Lightforged/Nightborne spells were replaced by the current Kyrian set: Ascended Hover, Ascended Resolve, Ascended Wings, Purity of Bastion, Virtue of Courage, Soul Guide, Steward's Craft and Ascendant Charge.
+- **Venthyr:** the old list was replaced by the current Venthyr set: Crimson Feast, Blood Scent, Children of Revendreth, Anima Hunger, Courtly Artifice, Sanguine Hover, Sanguine Resolve and Vampire Bat Form.
+- **Void Elf:** the empty `Voidelf` entry was repaired; the race now runs under `VoidElf` with its five racials.
+- **Installer:** CoA install/update rebuilds the client patch from the current client, merges the racial Spell rows, and includes the complete merged `Spell.dbc`. The player ZIP built from it contains the same data.
+- **Future CoA races:** a new client rank of the form `&lt;Race&gt; Racial` is applied to the matching race automatically; the installed CoA core header is used as the override when present.
+
 # AFK Realm 1.2.53
 
 ## Fixed in 1.2.53

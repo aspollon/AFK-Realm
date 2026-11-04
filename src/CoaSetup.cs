@@ -864,6 +864,10 @@ namespace CoAInstaller
                 string file = ClientRaces.Str(table, row, 11);
                 string name = ClientRaces.Str(table, row, 14);
                 if (name.Length == 0) name = file;
+                // The client file is Voidelf, but the race reader and the old config use VoidElf. Keep the key
+                // that the racial list is written under; otherwise the module reads an empty Voidelf section.
+                if (id == 59 && file.Equals("Voidelf", StringComparison.OrdinalIgnoreCase))
+                    file = "VoidElf";
                 string key = RaceKey(conf, id, file);
                 // The client also carries the old NPC row "Earthen" (27) and "ThinHuman" (32). A high package
                 // row with the same file/name must not take that key, or Describe would write the NPC row into

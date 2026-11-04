@@ -45,6 +45,80 @@ namespace CoAInstaller
             UseCoaRows(rowsFile);
         }
 
+        /// <summary>All client Spell.dbc ranks of the form "&lt;Race&gt; Racial", with one spell per name. CoA gives
+        /// Kyrian and Venthyr their own rank; a future CoA race with the same convention is picked up here as well.
+        /// Internal helper rows can be filtered by name.</summary>
+        public static Dictionary<string, uint[]> ClientRankGroups(string client, Func<string, bool> skipName)
+        {
+            var result = new Dictionary<string, uint[]>(StringComparer.OrdinalIgnoreCase);
+            if (string.IsNullOrEmpty(client)) return result;
+            try
+            {
+                string source;
+                byte[] bytes = ClientPatch.FromClient(client, "DBFilesClient\\Spell.dbc", out source);
+                if (bytes == null) return result;
+                var table = DbcTable.Parse(bytes, "Spell.dbc");
+                if (table.Fields != RaceImport.SpellFields) return result;
+                var names = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+                var ids = new Dictionary<string, List<uint>>(StringComparer.OrdinalIgnoreCase);
+                foreach (var record in table.Records)
+                {
+                    string rank = Text(table, table.Field(record, 153)).Trim();
+                    if (!rank.EndsWith("Racial", StringComparison.OrdinalIgnoreCase) ||
+                        rank.Equals("Racial", StringComparison.OrdinalIgnoreCase) ||
+                        rank.Equals("Racial Passive", StringComparison.OrdinalIgnoreCase) ||
+                        rank.IndexOf("CoA Focus", StringComparison.OrdinalIgnoreCase) >= 0) continue;
+                    string name = Text(table, table.Field(record, 136)).Trim();
+                    if (name.Length == 0 || (skipName != null && skipName(name))) continue;
+                    HashSet<string> seen;
+                    if (!names.TryGetValue(rank, out seen)) { seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase); names[rank] = seen; ids[rank] = new List<uint>(); }
+                    if (!seen.Add(name)) continue;
+                    ids[rank].Add(table.Field(record, 0));
+                }
+                foreach (var pair in ids) result[pair.Key] = pair.Value.OrderBy(x => x).ToArray();
+            }
+            catch { }
+            return result;
+        }
+
+        /// <summary>Sets the racial spells of one race from an already discovered client rank.</summary>
+        public static void SetRacials(int race, IEnumerable<uint> ids)
+        {
+            if (race <= 0 || ids == null) return;
+            var list = ids.Where(x => x > 0).Distinct().OrderBy(x => x).ToArray();
+            if (list.Length > 0) coaRacials[race] = list;
+        }
+
+        /// <summary>Reads the racial spells of one race from the rank column of the game client's Spell.dbc
+        /// ("Kyrian Racial"). This follows a CoA client update even when the module's old races.json still has the
+        /// previous racial set. Spell rows with the same name are one ability; internal helper rows are skipped by
+        /// name (for example Ascended Descent).</summary>
+        public static void UseClientRaceLabel(string client, int race, string label, params string[] skipNames)
+        {
+            if (string.IsNullOrEmpty(client) || race <= 0 || string.IsNullOrEmpty(label)) return;
+            try
+            {
+                string source;
+                byte[] bytes = ClientPatch.FromClient(client, "DBFilesClient\\Spell.dbc", out source);
+                if (bytes == null) return;
+                var table = DbcTable.Parse(bytes, "Spell.dbc");
+                if (table.Fields != RaceImport.SpellFields) return;
+                var skip = new HashSet<string>(skipNames ?? new string[0], StringComparer.OrdinalIgnoreCase);
+                var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                var ids = new List<uint>();
+                foreach (var record in table.Records)
+                {
+                    string rank = Text(table, table.Field(record, 153));
+                    if (!rank.Equals(label, StringComparison.OrdinalIgnoreCase)) continue;
+                    string name = Text(table, table.Field(record, 136));
+                    if (name.Length == 0 || skip.Contains(name) || !names.Add(name)) continue;
+                    ids.Add(table.Field(record, 0));
+                }
+                if (ids.Count > 0) coaRacials[race] = ids.OrderBy(x => x).ToArray();
+            }
+            catch { }
+        }
+
         /// <summary>Reads CoA Custom's race -> racial spell table from the installed core
         /// (src/server/shared/CoaCustomRacials.h). The module's races.json is only a copy; using the core header means a
         /// CoA update that adds races or changes racials is picked up here without a new AFK Realm or module release.
