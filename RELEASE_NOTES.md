@@ -1,3 +1,12 @@
+# AFK Realm 1.2.50
+
+## Fixed in 1.2.50
+
+- **The worldserver no longer aborts at startup because `custom_race_display` is missing.** The 1.9.8 core asks for this table when the custom-race switch is on; the CoA package ships it in `race_looks.sql`, but the installer does not run package SQL. AFK Realm now creates and fills the table during the CoA setup and repairs it before every server start. An existing installation can start the server again without rebuilding it.
+- **No more race on/off switches.** Every race of the installed CoA Custom package is kept on automatically; the stock Warcraft races stay available through the normal CoA character creation. The base-race page only chooses the start area, faction and racials of a custom race.
+- **Standard CoA-client rows are no longer offered.** The old Forgotten (32) and Forest Troll Alliance (40) rows, the NPC Earthen (27), the test race and the retired Skyborne/Darkfallen rows are filtered out. The package's Earthen Alliance (68), Earthen Horde (69), Murloc Alliance/Horde (30/31) and all other CoA Custom races stay in. The Earthen key is kept separate from the NPC row, so the package race keeps its own looks and racials.
+- **Existing race settings are repaired automatically.** Opening the base-race page or starting the server writes the complete CoA Custom race list and its racials again; standard-client rows cannot survive a save. No server rebuild is needed for these fixes.
+
 # AFK Realm 1.2.49
 
 ## New in 1.2.49

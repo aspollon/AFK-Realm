@@ -539,6 +539,11 @@ namespace CoAInstaller
             var running = World;
             if (running != null) return running;
             status(L.T("Starting the worldserver ..."));
+            // CoA's core asks for this table when the custom-race master switch is on. Repair it here too, so an
+            // existing installation starts after an app update without having to reinstall the whole CoA package.
+            // Also make sure every CoA Custom race is on: there are no race switches any more.
+            try { CoaSetup.EnsurePackageRaces(inst); } catch { }
+            try { CoaSetup.EnsureRaceDisplayTable(inst); } catch { }
             var p = StartConsole(inst.WorldExe, inst.WorldConf);
             // Configuration and database problems end the process within seconds.
             for (int i = 0; i < 30; i++)

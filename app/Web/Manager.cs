@@ -72,6 +72,10 @@ namespace CoAInstaller.Web
             }
             Settings.LastInstall = inst.Root;
             L.AddModules(ModuleCatalog.ModulesDir(inst));
+            // No race on/off switches: opening the server already switches every CoA Custom race of the installed
+            // package on and removes standard-client rows from the list. Doing it here also keeps the "races the
+            // server cannot create" banner from appearing for an old 1.2.49 configuration.
+            try { CoaSetup.EnsurePackageRaces(inst); } catch { }
             try { Ctl.RestoreAfterBotReset(); } catch { }
             if (loop == null)
             {

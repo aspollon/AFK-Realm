@@ -329,6 +329,16 @@ namespace CoAInstaller
                 Console.WriteLine(L.F("Copying SQL to {0} ...", sqlTarget));
                 CopyFiles(sqlSource, sqlTarget, "*.sql", o.NoBackup, ref copied, ref skipped);
                 Console.WriteLine(L.T("SQL files copied. Automatic execution is disabled; the included module data is used."));
+                // The core's custom-race display code asks for acore_world.custom_race_display at every start.
+                // CoA Custom ships it in race_looks.sql, but the SQL is otherwise not run automatically; without
+                // this table the worldserver aborts on startup. It only creates/fills the table, so it is safe to
+                // run on every install and update.
+                try
+                {
+                    EnsureRaceDisplayTable(inst);
+                    Console.WriteLine(L.T("The custom race looks table is ready."));
+                }
+                catch (Exception ex) { Console.WriteLine(L.T("The custom race looks table could not be prepared:") + " " + ex.Message); }
             }
 
             VerifyCopied(clientSource, Path.Combine(o.Client, "Data"), "*.MPQ");
@@ -537,7 +547,9 @@ namespace CoAInstaller
             if (o.ClientPatch) Console.WriteLine("  - AFK client patch");
         }
 
-        static readonly HashSet<int> HiddenCoaRaces = new HashSet<int> { 19, 27, 65, 72, 77, 80, 81 };
+        // Rows the CoA client carries for NPCs, test races and old versions, but which its race menu does not offer.
+        // 32 (Forgotten) and 40 (Forest Troll, Alliance) are the old base-client rows; they are not CoA Custom races.
+        static readonly HashSet<int> HiddenCoaRaces = new HashSet<int> { 19, 27, 32, 40, 65, 72, 77, 80, 81 };
 
         // The base race CoA Custom gives its races: its RACIAL table for the first 31 races and a
         // same-faction stock race for the Esteria races above them.
@@ -835,6 +847,12 @@ namespace CoAInstaller
             try { table = DbcTable.Parse(File.ReadAllBytes(dbc), "ChrRaces.dbc"); }
             catch { return; }
             ConfigFile conf = ConfigFile.Load(confPath, "modules\\mod_custom_races.conf");
+            // The race page has no on/off switches any more: the package's races and the numbers above 63 are
+            // always on. These keys are read by mod-custom-races and the CoA core.
+            Set(conf, "CustomRaces.Enable", "1");
+            Set(conf, "CoACustomRaces.Enable", "1");
+            Set(conf, "CustomRaces.MoreRaces", "1");
+            Set(conf, "CustomRaces.HighRaces", "1");
             var keys = new List<string>();
             HashSet<string> known = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var row in table.Records)
@@ -847,6 +865,12 @@ namespace CoAInstaller
                 string name = ClientRaces.Str(table, row, 14);
                 if (name.Length == 0) name = file;
                 string key = RaceKey(conf, id, file);
+                // The client also carries the old NPC row "Earthen" (27) and "ThinHuman" (32). A high package
+                // row with the same file/name must not take that key, or Describe would write the NPC row into
+                // the package race's section. Its own key gets the number appended (Earthen68, ThinHuman96).
+                if (id > 31 && (file.Equals("Earthen", StringComparison.OrdinalIgnoreCase) ||
+                                file.Equals("ThinHuman", StringComparison.OrdinalIgnoreCase)))
+                    key = RaceKey(conf, id, file + id);
                 if (!known.Add(key)) key = RaceKey(conf, id, file + id);
                 string prefix = "CustomRaces." + key + ".";
                 if (!Has(conf, prefix + "Source"))
@@ -911,13 +935,49 @@ namespace CoAInstaller
             }
             else if (keys.Count > 0)
             {
-                // The CoA UI owns race selection: every playable race of the CoA package is on,
-                // and no stale key or client-only race from an older configuration survives in
-                // CustomRaces.Races. Base races stay as the user chose them.
-                Set(conf, "CustomRaces.Races", Quote(string.Join(" ", keys.ToArray())));
+                // The CoA UI owns race selection: every CoA Custom race is on, and no stale key or
+                // standard-client race from an older configuration survives in CustomRaces.Races.
+                // Races imported from the user's own race folder stay, so their files keep working.
+                ConfigOption current;
+                var old = (conf.ByKey.TryGetValue("CustomRaces.Races", out current) ? ConfigOption.Unquote(current.CurrentRaw) : "")
+                    .Split(new[] { ' ', ',', ';', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+                var imported = old.Where(k =>
+                {
+                    ConfigOption o;
+                    return conf.ByKey.TryGetValue("CustomRaces." + k + ".Import", out o) &&
+                           ConfigOption.Unquote(o.CurrentRaw) == "1";
+                });
+                var all = keys.Concat(imported).Distinct(StringComparer.OrdinalIgnoreCase);
+                Set(conf, "CustomRaces.Races", Quote(string.Join(" ", all.ToArray())));
                 try { if (File.Exists(LeftOffFile(inst))) File.Delete(LeftOffFile(inst)); } catch { }
             }
             conf.Save();
+        }
+
+        /// <summary>Writes every CoA Custom race of the installed package into the race settings and switches it on.
+        /// The race page no longer has on/off switches; this is also called by every save of the base-race page.</summary>
+        public static void EnsurePackageRaces(Install inst)
+        {
+            WriteRaceRows(inst, Path.Combine(inst.DataDir, "dbc", "ChrRaces.dbc"), null);
+        }
+
+        /// <summary>Creates and fills acore_world.custom_race_display. The CoA core queries it on startup when
+        /// CoACustomRaces.Enable is on; a missing table aborts the worldserver. The CoA package ships the table in
+        /// race_looks.sql, which is not otherwise run by the installer. Safe to call before every server start.</summary>
+        public static void EnsureRaceDisplayTable(Install inst)
+        {
+            var login = DbLogin.FromConfig(inst);
+            string sql = Path.Combine(inst.Root, "CoA-Custom", "sql", "race_looks.sql");
+            if (File.Exists(sql))
+            {
+                MySql.RunFile(inst, login, "acore_world", sql);
+                return;
+            }
+            MySql.Query(inst, login,
+                "CREATE TABLE IF NOT EXISTS acore_world.custom_race_display (" +
+                "race TINYINT UNSIGNED NOT NULL, gender TINYINT UNSIGNED NOT NULL, " +
+                "idx TINYINT UNSIGNED NOT NULL, displayId INT UNSIGNED NOT NULL, " +
+                "PRIMARY KEY (race, gender, idx)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
         }
 
         static bool Has(ConfigFile conf, string key)

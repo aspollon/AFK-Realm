@@ -21,13 +21,24 @@ namespace CoAInstaller.Web
         readonly Dictionary<string, KeyValuePair<int, string>> virtuals = new Dictionary<string, KeyValuePair<int, string>>();
         public readonly List<string> bases = new List<string>();
         public readonly List<ClientRace> races = new List<ClientRace>();
+        HashSet<int> packageIds;
+        HashSet<int> PackageIds
+        {
+            get
+            {
+                if (packageIds == null)
+                    packageIds = new HashSet<int>(CoaSetup.PackageRaces(inst).Select(p => p.Key));
+                return packageIds;
+            }
+        }
         readonly List<int> slots = new List<int>(), moreSlots = new List<int>(), highSlots = new List<int>();
         readonly HashSet<int> reservedNumbers = new HashSet<int>(), stockCopyNumbers = new HashSet<int>();
         readonly HashSet<string> helmetPrefixes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         ClientRaces.Scan helmetScan;
         static readonly Dictionary<int, int> CoaExtraLooks = new Dictionary<int, int> { { 66, 1 }, { 68, 1 }, { 69, 1 }, { 70, 2 }, { 71, 2 } };
         // Rows the CoA client carries for NPCs, test races and old versions, but which its race menu does not offer.
-        static readonly HashSet<int> CoaHiddenRaces = new HashSet<int> { 19, 27, 65, 72, 77, 80, 81 };
+        // 32 (Forgotten) and 40 (Forest Troll, Alliance) are the old base-client rows, not CoA Custom races.
+        static readonly HashSet<int> CoaHiddenRaces = new HashSet<int> { 19, 27, 32, 40, 65, 72, 77, 80, 81 };
         static readonly Dictionary<string, string> BasePrefixes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             { "Human", "Hu" }, { "Orc", "Or" }, { "Dwarf", "Dw" }, { "NightElf", "Ni" }, { "Undead", "Sc" }, { "Tauren", "Ta" },
@@ -39,6 +50,10 @@ namespace CoAInstaller.Web
         public RacesModel(Install i)
         {
             inst = i;
+            // The race page has no on/off switches any more: every CoA Custom race is switched on and the
+            // standard-client rows are kept out before the page reads its settings. The package list comes
+            // from the installed server ChrRaces.dbc, so a future package adds its races here by itself.
+            try { CoaSetup.EnsurePackageRaces(inst); } catch { }
             string path = Path.Combine(inst.ConfigDir, "modules", "mod_custom_races.conf");
             conf = ConfigFile.Load(path, "modules\\mod_custom_races.conf");
             ReadKnown();
@@ -395,7 +410,7 @@ namespace CoAInstaller.Web
             foreach (var o in conf.Options.Where(o => o.Key.StartsWith("CustomRaces.", StringComparison.OrdinalIgnoreCase) && o.Key.EndsWith(".Id", StringComparison.OrdinalIgnoreCase)).ToList())
             {
                 string key = o.Key.Substring("CustomRaces.".Length, o.Key.Length - "CustomRaces.".Length - ".Id".Length);
-                if (races.Any(r => r.Key.Equals(key, StringComparison.OrdinalIgnoreCase))) continue;
+                if (races.Any(r => r.Key.Equals(key, StringComparison.OrdinalIgnoreCase)) || IsPackageKey(key)) continue;
                 int id;
                 if (int.TryParse(Raw(o.Key, ""), out id) && id > 0) Unset(o.Key);
             }
@@ -407,6 +422,7 @@ namespace CoAInstaller.Web
             MarkOwnNumbers();
             foreach (var r in races)
             {
+                if (IsPackageKey(r.Key)) continue;
                 if (!r.OwnNumber) continue;
                 int id = IdOf(r);
                 if (id <= 0 || id == r.Source) continue;
@@ -418,6 +434,7 @@ namespace CoAInstaller.Web
             var moved = new List<ClientRace>();
             foreach (var r in races)
             {
+                if (IsPackageKey(r.Key)) continue;
                 if (r.OwnNumber) continue;
                 if (!NumberTakenByOther(r, IdOf(r))) continue;
                 Set("CustomRaces." + r.Key + ".Id", "0");
@@ -568,7 +585,7 @@ namespace CoAInstaller.Web
             // what the CoA Custom install deliberately leaves out. Older settings kept
             // them (Troglodyte, a second Forgotten); remove them here as well, with
             // their whole sections, so only the package's own races stay in the list.
-            var copies = chosen.Where(IsClientCopy).ToList();
+            var copies = chosen.Where(k => IsClientCopy(k) && !IsPackageKey(k)).ToList();
             if (copies.Count > 0)
             {
                 foreach (var key in copies) DropRace(key);
@@ -588,7 +605,8 @@ namespace CoAInstaller.Web
                 string kept;
                 if (!seenNumbers.TryGetValue(number, out kept)) { seenNumbers[number] = key; continue; }
                 var keptRace = races.FirstOrDefault(x => x.Key.Equals(kept, StringComparison.OrdinalIgnoreCase));
-                bool keepThis = keptRace != null && keptRace.Pack == null && thisRace.Pack != null;
+                bool keepThis = IsPackageKey(key) ||
+                    (keptRace != null && keptRace.Pack == null && thisRace.Pack != null);
                 if (!keepThis) { duplicates.Add(key); continue; }
                 seenNumbers[number] = key;
                 duplicates.Add(kept);
@@ -601,7 +619,8 @@ namespace CoAInstaller.Web
             // An entry with Id=0 is not playable on this realm (for example the old
             // base-client "Earthen Npc"). The module never switches it on, so keep it
             // out of the settings instead of carrying it beside the package's Earthen.
-            var idle = chosen.Where(k => ConfigOption.Unquote(Raw("CustomRaces." + k + ".Id", "")) == "0").ToList();
+            var idle = chosen.Where(k => !IsPackageKey(k) &&
+                ConfigOption.Unquote(Raw("CustomRaces." + k + ".Id", "")) == "0").ToList();
             if (idle.Count > 0)
             {
                 foreach (var key in idle) DropRace(key);
@@ -616,6 +635,7 @@ namespace CoAInstaller.Web
                 var packageIds = new HashSet<int>(package.Select(p => p.Key));
                 var foreign = chosen.Where(k =>
                 {
+                    if (IsPackageKey(k)) return false;
                     var race = races.FirstOrDefault(x => x.Key.Equals(k, StringComparison.OrdinalIgnoreCase));
                     if (race == null || ConfigOption.Unquote(Raw("CustomRaces." + k + ".Import", "")) == "1") return false;
                     return !packageIds.Contains(IdOf(race)) && !packageIds.Contains(CoaRaceOf(race));
@@ -626,7 +646,8 @@ namespace CoAInstaller.Web
                     chosen = chosen.Except(foreign, StringComparer.OrdinalIgnoreCase).ToList();
                 }
             }
-            var valid = chosen.Where(k => races.Any(r => r.Key.Equals(k, StringComparison.OrdinalIgnoreCase))).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            var valid = chosen.Where(k => IsPackageKey(k) ||
+                races.Any(r => r.Key.Equals(k, StringComparison.OrdinalIgnoreCase))).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
             if (valid.Count != Chosen().Count) Set("CustomRaces.Races", string.Join(" ", valid));
             // Older AFK versions wrote this key beside Voidelf. The module ignores it, but it
             // looked like a second race and kept an empty racial list in the settings.
@@ -639,6 +660,17 @@ namespace CoAInstaller.Web
         {
             return ConfigOption.Unquote(Raw("CustomRaces." + key + ".Copy", "")) == "1" &&
                    ConfigOption.Unquote(Raw("CustomRaces." + key + ".Import", "")) != "1";
+        }
+
+        /// <summary>True for a section that belongs to a CoA Custom race of the installed package. These races stay
+        /// on automatically and are not removed by the old client-only-race cleanup.</summary>
+        bool IsPackageKey(string key)
+        {
+            int source;
+            if (int.TryParse(Raw("CustomRaces." + key + ".Source", ""), out source) && PackageIds.Contains(source))
+                return true;
+            var race = races.FirstOrDefault(x => x.Key.Equals(key, StringComparison.OrdinalIgnoreCase));
+            return race != null && (PackageIds.Contains(IdOf(race)) || PackageIds.Contains(CoaRaceOf(race)));
         }
 
         void DropRace(string key)
@@ -1209,7 +1241,11 @@ namespace CoAInstaller.Web
 
         public string Save()
         {
+            // No race switches: the package's races, the 64-race patch and CoA Custom's numbers are always on.
+            Set("CustomRaces.Enable", "1");
             Set("CoACustomRaces.Enable", "1");
+            Set("CustomRaces.MoreRaces", "1");
+            Set("CustomRaces.HighRaces", "1");
             HealNumbers(); PruneChosen();
             foreach (var r in races) if (Raw("CustomRaces." + r.Key + ".Source", "").Length > 0) Describe(r, IdOf(r));
             string name = conf.Name;
@@ -1224,7 +1260,9 @@ namespace CoAInstaller.Web
                 {
                     var r = races.FirstOrDefault(x => x.Key.Equals(key, StringComparison.OrdinalIgnoreCase));
                     string nm = Raw("CustomRaces." + key + ".Name", "");
-                    var wanted = new ServerRacials.Wanted { Key = key, Name = nm.Length > 0 ? nm : r != null ? r.Name : key, CoaRace = r != null ? CoaRaceOf(r) : 0 };
+                    int coaRace = r != null ? CoaRaceOf(r) : 0;
+                    if (coaRace == 0) int.TryParse(Raw("CustomRaces." + key + ".Source", ""), out coaRace);
+                    var wanted = new ServerRacials.Wanted { Key = key, Name = nm.Length > 0 ? nm : r != null ? r.Name : key, CoaRace = coaRace };
                     var pack = r != null ? PackOf(r) : null;
                     if (pack != null)
                         foreach (var spell in pack.Spells)

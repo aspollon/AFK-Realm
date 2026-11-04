@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.50
+
+- **Startup crash `Table 'acore_world.custom_race_display' doesn't exist` fixed:** `CoaSetup.EnsureRaceDisplayTable` runs CoA Custom's `race_looks.sql` during the CoA install and `ServerControl.StartWorld` repairs the table before every start. No server build needed.
+- **No race on/off switches:** `RacesModel` and `CoaSetup` keep every CoA Custom race on, plus `CustomRaces.Enable`, `CoACustomRaces.Enable`, `MoreRaces` and `HighRaces`; the base-race page only selects the base race.
+- **Only CoA Custom + stock races:** `HiddenCoaRaces` now also contains 32 (Forgotten) and 40 (Forest Troll Alliance); `WriteRaceRows` writes the package list, keeps imported race-folder races, and uses `Earthen68`/`ThinHuman96` keys so the NPC rows cannot overwrite a package race. `RacesModel` protects package keys from the old duplicate/idle/foreign cleanup and includes them in the base-race view.
+
 ## 1.2.41
 
 - **CoA Custom install: copies of client races are no longer carried over** (`CoaSetup.ResetRaceConfig`): only races imported from a race folder are. A carried copy took the section of the package's own race (`RaceKey` by Source: Haranir Horde 70 kept as the copy 76, `Appearance` 0) or came back beside it (the copy of ThinHuman 33 beside Forgotten 32, the copy of Troglodyte 46, the Murlocs' body).
