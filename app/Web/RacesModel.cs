@@ -140,6 +140,9 @@ namespace CoAInstaller.Web
                     bool hasCode = c.TryGetValue("ported", out ported) && ported is bool && (bool)ported;
                     string rowsFile = c.TryGetValue("rows", out rows) && rows is string ? Path.Combine(Path.GetDirectoryName(file), ((string)rows).Replace('/', Path.DirectorySeparatorChar)) : null;
                     ServerRacials.UseCoaCustom(table, code, hasCode, rowsFile);
+                    // The installed CoA core owns the real race -> racial table; new races/racials of a CoA update are
+                    // picked up from it instead of waiting for a new races.json in the module.
+                    ServerRacials.UseCoreHeader(inst.SourceDir);
                     string coaFolder = Raw("CustomRaces.ClientRootFolder", "");
                     string packRows = ServerRacials.PackRows(coaFolder);
                     if (packRows != null) ServerRacials.UseCoaRows(packRows, true);

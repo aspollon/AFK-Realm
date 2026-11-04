@@ -45,6 +45,33 @@ namespace CoAInstaller
             UseCoaRows(rowsFile);
         }
 
+        /// <summary>Reads CoA Custom's race -> racial spell table from the installed core
+        /// (src/server/shared/CoaCustomRacials.h). The module's races.json is only a copy; using the core header means a
+        /// CoA update that adds races or changes racials is picked up here without a new AFK Realm or module release.
+        /// Entries from the header win over the copy.</summary>
+        public static void UseCoreHeader(string sourceDir)
+        {
+            if (string.IsNullOrEmpty(sourceDir)) return;
+            string file = Path.Combine(sourceDir, "src", "server", "shared", "CoaCustomRacials.h");
+            if (!File.Exists(file)) return;
+            try
+            {
+                var rx = new System.Text.RegularExpressions.Regex(@"\{\s*(\d+)\s*,\s*\{([\d,\s]+)\}\s*\}");
+                foreach (string line in File.ReadLines(file))
+                {
+                    var m = rx.Match(line);
+                    if (!m.Success) continue;
+                    int race;
+                    if (!int.TryParse(m.Groups[1].Value, out race) || race <= 0) continue;
+                    var ids = m.Groups[2].Value.Split(',')
+                        .Select(x => { uint n; return uint.TryParse(x.Trim(), out n) ? n : 0; })
+                        .Where(n => n > 0).Distinct().ToArray();
+                    if (ids.Length > 0) coaRacials[race] = ids;
+                }
+            }
+            catch { }
+        }
+
         /// <summary>The file of CoA Custom's rows of its racials in its server pack (files\sql\10_esteria_racials_*.sql, the
         /// newest), from the CoA Custom folder chosen on the races page (the pack, its files folder or files\client_root);
         /// null when there is none.</summary>
@@ -201,6 +228,13 @@ namespace CoAInstaller
                     {
                         lines.Add("DELETE FROM `spell_script_names` WHERE `spell_id` = " + spell + ";");
                         lines.Add("INSERT INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES (" + spell + ",'" + script + "');");
+                    }
+                    // Gallop has two scripts in mod-custom-races: the aura (from CoA's rows) and the
+                    // cast-again-to-dismiss check. CoA's SQL only names the aura; bind the second here.
+                    if (spell == 14001006 && !lines.Any(l => l.Contains("'spell_centaur_gallop'")))
+                    {
+                        lines.Add("DELETE FROM `spell_script_names` WHERE `spell_id` = 14001006 AND `ScriptName` = 'spell_centaur_gallop';");
+                        lines.Add("INSERT INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES (14001006,'spell_centaur_gallop');");
                     }
                     if (coaProcs.TryGetValue(spell, out proc))
                     {

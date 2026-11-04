@@ -162,11 +162,44 @@ namespace CoAInstaller
                     plan.ClearCache |= clientPart.TryGetValue("clearCache", out v) && v is bool && (bool)v;
                 }
             }
+            // The server's merged Spell.dbc carries the custom racial spells (140xxxx and the other
+            // server-side rows) that the CoA client's Spell.dbc does not. Put that table into the
+            // AFK client patch as well: without it the server learns a racial the client has no row
+            // for, and the player sees no ability. Every player needs this file; a future CoA race
+            // or racial that AFK writes into the server table therefore reaches all clients with
+            // the next client patch, without a hand-built DBC asset.
+            AddMergedSpellTable(inst, plan);
             // The client pack may still carry stock CoA binaries. Patch them to temporary copies so
             // both the installed files and the ZIP get the customize/start fixes without asking
             // the player to run a Python script. Unknown versions are left untouched.
             ClientBinaryPatch.Prepare(plan);
             return plan;
+        }
+
+        /// <summary>Adds the server's merged Spell.dbc to the patch when custom races are configured. The CoA
+        /// client's own Spell.dbc has 225,534 rows and lacks the server-only 140xxxx racial rows; the server's
+        /// table (client rows + the racial SQL that AFK generates) has them. A client without this table knows a
+        /// racial spell by id only if the server happens to stream it, so players see no racial abilities.</summary>
+        static void AddMergedSpellTable(Install inst, Plan plan)
+        {
+            string conf = Path.Combine(inst.ConfigDir, "modules", "mod_custom_races.conf");
+            if (!File.Exists(conf)) return;
+            string races = Conf.Get(conf, "CustomRaces.Races");
+            if (string.IsNullOrWhiteSpace(races)) return;
+            string spell = Path.Combine(inst.DataDir, "dbc", "Spell.dbc");
+            if (!File.Exists(spell) || new FileInfo(spell).Length < 1024 * 1024) return;
+            if (plan.Files.Any(f => f.To.Equals("DBFilesClient\\Spell.dbc", StringComparison.OrdinalIgnoreCase))) return;
+            plan.Files.Add(new FileSpec
+            {
+                Module = "afk-realm",
+                From = spell,
+                To = "DBFilesClient\\Spell.dbc",
+                Fills = new List<Dictionary<string, object>>()
+            });
+            string why = L.T("The custom spell table of the server, with the racial abilities of CoA Custom's races.");
+            plan.Why.Add("AFK Realm: " + why);
+            plan.WhyEnglish.Add("AFK Realm: The custom spell table of the server, with the racial abilities of CoA Custom's races.");
+            if (!plan.Modules.Contains("afk-realm")) plan.Modules.Add("afk-realm");
         }
 
         static IEnumerable<Dictionary<string, object>> List(Dictionary<string, object> d, string key)

@@ -148,13 +148,48 @@ namespace CoAInstaller
             }
         }
 
-        /// <summary>Writes the complete server table and keeps the previous one as .coa-patcher-backup.</summary>
+        /// <summary>Writes the complete server table and keeps the previous one as .coa-patcher-backup. The game
+        /// client's own Spell.dbc is preferred over the bundled fallback: it follows every CoA update (new spells,
+        /// new races), and AFK Realm merges the racial rows of the package into it afterwards. The bundled table is
+        /// only a fallback for a server without a chosen game client.</summary>
         public static int Install(Install inst)
         {
+            byte[] client = ClientSpellTable();
+            if (client != null) return Write(inst, client);
             if (IsInstalled(inst)) return 0;
             byte[] dbc = DbcFromZip(Read());
             if (!IsDbc(dbc))
                 throw new InvalidOperationException(L.T("The server Spell.dbc file is not the expected CoA spell table."));
+            return Write(inst, dbc);
+        }
+
+        static bool LooksLikeSpell(byte[] data)
+        {
+            if (data == null || data.Length < 20 || data[0] != 'W' || data[1] != 'D' || data[2] != 'B' || data[3] != 'C') return false;
+            try
+            {
+                uint rows = BitConverter.ToUInt32(data, 4), fields = BitConverter.ToUInt32(data, 8), record = BitConverter.ToUInt32(data, 12);
+                return rows >= 200000 && fields == RaceImport.SpellFields && record == RaceImport.SpellFields * 4;
+            }
+            catch { return false; }
+        }
+
+        /// <summary>The Spell.dbc the game client actually reads (the last archive wins), if it is a CoA table.</summary>
+        static byte[] ClientSpellTable()
+        {
+            try
+            {
+                string client = ClientAddons.ClientFolder;
+                if (string.IsNullOrEmpty(client) || !ClientAddons.IsClientFolder(client)) return null;
+                string source;
+                byte[] data = ClientPatch.FromClient(client, "DBFilesClient\\Spell.dbc", out source);
+                return LooksLikeSpell(data) ? data : null;
+            }
+            catch { return null; }
+        }
+
+        static int Write(Install inst, byte[] dbc)
+        {
             string target = Target(inst);
             CoaUninstall.Capture(target);
             Directory.CreateDirectory(Path.GetDirectoryName(target));

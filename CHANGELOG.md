@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.52
+
+- **Client Spell.dbc in the AFK patch:** `ClientPatch.Collect` adds the server's merged `Spell.dbc` (`DBFilesClient\Spell.dbc`) when custom races are configured. Client base 225,534 rows plus package racial SQL -> server 225,579 rows, including 14001005/14001006/14001075; every player now gets the racial spells.
+- **No more bundled server Spell as the only base:** `ServerSpellDbc.Install` prefers the game client's current `Spell.dbc`, so CoA updates with new spells are followed; the bundled ZIP remains a fallback.
+- **Race -> racial mapping:** `ServerRacials.UseCoreHeader` reads `src/server/shared/CoaCustomRacials.h` when present; the module table remains the fallback.
+- **Centaur Gallop:** `ServerRacials.Sync` adds the `spell_centaur_gallop` binding next to CoA's `spell_centaur_gallop_aura`.
+
 ## 1.2.51
 
 - **Version string fixed:** `Product.Version` in `src/Core.cs` was still `1.2.49` in 1.2.50, so the app displayed and compared 1.2.49 after updating. Both `Product.Version` and the assembly version are now 1.2.51.

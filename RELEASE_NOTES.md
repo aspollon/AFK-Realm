@@ -1,3 +1,14 @@
+# AFK Realm 1.2.52
+
+## Fixed in 1.2.52
+
+- **The client now gets the server's complete Spell.dbc.** The CoA client's Spell.dbc has 225,534 rows and does not contain the server-only custom racial rows (the 140xxxx spells). AFK Realm now takes the game client's Spell.dbc, merges the racial rows generated from the CoA package into it, and adds the resulting table to the AFK client patch. The server learns the same spells, so every player sees the racials; without the new client patch players see no racial abilities.
+- **Future CoA updates are followed automatically.** The server table is built from the installed client's current Spell.dbc, not a hand-updated bundled table; the racial rows come from the installed CoA package's racial SQL. A CoA update with new spells, races or racials is therefore included on the next CoA install and client-patch build.
+- **The race -> racial mapping can come from the installed CoA core.** If `src/server/shared/CoaCustomRacials.h` exists, AFK Realm reads the race-to-racial table from it instead of waiting for a new `races.json`.
+- **Centaur Gallop gets its second script binding.** CoA's SQL only binds the aura; AFK Realm also binds `spell_centaur_gallop`, so casting Gallop again dismisses it and the startup error "Script named 'spell_centaur_gallop' is not assigned" is gone.
+
+**What to do:** install 1.2.52, then rebuild the client patch and the player ZIP (**Modules > Game client > Install** and the CoA player ZIP). Existing players need the new ZIP/patch; characters receive the racials at their next login.
+
 # AFK Realm 1.2.51
 
 ## Fixed in 1.2.51
