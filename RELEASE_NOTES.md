@@ -1,3 +1,11 @@
+# AFK Realm 1.2.48
+
+## Fixed in 1.2.48
+
+- **The custom-race master switch now reaches the current core.** `CoACustomRaces.Enable` is written into `mod_custom_races.conf`, the module config the current CoA core actually loads. The old `coa_custom_races.conf` is not loaded, which produced the warning "Missing property CoACustomRaces.Enable" even when the race settings were on. Existing servers: open **Modules > Custom races** and save once, or run the CoA Custom setup again.
+- **Earthen duplicates are cleaned up.** Race settings that contain two entries with the same race number (for example `Earthen` and an old `Earthen` copy at 68) keep one entry and remove the duplicate when the race page is saved.
+- **`mod-subclass` remains on the current core.** The module update from 1.2.47 is included: the missing compatibility headers and the guard against the `OnUnitDeath` crash on creatures without a `CreatureTemplate`.
+
 # AFK Realm 1.2.47
 
 ## Fixed in 1.2.47

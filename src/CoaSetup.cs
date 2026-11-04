@@ -983,6 +983,7 @@ namespace CoAInstaller
             if (!File.Exists(confPath)) return;
             ConfigFile conf = ConfigFile.Load(confPath, "modules\\mod_custom_races.conf");
             Set(conf, "CustomRaces.Enable", "1");
+            Set(conf, "CoACustomRaces.Enable", "1");
             Set(conf, "CustomRaces.ClientRootFolder", Quote(clientRoot));
             string exe = Path.Combine(clientRoot, "Ascension.exe");
             if (File.Exists(exe)) Set(conf, "CustomRaces.ClientExe", Quote(exe));

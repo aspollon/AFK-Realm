@@ -574,6 +574,30 @@ namespace CoAInstaller.Web
                 foreach (var key in copies) DropRace(key);
                 chosen = chosen.Except(copies, StringComparer.OrdinalIgnoreCase).ToList();
             }
+            // The same client race can be present twice under different keys (Earthen and an old
+            // Earthen copy both at number 68). Keep the package's own key and drop the duplicate.
+            var seenNumbers = new Dictionary<string, string>(StringComparer.Ordinal);
+            var duplicates = new List<string>();
+            foreach (var key in chosen)
+            {
+                var thisRace = races.FirstOrDefault(x => x.Key.Equals(key, StringComparison.OrdinalIgnoreCase));
+                if (thisRace == null) continue;
+                int id = IdOf(thisRace);
+                string number = id > 0 ? id.ToString() : ConfigOption.Unquote(Raw("CustomRaces." + key + ".Source", ""));
+                if (number.Length == 0) continue;
+                string kept;
+                if (!seenNumbers.TryGetValue(number, out kept)) { seenNumbers[number] = key; continue; }
+                var keptRace = races.FirstOrDefault(x => x.Key.Equals(kept, StringComparison.OrdinalIgnoreCase));
+                bool keepThis = keptRace != null && keptRace.Pack == null && thisRace.Pack != null;
+                if (!keepThis) { duplicates.Add(key); continue; }
+                seenNumbers[number] = key;
+                duplicates.Add(kept);
+            }
+            if (duplicates.Count > 0)
+            {
+                foreach (var key in duplicates) DropRace(key);
+                chosen = chosen.Except(duplicates, StringComparer.OrdinalIgnoreCase).ToList();
+            }
             // An entry with Id=0 is not playable on this realm (for example the old
             // base-client "Earthen Npc"). The module never switches it on, so keep it
             // out of the settings instead of carrying it beside the package's Earthen.
@@ -1166,6 +1190,7 @@ namespace CoAInstaller.Web
 
         public string Save()
         {
+            Set("CoACustomRaces.Enable", "1");
             HealNumbers(); PruneChosen();
             foreach (var r in races) if (Raw("CustomRaces." + r.Key + ".Source", "").Length > 0) Describe(r, IdOf(r));
             string name = conf.Name;
