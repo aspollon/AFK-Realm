@@ -1,3 +1,15 @@
+# AFK Realm 1.2.55
+
+## Fixed in 1.2.55
+
+- **The 1.9.8 Kyrian/Venthyr racials now really work on the server.** The client `Spell.dbc` contains the main racials and their helper spells, but the helper rows alone are not enough: the 1.9.8 core scripts (`spell_kyrian_hover`, `spell_venthyr_racial`, `spell_venthyr_crimson_feast`, …) were missing from the AFK server build. The scripts are now part of the server core build.
+- **Helper spells are generated with the race:** `111101`, `111103`, `111109`, `111111`, `111112`, `111113` (Kyrian) and `111205`, `111207`, `111210`, `111211`, `111212` (Venthyr) are written into the race SQL together with their `spell_script_names` bindings. Previously they were dropped as duplicate names, so Hover, Charge, Hover Height and Bat Form had nothing to cast.
+- **Ascended Wings:** its dummy marker row now carries the server-side safe-fall aura promised by the tooltip.
+- **Server updates apply the scripts automatically:** AFK Realm's engine carries the 1.9.8 racial scripts as a built-in core patch. A server **Update/Rebuild** applies them to the freshly downloaded CoA core; no manual copying into `Dependencies\Source` is needed.
+- **Client patch status:** after the race settings are saved, rebuild **Modules → Game client → Install** once. The client patch then reports **up to date** again.
+
+**What to do:** install 1.2.55, run **Server → Update/Rebuild** once (for the 1.9.8 core scripts), then **Game client → Install** and create the player ZIP again. Existing Kyrian/Venthyr characters get the working abilities at their next login.
+
 # AFK Realm 1.2.54
 
 ## Fixed in 1.2.54

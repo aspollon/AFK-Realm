@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.55
+
+- **Kyrian/Venthyr server implementation:** the engine's built-in core patch adds `kyrian_hover.cpp`, `kyrian_racials.cpp` and `venthyr_racials.cpp` plus the shared headers and loader registrations. The compiled worldserver gets the same 1.9.8 scripts the CoA client data expects.
+- **Helpers and bindings:** `ServerRacials.ScriptHelpers` adds 111101/111103/111109/111111/111112/111113 and 111205/111207/111210/111211/111212 to the race SQL; `ScriptBindings` writes `spell_kyrian_hover`, `spell_kyrian_hover_wings`, `spell_kyrian_ascendant_charge`, `spell_venthyr_crimson_feast`, `spell_venthyr_anima_hunger`, `spell_venthyr_racial`, `spell_venthyr_hover_height` and `spell_venthyr_bat_form`.
+- **111104 Ascended Wings:** the client dummy row is corrected to `SPELL_AURA_SAFE_FALL` on the server.
+- **Client patch:** rebuilt from the updated merged server `Spell.dbc`; `ClientAddons.Pending` is empty and the client patch reports Current after the rebuild.
+
 ## 1.2.54
 
 - **All-race racial audit:** `ServerRacials.ClientRankGroups` reads every client `Spell.dbc` rank ending in `Racial`; `RacesModel.AutoDetectClientRacials` applies each group to the race whose name/key/file matches. This replaces the stale 1.9.2 Kyrian/Venthyr entries and follows future `<Race> Racial` additions.

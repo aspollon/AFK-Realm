@@ -1,0 +1,1046 @@
+diff --git a/src/server/coa/CoAScriptLoader.cpp b/src/server/coa/CoAScriptLoader.cpp
+index ad916ff404..d893ef9d09 100644
+--- a/src/server/coa/CoAScriptLoader.cpp
++++ b/src/server/coa/CoAScriptLoader.cpp
+@@ -61,6 +61,9 @@ void AddSC_CoALfgStartPoint();
+ void AddSC_CoAStatisticQuery();
+ void AddSC_CoABossProbe();
+ void AddSC_CoADungeonSpellDamage();
++void AddSC_kyrian_hover();
++void AddSC_kyrian_racials();
++void AddSC_venthyr_racials();
+ void AddSC_CoAGameObjectScale();
+ void AddSC_CoACreatureScaling();
+ void AddSC_CoADungeonBossKit();
+@@ -837,6 +840,9 @@ void AddCoAScripts()
+     AddSC_CoAStatisticQuery();
+     AddSC_CoABossProbe();
+     AddSC_CoADungeonSpellDamage();
++    AddSC_kyrian_hover();
++    AddSC_kyrian_racials();
++    AddSC_venthyr_racials();
+     AddSC_CoAGameObjectScale();
+     AddSC_CoACreatureScaling();
+     AddSC_CoADungeonBossKit();
+diff --git a/src/server/coa/EsteriaRacials/kyrian_hover.cpp b/src/server/coa/EsteriaRacials/kyrian_hover.cpp
+new file mode 100644
+index 0000000000..56ae0582da
+--- /dev/null
++++ b/src/server/coa/EsteriaRacials/kyrian_hover.cpp
+@@ -0,0 +1,256 @@
++#include "DataMap.h"
++#include "KyrianHover.h"
++#include "Player.h"
++#include "ScriptMgr.h"
++#include "SpellAuraEffects.h"
++#include "SpellAuras.h"
++#include "SpellInfo.h"
++#include "SpellScript.h"
++#include "WorldPacket.h"
++
++namespace
++{
++    using namespace KyrianHover;
++
++    struct HoverData final : DataMap::Base
++    {
++        State state;
++        bool showingCombatTimer = false;
++        bool leftGround = false;
++    };
++
++    HoverData* GetHover(Player* player)
++    {
++        return player->CustomData.Get<HoverData>("KyrianHover");
++    }
++
++    bool IsGrounded(Player const* player)
++    {
++        return !player->Unit::IsFalling() && !player->IsFlying()
++            && player->GetPositionZ() <= player->GetFloorZ() + 0.25f;
++    }
++
++    bool CanHover(Player const* player)
++    {
++        return player->getRace(true) == Race && player->IsAlive() && !player->IsMounted()
++            && !player->IsInFlight() && !player->GetVehicle() && !player->GetTransport()
++            // Warrior stances are shapeshift records, but keep the native Kyrian body.
++            && !player->IsInWater() && !player->IsInDisallowedMountForm()
++            && player->GetDisplayId() == player->GetNativeDisplayId();
++    }
++
++    void Land(Player* player)
++    {
++        HoverData* data = GetHover(player);
++        if (!data || data->state.phase == Phase::Grounded)
++            return;
++
++        data->state.phase = Phase::Grounded;
++        player->RemoveAurasDueToSpell(Wings);
++        player->RemoveAurasDueToSpell(StunImmunity);
++        player->RemoveAurasDueToSpell(Descent);
++        // Aura additions can be coalesced away on an immediate touchdown.
++        // Explicitly tell observers when the grounded landing finish may play.
++        if (player->IsAlive() && IsGrounded(player) && !player->IsInWater()
++            && !player->IsMounted() && !player->GetVehicle() && !player->IsInFlight())
++            player->HandleEmoteCommand(EMOTE_ONESHOT_LAND);
++        player->AddSpellCooldown(Ability, 0, Cooldown, true);
++        WorldPacket packet;
++        player->BuildCooldownPacket(packet, SPELL_COOLDOWN_FLAG_NONE, Ability, Cooldown);
++        player->SendDirectMessage(&packet);
++    }
++
++    void Descend(Player* player)
++    {
++        if (HoverData* data = GetHover(player))
++            if (data->state.phase != Phase::Grounded)
++            {
++                data->state.Descend();
++                // Grant safe descent before revoking flight, including at altitude.
++                if (player->IsAlive() && !player->HasAura(Descent))
++                    player->CastSpell(player, Descent, true);
++                player->RemoveAurasDueToSpell(Wings);
++                player->RemoveAurasDueToSpell(StunImmunity);
++            }
++    }
++
++    void EndFlight(Player* player)
++    {
++        Descend(player);
++        if (IsGrounded(player) || !player->IsAlive() || player->IsInWater())
++            Land(player);
++    }
++}
++
++void KyrianHover::EndForCharge(Player* player)
++{
++    EndFlight(player);
++}
++
++class kyrian_hover_players : public PlayerScript
++{
++public:
++    kyrian_hover_players() : PlayerScript("kyrian_hover_players",
++        {PLAYERHOOK_ON_LOGIN, PLAYERHOOK_ON_UPDATE, PLAYERHOOK_ON_BEFORE_LOGOUT,
++            PLAYERHOOK_ON_MAP_CHANGED, PLAYERHOOK_ON_PLAYER_JUST_DIED}) { }
++
++    void OnPlayerLogin(Player* player) override
++    {
++        if (player->getRace(true) != Race)
++            return;
++
++        player->learnSpell(Ability);
++        // A saved wings aura without runtime state indicates an interrupted session.
++        // End that activation instead of granting a fresh combat allowance on reconnect.
++        if (player->HasAura(Wings) || player->HasAura(Descent))
++        {
++            HoverData* data = player->CustomData.GetDefault<HoverData>("KyrianHover");
++            data->state.phase = Phase::Descending;
++            EndFlight(player);
++        }
++        player->RemoveAurasDueToSpell(StunImmunity);
++    }
++
++    void OnPlayerUpdate(Player* player, uint32 elapsed) override
++    {
++        HoverData* data = GetHover(player);
++        if (!data || data->state.phase == Phase::Grounded)
++            return;
++
++        if (data->state.phase == Phase::Hovering)
++        {
++            if (!IsGrounded(player))
++                data->leftGround = true;
++            bool const combat = player->IsInCombat();
++            data->state.Update(elapsed, combat);
++            if (!CanHover(player) || !player->HasAura(Wings)
++                || player->HasUnitState(UNIT_STATE_STUNNED) || data->state.phase == Phase::Descending
++                || (data->leftGround && IsGrounded(player)))
++                Descend(player);
++            else if (data->showingCombatTimer != combat)
++            {
++                data->showingCombatTimer = combat;
++                if (Aura* aura = player->GetAura(Wings))
++                {
++                    aura->SetMaxDuration(combat ? int32(CombatBudget) : -1);
++                    aura->SetDuration(combat ? int32(data->state.remaining) : -1);
++                }
++            }
++        }
++
++        if (data->state.phase == Phase::Descending
++            && (IsGrounded(player) || !player->IsAlive() || player->IsInWater()
++                || player->IsMounted() || player->GetVehicle() || player->IsInFlight()))
++            Land(player);
++    }
++
++    // Preserve the descent aura across an airborne logout/map change. Landing,
++    // including after the next login, is what starts the cooldown.
++    void OnPlayerBeforeLogout(Player* player) override { EndFlight(player); }
++    void OnPlayerMapChanged(Player* player) override { EndFlight(player); }
++    void OnPlayerJustDied(Player* player) override { Land(player); }
++};
++
++class spell_kyrian_hover : public SpellScript
++{
++    PrepareSpellScript(spell_kyrian_hover);
++
++    bool Validate(SpellInfo const* /*info*/) override
++    {
++        return ValidateSpellInfo({Ability, Wings, StunImmunity, Descent});
++    }
++
++    SpellCastResult Check()
++    {
++        Player* player = GetCaster()->ToPlayer();
++        if (!player || player->getRace(true) != Race)
++            return SPELL_FAILED_SPELL_UNAVAILABLE;
++
++        HoverData* data = GetHover(player);
++        if (data && data->state.phase == Phase::Descending)
++            return SPELL_FAILED_NOT_READY;
++        if (data && data->state.phase == Phase::Hovering)
++            return SPELL_CAST_OK;
++        if (!CanHover(player) || !IsGrounded(player) || player->HasAuraType(SPELL_AURA_HOVER)
++            || player->HasAuraType(SPELL_AURA_FLY))
++            return SPELL_FAILED_NOT_HERE;
++        return SPELL_CAST_OK;
++    }
++
++    void Activate(SpellEffIndex /*index*/)
++    {
++        Player* player = GetCaster()->ToPlayer();
++        if (!player)
++            return;
++
++        HoverData* data = player->CustomData.GetDefault<HoverData>("KyrianHover");
++        if (data->state.phase == Phase::Hovering)
++        {
++            Descend(player);
++            return;
++        }
++        if (data->state.phase != Phase::Grounded || !CanHover(player) || !IsGrounded(player))
++            return;
++
++        data->state.Start();
++        data->showingCombatTimer = false;
++        data->leftGround = false;
++        player->CastSpell(player, Wings, true);
++        if (!player->HasAura(Wings))
++        {
++            data->state.phase = Phase::Grounded;
++            return;
++        }
++        if (player->IsInCombat())
++            player->CastSpell(player, StunImmunity, true);
++        player->HandleEmoteCommand(EMOTE_ONESHOT_LIFTOFF);
++    }
++
++    void Register() override
++    {
++        OnCheckCast += SpellCheckCastFn(spell_kyrian_hover::Check);
++        OnEffectHitTarget += SpellEffectFn(spell_kyrian_hover::Activate, EFFECT_0, SPELL_EFFECT_DUMMY);
++    }
++};
++
++class spell_kyrian_hover_wings : public AuraScript
++{
++    PrepareAuraScript(spell_kyrian_hover_wings);
++
++    void Removed(AuraEffect const* /*effect*/, AuraEffectHandleModes /*mode*/)
++    {
++        if (Player* player = GetTarget()->ToPlayer())
++            if (HoverData* data = GetHover(player))
++                if (data->state.phase == Phase::Hovering)
++                    Descend(player);
++    }
++
++    void Register() override
++    {
++        AfterEffectRemove += AuraEffectRemoveFn(spell_kyrian_hover_wings::Removed,
++            EFFECT_0, SPELL_AURA_FLY, AURA_EFFECT_HANDLE_REAL);
++    }
++};
++
++class kyrian_hover_stuns : public UnitScript
++{
++public:
++    kyrian_hover_stuns() : UnitScript("kyrian_hover_stuns", true, {UNITHOOK_ON_AURA_APPLY}) { }
++
++    void OnAuraApply(Unit* unit, Aura* aura) override
++    {
++        if (!aura->GetSpellInfo()->HasAura(SPELL_AURA_MOD_STUN) || !unit->HasUnitState(UNIT_STATE_STUNNED))
++            return;
++
++        if (Player* player = unit->ToPlayer())
++            Descend(player);
++    }
++};
++
++void AddSC_kyrian_hover()
++{
++    new kyrian_hover_players();
++    new kyrian_hover_stuns();
++    RegisterSpellScript(spell_kyrian_hover);
++    RegisterSpellScript(spell_kyrian_hover_wings);
++}
+diff --git a/src/server/coa/EsteriaRacials/kyrian_racials.cpp b/src/server/coa/EsteriaRacials/kyrian_racials.cpp
+new file mode 100644
+index 0000000000..7b609fce1d
+--- /dev/null
++++ b/src/server/coa/EsteriaRacials/kyrian_racials.cpp
+@@ -0,0 +1,245 @@
++#include "DataMap.h"
++#include "KyrianHover.h"
++#include "KyrianRacials.h"
++#include "MotionMaster.h"
++#include "MoveSpline.h"
++#include "ObjectAccessor.h"
++#include "PathGenerator.h"
++#include "Player.h"
++#include "ScriptMgr.h"
++#include "SpellInfo.h"
++#include "SpellScript.h"
++#include "Util.h"
++#include <algorithm>
++
++namespace
++{
++    using namespace KyrianRacials;
++
++    enum ChargeMovement : uint32
++    {
++        ChargeMovementId = 111110,
++        ChargeTimeout = 5000
++    };
++
++    struct ChargeData final : DataMap::Base
++    {
++        bool active = false;
++        bool dive = false;
++        ObjectGuid target;
++        Position destination;
++        uint32 spline = 0;
++        uint32 elapsed = 0;
++    };
++
++    void UpdateSpiritSpeed(Player* player)
++    {
++        bool const spirit = player->getRace(true) == Race && player->HasSpell(SoulGuide)
++            && player->HasPlayerFlag(PLAYER_FLAGS_GHOST);
++        if (!spirit)
++            player->RemoveAurasDueToSpell(SpiritSpeed);
++        else if (!player->HasAura(SpiritSpeed))
++            player->CastSpell(player, SpiritSpeed, true);
++    }
++
++    void CancelCharge(Player* player)
++    {
++        if (ChargeData* data = player->CustomData.Get<ChargeData>("KyrianCharge"))
++        {
++            bool const endHover = data->active && data->dive;
++            data->active = false;
++            if (endHover)
++                KyrianHover::EndForCharge(player);
++        }
++    }
++
++    void ChargeArrived(Player* player, Unit* target, bool dive)
++    {
++        // Keep flight permission during the accepted spline, then consume Hover
++        // even if the target has died or moved out of reach before impact.
++        if (dive)
++            KyrianHover::EndForCharge(player);
++
++        if (!target || !target->IsAlive() || !player->IsValidAttackTarget(target)
++            || !player->IsWithinLOSInMap(target))
++            return;
++        float const reach = player->GetCombatReach() + target->GetCombatReach() + 2.0f;
++        if (!player->IsWithinDistInMap(target, reach))
++            return;
++
++        float const attackPower = std::max(player->GetTotalAttackPowerValue(BASE_ATTACK),
++            player->GetTotalAttackPowerValue(RANGED_ATTACK));
++        float const spellPower = float(std::max<int32>(0,
++            player->SpellBaseDamageBonusDone(SPELL_SCHOOL_MASK_HOLY)));
++        int32 const damage = int32(ChargeDamagePerLevel * player->GetLevel()
++            + ChargeStatCoefficient * std::max(attackPower, spellPower));
++        int32 const impact = dive ? damage + CalculatePct(damage, ChargeDiveBonusPercent) : damage;
++        player->CastCustomSpell(ChargeImpact, SPELLVALUE_BASE_POINT0, impact, target, true);
++        player->CastSpell(player, ChargeSlow, true);
++        // The persistent ground aura snapshots the same AP/SP choice at arrival.
++        int32 const ringTick = std::max<int32>(1, CalculatePct(damage, ChargeRingTickPercent));
++        player->CastCustomSpell(ChargeRing, SPELLVALUE_BASE_POINT0, ringTick, player, true);
++    }
++}
++
++class kyrian_racial_players : public PlayerScript
++{
++public:
++    kyrian_racial_players() : PlayerScript("kyrian_racial_players",
++        {PLAYERHOOK_ON_LOGIN, PLAYERHOOK_ON_UPDATE, PLAYERHOOK_ON_PLAYER_RELEASED_GHOST,
++            PLAYERHOOK_ON_PLAYER_RESURRECT, PLAYERHOOK_ON_BEFORE_LOGOUT, PLAYERHOOK_ON_MAP_CHANGED,
++            PLAYERHOOK_ON_PLAYER_JUST_DIED}) { }
++
++    void OnPlayerLogin(Player* player) override
++    {
++        if (player->getRace(true) == Race)
++            for (uint32 spell : {AscendedWings, Purity, Courage, SoulGuide, Craft, Charge})
++                player->learnSpell(spell);
++        UpdateSpiritSpeed(player);
++    }
++
++    void OnPlayerReleasedGhost(Player* player) override { UpdateSpiritSpeed(player); }
++    void OnPlayerResurrect(Player* player, float /*percent*/, bool& /*sickness*/) override
++    {
++        player->RemoveAurasDueToSpell(SpiritSpeed);
++    }
++
++    void OnPlayerBeforeLogout(Player* player) override { CancelCharge(player); }
++    void OnPlayerMapChanged(Player* player) override
++    {
++        CancelCharge(player);
++        UpdateSpiritSpeed(player);
++    }
++    void OnPlayerJustDied(Player* player) override { CancelCharge(player); }
++
++    void OnPlayerUpdate(Player* player, uint32 diff) override
++    {
++        if (player->getRace(true) != Race)
++        {
++            player->RemoveAurasDueToSpell(SpiritSpeed);
++            CancelCharge(player);
++            return;
++        }
++        UpdateSpiritSpeed(player);
++
++        ChargeData* data = player->CustomData.Get<ChargeData>("KyrianCharge");
++        if (!data || !data->active)
++            return;
++        data->elapsed += diff;
++        if (!player->IsAlive() || player->HasUnitState(UNIT_STATE_ROOT | UNIT_STATE_STUNNED
++            | UNIT_STATE_FLEEING | UNIT_STATE_CONFUSED) || player->GetTransport() || player->GetVehicle()
++            || player->IsInFlight() || player->movespline->GetId() != data->spline
++            || data->elapsed >= ChargeTimeout)
++        {
++            CancelCharge(player);
++            return;
++        }
++        if (!player->movespline->Finalized())
++            return;
++
++        // Only the original, completed spline may deliver the impact. A new
++        // spline, interrupted charge, logout or teleport never deals a late hit.
++        if (player->GetExactDist(&data->destination) > 2.0f)
++        {
++            CancelCharge(player);
++            return;
++        }
++        data->active = false;
++        ChargeArrived(player, ObjectAccessor::GetUnit(*player, data->target), data->dive);
++    }
++};
++
++class spell_kyrian_ascendant_charge : public SpellScript
++{
++    PrepareSpellScript(spell_kyrian_ascendant_charge);
++
++    Position _destination;
++    bool _dive = false;
++
++    bool Validate(SpellInfo const* /*info*/) override
++    {
++        return ValidateSpellInfo({Charge, ChargeImpact, ChargeSlow, ChargeRing, KyrianHover::Wings});
++    }
++
++    SpellCastResult Check()
++    {
++        Player* player = GetCaster()->ToPlayer();
++        Unit* target = GetExplTargetUnit();
++        if (!player || player->getRace(true) != Race)
++            return SPELL_FAILED_SPELL_UNAVAILABLE;
++        if (!target || !target->IsAlive() || !player->IsValidAttackTarget(target))
++            return SPELL_FAILED_BAD_TARGETS;
++        if (!player->IsAlive() || player->IsMounted() || player->IsInFlight() || player->GetVehicle()
++            || player->GetTransport() || player->IsInWater() || player->IsInDisallowedMountForm()
++            || player->GetDisplayId() != player->GetNativeDisplayId())
++            return SPELL_FAILED_NOT_HERE;
++        if (player->HasUnitState(UNIT_STATE_ROOT | UNIT_STATE_STUNNED | UNIT_STATE_FLEEING | UNIT_STATE_CONFUSED))
++            return SPELL_FAILED_ROOTED;
++        if (ChargeData* data = player->CustomData.Get<ChargeData>("KyrianCharge"))
++            if (data->active)
++                return SPELL_FAILED_NOT_READY;
++        if (!player->IsWithinDistInMap(target, ChargeRange, true, false, false))
++            return SPELL_FAILED_OUT_OF_RANGE;
++        if (!player->IsWithinLOSInMap(target))
++            return SPELL_FAILED_LINE_OF_SIGHT;
++
++        _dive = player->HasAura(KyrianHover::Wings) && player->IsFlying();
++        if (!_dive && (player->IsFlying() || player->IsFalling()))
++            return SPELL_FAILED_NOT_ON_GROUND;
++        _destination = target->GetFirstCollisionPosition(player->GetCombatReach() + target->GetCombatReach(),
++            target->GetRelativeAngle(player));
++        if (!_dive)
++        {
++            PathGenerator path(player);
++            path.SetPathLengthLimit(ChargeRange * 1.5f);
++            if (!path.CalculatePath(_destination.GetPositionX(), _destination.GetPositionY(),
++                _destination.GetPositionZ(), false)
++                || (path.GetPathType() & (PATHFIND_NOPATH | PATHFIND_INCOMPLETE | PATHFIND_SHORT)))
++                return SPELL_FAILED_NOPATH;
++        }
++        return SPELL_CAST_OK;
++    }
++
++    void Launch(SpellEffIndex /*index*/)
++    {
++        Player* player = GetCaster()->ToPlayer();
++        Unit* target = GetHitUnit();
++        if (!player || !target || !player->IsValidAttackTarget(target))
++            return;
++        player->SetSheath(SHEATH_STATE_MELEE);
++        ChargeData* data = player->CustomData.GetDefault<ChargeData>("KyrianCharge");
++        data->active = false;
++        data->target = target->GetGUID();
++        data->destination = _destination;
++        data->elapsed = 0;
++        data->dive = _dive;
++        // A target already at the arrival point needs no zero-length spline.
++        if (player->GetExactDist(&_destination) <= 0.5f)
++        {
++            ChargeArrived(player, target, data->dive);
++            return;
++        }
++        // A shallow arc leaps from the ground; a zero-amplitude arc dives in
++        // a straight line while retaining the existing Wings flight permission.
++        uint32 const previousSpline = player->movespline->GetId();
++        player->GetMotionMaster()->MoveJump(_destination.GetPositionX(), _destination.GetPositionY(),
++            _destination.GetPositionZ(), _dive ? 30.0f : 24.0f, _dive ? 0.0f : 8.0f,
++            ChargeMovementId, target);
++        data->spline = player->movespline->GetId();
++        data->active = data->spline != previousSpline && !player->movespline->Finalized();
++        if (data->active)
++            sScriptMgr->AnticheatSetUnderACKmount(player);
++    }
++
++    void Register() override
++    {
++        OnCheckCast += SpellCheckCastFn(spell_kyrian_ascendant_charge::Check);
++        OnEffectHitTarget += SpellEffectFn(spell_kyrian_ascendant_charge::Launch, EFFECT_0, SPELL_EFFECT_DUMMY);
++    }
++};
++
++void AddSC_kyrian_racials()
++{
++    new kyrian_racial_players();
++    RegisterSpellScript(spell_kyrian_ascendant_charge);
++}
+diff --git a/src/server/coa/EsteriaRacials/venthyr_racials.cpp b/src/server/coa/EsteriaRacials/venthyr_racials.cpp
+new file mode 100644
+index 0000000000..1a7b28a62d
+--- /dev/null
++++ b/src/server/coa/EsteriaRacials/venthyr_racials.cpp
+@@ -0,0 +1,333 @@
++#include "Creature.h"
++#include "DBCStores.h"
++#include "DataMap.h"
++#include "Player.h"
++#include "ObjectMgr.h"
++#include "Map.h"
++#include "ScriptMgr.h"
++#include "SpellAuraEffects.h"
++#include "SpellAuras.h"
++#include "SpellInfo.h"
++#include "SpellMgr.h"
++#include "SpellScript.h"
++#include "VenthyrRacials.h"
++#include "WorldPacket.h"
++#include <algorithm>
++
++namespace
++{
++    using namespace VenthyrRacials;
++
++    struct HoverData final : DataMap::Base
++    {
++        HoverState state;
++        bool active = false;
++        bool combatTimer = false;
++    };
++
++    bool NativeTravelBody(Player const* player)
++    {
++        return player->getRace(true) == Race && player->IsAlive() && !player->IsMounted()
++            && !player->IsInFlight() && !player->GetVehicle() && !player->GetTransport()
++            && !player->IsInWater() && !player->IsInDisallowedMountForm()
++            && player->GetDisplayId() == player->GetNativeDisplayId();
++    }
++
++    // CoA: Vampire Bat Form works anywhere out of combat (no riding skill, outdoor or flyable-area requirement)
++    bool FlightAllowed(Player* /*player*/)
++    {
++        return sSpellMgr->GetSpellInfo(BatAura) != nullptr;
++    }
++
++    void EndHover(Player* player)
++    {
++        HoverData* data = player->CustomData.Get<HoverData>("VenthyrHover");
++        bool const active = player->HasAura(HoverAura) || (data && data->active);
++        if (data)
++            data->active = false;
++        player->RemoveAurasDueToSpell(HoverAura);
++        player->RemoveAurasDueToSpell(Resolve);
++        if (!active)
++            return;
++
++        player->AddSpellCooldown(Hover, 0, HoverCooldown, true);
++        WorldPacket packet;
++        player->BuildCooldownPacket(packet, SPELL_COOLDOWN_FLAG_NONE, Hover, HoverCooldown);
++        player->SendDirectMessage(&packet);
++    }
++}
++
++class venthyr_racial_players : public PlayerScript
++{
++public:
++    venthyr_racial_players() : PlayerScript("venthyr_racial_players",
++        {PLAYERHOOK_ON_LOGIN, PLAYERHOOK_ON_UPDATE, PLAYERHOOK_ON_BEFORE_LOGOUT,
++            PLAYERHOOK_ON_MAP_CHANGED, PLAYERHOOK_ON_PLAYER_JUST_DIED}) { }
++
++    void OnPlayerLogin(Player* player) override
++    {
++        // Saved travel state cannot grant a fresh combat timer on reconnect.
++        EndHover(player);
++        player->RemoveAurasDueToSpell(BatAura);
++        player->RemoveAurasDueToSpell(BatSpeed);
++        if (player->getRace(true) != Race)
++            return;
++        for (uint32 spell : {Feast, BloodScent, ShadowDefense, AnimaHunger, Craft, Hover, Bat})
++            player->learnSpell(spell);
++    }
++
++    void OnPlayerBeforeLogout(Player* player) override
++    {
++        EndHover(player);
++        player->RemoveAurasDueToSpell(BatAura);
++        player->RemoveAurasDueToSpell(BatSpeed);
++    }
++
++    void OnPlayerMapChanged(Player* player) override { OnPlayerBeforeLogout(player); }
++    void OnPlayerJustDied(Player* player) override { OnPlayerBeforeLogout(player); }
++
++    void OnPlayerUpdate(Player* player, uint32 elapsed) override
++    {
++        HoverData* data = player->CustomData.Get<HoverData>("VenthyrHover");
++        if (data && data->active)
++        {
++            bool const combat = player->IsInCombat();
++            if (!NativeTravelBody(player) || !player->HasAura(HoverAura)
++                || player->HasUnitState(UNIT_STATE_STUNNED) || !data->state.Update(elapsed, combat))
++                EndHover(player);
++            else if (combat != data->combatTimer)
++            {
++                data->combatTimer = combat;
++                if (Aura* aura = player->GetAura(HoverAura))
++                {
++                    aura->SetMaxDuration(combat ? int32(HoverCombatBudget) : -1);
++                    aura->SetDuration(combat ? int32(data->state.remaining) : -1);
++                }
++            }
++        }
++        if (player->HasAura(BatAura) && (player->getRace(true) != Race || !player->IsAlive()
++            || player->IsInCombat() || player->IsMounted() || player->IsInFlight()
++            || player->GetVehicle() || player->GetTransport() || player->IsInWater()
++            || player->IsInDisallowedMountForm() || !FlightAllowed(player)))
++            player->RemoveAurasDueToSpell(BatAura);
++        if (!player->HasAura(BatAura))
++            player->RemoveAurasDueToSpell(BatSpeed);
++        if (player->HasAura(BatDescent) && (!player->IsAlive() || player->IsInWater()
++            || player->IsMounted() || player->IsInFlight() || (!player->IsFlying() && !player->IsFalling()
++                && player->GetPositionZ() <= player->GetFloorZ() + 0.25f)))
++            player->RemoveAurasDueToSpell(BatDescent);
++    }
++};
++
++class spell_venthyr_racial : public SpellScript
++{
++    PrepareSpellScript(spell_venthyr_racial);
++
++    bool Validate(SpellInfo const* /*info*/) override
++    {
++        return ValidateSpellInfo({Feast, HoverAura, Resolve, BatAura, BatSpeed, BatDescent, AnimaHeal})
++            && sCreatureDisplayInfoStore.LookupEntry(VampireBatDisplay)
++            && sObjectMgr->GetCreatureTemplate(VampireBatCreature);
++    }
++
++    SpellCastResult Check()
++    {
++        Player* player = GetCaster()->ToPlayer();
++        if (!player || player->getRace(true) != Race)
++            return SPELL_FAILED_SPELL_UNAVAILABLE;
++        uint32 const id = GetSpellInfo()->Id;
++        if (id == Feast || (id == Hover && player->HasAura(HoverAura))
++            || (id == Bat && player->HasAura(BatAura)))
++            return SPELL_CAST_OK;
++        if (!NativeTravelBody(player) || player->HasUnitState(UNIT_STATE_ROOT | UNIT_STATE_STUNNED
++            | UNIT_STATE_FLEEING | UNIT_STATE_CONFUSED) || player->IsFlying() || player->IsFalling())
++            return SPELL_FAILED_NOT_HERE;
++        if (id == Hover && player->HasAuraType(SPELL_AURA_HOVER))
++            return SPELL_FAILED_NOT_HERE;
++        if (id == Bat && player->IsInCombat())
++            return SPELL_FAILED_AFFECTING_COMBAT;
++        if (id == Bat && !FlightAllowed(player))
++            return SPELL_FAILED_NOT_HERE;
++        return SPELL_CAST_OK;
++    }
++
++    void Toggle(SpellEffIndex /*index*/)
++    {
++        Player* player = GetCaster()->ToPlayer();
++        if (!player)
++            return;
++        if (GetSpellInfo()->Id == Hover)
++        {
++            if (player->HasAura(HoverAura))
++            {
++                EndHover(player);
++                return;
++            }
++            HoverData* data = player->CustomData.GetDefault<HoverData>("VenthyrHover");
++            data->state = HoverState{};
++            data->active = true;
++            data->combatTimer = player->IsInCombat();
++            player->CastSpell(player, HoverAura, true);
++            if (!player->HasAura(HoverAura))
++            {
++                data->active = false;
++                return;
++            }
++            if (player->IsInCombat())
++            {
++                player->CastSpell(player, Resolve, true);
++                player->GetAura(HoverAura)->SetDuration(HoverCombatBudget);
++            }
++        }
++        else
++        {
++            if (player->HasAura(BatAura))
++                player->RemoveAurasDueToSpell(BatAura);
++            else
++            {
++                EndHover(player);
++                player->CastSpell(player, BatAura, true);
++            }
++        }
++    }
++
++    void Register() override
++    {
++        OnCheckCast += SpellCheckCastFn(spell_venthyr_racial::Check);
++        if (m_scriptSpellId == Hover || m_scriptSpellId == Bat)
++            OnEffectHitTarget += SpellEffectFn(spell_venthyr_racial::Toggle, EFFECT_0, SPELL_EFFECT_DUMMY);
++    }
++};
++
++class spell_venthyr_crimson_feast : public AuraScript
++{
++    PrepareAuraScript(spell_venthyr_crimson_feast);
++
++    void Amount(AuraEffect const* /*effect*/, int32& amount, bool& recalculate)
++    {
++        recalculate = false;
++        Unit* caster = GetCaster();
++        if (!caster)
++            return;
++        float const power = std::max(caster->GetTotalAttackPowerValue(BASE_ATTACK),
++            caster->GetTotalAttackPowerValue(RANGED_ATTACK));
++        int32 spellPower = 0;
++        for (SpellSchoolMask school : {SPELL_SCHOOL_MASK_HOLY, SPELL_SCHOOL_MASK_FIRE,
++            SPELL_SCHOOL_MASK_NATURE, SPELL_SCHOOL_MASK_FROST, SPELL_SCHOOL_MASK_SHADOW, SPELL_SCHOOL_MASK_ARCANE})
++            spellPower = std::max(spellPower, caster->SpellBaseDamageBonusDone(school));
++        amount = std::max<int32>(1, int32((FeastDamagePerLevel * caster->GetLevel()
++            + FeastStatCoefficient * std::max(power, float(spellPower))) / FeastTicks));
++    }
++
++    void Register() override
++    {
++        DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_venthyr_crimson_feast::Amount,
++            EFFECT_0, SPELL_AURA_PERIODIC_LEECH);
++    }
++};
++
++class spell_venthyr_anima_hunger : public AuraScript
++{
++    PrepareAuraScript(spell_venthyr_anima_hunger);
++
++    bool Validate(SpellInfo const* /*info*/) override { return ValidateSpellInfo({AnimaHeal}); }
++
++    bool Check(ProcEventInfo& eventInfo)
++    {
++        Player* player = GetTarget()->ToPlayer();
++        Unit* victim = eventInfo.GetActionTarget();
++        return player && player->getRace(true) == Race && player->IsAlive() && victim
++            && eventInfo.GetActor() == player && victim != player && player->isHonorOrXPTarget(victim);
++    }
++
++    void Heal(AuraEffect const* effect, ProcEventInfo& /*eventInfo*/)
++    {
++        PreventDefaultAction();
++        GetTarget()->CastSpell(GetTarget(), AnimaHeal, true, nullptr, effect);
++    }
++
++    void Register() override
++    {
++        DoCheckProc += AuraCheckProcFn(spell_venthyr_anima_hunger::Check);
++        OnEffectProc += AuraEffectProcFn(spell_venthyr_anima_hunger::Heal, EFFECT_0, SPELL_AURA_DUMMY);
++    }
++};
++
++class spell_venthyr_hover_height : public AuraScript
++{
++    PrepareAuraScript(spell_venthyr_hover_height);
++    float _previousHeight = 0.0f;
++
++    void Apply(AuraEffect const* /*effect*/, AuraEffectHandleModes /*mode*/)
++    {
++        _previousHeight = GetTarget()->GetFloatValue(UNIT_FIELD_HOVERHEIGHT);
++        GetTarget()->SetFloatValue(UNIT_FIELD_HOVERHEIGHT, HoverHeight);
++    }
++
++    void Remove(AuraEffect const* /*effect*/, AuraEffectHandleModes /*mode*/)
++    {
++        GetTarget()->SetFloatValue(UNIT_FIELD_HOVERHEIGHT, _previousHeight);
++        if (m_scriptSpellId == HoverAura)
++            if (Player* player = GetTarget()->ToPlayer())
++                if (HoverData* data = player->CustomData.Get<HoverData>("VenthyrHover"))
++                    if (data->active)
++                        EndHover(player);
++    }
++
++    void Register() override
++    {
++        OnEffectApply += AuraEffectApplyFn(spell_venthyr_hover_height::Apply,
++            EFFECT_ALL, SPELL_AURA_HOVER, AURA_EFFECT_HANDLE_REAL);
++        AfterEffectRemove += AuraEffectRemoveFn(spell_venthyr_hover_height::Remove,
++            EFFECT_ALL, SPELL_AURA_HOVER, AURA_EFFECT_HANDLE_REAL);
++    }
++};
++
++class spell_venthyr_bat_form : public AuraScript
++{
++    PrepareAuraScript(spell_venthyr_bat_form);
++
++    bool Validate(SpellInfo const* /*info*/) override { return ValidateSpellInfo({BatSpeed, BatDescent}); }
++
++    void Apply(AuraEffect const* /*effect*/, AuraEffectHandleModes /*mode*/)
++    {
++        GetTarget()->CastSpell(GetTarget(), BatSpeed, true);
++        GetTarget()->RemoveAurasDueToSpell(BatDescent);
++    }
++
++    void BeforeRemove(AuraEffect const* /*effect*/, AuraEffectHandleModes /*mode*/)
++    {
++        // Apply protection before the native fly effect is removed. Manual
++        // cancellation, combat, map changes and dispels all use this path.
++        Player* player = GetTarget()->ToPlayer();
++        if (player && player->IsAlive() && !player->IsInWater()
++            && (player->IsFlying() || player->IsFalling()
++                || player->GetPositionZ() > player->GetFloorZ() + 0.5f))
++            player->CastSpell(player, BatDescent, true);
++    }
++
++    void Remove(AuraEffect const* /*effect*/, AuraEffectHandleModes /*mode*/)
++    {
++        GetTarget()->RemoveAurasDueToSpell(BatSpeed);
++    }
++
++    void Register() override
++    {
++        AfterEffectApply += AuraEffectApplyFn(spell_venthyr_bat_form::Apply,
++            EFFECT_2, SPELL_AURA_FLY, AURA_EFFECT_HANDLE_REAL);
++        OnEffectRemove += AuraEffectRemoveFn(spell_venthyr_bat_form::BeforeRemove,
++            EFFECT_2, SPELL_AURA_FLY, AURA_EFFECT_HANDLE_REAL);
++        AfterEffectRemove += AuraEffectRemoveFn(spell_venthyr_bat_form::Remove,
++            EFFECT_2, SPELL_AURA_FLY, AURA_EFFECT_HANDLE_REAL);
++    }
++};
++
++void AddSC_venthyr_racials()
++{
++    new venthyr_racial_players();
++    RegisterSpellScript(spell_venthyr_racial);
++    RegisterSpellScript(spell_venthyr_crimson_feast);
++    RegisterSpellScript(spell_venthyr_anima_hunger);
++    RegisterSpellScript(spell_venthyr_hover_height);
++    RegisterSpellScript(spell_venthyr_bat_form);
++}
+diff --git a/src/server/shared/KyrianHover.h b/src/server/shared/KyrianHover.h
+new file mode 100644
+index 0000000000..5fe34585b5
+--- /dev/null
++++ b/src/server/shared/KyrianHover.h
+@@ -0,0 +1,72 @@
++#ifndef ACORE_KYRIAN_HOVER_H
++#define ACORE_KYRIAN_HOVER_H
++
++#include <cstdint>
++
++class Player;
++
++namespace KyrianHover
++{
++    // End a consumed dive through the normal safe descent and landing cooldown path.
++    void EndForCharge(Player* player);
++
++    constexpr std::uint8_t Race = 107;
++    constexpr std::uint32_t Ability = 111100;
++    constexpr std::uint32_t Wings = 111101;
++    constexpr std::uint32_t StunImmunity = 111102;
++    constexpr std::uint32_t Descent = 111103;
++    constexpr std::uint32_t CombatBudget = 15000;
++    constexpr std::uint32_t Cooldown = 120000;
++
++    enum class Phase
++    {
++        Grounded,
++        Hovering,
++        Descending
++    };
++
++    struct State
++    {
++        Phase phase = Phase::Grounded;
++        std::uint32_t remaining = CombatBudget;
++
++        constexpr void Start()
++        {
++            phase = Phase::Hovering;
++            remaining = CombatBudget;
++        }
++
++        constexpr void Descend() { phase = Phase::Descending; }
++
++        constexpr void Update(std::uint32_t elapsed, bool combat)
++        {
++            if (phase != Phase::Hovering || !combat)
++                return;
++
++            remaining = elapsed >= remaining ? 0 : remaining - elapsed;
++            if (!remaining)
++                Descend();
++        }
++    };
++
++    // These checks are compiled with the server, without requiring a live realm.
++    constexpr bool CheckBudget()
++    {
++        State state;
++        state.Start();
++        state.Update(6000, true);
++        state.Update(0xFFFFFFFFu, false);
++        if (state.remaining != 9000 || state.phase != Phase::Hovering)
++            return false;
++        state.Update(8999, true);
++        if (state.remaining != 1)
++            return false;
++        state.Update(1, true);
++        state.Update(1, false);
++        return state.phase == Phase::Descending && state.remaining == 0;
++    }
++
++    static_assert(CheckBudget());
++}
++
++#endif
+diff --git a/src/server/shared/KyrianRacials.h b/src/server/shared/KyrianRacials.h
+new file mode 100644
+index 0000000000..61940b8c7b
+--- /dev/null
++++ b/src/server/shared/KyrianRacials.h
+@@ -0,0 +1,27 @@
++#ifndef ACORE_KYRIAN_RACIALS_H
++#define ACORE_KYRIAN_RACIALS_H
++
++#include <cstdint>
++
++namespace KyrianRacials
++{
++    constexpr std::uint8_t Race = 107;
++    constexpr std::uint32_t AscendedWings = 111104;
++    constexpr std::uint32_t Purity = 111105;
++    constexpr std::uint32_t Courage = 111106;
++    constexpr std::uint32_t SoulGuide = 111107;
++    constexpr std::uint32_t Craft = 111108;
++    constexpr std::uint32_t SpiritSpeed = 111109;
++    constexpr std::uint32_t Charge = 111110;
++    constexpr std::uint32_t ChargeImpact = 111111;
++    constexpr std::uint32_t ChargeSlow = 111112;
++    constexpr std::uint32_t ChargeRing = 111113;
++    constexpr std::uint32_t FallReductionPercent = 50;
++    constexpr float ChargeRange = 25.0f;
++    constexpr float ChargeStatCoefficient = 0.15f;
++    constexpr float ChargeDamagePerLevel = 2.0f;
++    constexpr std::uint32_t ChargeRingTickPercent = 10;
++    constexpr std::uint32_t ChargeDiveBonusPercent = 20;
++}
++
++#endif
+diff --git a/src/server/shared/VenthyrRacials.h b/src/server/shared/VenthyrRacials.h
+new file mode 100644
+index 0000000000..5f3f4aa48a
+--- /dev/null
++++ b/src/server/shared/VenthyrRacials.h
+@@ -0,0 +1,53 @@
++#ifndef ACORE_VENTHYR_RACIALS_H
++#define ACORE_VENTHYR_RACIALS_H
++
++#include <cstdint>
++
++namespace VenthyrRacials
++{
++    constexpr std::uint8_t Race = 101;
++    constexpr std::uint32_t Feast = 111200;
++    constexpr std::uint32_t BloodScent = 111201;
++    constexpr std::uint32_t ShadowDefense = 111202;
++    constexpr std::uint32_t AnimaHunger = 111203;
++    constexpr std::uint32_t Craft = 111204;
++    constexpr std::uint32_t AnimaHeal = 111205;
++    constexpr std::uint32_t Hover = 111206;
++    constexpr std::uint32_t HoverAura = 111207;
++    constexpr std::uint32_t Resolve = 111208;
++    constexpr std::uint32_t Bat = 111209;
++    constexpr std::uint32_t BatAura = 111210;
++    constexpr std::uint32_t BatDescent = 111211;
++    constexpr std::uint32_t BatSpeed = 111212;
++    constexpr std::uint32_t VampireBatDisplay = 4732;
++    constexpr std::uint32_t VampireBatCreature = 20725;
++    constexpr std::uint32_t HoverCombatBudget = 15000;
++    constexpr std::uint32_t HoverCooldown = 120000;
++    constexpr float HoverHeight = 0.75f;
++    constexpr float FeastDamagePerLevel = 2.0f;
++    constexpr float FeastStatCoefficient = 0.15f;
++    constexpr std::uint32_t FeastTicks = 4;
++    constexpr std::uint32_t AnimaHealPercent = 3;
++
++    struct HoverState
++    {
++        std::uint32_t remaining = HoverCombatBudget;
++        constexpr bool Update(std::uint32_t elapsed, bool combat)
++        {
++            if (combat)
++                remaining = elapsed >= remaining ? 0 : remaining - elapsed;
++            return remaining != 0;
++        }
++    };
++
++    constexpr bool CheckHoverBudget()
++    {
++        HoverState state;
++        return state.Update(5000, true) && state.Update(0xFFFFFFFFu, false)
++            && state.remaining == 10000 && state.Update(9999, true) && !state.Update(1, true);
++    }
++
++    static_assert(CheckHoverBudget());
++}
++
++#endif

@@ -36,6 +36,29 @@ namespace CoAInstaller
         static Dictionary<uint, string> coaScripts = new Dictionary<uint, string>();
         static Dictionary<uint, string> coaProcs = new Dictionary<uint, string>();
 
+        /// <summary>The helper spells the 1.9.8 Kyrian and Venthyr scripts cast. The client carries most of
+        /// them, but their server rows are dummy rows; the core scripts turn the dummy spell into the
+        /// effect. CoA's table only names the racial itself, so add these rows to the race file as well.</summary>
+        static readonly Dictionary<uint, uint[]> ScriptHelpers = new Dictionary<uint, uint[]>
+        {
+            { 111100, new[] { 111101u, 111103u, 111109u, 111111u, 111112u, 111113u } }, // Kyrian Hover / Charge
+            { 111200, new[] { 111205u, 111207u, 111210u, 111211u, 111212u } },           // Venthyr Feast / Hover / Bat
+        };
+
+        /// <summary>The 1.9.8 scripts that are compiled into the current server build.</summary>
+        static readonly Dictionary<uint, string> ScriptBindings = new Dictionary<uint, string>
+        {
+            { 111100, "spell_kyrian_hover" },
+            { 111101, "spell_kyrian_hover_wings" },
+            { 111110, "spell_kyrian_ascendant_charge" },
+            { 111200, "spell_venthyr_crimson_feast" },
+            { 111203, "spell_venthyr_anima_hunger" },
+            { 111206, "spell_venthyr_racial" },
+            { 111207, "spell_venthyr_hover_height" },
+            { 111209, "spell_venthyr_racial" },
+            { 111210, "spell_venthyr_bat_form" },
+        };
+
         /// <summary>The racials of CoA Custom's races (race number -> spells), those that need code of its server (none
         /// when the module has that code: ported), and the file of CoA Custom's rows for them.</summary>
         public static void UseCoaCustom(Dictionary<int, uint[]> racials, IEnumerable<uint> scripted, bool ported, string rowsFile)
@@ -283,7 +306,7 @@ namespace CoAInstaller
                     string coa;
                     string insert = records.ContainsKey(spell) ? Insert("spell_dbc", records[spell])
                         : coaSpellRows.TryGetValue(spell, out coa) ? "INSERT INTO `spell_dbc` VALUES " + coa + ";"
-                        : race.Rows.TryGetValue(spell, out row) || clientRows.TryGetValue(spell, out row) ? InsertRow(row) : null;
+                        : race.Rows.TryGetValue(spell, out row) || clientRows.TryGetValue(spell, out row) ? InsertRow(CorrectRow(spell, row)) : null;
                     if (insert == null) continue;
                     spells.Add(spell);
                     lines.Add("DELETE FROM `spell_dbc` WHERE `ID` = " + spell + ";");
@@ -299,6 +322,11 @@ namespace CoAInstaller
                 {
                     string script, proc;
                     if (coaScripts.TryGetValue(spell, out script))
+                    {
+                        lines.Add("DELETE FROM `spell_script_names` WHERE `spell_id` = " + spell + ";");
+                        lines.Add("INSERT INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES (" + spell + ",'" + script + "');");
+                    }
+                    if (ScriptBindings.TryGetValue(spell, out script) && !coaScripts.ContainsKey(spell))
                     {
                         lines.Add("DELETE FROM `spell_script_names` WHERE `spell_id` = " + spell + ";");
                         lines.Add("INSERT INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES (" + spell + ",'" + script + "');");
@@ -473,8 +501,27 @@ namespace CoAInstaller
         /// in blocks of 20: Bull Rush 110600 and its knockdown 110601).</summary>
         static uint[] WithHelpers(uint[] spells)
         {
+            var result = new List<uint>(spells);
+            foreach (var helper in ScriptHelpers)
+                if (spells.Contains(helper.Key)) result.AddRange(helper.Value);
             var blocks = new HashSet<uint>(spells.Where(coaSpellRows.ContainsKey).Select(s => s / 20));
-            return spells.Concat(coaSpellRows.Keys.Where(id => blocks.Contains(id / 20)).OrderBy(id => id)).Distinct().ToArray();
+            result.AddRange(coaSpellRows.Keys.Where(id => blocks.Contains(id / 20)));
+            return result.Distinct().OrderBy(id => id).ToArray();
+        }
+
+        /// <summary>The client's 1.9.8 rows already carry the correct effect and aura columns for the
+        /// helper spells; the old parser looked at the second aura column and mistook them for dummy rows.
+        /// Keep the client row unchanged and only add the missing helper IDs to the generated race file.</summary>
+        static object[] CorrectRow(uint id, object[] row)
+        {
+            // 111104 is a dummy marker in the client row. The server needs the safe-fall aura that
+            // its tooltip promises; the other passive rows are already handled by the 1.9.8 scripts.
+            if (id == 111104 && row != null && row.Length == RaceImport.SpellFields)
+            {
+                row[95] = 144u; // EFFECT_AURA_1 = SPELL_AURA_SAFE_FALL
+                row[80] = 5u;   // EFFECT_BASE_POINTS_1
+            }
+            return row;
         }
 
         // The columns of spell_dbc follow the fields of the client's Spell.dbc one to one (234 of them); these are floats,
