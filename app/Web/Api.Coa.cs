@@ -173,6 +173,26 @@ namespace CoAInstaller.Web
                         try { StartWork(inst, ctl, step); job.Message += " " + L.T("The server is starting with the new races."); }
                         catch (Exception ex) { job.Message += " " + L.T("The server could not be started:") + " " + ex.Message; }
                     }
+                    // The complete CoA player ZIP is the only ZIP players need. Build it here when asked, so it
+                    // includes the CoA files, the module add-ons and the freshly built AFK patch (with the merged
+                    // Spell.dbc). A failure must not undo a successful CoA install.
+                    if (a.Bool("playerZip", false))
+                    {
+                        try
+                        {
+                            step(L.T("Packing the complete CoA Custom player ZIP ..."));
+                            string zip = Path.Combine(Files.Temp, Guid.NewGuid().ToString("N") + ".zip");
+                            CoaSetup.ExportClientZip(zip, package, inst, client, (t, x, y) =>
+                            {
+                                job.Status = t;
+                                job.Sub = y > 0 ? (double)x / y : -1;
+                                job.Changed(false);
+                            });
+                            job.Payload = new { url = Files.Offer(zip, "CoA-Custom-client.zip", true), name = "CoA-Custom-client.zip" };
+                            job.Message += " " + L.T("The complete player ZIP is ready.");
+                        }
+                        catch (Exception ex) { job.Message += " " + L.T("The player ZIP could not be created:") + " " + ex.Message; }
+                    }
                     Console.WriteLine(DateTime.Now.ToString("HH:mm:ss") + "  " + job.Message);
                     }
                     catch (Exception ex) { Console.WriteLine(DateTime.Now.ToString("HH:mm:ss") + "  ERROR: " + ex.Message); throw; }

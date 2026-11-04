@@ -1,7 +1,7 @@
 // CoA Custom: copy the finished package into the game client and server, build the client patch,
 // download a newer package and export the complete client ZIP for other computers.
 import { h, T, F, post, get, download, ApiError } from './core.js';
-import { dialog, alert, confirm, choose, input, primary, secondary, runProgress } from './ui.js';
+import { dialog, alert, confirm, choose, input, primary, secondary, toggle, runProgress } from './ui.js';
 
 export async function coaDialog() {
   let state;
@@ -34,6 +34,7 @@ export async function coaDialog() {
   const serverPath = input(state.server || '', { style: { flex: '1', minWidth: '240px' } });
   const clientPath = input(state.client || '', { style: { flex: '1', minWidth: '240px' } });
   const status = h('div.small.muted', {}, state.packageRoot ? F('Package: {0}', state.packageRoot) : T('Choose the extracted CoA Custom package.'));
+  const playerZip = toggle(T('Create the player ZIP after installing'), true);
 
   async function rememberPaths() {
     try { await post('/api/coa/paths', { package: packagePath.value, server: serverPath.value, client: clientPath.value }); }
@@ -63,7 +64,7 @@ export async function coaDialog() {
     let st = {};
     try { st = await post('/api/coa/state'); } catch { st = {}; }
     if ((st.missingModules || []).length && !await installNeededModules(st.missingModules)) return;
-    const args = { package: packagePath.value, server: serverPath.value, client: clientPath.value };
+    const args = { package: packagePath.value, server: serverPath.value, client: clientPath.value, playerZip: playerZip.checked };
     const job = await runProgress(async () => {
       try { return await post('/api/coa/install', args); }
       catch (e) {
@@ -72,7 +73,10 @@ export async function coaDialog() {
         throw e;
       }
     }, T('Installing CoA Custom ...'));
-    if (job && job.message) await alert(job.message);
+    if (job && job.payload && job.payload.url) {
+      download(job.payload.url);
+      await alert(T('The complete CoA Custom client ZIP is ready:') + ' ' + (job.payload.name || '') + '\n\n' + (job.message || ''));
+    } else if (job && job.message) await alert(job.message);
     status.textContent = job && job.ok ? T('CoA Custom installed.') : status.textContent;
   }
 
@@ -112,11 +116,12 @@ export async function coaDialog() {
     h('div.row.nowrap', {}, h('span', { style: { width: '120px' } }, T('CoA package')), packagePath, browse(packagePath, T('Choose the extracted CoA Custom package'))),
     h('div.row.nowrap', {}, h('span', { style: { width: '120px' } }, T('Server folder')), serverPath, browse(serverPath, T('Choose the AFK Realm server folder'))),
     h('div.row.nowrap', {}, h('span', { style: { width: '120px' } }, T('Game client')), clientPath, browse(clientPath, T('Choose the game folder (it contains the "Data" folder)'))),
+    playerZip,
     status,
     (state.missingModules || []).length ? h('div.row', { style: { alignItems: 'center' } },
       h('span.warn', { style: { flex: '1' } }, T('CoA Custom\'s races need the module mod-custom-races on the server (it brings mod-classic-classes along). Without it nobody can create them.')),
       primary(T('Install it ...'), () => import('./modules.js').then(x => x.installModules(state.missingModules, T('CoA Custom needs these modules on the server.'))))) : null,
-    h('p.small.muted', {}, T('A newer CoA package replaces changed files and copies new MPQs, client_root files and add-ons. The module add-ons and the AFK client patch are installed in the same step. The player ZIP is the only ZIP you need to give to players; the Game client page is for AFK-only clients without CoA.')),
+    h('p.small.muted', {}, T('A newer CoA package replaces changed files and copies new MPQs, client_root files and add-ons. The module add-ons and the AFK client patch are installed in the same step. The player ZIP is the only ZIP you need to give to players; the same ZIP can also be created from Modules > Game client with "Create player ZIP".')),
     h('div.row', {}, secondary(T('Change CoA GitHub key ...'), async () => { await askToken(false); })));
 
   return dialog({

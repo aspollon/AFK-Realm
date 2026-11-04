@@ -26,8 +26,11 @@ export async function clientDialog(reason) {
     ], look.rows, { height: '40vh' }) : h('div'));
     clearCache.style.display = look.cacheShown ? '' : 'none';
     clearCache.checked = look.cacheChecked;
-    exportBtn.disabled = !look.canExport;
-    exportBtn.style.display = look.coa ? 'none' : '';
+    // With CoA Custom installed the AFK-only export is not the right ZIP. The same button now makes the
+    // complete CoA player ZIP, so it must not disappear after the CoA setup.
+    exportBtn.disabled = !(look.canExport || look.coa);
+    exportBtn.style.display = '';
+    exportBtn.lastChild.textContent = look.coa ? T('Create player ZIP �?�') : T('Export AFK-only ZIP �?�');
     installBtn.disabled = !look.canInstall;
     installBtn.lastChild.textContent = look.installText;
     state.textContent = look.state;
@@ -49,10 +52,13 @@ export async function clientDialog(reason) {
   }
 
   async function exportZip() {
-    const j = await runProgress(() => post('/api/client/export', { folder: folder.value.trim() }), T('Making the ZIP for the other players …'));
-    if (j && j.ok && j.payload) {
+    const coa = !!(look && look.coa);
+    const url = coa ? '/api/coa/export' : '/api/client/export';
+    const body = coa ? { client: folder.value.trim() } : { folder: folder.value.trim() };
+    const j = await runProgress(() => post(url, body), coa ? T('Packing the complete CoA Custom client ...') : T('Making the ZIP for the other players ...'));
+    if (j && j.ok && j.payload && j.payload.url) {
       download(j.payload.url);
-      await alert(T('Saved:') + ' ' + j.payload.name + '\n\n' + j.message);
+      await alert(T('Saved:') + ' ' + (j.payload.name || '') + '\n\n' + j.message);
     }
   }
 
@@ -72,7 +78,7 @@ export async function clientDialog(reason) {
 
   const body = h('div', {},
     reason ? h('p', { style: { fontWeight: '700', color: 'var(--accent-text)' } }, reason) : null,
-    h('p.muted', {}, F('Some modules bring an add-on for the game client, or change files of the client. {0} copies the add-ons into Interface\\AddOns of your game and builds the client patch (Data\\{1}) from your own game client, keeps both up to date and takes them out again when their module is removed. On a CoA server use "Create player ZIP ..." in Modules > CoA Custom: that ZIP includes CoA, the module add-ons and the client patch. The export here is only for AFK servers without CoA.', meta.product, 'patch-ZZZZZ.MPQ')),
+    h('p.muted', {}, F('Some modules bring an add-on for the game client, or change files of the client. {0} copies the add-ons into Interface\\AddOns of your game and builds the client patch (Data\\{1}) from your own game client, keeps both up to date and takes them out again when their module is removed. On a CoA server the same button creates the complete CoA player ZIP, including CoA, the module add-ons and the client patch.', meta.product, 'patch-ZZZZZ.MPQ')),
     meta.remote ? h('p.small.warn', {}, F('The game folder is a folder on the computer {0} runs on.', meta.product)) : null,
     h('div.row', { style: { alignItems: 'center' } }, h('span', {}, T('Game folder')), folder, secondary(T('Browse …'), () => browse()), downloadBtn),
     listBox, h('div', { style: { margin: '8px 0 4px' } }, clearCache), state);

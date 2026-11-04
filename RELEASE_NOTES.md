@@ -1,3 +1,11 @@
+# AFK Realm 1.2.53
+
+## Fixed in 1.2.53
+
+- **The player ZIP works on CoA servers.** The button in **Modules → Game client** used to be hidden when CoA Custom was installed, because that page built only the AFK-only ZIP. With CoA installed the same button now creates the complete CoA player ZIP (CoA files, module add-ons and the AFK client patch with the merged `Spell.dbc`).
+- **The CoA install can create the player ZIP automatically.** There is a new **"Create the player ZIP after installing"** switch in **CoA Custom**, on by default. After a successful install/update AFK Realm packs the complete player ZIP and offers it for download. A ZIP failure does not undo the CoA install.
+- **The CoA page's own "Create player ZIP" button remains available** for creating it later without reinstalling.
+
 # AFK Realm 1.2.52
 
 ## Fixed in 1.2.52

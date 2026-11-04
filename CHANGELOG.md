@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.53
+
+- **Game client player ZIP on CoA:** `client.js` no longer hides the export button when `look.coa`; it labels it "Create player ZIP" and calls `/api/coa/export`. The CoA player ZIP includes CoA files, module add-ons and the AFK patch (merged Spell.dbc).
+- **Automatic player ZIP after CoA install:** `coa.js` has a `playerZip` switch (default on); `/api/coa/install` calls `CoaSetup.ExportClientZip` after a successful setup and returns the ZIP as `job.Payload` for download. Export errors are reported without failing the install.
+
 ## 1.2.52
 
 - **Client Spell.dbc in the AFK patch:** `ClientPatch.Collect` adds the server's merged `Spell.dbc` (`DBFilesClient\Spell.dbc`) when custom races are configured. Client base 225,534 rows plus package racial SQL -> server 225,579 rows, including 14001005/14001006/14001075; every player now gets the racial spells.
