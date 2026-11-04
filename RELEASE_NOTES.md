@@ -1,3 +1,10 @@
+# AFK Realm 1.2.51
+
+## Fixed in 1.2.51
+
+- **The updater no longer reports 1.2.49 after installing 1.2.50.** The displayed and compared version is the constant in `Product.Version`, and 1.2.50 changed only the assembly version, not that constant. 1.2.51 sets both to 1.2.51, so the update ends at 1.2.51 and does not offer the same version again.
+- Everything from 1.2.50 is included: the `custom_race_display` repair, no race on/off switches, only CoA Custom races plus the stock Warcraft races, and automatic race settings.
+
 # AFK Realm 1.2.50
 
 ## Fixed in 1.2.50

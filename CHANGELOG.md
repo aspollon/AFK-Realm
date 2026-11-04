@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.51
+
+- **Version string fixed:** `Product.Version` in `src/Core.cs` was still `1.2.49` in 1.2.50, so the app displayed and compared 1.2.49 after updating. Both `Product.Version` and the assembly version are now 1.2.51.
+
 ## 1.2.50
 
 - **Startup crash `Table 'acore_world.custom_race_display' doesn't exist` fixed:** `CoaSetup.EnsureRaceDisplayTable` runs CoA Custom's `race_looks.sql` during the CoA install and `ServerControl.StartWorld` repairs the table before every start. No server build needed.
