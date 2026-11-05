@@ -11,7 +11,7 @@
     <OutputType>WinExe</OutputType>
     <AssemblyName>AFK-Realm</AssemblyName>
     <Product>AFK Realm</Product>
-    <Version>1.2.63</Version>
+    <Version>1.2.64</Version>
     <RootNamespace>CoAInstaller</RootNamespace>
     <Nullable>disable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
@@ -32,6 +32,7 @@
     <EmbeddedResource Include="../engine/patches/*.patch" LogicalName="CoAInstaller.engine.patches.%(Filename)%(Extension)" />
     <EmbeddedResource Include="../assets/dxvk/dxvk-x64.zip" LogicalName="CoAInstaller.dxvk.zip" />
     <EmbeddedResource Include="../assets/dungeon-clear-addon/DungeonClear.zip" LogicalName="CoAInstaller.dungeonclear.zip" />
+    <EmbeddedResource Include="../assets/bot-map-tools.zip" LogicalName="CoAInstaller.botmaps.zip" />
     <EmbeddedResource Include="../assets/afk-realm-header.png" LogicalName="CoAInstaller.logo.png" />
     <EmbeddedResource Include="../lang/*.json" LogicalName="CoAInstaller.lang.%(Filename)%(Extension)" />
     <EmbeddedResource Include="wwwroot/**/*" LogicalName="web/%(RecursiveDir)%(Filename)%(Extension)" />

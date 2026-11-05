@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.64
+
+- **Real map art from the game client** for Eastern Kingdoms, Kalimdor, Outland and Northrend, with zone maps.
+- **Automatic per-installation extraction:** bundled map tools, progress/status and a button when images are missing; no client art is committed or shipped.
+- **Removed overlapping map hit boxes:** zones are chosen from the list, the map zooms to the zone, bot dots remain clickable, and a back button returns to the continent.
+
 ## 1.2.63
 
 - **Bot world map:** Eastern Kingdoms, Kalimdor, Outland and Northrend, with zone counts, live/last-save dots and bot cards.

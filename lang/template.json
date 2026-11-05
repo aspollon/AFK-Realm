@@ -2370,6 +2370,22 @@
     "No character by that name.": "",
     "The character could not be read.": "",
     "The gear could not be read: {0}": "",
-    "The armory could not be read: {0}": ""
+    "The armory could not be read: {0}": "",
+    "Map image status is unavailable.": "",
+    "Extracting map images: {0}/{1} · {2}": "",
+    "Map images from your game client.": "",
+    "The real map images are not extracted yet. They come from your own game client.": "",
+    "Extract map images": "",
+    "Choose the game client folder": "",
+    "The folder that holds Data\\common.MPQ.": "",
+    "Choose the game client folder (the one holding Data\\common.MPQ) first.": "",
+    "The server's DBC folder was not found. Create the map data first.": "",
+    "The bundled map extraction tools are missing.": "",
+    "The map extraction tools are missing in this build.": "",
+    "Opening the client archives …": "",
+    "Map images are ready.": "",
+    "Map extraction ended with code {0}.": "",
+    "Back to the continent": "",
+    "Every online bot on the map, with its zone and last known position. Choose a zone in the list to zoom in; click a bot dot for its card.": ""
   }
 }

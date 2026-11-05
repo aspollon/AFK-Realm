@@ -1,3 +1,12 @@
+# AFK Realm 1.2.64
+
+## Real map art, without overlapping click boxes
+
+- **Proper continent and zone maps:** the map now uses the continent and zone graphics from your own game client, including **Northrend**. No map art is shipped with AFK Realm; the files are extracted locally on each installation.
+- **One button, works for every user:** when the map images are missing, **Extract map images** asks for the game client folder and runs the bundled extraction tools with the server's own Python. Progress and any error are shown right above the map. The existing `Dependencies\BotMaps` images are reused.
+- **No invisible click fields on the map:** zone rectangles no longer catch clicks. A zone is selected from the list on the right and the map zooms into that zone's own map; **Back to the continent** returns. Bot dots stay clickable and open the bot card.
+- **Northrend included** in the map tabs and in the extraction tools.
+
 # AFK Realm 1.2.63
 
 ## Bots dashboard: map, journals, PvP, auction, armory

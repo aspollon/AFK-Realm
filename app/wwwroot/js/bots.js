@@ -1,7 +1,7 @@
 // The Bots section: an AFK-themed dashboard of the random bots, read from the database and, when enabled, from the
 // live Playerbots status file. It also has a world map, the chat/loot journals and the full bot cards.
 import { h, T, F, get, post, replace, debounce } from './core.js';
-import { card, secondary, primary, segmented, tabs, table, input, dialog, alert, confirm, check } from './ui.js';
+import { card, secondary, primary, segmented, tabs, table, input, dialog, alert, confirm, check, choose } from './ui.js';
 
 const nf = new Intl.NumberFormat();
 const SVG = 'http://www.w3.org/2000/svg';
@@ -76,6 +76,7 @@ function contentBounds(cont) {
 export function dashboard() {
   let all = false, loading = false, data = null, query = '', view = 0;
   let mapData = null, mapContinent = null, mapZone = 0, mapLoading = false;
+  let mapArt = null, mapArtPoll = null, mapArtBusy = false;
   let chatData = null, lootData = null, logData = null, chatKind = '', chatQuery = '', chatLoading = false;
   let pvpData = null, auctionData = null, pvpLoading = false, auctionLoading = false;
   let armoryData = null, armoryLoading = false;
@@ -98,12 +99,15 @@ export function dashboard() {
 
   // ---- world map ----
   const mapSub = h('div.small.muted');
+  const mapBack = secondary(T('Back to the continent'), () => { mapZone = 0; drawMap(); });
+  mapBack.style.display = 'none';
   const mapTabs = h('div.tabs');
   const mapHolder = h('div.map-holder');
   const mapSide = h('div.map-side');
   const mapElsewhere = h('div.small.muted');
-  const mapCard = card(T('World map'), T('Every online bot on the map, with its zone and last known position. With live status on, the dots and cards follow the bots every few seconds.'), 'globe',
-    mapSub, mapTabs, h('div.map-layout', {}, mapHolder, mapSide), mapElsewhere);
+  const mapArtBox = h('div.map-art-box');
+  const mapCard = card(T('World map'), T('Every online bot on the map, with its zone and last known position. Choose a zone in the list to zoom in; click a bot dot for its card.'), 'globe',
+    mapSub, h('div.row', { style: { alignItems: 'center' } }, mapTabs, mapBack), h('div.map-layout', {}, mapHolder, mapSide), mapElsewhere, mapArtBox);
 
   // ---- roster ----
   const search = input('', {
@@ -244,18 +248,83 @@ export function dashboard() {
   }
 
   async function ensureMap() {
-    if (mapData) { drawMap(); return; }
+    if (mapData) { drawMap(); drawMapArt(); return; }
     if (mapLoading) return;
     mapLoading = true;
     mapSub.textContent = T('Reading the map …');
     try {
-      mapData = await get('/worldmap.json', { v: 'afk-northrend-1' });
+      const [world, art] = await Promise.all([
+        get('/worldmap.json', { v: 'afk-northrend-1' }),
+        get('/api/bots/mapart/status').catch(() => null)
+      ]);
+      mapData = world;
+      mapArt = art;
       mapContinent = Object.keys(mapData.continents || {})[0] || null;
       drawMap();
+      drawMapArt();
+      if (mapArt && mapArt.extracting) pollMapArt();
     } catch (e) {
       replace(mapHolder, h('div.note.warn', {}, e.message || String(e)));
       mapSub.textContent = '';
     } finally { mapLoading = false; }
+  }
+
+  function drawMapArt() {
+    if (!mapArt) {
+      replace(mapArtBox, h('div.small.muted', {}, T('Map image status is unavailable.')));
+      return;
+    }
+    const maps = mapArt.maps || [];
+    const missing = ['0', '1', '530', '571'].filter(id => !maps.includes(id));
+    if (mapArt.extracting) {
+      const pct = mapArt.total > 0 ? Math.round(100 * mapArt.done / mapArt.total) : 0;
+      replace(mapArtBox, h('div.map-art-row', {},
+        h('span.small.muted', {}, F('Extracting map images: {0}/{1} · {2}', mapArt.done || 0, mapArt.total || 0, mapArt.state || '')),
+        h('span.track', { style: { flex: '1', minWidth: '120px' } }, h('i', { style: { width: pct + '%' } }))));
+      return;
+    }
+    if (!missing.length) {
+      replace(mapArtBox, h('div.small.muted', {}, T('Map images from your game client.')));
+      return;
+    }
+    const box = h('div.map-art-row', {});
+    box.appendChild(h('span.small.muted', {}, T('The real map images are not extracted yet. They come from your own game client.')));
+    const button = primary(T('Extract map images'), async () => {
+      if (mapArtBusy) return;
+      mapArtBusy = true;
+      try {
+        let folder = mapArt.client;
+        if (!mapArt.hasClient) {
+          folder = await choose({ title: T('Choose the game client folder'), hint: T('The folder that holds Data\\common.MPQ.') });
+          if (!folder) return;
+        }
+        button.disabled = true;
+        mapArt = await post('/api/bots/mapart/extract', { folder });
+        drawMapArt();
+        pollMapArt();
+      } catch (e) { await alert(e.message || String(e)); }
+      finally { mapArtBusy = false; button.disabled = false; }
+    }, 'download');
+    box.appendChild(button);
+    replace(mapArtBox, box);
+  }
+
+  function pollMapArt() {
+    if (mapArtPoll) clearInterval(mapArtPoll);
+    mapArtPoll = setInterval(async () => {
+      try {
+        mapArt = await get('/api/bots/mapart/status');
+        drawMapArt();
+        if (!mapArt.extracting) {
+          clearInterval(mapArtPoll);
+          mapArtPoll = null;
+          drawMap();
+        }
+      } catch {
+        clearInterval(mapArtPoll);
+        mapArtPoll = null;
+      }
+    }, 2000);
   }
 
   function drawMap() {
@@ -277,51 +346,65 @@ export function dashboard() {
     const inCont = online.filter(b => String(b.map) === String(mapContinent) && inBounds(b, cont.bounds));
     const zoneCount = {};
     for (const b of inCont) if (b.zoneId) zoneCount[b.zoneId] = (zoneCount[b.zoneId] || 0) + 1;
-    const zones = (cont.zones || []).slice().sort((a, b) => (zoneCount[b.areaId] || 0) - (zoneCount[a.areaId] || 0) || String(a.title || a.name).localeCompare(String(b.title || b.name)));
+    const zones = (cont.zones || []).slice().sort((a, b) => String(a.title || a.name).localeCompare(String(b.title || b.name)));
     const selected = zones.find(z => z.areaId === mapZone);
     const shown = selected ? inCont.filter(b => b.zoneId === selected.areaId) : inCont;
 
-    const crop = contentBounds(cont);
+    const zoneArt = !!(selected && mapArt && (mapArt.zones || []).includes(selected.name));
+    const continentArt = !!(mapArt && (mapArt.maps || []).includes(String(mapContinent)));
+    const hasArt = zoneArt || continentArt;
+    const pointBounds = zoneArt ? selected.bounds : cont.bounds;
+    const crop = selected ? (zoneArt ? { x: 0, y: 0, w: 1, h: 1 } : selected) : contentBounds(cont);
     const box = svg('svg', {
-      class: 'map-svg', role: 'img', 'aria-label': cont.name || T('World map'),
+      class: 'map-svg' + (hasArt ? ' has-art' : ''), role: 'img', 'aria-label': cont.name || T('World map'),
       viewBox: (crop.x * 1000).toFixed(1) + ' ' + (crop.y * 668).toFixed(1) + ' ' + Math.max(1, crop.w * 1000).toFixed(1) + ' ' + Math.max(1, crop.h * 668).toFixed(1)
     });
     box.appendChild(svg('rect', { x: 0, y: 0, width: 1000, height: 668, fill: 'var(--canvas)' }));
-    for (const z of zones) {
-      const id = z.areaId;
-      const active = id === mapZone;
-      const count = zoneCount[id] || 0;
-      const r = svg('rect', {
-        x: (z.x * 1000).toFixed(1), y: (z.y * 668).toFixed(1), width: Math.max(2, z.w * 1000).toFixed(1), height: Math.max(2, z.h * 668).toFixed(1),
-        class: 'map-zone' + (active ? ' active' : '') + (count ? ' has' : ''),
-        onclick: () => { mapZone = active ? 0 : id; drawMap(); }
-      });
-      r.appendChild(svg('title', {}, (z.title || z.name) + ' · ' + count));
-      box.appendChild(r);
+    if (hasArt) {
+      const art = zoneArt
+        ? '/api/bots/mapart/zones/' + encodeURIComponent(selected.name) + '.png?v=' + encodeURIComponent(mapArt.version || '')
+        : '/api/bots/mapart/' + mapContinent + '.png?v=' + encodeURIComponent(mapArt.version || '');
+      box.appendChild(svg('image', { href: art, x: 0, y: 0, width: 1000, height: 668, preserveAspectRatio: 'none' }));
     }
+
+    if (!hasArt) {
+      // Without extracted art the zone rectangles are the map. They are only a guide;
+      // zones are selected in the list on the right, never by an overlapping hit box.
+      for (const z of zones) {
+        const count = zoneCount[z.areaId] || 0;
+        const r = svg('rect', {
+          x: (z.x * 1000).toFixed(1), y: (z.y * 668).toFixed(1), width: Math.max(2, z.w * 1000).toFixed(1), height: Math.max(2, z.h * 668).toFixed(1),
+          class: 'map-zone' + (count ? ' has' : '') + (z.areaId === mapZone ? ' active' : '')
+        });
+        r.appendChild(svg('title', {}, (z.title || z.name) + ' · ' + count));
+        box.appendChild(r);
+      }
+    }
+
     for (const b of shown) {
-      const p = mapPoint(b, cont.bounds);
+      const p = mapPoint(b, pointBounds);
       if (p.x < 0 || p.y < 0 || p.x > 1000 || p.y > 668) continue;
       const dot = svg('circle', {
-        cx: p.x.toFixed(1), cy: p.y.toFixed(1), r: selected ? 4.5 : 3.6, class: 'map-bot',
-        fill: classColor(b.className), 'data-name': b.name, onclick: () => showBot(b)
+        cx: p.x.toFixed(1), cy: p.y.toFixed(1), r: selected ? 5.5 : 4.2, class: 'map-bot',
+        fill: classColor(b.className), 'data-name': b.name,
+        onclick: event => { event.stopPropagation(); showBot(b); }
       });
       dot.appendChild(svg('title', {}, b.name + (b.zone ? ' · ' + b.zone : '') + (b.task ? ' · ' + b.task : '')));
       box.appendChild(dot);
     }
     replace(mapHolder, box);
 
-    const rows = zones.filter(z => zoneCount[z.areaId] > 0 || z.areaId === mapZone);
     const list = [h('button', { type: 'button', class: 'map-zone-row' + (mapZone === 0 ? ' active' : ''), onclick: () => { mapZone = 0; drawMap(); } },
       h('span.zn', {}, T('All zones')), h('span.zc', {}, String(inCont.length)))];
-    for (const z of rows) {
+    for (const z of zones) {
       list.push(h('button', { type: 'button', class: 'map-zone-row' + (z.areaId === mapZone ? ' active' : ''), onclick: () => { mapZone = z.areaId; drawMap(); } },
         h('span.zn', {}, z.title || z.name), h('span.zc', {}, String(zoneCount[z.areaId] || 0))));
     }
     replace(mapSide, h('div.map-zone-list', {}, list));
-    mapSub.textContent = F('{0} bots on {1}', shown.length, cont.name || T('this map'));
+    mapBack.style.display = selected ? '' : 'none';
+    mapSub.textContent = F('{0} bots on {1}', shown.length, selected ? (selected.title || selected.name) : (cont.name || T('this map')));
     const elsewhere = online.length - inCont.length;
-    mapElsewhere.textContent = elsewhere > 0 ? F('{0} more bots are on another map or between maps.', elsewhere) : '';
+    mapElsewhere.textContent = !selected && elsewhere > 0 ? F('{0} more bots are on another map or between maps.', elsewhere) : '';
   }
 
   function traitWord(value, low, mid, high) {
