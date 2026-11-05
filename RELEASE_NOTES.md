@@ -1,3 +1,16 @@
+# AFK Realm 1.2.69
+
+## Fix: the build stopped at rc.exe with a long command line
+
+- **The resource compiler gets only the include folders it needs.** Visual Studio passes the C++ include folders of CoA, Playerbots and every installed module to `rc.exe` as well. On a large server that is several hundred absolute paths and more than 32,000 characters; Windows then refuses to start `rc.exe` with `MSB6003 ... filename or extension too long`.
+- **AFK now shortens that list after CMake and before MSBuild**, so the resource step works even when the server folder is long. Only generated project metadata is changed during the build; no server data, configs or characters are touched.
+- **The short-path junction is still used** for servers that are built through `C:\afk\...`; both fixes work together.
+
+## mod-subclass fits the current CoA core again
+
+- **The core patch is adapted** to the current player hook enum and the changed appearance update flow.
+- **The module is built again** instead of being left out of the server. Subclass characters keep their second class.
+
 # AFK Realm 1.2.68
 
 ## Fix: CoA Custom installation stopped with "Moved"

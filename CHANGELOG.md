@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.69
+
+- **Resource compiler command line fixed:** the Visual Studio projects pass every C++ include folder of CoA, Playerbots and the modules to `rc.exe`. With many modules this exceeded Windows' 32,000-character limit and the build stopped with `MSB6003 ... filename or extension too long`. The engine now shortens that list to the folders the `.rc` file needs.
+- **mod-subclass fits the current CoA core again:** the core patch is adapted to the new player hooks and appearance flow, so the module is built instead of being left out.
+
 ## 1.2.68
 
 - **Fix "Moved" property error** in the engine: the built-in Playerbots and Dungeon Clear revision entries now always have the optional `Moved` list, so CoA Custom installation and updates work again.
