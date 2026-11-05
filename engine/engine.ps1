@@ -1327,6 +1327,44 @@ function Invoke-Configure([string]$CMake, $VisualStudio, [string]$OpenSsl, [stri
         "-DGIT_EXECUTABLE=$(& $forward $script:GitExe)") + @(Get-ModuleLinkageArgs)))
 }
 
+# The Visual Studio project passes every C++ include directory of the linked targets to the resource compiler
+# as well. On a large server (CoA + Playerbots + the modules) that is several hundred absolute paths and more than
+# 32,000 characters, so Windows refuses to start rc.exe ("MSB6003: The filename or extension is too long") even
+# though the individual paths are valid. The resource files only include their own resource.h, the generated
+# revision.h and the Windows SDK headers; the C++ module directories are not needed. Replace the oversized list
+# after CMake has written the projects, before MSBuild runs.
+function Limit-ResourceCompilerIncludes {
+    if (-not $OnWindows) { return }
+    $limit = 16000
+    $projects = @(Get-ChildItem -LiteralPath $Paths.Build -Recurse -Filter '*.vcxproj' -File -ErrorAction SilentlyContinue |
+                  Where-Object { $_.BaseName -in @('authserver', 'worldserver') })
+    foreach ($project in $projects) {
+        $bytes = [IO.File]::ReadAllBytes($project.FullName)
+        $hasBom = $bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF
+        $text = [IO.File]::ReadAllText($project.FullName)
+        if (-not $text.Contains('<ResourceCompile')) { continue }
+        $state = @{ Changed = $false; Before = 0; After = 0 }
+        $evaluator = {
+            param($match)
+            $before = $match.Groups[2].Value
+            if ($before.Length -le $limit) { return $match.Value }
+            $state.Changed = $true
+            $state.Before = [Math]::Max($state.Before, $before.Length)
+            $app = $project.BaseName
+            $replacement = '$(ProjectDir)..\..\..;$(ProjectDir)..\..\..\..\Source\src\server\apps\' + $app
+            $state.After = [Math]::Max($state.After, $replacement.Length)
+            return $match.Groups[1].Value + $replacement + $match.Groups[3].Value
+        }
+        # Stay inside one ResourceCompile element: do not let the match run from the item to a later definition.
+        $pattern = '(?s)(<ResourceCompile(?:\s[^>]*)?>(?:(?!</ResourceCompile>).)*?<AdditionalIncludeDirectories>)(.*?)(</AdditionalIncludeDirectories>)'
+        $updated = [regex]::Replace($text, $pattern, $evaluator)
+        if ($state.Changed) {
+            [IO.File]::WriteAllText($project.FullName, $updated, (New-Object Text.UTF8Encoding($hasBom)))
+            Write-Log ("Resource compiler: {0} include list shortened from {1} to {2} characters so rc.exe can start." -f $project.BaseName, $state.Before, $state.After)
+        }
+    }
+}
+
 function Invoke-Compile([string]$CMake) {
     # '--parallel' is the number of projects built at once; each project already
     # compiles on all cores. Too many at once exhausts memory (C1076/C3859), so the
@@ -2764,6 +2802,7 @@ try {
             Enter-Phase 'configure' 'Preparing the build (CMake)'
             if ($OnWindows) { Invoke-Configure $cmake $vs $openssl $boost -Clean:($action -eq 'Rebuild') }
             else { Invoke-ConfigureLinux $cmake $toolchain -Clean:($action -eq 'Rebuild') }
+            Limit-ResourceCompilerIncludes
             $failedAt = 'compile'
             Enter-Phase 'compile' 'Compiling the server'
             Invoke-Compile $cmake
