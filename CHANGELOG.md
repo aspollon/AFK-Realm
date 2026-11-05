@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.2.63
+
+- **Bot world map:** Eastern Kingdoms, Kalimdor, Outland and Northrend, with zone counts, live/last-save dots and bot cards.
+- **Chat & Loot:** native journal readers with filters and a safe `worldserver.conf` journal setup (backup first, optional player chat).
+- **Live overview:** activity, combat/dead/group figures, task distribution and top bots by kills.
+- **PvP:** battlegrounds, arenas and arena teams for the last 24 hours.
+- **Auction house:** read-only offers, houses, sellers and most expensive auctions.
+- **Armory:** character search, equipped gear, item level and stats.
+- **Bot personalities:** chat persona from `mod_playerbots_auctions_personas` and trading/crafting traits derived from the auction module's stable bot hash.
+
 ## 1.2.62
 
 - **Native Bots dashboard:** AFK-styled overview plus searchable bot roster and detail cards for class, race, level, zone, health, group, kills, position, quests and activity.

@@ -1,3 +1,18 @@
+# AFK Realm 1.2.63
+
+## Bots dashboard: map, journals, PvP, auction, armory
+
+- **World map with Northrend:** every online bot on Eastern Kingdoms, Kalimdor, Outland and now Northrend, with zone outlines, zone counts, last known or live positions and a bot card on click.
+- **Chat & Loot:** the bots' chat and rare finds from `Chat.log` / `BotLoot.log`, with filters and a one-click **Turn on bot journals** button that backs up `worldserver.conf` first. Player chat is optional.
+- **Live overview:** live activity, combat/dead/group counts, what the bots are doing and the top bots by kills.
+- **PvP:** battleground and arena figures for the last 24 hours, plus arena teams.
+- **Auction house:** a read-only overview of the offers, houses, sellers and most expensive auctions. The bots trade through `mod-playerbots-auctions`; the dashboard does not create auctions.
+- **Armory:** search a bot or player and see equipped gear, item level and stats.
+- **Bot personalities:** the chat personality from `mod_playerbots_auctions_personas` and the stable trading/crafting traits from the auction module are shown on every bot card.
+- **Northrend map data** is generated from the client's zone rectangles; the map uses vector outlines, not extracted client art.
+
+The native overview remains the fast, Python-free page. The new pages use only AFK Realm's own web server and database; no Python sidecar is needed.
+
 # AFK Realm 1.2.62
 
 ## Bots dashboard

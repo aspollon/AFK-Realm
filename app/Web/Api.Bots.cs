@@ -140,11 +140,23 @@ namespace CoAInstaller.Web
     class BotInfo
     {
         public string Name { get; set; } = "";
+        public int Guid { get; set; }
         public string ClassName { get; set; } = "";
         public string RaceName { get; set; } = "";
         public string Zone { get; set; } = "";
+        public int ZoneId { get; set; }
         public string Task { get; set; } = "";
         public string Leader { get; set; } = "";
+        public string Persona { get; set; } = "";
+        public string PersonaStreak { get; set; } = "";
+        public float Trading { get; set; }
+        public float Crafting { get; set; }
+        public float Order { get; set; }
+        public float Patience { get; set; }
+        public float Knowledge { get; set; }
+        public float Thrift { get; set; }
+        public float Greed { get; set; }
+        public float Talk { get; set; }
         public int Level { get; set; }
         public int Health { get; set; }
         public int Power { get; set; }
@@ -178,24 +190,39 @@ namespace CoAInstaller.Web
             var names = BotNames.Load(inst, login);
             var r = new BotRoster();
 
-            foreach (var row in MySql.Query(inst, login, "SELECT c.name, c.race, c.class, c.level, c.zone, c.online FROM acore_characters.characters c " +
+            foreach (var row in MySql.Query(inst, login, "SELECT c.name, c.race, c.class, c.level, c.zone, c.online, c.map, c.position_x, c.position_y, c.guid FROM acore_characters.characters c " +
                 "JOIN acore_auth.account a ON a.id = c.account WHERE " + bot + (inWorldOnly ? " AND c.online = 1" : "") +
                 " ORDER BY c.online DESC, c.level DESC, c.name LIMIT 5000;"))
             {
                 var f = row.Split('\t');
                 int race, cls, level, zone;
-                if (f.Length < 6 || !int.TryParse(f[1], out race) || !int.TryParse(f[2], out cls) || !int.TryParse(f[3], out level) || !int.TryParse(f[4], out zone))
+                if (f.Length < 10 || !int.TryParse(f[1], out race) || !int.TryParse(f[2], out cls) || !int.TryParse(f[3], out level) || !int.TryParse(f[4], out zone))
                     continue;
-                r.Bots.Add(new BotInfo
+                int map, guid;
+                double x, y;
+                if (!int.TryParse(f[6], out map)) map = 0;
+                if (!int.TryParse(f[9], out guid)) guid = 0;
+                if (!double.TryParse(f[7], NumberStyles.Float, CultureInfo.InvariantCulture, out x)) x = 0;
+                if (!double.TryParse(f[8], NumberStyles.Float, CultureInfo.InvariantCulture, out y)) y = 0;
+                var b = new BotInfo
                 {
                     Name = f[0],
+                    Guid = guid,
                     ClassName = names.ClassName(cls),
                     RaceName = names.RaceName(race),
                     Level = level,
                     Zone = zone > 0 ? GameData.ZoneName(inst, zone) : "",
-                    Online = f[5] != "0"
-                });
+                    ZoneId = zone,
+                    Online = f[5] != "0",
+                    Map = map,
+                    X = x,
+                    Y = y
+                };
+                ApplyTraits(b);
+                r.Bots.Add(b);
             }
+
+            ApplyPersonas(inst, login, r);
 
             ReadLive(inst, names, r);
             r.Bots.Sort((a, b) =>
@@ -209,6 +236,52 @@ namespace CoAInstaller.Web
             return r;
         }
 
+        static float Trait(int guid, int which)
+        {
+            unchecked
+            {
+                uint hash = (uint)guid * 2654435761u + (uint)which * 40503u;
+                hash ^= hash >> 15;
+                hash *= 2246822519u;
+                hash ^= hash >> 13;
+                hash *= 3266489917u;
+                hash ^= hash >> 16;
+                return (hash & 0xFFFF) / 65535.0f;
+            }
+        }
+
+        static void ApplyTraits(BotInfo b)
+        {
+            // Same stable per-bot traits as mod-playerbots-auctions (PbaSettings.cpp, TraitOf).
+            b.Order = Trait(b.Guid, 1);
+            b.Patience = Trait(b.Guid, 2);
+            b.Knowledge = Trait(b.Guid, 3);
+            b.Thrift = Trait(b.Guid, 4);
+            b.Trading = Trait(b.Guid, 5);
+            b.Crafting = Trait(b.Guid, 6);
+            b.Greed = Trait(b.Guid, 7);
+            b.Talk = Trait(b.Guid, 10);
+        }
+
+        static void ApplyPersonas(Install inst, DbLogin login, BotRoster r)
+        {
+            try
+            {
+                var byGuid = r.Bots.ToDictionary(b => b.Guid, b => b);
+                foreach (var row in MySql.Query(inst, login, "SELECT guid, personality, streak FROM acore_characters.mod_playerbots_auctions_personas;"))
+                {
+                    var f = row.Split('\t');
+                    int guid;
+                    if (f.Length < 3 || !int.TryParse(f[0], out guid)) continue;
+                    BotInfo b;
+                    if (!byGuid.TryGetValue(guid, out b)) continue;
+                    b.Persona = f[1];
+                    b.PersonaStreak = f[2];
+                }
+            }
+            catch { }
+        }
+
         static void ReadLive(Install inst, BotNames names, BotRoster r)
         {
             string conf = Path.Combine(inst.ConfigDir, "modules", "playerbots.conf");
@@ -220,9 +293,14 @@ namespace CoAInstaller.Web
             }
             else
             {
-                // AFK knows the usual place even when the setting has not been written yet.
-                string usual = Path.Combine(inst.LogDir, "bot-status.json");
-                if (File.Exists(usual)) r.LiveFile = usual;
+                // AFK knows the usual places even when the setting has not been written yet.
+                foreach (string usual in new[]
+                {
+                    Path.Combine(inst.LogDir, "bot-status.json"),
+                    Path.Combine(inst.ServerDir, "bot-status.json"),
+                    Path.Combine(inst.ServerDir, "logs", "bot-status.json")
+                })
+                    if (File.Exists(usual)) { r.LiveFile = usual; break; }
             }
 
             if (r.LiveFile.Length == 0)
@@ -278,7 +356,7 @@ namespace CoAInstaller.Web
                         b.Power = Int(e, "pw", b.Power);
                         b.Map = Int(e, "m", b.Map);
                         int zone = Int(e, "zone", 0);
-                        if (zone > 0) b.Zone = GameData.ZoneName(inst, zone);
+                        if (zone > 0) { b.Zone = GameData.ZoneName(inst, zone); b.ZoneId = zone; }
                         b.X = Number(e, "x", b.X);
                         b.Y = Number(e, "y", b.Y);
                         b.Combat = Bool(e, "combat");

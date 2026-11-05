@@ -95,6 +95,9 @@ namespace CoAInstaller.Web
             MapRaces(app);
             MapSetups(app);
             MapBots(app);
+            MapBotActivity(app);
+            MapBotMore(app);
+            MapBotArmory(app);
             MapFiles(app);
             MapRemote(app);
             MapSupport(app);
