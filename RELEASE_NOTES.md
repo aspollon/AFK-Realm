@@ -1,3 +1,15 @@
+# AFK Realm 1.2.58
+
+## Fixed in 1.2.58
+
+- **CoA Custom 1.9.9 no longer collides with the AFK client patch.** The new CoA package ships its own `Data\patch-ZZZZZ.MPQ`; AFK's patch is now `Data\patch-ZZZZZZZZ.MPQ`, which sorts after CoA's archive and therefore still wins.
+- **The old error is gone:** AFK no longer reports "Data\patch-ZZZZZ.MPQ ... was not made by AFK Realm" when the CoA package copied its own file there.
+- **Safe cleanup:** an old AFK `patch-ZZZZZ.MPQ` is removed only when it carries AFK Realm's stamp. CoA's own `patch-ZZZZZ.MPQ` is left untouched. The old AFK `patch-Y.MPQ` is still cleaned up as before.
+- **Player ZIP:** the exported client patch uses the new name too, so other players get the correct archive.
+- The 1.2.57 server build checks and automatic rebuild after CoA Custom install are unchanged.
+
+**What to do:** update to 1.2.58, close the game, then run **Game client > Install** once. The old AFK patch is replaced by `Data\patch-ZZZZZZZZ.MPQ`; restart the client afterwards. Existing CoA 1.9.9 installations then load AFK's changes after CoA's new patch.
+
 # AFK Realm 1.2.57
 
 ## Fixed in 1.2.57

@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.58
+
+- **Client patch name:** CoA Custom 1.9.9 now ships `Data\patch-ZZZZZ.MPQ`, so AFK's generated patch moved to `Data\patch-ZZZZZZZZ.MPQ` (sorted after CoA's archive).
+- **Migration:** the old AFK `patch-ZZZZZ.MPQ` is removed only when it carries the AFK stamp; CoA's own patch with that name is never deleted. The old `patch-Y.MPQ` cleanup remains.
+- **ZIP/export:** player ZIPs and CoA exports contain the new archive name.
+- **Fix:** CoA Custom 1.9.9 install no longer fails with "Data\patch-ZZZZZ.MPQ ... was not made by AFK Realm".
+
 ## 1.2.57
 
 - **Required racial patch:** `afk-1.9.8-racials.patch` is checked and applied on every build; if it is missing or no longer fits, the build stops instead of silently omitting the Kyrian/Venthyr scripts.

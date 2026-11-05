@@ -13,18 +13,20 @@ namespace CoAInstaller
     enum PatchState { None, Current, Missing, Outdated, Leftover }
 
     /// <summary>
-    /// The client patch of the modules: an archive (Data\patch-ZZZZZ.MPQ) that changes files of the game client - the
+    /// The client patch of the modules: an archive (Data\patch-ZZZZZZZZ.MPQ) that changes files of the game client - the
     /// "client": {"patch": ...} part of a module's afk-realm.json. A module brings files of its own ("files") and asks
     /// for changes to files of the client ("edits"); AFK Realm takes those files from the player's own game client,
     /// so it never hands out files of the game, and builds the archive anew whenever the client, a module or a setting
     /// it reads has changed. The archive goes into the game folder, and into the ZIP for the other players.
-    /// The late letter matters: CoA Custom carries its loading screens in patch-ZZZD.MPQ, so a patch-Y archive
-    /// would be overridden by it.
+    /// The late name matters: CoA Custom carries its loading screens in patch-ZZZD.MPQ and 1.9.9 now also ships its own
+    /// patch-ZZZZZ.MPQ, so our patch has to sort after those. The old AFK patch-Y and patch-ZZZZZ are removed as well.
     /// </summary>
     static class ClientPatch
     {
-        public const string ArchiveName = "patch-ZZZZZ.MPQ";
+        public const string ArchiveName = "patch-ZZZZZZZZ.MPQ";
         const string LegacyArchiveName = "patch-Y.MPQ";
+        // CoA Custom 1.9.9 uses this name itself; remove it only when it carries AFK Realm's stamp.
+        const string PreviousArchiveName = "patch-ZZZZZ.MPQ";
         const string StampName = "AFK-Realm\\client-patch.txt";
 
         static string RecordFile(Install inst) { return Path.Combine(inst.Root, "Dependencies", "client-patch.txt"); }
@@ -386,7 +388,7 @@ namespace CoAInstaller
         /// <summary>The contents of the archive as it should be now: name -> bytes. Throws when the client lacks a file a module edits.</summary>
         public static SortedDictionary<string, byte[]> Build(Install inst, string client, Plan plan, List<string> notes)
         {
-            // ZIP export and state checks use Build without Install; remove the old AFK patch-Y here as well.
+            // ZIP export and state checks use Build without Install; remove the old AFK patch-Y and patch-ZZZZZ here as well.
             RemoveLegacyPatch(client);
             var files = new SortedDictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
             foreach (var f in plan.Files)
@@ -1004,14 +1006,20 @@ namespace CoAInstaller
             catch { return ""; }
         }
 
-        /// <summary>Removes the old patch-Y of versions before the loading-screen archive moved after CoA's
-        /// patch-ZZZD. Only a file that carries AFK Realm's own stamp is touched.</summary>
+        /// <summary>Removes the old patch-Y and the old patch-ZZZZZ of earlier AFK versions. CoA Custom 1.9.9
+        /// uses patch-ZZZZZ itself now, so only a file that carries AFK Realm's own stamp is touched.</summary>
         static void RemoveLegacyPatch(string client)
         {
             if (string.IsNullOrEmpty(client)) return;
             string data = Os.Resolve(client, "Data");
             if (!Directory.Exists(data)) return;
-            foreach (string old in Directory.GetFiles(data, "*", SearchOption.AllDirectories).Where(f => Path.GetFileName(f).Equals(LegacyArchiveName, StringComparison.OrdinalIgnoreCase)))
+            Func<string, bool> oldName = f =>
+            {
+                string name = Path.GetFileName(f);
+                return name.Equals(LegacyArchiveName, StringComparison.OrdinalIgnoreCase) ||
+                    name.Equals(PreviousArchiveName, StringComparison.OrdinalIgnoreCase);
+            };
+            foreach (string old in Directory.GetFiles(data, "*", SearchOption.AllDirectories).Where(oldName))
             {
                 try
                 {
@@ -1534,7 +1542,7 @@ namespace CoAInstaller
             int at = list.FindIndex(p => string.Equals(Path.GetFullPath(p), Path.GetFullPath(path), StringComparison.OrdinalIgnoreCase));
             if (at >= 0) { list[at] = temp; return list; }
             // not there yet (first install): where the game will read it - after every lettered patch of Data whose name
-            // sorts before it. "patch.MPQ" sorts after "patch-ZZZZZ.MPQ" by its characters, but the game reads it
+            // sorts before it. "patch.MPQ" sorts after "patch-ZZZZZZZZ.MPQ" by its characters, but the game reads it
             // first; only the lettered patches count here.
             string data = Path.GetFullPath(Os.Resolve(client, "Data"));
             Func<string, bool> lettered = p =>
@@ -1549,7 +1557,7 @@ namespace CoAInstaller
             return list;
         }
 
-        /// <summary>Puts the patch into a ZIP for other players, as Data\patch-ZZZZZ.MPQ.</summary>
+        /// <summary>Puts the patch into a ZIP for other players, as Data\patch-ZZZZZZZZ.MPQ.</summary>
         public static void AddToZip(ZipArchive zip, Install inst, string client, Plan plan) { AddToZip(zip, inst, client, plan, null); }
 
         /// <summary>Adds only the generated AFK client patch to a ZIP (the CoA client export adds the package files itself).</summary>
