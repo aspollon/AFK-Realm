@@ -173,6 +173,26 @@ namespace CoAInstaller.Web
         public string[] Quests { get; set; } = Array.Empty<string>();
     }
 
+    /// <summary>The live bot snapshot is on by default: the server writes bot-status.json from its first start.</summary>
+    static class BotLiveStatus
+    {
+        public static bool Ensure(Install inst)
+        {
+            try
+            {
+                string conf = Path.Combine(inst.ConfigDir, "modules", "playerbots.conf");
+                if (!File.Exists(conf)) return false;
+                if (!string.IsNullOrWhiteSpace(Conf.Get(conf, "AiPlayerbot.CoaStatusFile"))) return false;
+                Directory.CreateDirectory(inst.LogDir);
+                string file = Path.Combine(inst.LogDir, "bot-status.json");
+                Conf.Set(conf, "AiPlayerbot.CoaStatusFile", "\"" + file.Replace("\\", "/") + "\"");
+                Conf.Set(conf, "AiPlayerbot.CoaStatusIntervalSeconds", "5");
+                return true;
+            }
+            catch { return false; }
+        }
+    }
+
     /// <summary>The bots as a list for the dashboard, with the optional live snapshot of the Playerbots status file.</summary>
     class BotRoster
     {
@@ -448,11 +468,12 @@ namespace CoAInstaller.Web
                 bool inWorldOnly = c.Request.Query["all"] != "1";
                 try
                 {
+                    bool enabledNow = BotLiveStatus.Ensure(Inst);
                     var r = BotRoster.Load(Inst, inWorldOnly);
                     return new
                     {
                         bots = r.Bots, live = r.Live, liveAt = r.LiveAt, liveFile = r.LiveFile,
-                        configured = r.Configured, note = r.Note
+                        configured = r.Configured, note = r.Note, enabledNow
                     };
                 }
                 catch (Exception ex)

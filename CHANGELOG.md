@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.66
+
+- **Live bot snapshot enabled by default:** engine setup writes `AiPlayerbot.CoaStatusFile` and the 5-second interval; existing installs get it filled automatically when the bot roster is opened.
+- **One restart/reload** is still needed for the worldserver to start writing the file.
+- **Custom paths are preserved.**
+
 ## 1.2.65
 
 - **Server presets moved** from the Modules page to the Server page.

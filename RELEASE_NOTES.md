@@ -1,3 +1,11 @@
+# AFK Realm 1.2.66
+
+## Live bot status is on by default
+
+- **`AiPlayerbot.CoaStatusFile` is now set automatically** while setting up or updating the server, and also the first time the native bot roster is opened on an existing installation. AFK Realm writes the snapshot to the server's `logs\bot-status.json` and refreshes it every 5 seconds.
+- **No more manual switch:** after the change, the worldserver needs one restart (or `.reload config`); after that the map, roster and bot cards show live task, health, group and position. The old **Turn on live status** button remains only as a fallback.
+- **Existing custom status paths are kept:** AFK Realm only fills the setting when it is empty.
+
 # AFK Realm 1.2.65
 
 ## Fixes for the map and the server page

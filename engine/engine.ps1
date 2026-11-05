@@ -1421,7 +1421,14 @@ function Set-ServerConfig([string]$Password) {
         Set-ConfigValue $import 'SourceDirectory' ('"' + $Paths.Source.Replace('\', '/') + '"')
     }
     $bots = @(Get-ChildItem $Paths.Configs -Recurse -Filter 'playerbots.conf') | Select-Object -First 1
-    if ($bots) { Set-ConfigValue $bots.FullName 'PlayerbotsDatabaseInfo' (& $connection 'acore_playerbots') }
+    if ($bots) {
+        Set-ConfigValue $bots.FullName 'PlayerbotsDatabaseInfo' (& $connection 'acore_playerbots')
+        # AFK Realm's bot dashboard reads this snapshot: on from the first start, not after a manual click.
+        $status = Join-Path $Paths.Logs 'bot-status.json'
+        [void][IO.Directory]::CreateDirectory($Paths.Logs)
+        Set-ConfigValue $bots.FullName 'AiPlayerbot.CoaStatusFile' ('"' + $status.Replace('\', '/') + '"')
+        Set-ConfigValue $bots.FullName 'AiPlayerbot.CoaStatusIntervalSeconds' '5'
+    }
     Write-Log 'Server configuration updated.'
 }
 
