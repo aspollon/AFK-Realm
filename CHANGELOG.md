@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.68
+
+- **Fix "Moved" property error** in the engine: the built-in Playerbots and Dungeon Clear revision entries now always have the optional `Moved` list, so CoA Custom installation and updates work again.
+
 ## 1.2.67
 
 - **mod-dungeon-clear is built in:** always cloned from Zyth45's `coa` branch, included in the build stamp and updates, and not removable in the module catalog.

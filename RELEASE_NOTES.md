@@ -1,3 +1,11 @@
+# AFK Realm 1.2.68
+
+## Fix: CoA Custom installation stopped with "Moved"
+
+- **The engine no longer expects a `Moved` property on Playerbots or Dungeon Clear.** 1.2.67 added Dungeon Clear as a built-in repository but left its revision entry without the optional `Moved` list; with strict mode, CoA Custom installation stopped before doing anything.
+- **Playerbots and Dungeon Clear now both carry the optional empty list.** CoA Custom, server updates and module changes run again normally.
+- **No server data was changed** by the failed attempt.
+
 # AFK Realm 1.2.67
 
 ## Dungeon Clear is part of the server, like Playerbots

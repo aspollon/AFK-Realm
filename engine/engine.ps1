@@ -71,9 +71,9 @@ $Project = @{
     # Moved = earlier addresses of the same repository; a revision recorded under one of them still counts.
     Core       = @{ Repo = 'https://github.com/Conquest-of-AzerothCore/azerothcore-wotlk-coa.git'; Branch = 'main'; Revision = ''
                     Moved = @('https://github.com/jealous-sound/azerothcore-wotlk-coa.git') }
-    Playerbots = @{ Repo = 'https://github.com/Zyth45/mod-playerbots.git'; Branch = 'coa'; Revision = ''; Folder = 'mod-playerbots' }
+    Playerbots = @{ Repo = 'https://github.com/Zyth45/mod-playerbots.git'; Branch = 'coa'; Revision = ''; Folder = 'mod-playerbots'; Moved = @() }
     # Zyth45's Dungeon Clear is part of the server itself, like Playerbots: always downloaded and built, never removable.
-    DungeonClear = @{ Repo = 'https://github.com/Zyth45/mod-dungeon-clear.git'; Branch = 'coa'; Revision = ''; Folder = 'mod-dungeon-clear' }
+    DungeonClear = @{ Repo = 'https://github.com/Zyth45/mod-dungeon-clear.git'; Branch = 'coa'; Revision = ''; Folder = 'mod-dungeon-clear'; Moved = @() }
     # The CoA fork ships its world content as a versioned package with its own importer.
     WorldImporter = 'apps\coa-world\world_data.py'
 }
