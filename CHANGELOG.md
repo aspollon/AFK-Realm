@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.60
+
+- **New own module:** `mod-afk-junk-to-gold`, listed under Modules by AFK Realm, with a setup page for players/bots, sale chat, upgrade and quest-item protection, and a minimum vendor price.
+- **Crash-safe:** sells on the next player update instead of destroying an item inside `OnPlayerLootItem`; compatible with Playerbots, custom races, CoA Challenges and Worldforged hooks.
+- **Defaults:** players on, bots off; bot junk stays with `mod-playerbots-auctions`.
+- **AFK Realm preset:** the built-in preset now includes the new module automatically.
+- **Module repository:** https://github.com/aspollon/mod-afk-junk-to-gold
+
 ## 1.2.59
 
 - **Server presets:** new page under Modules with a built-in "AFK Realm" preset (auction bots, Immersion Life, World Journey, Classic Classes, Custom Races, subclass support) and the CoA/WCR baseline settings.

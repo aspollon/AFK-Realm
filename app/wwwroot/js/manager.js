@@ -225,6 +225,8 @@ export function manager() {
         primary(T('Set up World Journey …'), setup('journey.js', 'journeySetup'))),
       moduleCard(m.auction, T('Auction house bots'), T('How the bots of mod-playerbots-auctions trade: how often they come, what they sell and buy, their prices, crafting, deals by chat, the Trading Post and their chatter.'), 'auction',
         primary(T('Set up the auction house bots …'), setup('setups.js', 'auctionSetup'))),
+      moduleCard(m.junk, T('Junk to Gold (AFK)'), T('Sell gray loot for real players automatically, safely after all loot hooks. Bots are left to the auction-house module by default.'), 'modules',
+        primary(T('Set up Junk to Gold ...'), setup('setups.js', 'junkSetup'))),
       moduleCard(m.classic, T('Classic classes'), T('Which classic classes - Warrior to Druid - can be played next to the classes of Conquest of Azeroth, by players and bots.'), 'gamemaster',
         primary(T('Set up the classic classes …'), setup('setups.js', 'classicSetup'))),
       m.races ? null : (() => { const c = card(T('CoA Custom'), T('The CoA Custom races (Dracthyr, Worgen, Vulpera, Sethrak, High elves and more) need the server module mod-custom-races, which brings mod-classic-classes along. Install it first; the server is rebuilt. Then this card installs CoA Custom.'), 'races',

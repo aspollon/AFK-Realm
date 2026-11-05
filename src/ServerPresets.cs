@@ -129,7 +129,8 @@ namespace CoAInstaller
             "mod-world-journey",
             "mod-classic-classes",
             "mod-custom-races",
-            "mod-subclass"
+            "mod-subclass",
+            "mod-afk-junk-to-gold"
         };
 
         public static ServerPreset BuiltInAfkRealm()

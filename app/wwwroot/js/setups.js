@@ -330,3 +330,25 @@ export function immersionSetup() {
     }
   });
 }
+
+// ---------------------------------------------------------------- junk to gold (AFK)
+
+export function junkSetup() {
+  return setupPage({
+    file: 'modules/mod_afk_junk_to_gold.conf', title: T('Junk to Gold (AFK)'), subtitle: T('mod-afk-junk-to-gold  -  modules\\mod_afk_junk_to_gold.conf'),
+    icon: 'modules', masterKey: 'JunkToGold.Enable', masterText: T('Junk to Gold on'),
+    build(p) {
+      p.tab(T('Selling'));
+      const who = p.card(T('Who sells'), T('The module sells poor-quality loot for real players by default. Bots are left to mod-playerbots-auctions, which already sells what they do not need.'), 'accounts');
+      p.toggle(who, 'JunkToGold.Players', T('Sell for real players'));
+      p.toggle(who, 'JunkToGold.Bots', T('Sell for Playerbots too'), T('Only enable this when mod-playerbots-auctions is not selling bot junk; otherwise the same drop is handled twice.'));
+      const keep = p.card(T('What is kept'), T('These safeguards prevent the module from selling something that is still useful.'), 'maintenance');
+      p.toggle(keep, 'JunkToGold.KeepUpgrades', T('Keep gray armor and weapons that are upgrades'));
+      p.toggle(keep, 'JunkToGold.KeepQuestItems', T('Keep quest items'));
+      const chat = p.card(T('Sale message'), T('A short chat line for real players. Bots never receive the message.'), 'accounts');
+      p.toggle(chat, 'JunkToGold.SaleChat', T('Show what was sold and for how much'));
+      p.slider(chat, 'JunkToGold.MinSellPrice', T('Minimum vendor price'), 0, 100000, 1, v => F('{0} copper', Math.trunc(v)));
+      p.note(T('The sale runs after the loot hooks of Playerbots, custom races and the challenge modules, so no other module receives a destroyed item.'));
+    }
+  });
+}

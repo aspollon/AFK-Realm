@@ -1,3 +1,16 @@
+# AFK Realm 1.2.60
+
+## Junk to Gold (AFK)
+
+- **New AFK module:** `mod-afk-junk-to-gold` is now listed under **Modules by AFK Realm**, with its own setup page.
+- **Safe by design:** the sale is deferred to the player's next update, after every `OnPlayerLootItem` hook has returned. Playerbots, Custom Races, CoA Challenges and Worldforged therefore never receive a destroyed item.
+- **Default behavior:** enabled for **real players**, disabled for **bots**. Bots keep using the auction-house module for their junk.
+- **Safeguards:** gray upgrades, quest items and items needed for active quest objectives are kept; a merged stack only sells the amount that was actually looted.
+- **No core or client patch.** The module contains only a server config and a PlayerScript.
+- **Included in the AFK Realm preset.** The built-in preset now installs it together with the other AFK modules. Do not run the external TrisBits `mod-junk-to-gold-plus` at the same time.
+
+Module repository: https://github.com/aspollon/mod-afk-junk-to-gold
+
 # AFK Realm 1.2.59
 
 ## Server presets
