@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.61
+
+- **mod-dungeon-clear integrated:** Zyth45's CoA/SquidBots module is now an AFK-listed module and part of the built-in AFK Realm preset.
+- **DungeonClear addon:** embedded in AFK Realm and installed automatically by Game client > Install while the module is installed; included in player ZIPs and removed with the module.
+- **No manual addon download** and no additional client patch required.
+
 ## 1.2.60
 
 - **New own module:** `mod-afk-junk-to-gold`, listed under Modules by AFK Realm, with a setup page for players/bots, sale chat, upgrade and quest-item protection, and a minimum vendor price.

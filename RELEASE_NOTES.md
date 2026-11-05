@@ -1,3 +1,14 @@
+# AFK Realm 1.2.61
+
+## Dungeon Clear
+
+- **`mod-dungeon-clear` is now a fixed part of AFK Realm.** Zyth45's CoA/SquidBots branch is listed under **Modules by AFK Realm** and included in the built-in AFK Realm preset. It needs the Playerbots that AFK Realm already builds.
+- **The DungeonClear addon is installed automatically.** It is embedded in AFK Realm, copied into `Interface\AddOns\DungeonClear` by **Game client > Install**, included in the player ZIP, and removed again when the module is removed. No manual addon download is needed.
+- **No server/client patch or extra configuration is required.** The module uses its own `mod_dungeon_clear.conf` and the `.dc` commands or the addon panel.
+- **Source:** https://github.com/Zyth45/mod-dungeon-clear (branch `coa`), addon based on https://github.com/jrad7/mod-dungeon-clear-addon
+
+**What to do:** update to 1.2.61, let the AFK Realm preset install the module (or install it from Modules), then run **Game client > Install** once. The addon must be visible in the client's add-on list as **DungeonClear**.
+
 # AFK Realm 1.2.60
 
 ## Junk to Gold (AFK)

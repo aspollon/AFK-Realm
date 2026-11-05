@@ -130,7 +130,8 @@ namespace CoAInstaller
             "mod-classic-classes",
             "mod-custom-races",
             "mod-subclass",
-            "mod-afk-junk-to-gold"
+            "mod-afk-junk-to-gold",
+            "mod-dungeon-clear"
         };
 
         public static ServerPreset BuiltInAfkRealm()

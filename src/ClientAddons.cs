@@ -137,7 +137,56 @@ namespace CoAInstaller
                     result.Add(addon);
                 }
             }
+            AddEmbeddedDungeonClear(inst, client, result);
             return result;
+        }
+
+        /// <summary>mod-dungeon-clear keeps its companion addon in a separate repository. AFK Realm carries the
+        /// addon as an embedded ZIP, so installing the module also installs and removes the DungeonClear addon.</summary>
+        static void AddEmbeddedDungeonClear(Install inst, string client, List<ClientAddon> result)
+        {
+            if (result.Any(a => a.Name.Equals("DungeonClear", StringComparison.OrdinalIgnoreCase))) return;
+            string module = Path.Combine(ModuleCatalog.ModulesDir(inst), "mod-dungeon-clear");
+            if (!Directory.Exists(module)) return;
+            string source = EnsureDungeonClearAddon(inst);
+            if (source == null) return;
+            const string why = "The DungeonClear panel starts, pauses and steers the tank bot through a dungeon.";
+            var addon = new ClientAddon { Module = "mod-dungeon-clear", Name = "DungeonClear", Source = source, Why = L.T(why), WhyEnglish = why };
+            addon.State = client == null ? AddonState.Missing : StateOf(addon, client);
+            result.Add(addon);
+        }
+
+        static string EnsureDungeonClearAddon(Install inst)
+        {
+            const string resource = "CoAInstaller.dungeonclear.zip";
+            string target = Path.Combine(inst.Root, "Dependencies", "ClientAddons", "DungeonClear");
+            string marker = Path.Combine(target, ".afk-version");
+            try
+            {
+                if (File.Exists(Path.Combine(target, "DungeonClear.toc")) && File.Exists(marker) && File.ReadAllText(marker).Trim() == Product.Version)
+                    return target;
+                if (Directory.Exists(target)) Directory.Delete(target, true);
+                Directory.CreateDirectory(target);
+                using (var stream = typeof(ClientAddons).Assembly.GetManifestResourceStream(resource))
+                {
+                    if (stream == null) return null;
+                    using (var zip = new ZipArchive(stream, ZipArchiveMode.Read))
+                    {
+                        string root = Path.GetFullPath(target).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+                        foreach (var entry in zip.Entries)
+                        {
+                            if (string.IsNullOrEmpty(entry.Name)) continue;
+                            string dest = Path.GetFullPath(Path.Combine(target, entry.FullName));
+                            if (!dest.StartsWith(root, StringComparison.OrdinalIgnoreCase)) continue;
+                            Directory.CreateDirectory(Path.GetDirectoryName(dest));
+                            entry.ExtractToFile(dest, true);
+                        }
+                    }
+                }
+                File.WriteAllText(marker, Product.Version);
+                return target;
+            }
+            catch { return null; }
         }
 
         static AddonState StateOf(ClientAddon addon, string client)
