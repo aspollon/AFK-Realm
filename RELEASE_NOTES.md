@@ -1,3 +1,15 @@
+# AFK Realm 1.2.62
+
+## Bots dashboard
+
+- **The Bots page is now an AFK-native dashboard.** It keeps the familiar overview of bots, players, factions, classes, races, levels and zones, and adds a searchable **bot roster** with every bot's class, race, level, zone and group.
+- **Click a bot for its card:** health, power, group, kills, position, quests and what it is doing.
+- **Live activity from Playerbots:** with `AiPlayerbot.CoaStatusFile` enabled, the dashboard shows each bot's current task, health, group and position from the `bot-status.json` snapshot. The **Turn on live status** button writes the setting to `modules/playerbots.conf`; restart the worldserver or run `.reload config` once.
+- **No Python and no SquidBots sidecar.** The dashboard uses AFK Realm's own web server, database access and theme.
+- **Database-only mode:** without live status the roster and overview still work; they show the saved state and explain how to enable live values.
+
+The first native version covers the overview, roster, search and bot cards. Chat, loot and map views can follow in a later release.
+
 # AFK Realm 1.2.61
 
 ## Dungeon Clear

@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.62
+
+- **Native Bots dashboard:** AFK-styled overview plus searchable bot roster and detail cards for class, race, level, zone, health, group, kills, position, quests and activity.
+- **Live Playerbots activity:** reads `AiPlayerbot.CoaStatusFile` / `bot-status.json`; a button in the dashboard enables the setting in `modules/playerbots.conf`.
+- **No Python sidecar:** no SquidBots installation or separate dashboard process; database-only mode works without live status.
+- **First native version:** chat, loot and map views remain follow-up work.
+
 ## 1.2.61
 
 - **mod-dungeon-clear integrated:** Zyth45's CoA/SquidBots module is now an AFK-listed module and part of the built-in AFK Realm preset.

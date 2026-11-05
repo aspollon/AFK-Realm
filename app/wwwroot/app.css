@@ -369,3 +369,23 @@ details.advanced > summary { cursor: pointer; font-weight: 600; margin: 4px 0; }
 .helpbtn { display: flex; align-items: center; gap: 8px; width: 100%; margin: 10px 0 8px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--warn); background: rgba(196,120,20,.12); color: var(--warn); font-weight: 700; font-size: 14px; cursor: pointer; text-align: left; }
 .helpbtn:hover { background: rgba(196,120,20,.22); }
 .helpbtn span:first-child { font-size: 18px; }
+
+/* ---- Bots dashboard ---- */
+.bots-dash .card { max-width: none; }
+.bots-dash .dash-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: start; }
+.bots-dash .dash-grid > .card { margin: 0; }
+.bots-dash .dash-wide { grid-column: 1 / -1; }
+@media (max-width: 900px) { .bots-dash .dash-grid { grid-template-columns: 1fr; } .bots-dash .dash-wide { grid-column: auto; } }
+.bot-name { display: inline-flex; align-items: center; gap: 7px; font-weight: 600; }
+.bot-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; }
+.bot-dot.live { background: #35b56a; box-shadow: 0 0 0 3px rgba(53,181,106,.14); }
+.bot-dot.combat { background: #d4a72c; box-shadow: 0 0 0 3px rgba(212,167,44,.14); }
+.bot-dot.dead { background: #c94b4b; box-shadow: 0 0 0 3px rgba(201,75,75,.14); }
+.bot-dot.online { background: var(--accent); }
+.health { display: inline-flex; width: 70px; height: 8px; border-radius: 5px; background: var(--canvas); overflow: hidden; vertical-align: middle; }
+.health i { display: block; height: 100%; border-radius: 5px; background: #35b56a; }
+.health i.mid { background: #d4a72c; }
+.health i.low { background: #c94b4b; }
+.health-cell { display: inline-flex; align-items: center; gap: 6px; }
+.health-num { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.bots-dash .note.warn { border-left: 3px solid var(--warn); }
