@@ -130,8 +130,7 @@ namespace CoAInstaller
             "mod-classic-classes",
             "mod-custom-races",
             "mod-subclass",
-            "mod-afk-junk-to-gold",
-            "mod-dungeon-clear"
+            "mod-afk-junk-to-gold"
         };
 
         public static ServerPreset BuiltInAfkRealm()
@@ -214,7 +213,7 @@ namespace CoAInstaller
 
             var preset = new ServerPreset { Name = name, Description = (description ?? "").Trim() };
             var installed = ModuleCatalog.Merge(inst, null)
-                .Where(m => m.Installed && !m.IsPlayerbots && m.State != ModuleState.PartOfCoA)
+                .Where(m => m.Installed && !m.IsBuiltIn && m.State != ModuleState.PartOfCoA)
                 .OrderBy(m => m.Name, StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
@@ -297,7 +296,7 @@ namespace CoAInstaller
         {
             var plan = new PresetPlan();
             var installed = ModuleCatalog.Merge(inst, null)
-                .Where(m => m.Installed && !m.IsPlayerbots)
+                .Where(m => m.Installed && !m.IsBuiltIn)
                 .ToList();
 
             Func<PresetModule, ModuleEntry, bool> same = (a, b) =>
@@ -308,6 +307,9 @@ namespace CoAInstaller
             var add = new List<PresetModule>();
             foreach (PresetModule module in preset.Modules)
             {
+                // Built-in modules are part of every server and never installed through a preset.
+                if (module.Name.Equals("mod-playerbots", StringComparison.OrdinalIgnoreCase) ||
+                    module.Name.Equals("mod-dungeon-clear", StringComparison.OrdinalIgnoreCase)) continue;
                 if (installed.Any(m => m.State != ModuleState.PartOfCoA && same(module, m))) continue;
                 if (module.CloneUrl.Length == 0 && module.FullName.Length > 0)
                     module.CloneUrl = "https://github.com/" + module.FullName + ".git";

@@ -56,7 +56,7 @@ namespace CoAInstaller
                     foreach (var folder in Directory.GetDirectories(modules))
                     {
                         string name = Path.GetFileName(folder);
-                        if (name.Equals("mod-playerbots", StringComparison.OrdinalIgnoreCase)) continue;
+                        if (name.Equals("mod-playerbots", StringComparison.OrdinalIgnoreCase) || name.Equals("mod-dungeon-clear", StringComparison.OrdinalIgnoreCase)) continue;
                         string branch, revision, repo = GitHubRepoOf(folder);
                         if (repo == null || !ReadHead(folder, out branch, out revision)) continue;
                         // Fetch the module first: a local change that is already in the
@@ -182,7 +182,7 @@ namespace CoAInstaller
             foreach (var folder in Directory.GetDirectories(modules))
             {
                 string name = Path.GetFileName(folder);
-                if (name.Equals("mod-playerbots", StringComparison.OrdinalIgnoreCase)) continue;
+                if (name.Equals("mod-playerbots", StringComparison.OrdinalIgnoreCase) || name.Equals("mod-dungeon-clear", StringComparison.OrdinalIgnoreCase)) continue;
                 // the newest manifest and patches of the module, else those it has
                 bool newest = GitHubRepoOf(folder) != null && fetch(folder);
                 Func<string, string> read = path =>

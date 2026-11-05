@@ -30,6 +30,9 @@ namespace CoAInstaller
         public bool Installed { get { return State == ModuleState.Managed || State == ModuleState.ByHand; } }
         /// <summary>Playerbots: AFK Realm always builds its CoA branch; catalog entries of the same name are other versions.</summary>
         public bool IsPlayerbots { get { return Name.Equals("mod-playerbots", StringComparison.OrdinalIgnoreCase); } }
+        /// <summary>Dungeon Clear: Zyth45's module is part of every server, like Playerbots, and cannot be removed.</summary>
+        public bool IsDungeonClear { get { return Name.Equals("mod-dungeon-clear", StringComparison.OrdinalIgnoreCase); } }
+        public bool IsBuiltIn { get { return IsPlayerbots || IsDungeonClear; } }
     }
 
     /// <summary>What AFK Realm found out about a module before installing it.</summary>
@@ -78,9 +81,6 @@ namespace CoAInstaller
                 new ModuleEntry { Name = "mod-subclass", FullName = "aspollon/mod-subclass", Branch = "main", Own = true, Hidden = true,
                     Url = "https://github.com/aspollon/mod-subclass", CloneUrl = "https://github.com/aspollon/mod-subclass.git",
                     Description = L.N("For CoA Custom 1.9.8 and newer: the second class of the Two-Headed Ogre and the Thin Twins (Stefan's subclassing). Needs mod-custom-races.") },
-                new ModuleEntry { Name = "mod-dungeon-clear", FullName = "Zyth45/mod-dungeon-clear", Branch = "coa", Own = true,
-                    Url = "https://github.com/Zyth45/mod-dungeon-clear", CloneUrl = "https://github.com/Zyth45/mod-dungeon-clear.git",
-                    Description = L.N("CoA/SquidBots dungeon clearing for Playerbots (Zyth45 branch); includes the DungeonClear addon") },
                 new ModuleEntry { Name = "mod-afk-junk-to-gold", FullName = "aspollon/mod-afk-junk-to-gold", Branch = "main", Own = true,
                     Url = "https://github.com/aspollon/mod-afk-junk-to-gold", CloneUrl = "https://github.com/aspollon/mod-afk-junk-to-gold.git",
                     Description = L.N("Sells gray junk for real players, safely after the loot hooks; bots stay with the auction-house module") },
@@ -311,7 +311,7 @@ namespace CoAInstaller
             var folders = Directory.Exists(dir) ? Directory.GetDirectories(dir).Select(Path.GetFileName).ToList() : new List<string>();
             foreach (var name in folders.Concat(managed.Keys).Distinct(StringComparer.OrdinalIgnoreCase))
             {
-                if (name.Equals("mod-playerbots", StringComparison.OrdinalIgnoreCase)) continue;
+                if (name.Equals("mod-playerbots", StringComparison.OrdinalIgnoreCase) || name.Equals("mod-dungeon-clear", StringComparison.OrdinalIgnoreCase)) continue;
                 string folder = Path.Combine(dir, name);
                 string[] info; managed.TryGetValue(name, out info);
                 bool hasGit = Directory.Exists(Path.Combine(folder, ".git"));
@@ -346,8 +346,20 @@ namespace CoAInstaller
                     if (!Directory.Exists(folder)) entry.Status = "missing";
                 }
             }
-            // Playerbots is always built in, so the catalog's versions of it are shown as included, not installable.
+            // Playerbots and Dungeon Clear are always built in, so catalog entries are shown as included, not installable.
             foreach (var bots in result.Where(e => e.IsPlayerbots)) bots.State = ModuleState.PartOfCoA;
+            var dungeon = result.FirstOrDefault(e => e.IsDungeonClear);
+            if (dungeon == null)
+            {
+                dungeon = new ModuleEntry
+                {
+                    Name = "mod-dungeon-clear", FullName = "Zyth45/mod-dungeon-clear", Branch = "coa",
+                    Url = "https://github.com/Zyth45/mod-dungeon-clear", CloneUrl = "https://github.com/Zyth45/mod-dungeon-clear.git",
+                    Description = L.N("Zyth45's Dungeon Clear for the Playerbots: the tank clears a dungeon boss by boss. Included in every AFK Realm server, like Playerbots; the DungeonClear add-on is installed automatically.")
+                };
+                result.Add(dungeon);
+            }
+            dungeon.State = ModuleState.PartOfCoA;
             return result;
         }
 

@@ -72,6 +72,8 @@ $Project = @{
     Core       = @{ Repo = 'https://github.com/Conquest-of-AzerothCore/azerothcore-wotlk-coa.git'; Branch = 'main'; Revision = ''
                     Moved = @('https://github.com/jealous-sound/azerothcore-wotlk-coa.git') }
     Playerbots = @{ Repo = 'https://github.com/Zyth45/mod-playerbots.git'; Branch = 'coa'; Revision = ''; Folder = 'mod-playerbots' }
+    # Zyth45's Dungeon Clear is part of the server itself, like Playerbots: always downloaded and built, never removable.
+    DungeonClear = @{ Repo = 'https://github.com/Zyth45/mod-dungeon-clear.git'; Branch = 'coa'; Revision = ''; Folder = 'mod-dungeon-clear' }
     # The CoA fork ships its world content as a versioned package with its own importer.
     WorldImporter = 'apps\coa-world\world_data.py'
 }
@@ -136,6 +138,7 @@ $Paths = @{
 }
 $Paths.Modules = Join-Path $Paths.Source 'modules'
 $Paths.Playerbots = Join-Path $Paths.Modules $Project.Playerbots.Folder
+$Paths.DungeonClear = Join-Path $Paths.Modules $Project.DungeonClear.Folder
 # A long server folder makes the paths of the build longer than Windows' 260 characters: Boost's installer, the
 # compiler and MSBuild then fail. A new server in a folder longer than 24 characters therefore builds through a short
 # junction, <drive>\afk\<8 characters>, that leads to its Dependencies folder - the files stay where they are, only the
@@ -171,6 +174,7 @@ function Use-ShortDependencies {
     }
     $Paths.Modules = Join-Path $Paths.Source 'modules'
     $Paths.Playerbots = Join-Path $Paths.Modules $Project.Playerbots.Folder
+    $Paths.DungeonClear = Join-Path $Paths.Modules $Project.DungeonClear.Folder
     Write-Log "Long server folder: the build works through $short (it leads to $real)."
 }
 
@@ -1079,7 +1083,7 @@ function Read-Revisions {
     foreach ($line in [IO.File]::ReadAllLines($Paths.Revisions)) {
         $f = $line.Split('|')
         if ($f.Count -ne 4 -or $f[3] -notmatch '^[0-9a-f]{40}$') { continue }
-        foreach ($part in @(@{ Key = 'core'; Item = $Project.Core }, @{ Key = 'module'; Item = $Project.Playerbots })) {
+        foreach ($part in @(@{ Key = 'core'; Item = $Project.Core }, @{ Key = 'module'; Item = $Project.Playerbots }, @{ Key = 'module'; Item = $Project.DungeonClear })) {
             if ($f[0] -eq $part.Key -and ($f[1] -eq $part.Item.Repo -or @($part.Item.Moved) -contains $f[1]) -and $f[2] -eq $part.Item.Branch) { $part.Item.Revision = $f[3] }
         }
     }
@@ -1087,7 +1091,8 @@ function Read-Revisions {
 function Save-Revisions {
     [IO.File]::WriteAllLines($Paths.Revisions, @(
         ('core|{0}|{1}|{2}' -f $Project.Core.Repo, $Project.Core.Branch, $Project.Core.Revision),
-        ('module|{0}|{1}|{2}' -f $Project.Playerbots.Repo, $Project.Playerbots.Branch, $Project.Playerbots.Revision)))
+        ('module|{0}|{1}|{2}' -f $Project.Playerbots.Repo, $Project.Playerbots.Branch, $Project.Playerbots.Revision),
+        ('module|{0}|{1}|{2}' -f $Project.DungeonClear.Repo, $Project.DungeonClear.Branch, $Project.DungeonClear.Revision)))
 }
 # The built-in patches are part of the compiled server, so their content belongs in the build stamp.
 # Without it, an app update with new racial scripts could report "up to date" while the old worldserver
@@ -1101,7 +1106,7 @@ function Get-PatchStamp {
     }
     return ($parts -join ';')
 }
-function Get-BuildStamp { return ('{0}|{1}|{2}' -f $Project.Core.Revision, $Project.Playerbots.Revision, (Get-PatchStamp)) }
+function Get-BuildStamp { return ('{0}|{1}|{2}|{3}' -f $Project.Core.Revision, $Project.Playerbots.Revision, $Project.DungeonClear.Revision, (Get-PatchStamp)) }
 
 # Brings a repository to an exact revision. Additional module folders inside the
 # core's modules\ directory are never touched.
@@ -1125,6 +1130,7 @@ function Sync-Sources([string]$Git) {
     Sync-Repository $Git $Project.Core $Paths.Source -KeepModules
     New-Item -ItemType Directory -Force -Path (Join-Path $Paths.Source 'modules') | Out-Null
     Sync-Repository $Git $Project.Playerbots $Paths.Playerbots
+    Sync-Repository $Git $Project.DungeonClear $Paths.DungeonClear
     Save-Revisions
 }
 
@@ -1139,7 +1145,8 @@ function Get-RemoteHead([string]$Git, [hashtable]$Item) {
 function Resolve-LatestRevisions([string]$Git) {
     $Project.Core.Revision = Get-RemoteHead $Git $Project.Core
     $Project.Playerbots.Revision = Get-RemoteHead $Git $Project.Playerbots
-    Write-Log ('Newest version: CoA core {0}, Playerbots {1}' -f $Project.Core.Revision.Substring(0, 8), $Project.Playerbots.Revision.Substring(0, 8)) Cyan
+    $Project.DungeonClear.Revision = Get-RemoteHead $Git $Project.DungeonClear
+    Write-Log ('Newest version: CoA core {0}, Playerbots {1}, Dungeon Clear {2}' -f $Project.Core.Revision.Substring(0, 8), $Project.Playerbots.Revision.Substring(0, 8), $Project.DungeonClear.Revision.Substring(0, 8)) Cyan
 }
 
 # Looks for new commits. Core and Playerbots move to the branch head; additional
@@ -1149,7 +1156,7 @@ function Find-Updates([string]$Git) {
     $pinned = @()
     if ($ModulesOnly) {
         Write-Log 'Modules only: the CoA core and Playerbots stay at the versions the server has.' Cyan
-        foreach ($keep in @(@{ Item = $Project.Core; Folder = $Paths.Source }, @{ Item = $Project.Playerbots; Folder = $Paths.Playerbots })) {
+        foreach ($keep in @(@{ Item = $Project.Core; Folder = $Paths.Source }, @{ Item = $Project.Playerbots; Folder = $Paths.Playerbots }, @{ Item = $Project.DungeonClear; Folder = $Paths.DungeonClear })) {
             if (-not $keep.Item.Revision -and (Test-Path (Join-Path $keep.Folder '.git'))) {
                 $keep.Item.Revision = Get-ProgramOutput $Git @('-C', $keep.Folder, 'rev-parse', 'HEAD')
             }
@@ -1158,6 +1165,14 @@ function Find-Updates([string]$Git) {
     } else {
         $pinned = @(@{ Name = 'Core'; Item = $Project.Core; Folder = $Paths.Source },
                     @{ Name = 'Playerbots'; Item = $Project.Playerbots; Folder = $Paths.Playerbots })
+        if (-not $CoreOnly) {
+            $pinned += @{ Name = 'Dungeon Clear'; Item = $Project.DungeonClear; Folder = $Paths.DungeonClear }
+        } else {
+            if (-not $Project.DungeonClear.Revision -and (Test-Path (Join-Path $Paths.DungeonClear '.git'))) {
+                $Project.DungeonClear.Revision = Get-ProgramOutput $Git @('-C', $Paths.DungeonClear, 'rev-parse', 'HEAD')
+            }
+            if (-not $Project.DungeonClear.Revision) { throw (Tr 'The server has no source code yet; run a full update first.') }
+        }
     }
     foreach ($entry in $pinned) {
         $latest = Get-RemoteHead $Git $entry.Item
@@ -1170,7 +1185,7 @@ function Find-Updates([string]$Git) {
     $modules = Join-Path $Paths.Source 'modules'
     if ($CoreOnly) { Write-Log 'Core only: the modules stay at the versions the server has.' Cyan; return ,$changes }
     foreach ($dir in @(Get-ChildItem $modules -Directory -ErrorAction SilentlyContinue)) {
-        if ($dir.FullName -eq $Paths.Playerbots -or -not (Test-Path (Join-Path $dir.FullName '.git'))) { continue }
+        if ($dir.FullName -eq $Paths.Playerbots -or $dir.FullName -eq $Paths.DungeonClear -or -not (Test-Path (Join-Path $dir.FullName '.git'))) { continue }
         $upstream = Get-ProgramOutput $Git @('-C', $dir.FullName, 'rev-parse', '--abbrev-ref', '@{u}')
         if (-not $upstream) { Write-Log "$($dir.Name): no tracking branch, skipped." Yellow; continue }
         if ($null -eq (Get-ProgramOutput $Git @('-C', $dir.FullName, 'fetch', '--quiet'))) { Write-Log "$($dir.Name): could not fetch, skipped." Yellow; continue }
@@ -1836,7 +1851,7 @@ function Edit-ModuleFolders([string]$Git, [string[]]$Add, [string[]]$Remove) {
     New-Item -ItemType Directory -Force -Path $Paths.Modules | Out-Null
     try {
     foreach ($name in $Remove) {
-        if ($name -notmatch '^[\w.\-]+$' -or $name -eq $Project.Playerbots.Folder) { throw (Tr 'The module {0} cannot be removed.' $name) }
+        if ($name -notmatch '^[\w.\-]+$' -or $name -eq $Project.Playerbots.Folder -or $name -eq $Project.DungeonClear.Folder) { throw (Tr 'The module {0} cannot be removed.' $name) }
         $folder = Join-Path $Paths.Modules $name
         if (-not (Test-Path $folder)) { Write-Log "$($name): the folder is already gone."; $state.Removed.Add(@{ Name = $name; Folder = $folder; Aside = $null }); continue }
         if (Get-ProgramOutput $Git @('-C', $Paths.Source, 'ls-files', "modules/$name")) { throw (Tr '{0} is part of the CoA core and cannot be removed.' $name) }
@@ -2421,10 +2436,11 @@ function New-Snapshot([string]$Password, [string]$Reason) {
     $stamp = if (Test-Path $Paths.BuildMarker) { [IO.File]::ReadAllText($Paths.BuildMarker).Trim() } else { '' }
     $revisions = if (Test-Path $Paths.Revisions) { [IO.File]::ReadAllLines($Paths.Revisions) } else { @() }
     $core = @($revisions | Where-Object { $_ -like 'core|*' } | ForEach-Object { $_.Split('|')[3] }) + @('') | Select-Object -First 1
-    $bots = @($revisions | Where-Object { $_ -like 'module|*' } | ForEach-Object { $_.Split('|')[3] }) + @('') | Select-Object -First 1
+    $bots = @($revisions | Where-Object { $_ -like '*|*mod-playerbots*|*' } | ForEach-Object { $_.Split('|')[3] }) + @('') | Select-Object -First 1
+    $dungeon = @($revisions | Where-Object { $_ -like '*|*mod-dungeon-clear*|*' } | ForEach-Object { $_.Split('|')[3] }) + @('') | Select-Object -First 1
     $size = (Get-ChildItem $partial -File | Measure-Object Length -Sum).Sum
     [IO.File]::WriteAllLines((Join-Path $partial 'manifest.txt'), @(
-        'format=1', "created=$(Get-Date -Format 'yyyy-MM-dd HH:mm')", "reason=$Reason", "core=$core", "playerbots=$bots",
+        'format=1', "created=$(Get-Date -Format 'yyyy-MM-dd HH:mm')", "reason=$Reason", "core=$core", "playerbots=$bots", "dungeon=$dungeon",
         "buildstamp=$stamp", "databases=$($databases -join ',')", "bytes=$size"))
     Move-Item $partial $folder
     Write-Log ('Backup saved: {0} ({1:N0} MB)' -f $name, ($size / 1MB)) Green
@@ -2477,7 +2493,7 @@ function Restore-Snapshot([string]$Name, [string]$Password) {
 
     # The sources go back to the snapshot's versions, so "Check for updates" offers the newer code again.
     $git = Resolve-Git
-    foreach ($part in @(@{ Item = $Project.Core; Folder = $Paths.Source; Key = 'core' }, @{ Item = $Project.Playerbots; Folder = $Paths.Playerbots; Key = 'playerbots' })) {
+    foreach ($part in @(@{ Item = $Project.Core; Folder = $Paths.Source; Key = 'core' }, @{ Item = $Project.Playerbots; Folder = $Paths.Playerbots; Key = 'playerbots' }, @{ Item = $Project.DungeonClear; Folder = $Paths.DungeonClear; Key = 'dungeon' })) {
         $revision = $manifest[$part.Key]
         if ($revision -notmatch '^[0-9a-f]{40}$' -or -not (Test-Path (Join-Path $part.Folder '.git'))) { continue }
         $part.Item.Revision = $revision

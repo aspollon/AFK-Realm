@@ -312,6 +312,19 @@ namespace CoAInstaller
                 record[addon.Name] = addon.Module;
                 done.Add(addon.State == AddonState.Outdated ? L.F("{0} updated", addon.Name) : addon.State == AddonState.Current ? L.F("{0} copied again", addon.Name) : L.F("{0} installed", addon.Name));
             }
+            // The DungeonClear add-on only loads from a folder with exactly that name. Remove the names a
+            // repository download or an old manual installation leaves behind.
+            if (addons.Any(a => a.Name.Equals("DungeonClear", StringComparison.OrdinalIgnoreCase)))
+            {
+                foreach (string wrong in new[] { "mod-dungeon-clear-addon", "mod-dungeon-clear-addon-main", "DungeonClear-main", "DungeonClear-master" })
+                {
+                    string folder = Path.Combine(target, wrong);
+                    if (!Directory.Exists(folder) || !File.Exists(Path.Combine(folder, "DungeonClear.toc"))) continue;
+                    Directory.Delete(folder, true);
+                    record.Remove(wrong);
+                    done.Add(L.F("{0} removed (the add-on folder must be named DungeonClear)", wrong));
+                }
+            }
             foreach (var name in leftovers)
             {
                 string folder = Path.Combine(target, name);

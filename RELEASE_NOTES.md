@@ -1,3 +1,11 @@
+# AFK Realm 1.2.67
+
+## Dungeon Clear is part of the server, like Playerbots
+
+- **No longer a module by AFK Realm:** `mod-dungeon-clear` is always downloaded from **Zyth45/mod-dungeon-clear, branch `coa`**, built with every server and updated with the base server. It cannot be unchecked or removed in the module catalog.
+- **The DungeonClear add-on is installed with it.** The client folder must be named exactly **`DungeonClear`**; Game client > Install does that, and also removes the wrong folder names a manual download leaves behind (`mod-dungeon-clear-addon`, `DungeonClear-main`, ...). Player ZIPs use the same exact folder.
+- **Server presets no longer contain it** - it is already in every server. Existing preset files are harmless; the module is skipped when plans are applied.
+
 # AFK Realm 1.2.66
 
 ## Live bot status is on by default

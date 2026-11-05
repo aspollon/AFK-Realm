@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.67
+
+- **mod-dungeon-clear is built in:** always cloned from Zyth45's `coa` branch, included in the build stamp and updates, and not removable in the module catalog.
+- **DungeonClear add-on:** installed in exactly `Interface\AddOns\DungeonClear`, wrong download folder names are removed, and player ZIPs use the exact path.
+- **AFK Realm preset** no longer lists Dungeon Clear separately.
+
 ## 1.2.66
 
 - **Live bot snapshot enabled by default:** engine setup writes `AiPlayerbot.CoaStatusFile` and the 5-second interval; existing installs get it filled automatically when the bot roster is opened.

@@ -2406,6 +2406,9 @@
     "Map extraction ended with code {0}.": "Die Kartenextraktion endete mit Code {0}.",
     "Back to the continent": "Zurück zum Kontinent",
     "Every online bot on the map, with its zone and last known position. Choose a zone in the list to zoom in; click a bot dot for its card.": "Jeder Online-Bot auf der Karte, mit Gebiet und letzter bekannter Position. Wähle ein Gebiet in der Liste, um hineinzuzoomen; klicke auf einen Bot-Punkt für seine Karte.",
-    "Map ready · bot data is unavailable. Start the database and server to see bots.": "Karte bereit · Bot-Daten sind nicht verfügbar. Starte Datenbank und Server, um Bots zu sehen."
+    "Map ready · bot data is unavailable. Start the database and server to see bots.": "Karte bereit · Bot-Daten sind nicht verfügbar. Starte Datenbank und Server, um Bots zu sehen.",
+    "Dungeon Clear is already included: {0} always builds Zyth45/mod-dungeon-clear (branch coa) with Playerbots and installs the DungeonClear add-on automatically. It cannot be removed.": "Dungeon Clear ist bereits enthalten: {0} baut Zyth45/mod-dungeon-clear (Branch coa) immer zusammen mit Playerbots und installiert das DungeonClear-Addon automatisch. Es kann nicht entfernt werden.",
+    "The add-on folder in the client must be named exactly DungeonClear; Game client > Install does this for you.": "Der Addon-Ordner im Client muss genau DungeonClear heißen; Game client > Install erledigt das für dich.",
+    "{0} removed (the add-on folder must be named DungeonClear)": "{0} entfernt (der Addon-Ordner muss DungeonClear heißen)"
   }
 }

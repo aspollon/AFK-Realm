@@ -288,7 +288,7 @@ namespace CoAInstaller
             bool tick = ticked.Contains(m);
             switch (m.State)
             {
-                case ModuleState.PartOfCoA: return m.IsPlayerbots ? L.T("included") : L.T("part of CoA");
+                case ModuleState.PartOfCoA: return m.IsBuiltIn ? L.T("included") : L.T("part of CoA");
                 case ModuleState.Managed:
                     if (!tick) return L.T("will be removed");
                     return m.Status == "sql-failed" ? L.T("database step failed") : m.Status == "missing" ? L.T("folder missing") : L.T("installed");
@@ -351,6 +351,12 @@ namespace CoAInstaller
                 AddCheck(0, L.F("Playerbots is already included: {0} always builds the CoA version (Zyth45/mod-playerbots, branch coa) and keeps it up to date with every server update.", Product.Name));
                 if (m.FullName.Length > 0 && !m.FullName.Equals("Zyth45/mod-playerbots", StringComparison.OrdinalIgnoreCase))
                     AddCheck(-1, L.F("This entry is a different version ({0}) that does not fit CoA. Nothing needs to be installed here.", m.FullName));
+                return;
+            }
+            if (m.IsDungeonClear)
+            {
+                AddCheck(0, L.F("Dungeon Clear is already included: {0} always builds Zyth45/mod-dungeon-clear (branch coa) with Playerbots and installs the DungeonClear add-on automatically. It cannot be removed.", Product.Name));
+                AddCheck(-1, L.T("The add-on folder in the client must be named exactly DungeonClear; Game client > Install does this for you."));
                 return;
             }
             if (m.State == ModuleState.PartOfCoA) { AddCheck(0, L.T("This module is already part of the CoA core.")); return; }
