@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.59
+
+- **Server presets:** new page under Modules with a built-in "AFK Realm" preset (auction bots, Immersion Life, World Journey, Classic Classes, Custom Races, subclass support) and the CoA/WCR baseline settings.
+- **Save current server as preset:** captures installed modules and settings that differ from their `.conf.dist` defaults; excludes database logins, passwords, local paths and ports.
+- **Guided creation:** name/description, module selection and changed-setting selection, then save. Presets can be renamed and deleted.
+- **Apply:** installs missing modules through the existing module engine, rebuilds, then writes the preset settings; shows warnings for missing config entries.
+- **Share:** export/import `.afk-preset.json` files, including presets created on another server.
+
 ## 1.2.58
 
 - **Client patch name:** CoA Custom 1.9.9 now ships `Data\patch-ZZZZZ.MPQ`, so AFK's generated patch moved to `Data\patch-ZZZZZZZZ.MPQ` (sorted after CoA's archive).

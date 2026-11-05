@@ -1,3 +1,16 @@
+# AFK Realm 1.2.59
+
+## Server presets
+
+- **A complete server setup as a preset.** The new **Modules > Server presets** page saves the installed module list and the settings that differ from their server defaults. Database logins, passwords, local paths and ports are never saved.
+- **Built-in preset "AFK Realm".** It installs the modules made for AFK Realm: auction-house bots, Immersion Life, World Journey, Classic Classes, Custom Races and the subclass support. The CoA/WCR baseline settings are included; CoA Custom is still downloaded and installed separately afterwards.
+- **Guided preset creation.** Name and description, choose the modules, choose the changed settings, then save. A preset created from the current server can also be saved in one step.
+- **Apply with a plan.** AFK Realm shows which modules will be installed and how many settings will be written, backs up the server, installs the modules, rebuilds, then writes the settings. Afterwards it points to Game client > Install and, when needed, offers to open CoA Custom.
+- **Share presets.** A preset can be exported as a small `.afk-preset.json` file and imported on another server. Imported presets can be renamed, deleted and applied like local ones.
+- **Safe cleanup:** only changed, non-sensitive options are stored; a value can be unticked before saving. Existing presets are files under `Dependencies\Presets`.
+
+**What to do:** open **Modules > Server presets**, apply **AFK Realm**, then install/update CoA Custom and run **Game client > Install**. For your own server state, choose **Save current server ...**.
+
 # AFK Realm 1.2.58
 
 ## Fixed in 1.2.58

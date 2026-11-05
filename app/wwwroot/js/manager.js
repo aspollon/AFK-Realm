@@ -219,6 +219,8 @@ export function manager() {
     const out = [
       card(T('Manage modules'), T('Add or remove modules: those made for this server and the AzerothCore module catalog. The server is backed up and rebuilt; database changes of modules installed here are recorded, so removing a module undoes them.'), 'modules',
         primary(T('Manage modules …'), () => import('./modules.js').then(x => x.modulesDialog()))),
+      card(T('Server presets'), T('Install a complete module and settings set with one click. The built-in AFK Realm preset installs the modules made for AFK Realm; save your own server as a preset or share it with another admin.'), 'modules',
+        primary(T('Open server presets ...'), () => import('./presets.js').then(x => x.presetsDialog()))),
       moduleCard(m.journey, T('World Journey'), T('The old world, Outland and Northrend as one journey from 1 to 60: where each part begins, how the level window works, how hard creatures are and what follows the journey.'), 'journey',
         primary(T('Set up World Journey …'), setup('journey.js', 'journeySetup'))),
       moduleCard(m.auction, T('Auction house bots'), T('How the bots of mod-playerbots-auctions trade: how often they come, what they sell and buy, their prices, crafting, deals by chat, the Trading Post and their chatter.'), 'auction',

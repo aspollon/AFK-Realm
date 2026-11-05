@@ -56,7 +56,7 @@ namespace CoAInstaller
         public const string ManifestName = "afk-realm.json";
 
         /// <summary>Modules made for AFK Realm. They are always in the list, whatever the catalog says.</summary>
-        static ModuleEntry[] OwnModules()
+        internal static ModuleEntry[] OwnModules()
         {
             return new[]
             {
