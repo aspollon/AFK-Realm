@@ -1,3 +1,12 @@
+# AFK Realm 1.2.65
+
+## Fixes for the map and the server page
+
+- **Server presets moved to the Server page.** They are no longer under Modules; open the Server section in the sidebar and use **Open server presets** there.
+- **The map no longer waits for the database.** The map image, zones, Northrend and zone list appear immediately; if the database or server is stopped, the page says so instead of staying on "Reading ...".
+- **Zone images fixed.** Selecting a zone from the list now opens its own map image reliably.
+- **Clearer map status.** Once the images exist, the page says **Map images are ready** instead of a line that looked like it was still loading.
+
 # AFK Realm 1.2.64
 
 ## Real map art, without overlapping click boxes

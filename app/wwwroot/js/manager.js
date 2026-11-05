@@ -134,6 +134,8 @@ export function manager() {
     const mapState = h('div');
     sectionEls.mapState = mapState;
     const out = [
+      card(T('Server presets'), T('Install a complete module and settings set with one click. The built-in AFK Realm preset installs the modules made for AFK Realm; save your own server as a preset or share it with another admin.'), 'server',
+        primary(T('Open server presets ...'), () => import('./presets.js').then(x => x.presetsDialog()))),
       meta.windows ? null : card(T('Linux: faster databases'), T('On Linux, the database and world server often run noticeably faster with jemalloc, and Redis helps with caching. Install them once; this is a recommendation, not a requirement.'), 'server',
         h('pre.small', {}, 'Ubuntu / Debian:\nsudo apt update && sudo apt install libjemalloc2 redis-server\n(optional build headers: sudo apt install build-essential libjemalloc-dev)\n\nCentOS / RHEL / Rocky Linux:\nsudo dnf install epel-release\nsudo dnf install redis\nsudo dnf install jemalloc')),
       card(T('Scheduled restart'), F('A world that has run for many hours can grow slow and use more and more memory; a restart gives it back. {0} can do that on its own: players are told in the game beforehand, then the server is stopped cleanly and started again. This works while the server runs and {0} stays open.', meta.product), 'server',
@@ -219,8 +221,6 @@ export function manager() {
     const out = [
       card(T('Manage modules'), T('Add or remove modules: those made for this server and the AzerothCore module catalog. The server is backed up and rebuilt; database changes of modules installed here are recorded, so removing a module undoes them.'), 'modules',
         primary(T('Manage modules …'), () => import('./modules.js').then(x => x.modulesDialog()))),
-      card(T('Server presets'), T('Install a complete module and settings set with one click. The built-in AFK Realm preset installs the modules made for AFK Realm; save your own server as a preset or share it with another admin.'), 'modules',
-        primary(T('Open server presets ...'), () => import('./presets.js').then(x => x.presetsDialog()))),
       moduleCard(m.journey, T('World Journey'), T('The old world, Outland and Northrend as one journey from 1 to 60: where each part begins, how the level window works, how hard creatures are and what follows the journey.'), 'journey',
         primary(T('Set up World Journey …'), setup('journey.js', 'journeySetup'))),
       moduleCard(m.auction, T('Auction house bots'), T('How the bots of mod-playerbots-auctions trade: how often they come, what they sell and buy, their prices, crafting, deals by chat, the Trading Post and their chatter.'), 'auction',

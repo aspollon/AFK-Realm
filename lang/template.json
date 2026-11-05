@@ -2386,6 +2386,7 @@
     "Map images are ready.": "",
     "Map extraction ended with code {0}.": "",
     "Back to the continent": "",
-    "Every online bot on the map, with its zone and last known position. Choose a zone in the list to zoom in; click a bot dot for its card.": ""
+    "Every online bot on the map, with its zone and last known position. Choose a zone in the list to zoom in; click a bot dot for its card.": "",
+    "Map ready · bot data is unavailable. Start the database and server to see bots.": ""
   }
 }

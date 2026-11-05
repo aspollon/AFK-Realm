@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.65
+
+- **Server presets moved** from the Modules page to the Server page.
+- **Map rendering no longer depends on a running database:** art and zones show immediately; missing bot data gets a clear message.
+- **Zone map images fixed** (`.png` route) and map status wording clarified.
+- **Northrend and real client map extraction** remain from 1.2.64.
+
 ## 1.2.64
 
 - **Real map art from the game client** for Eastern Kingdoms, Kalimdor, Outland and Northrend, with zone maps.

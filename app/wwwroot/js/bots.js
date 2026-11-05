@@ -284,7 +284,7 @@ export function dashboard() {
       return;
     }
     if (!missing.length) {
-      replace(mapArtBox, h('div.small.muted', {}, T('Map images from your game client.')));
+      replace(mapArtBox, h('div.small.muted', {}, T('Map images are ready.')));
       return;
     }
     const box = h('div.map-art-row', {});
@@ -328,10 +328,6 @@ export function dashboard() {
   }
 
   function drawMap() {
-    if (!data) {
-      replace(mapHolder, h('div.muted', {}, T('Reading …')));
-      return;
-    }
     if (!mapData) { ensureMap(); return; }
     const continents = mapData.continents || {};
     const keys = Object.keys(continents).sort((a, b) => Number(a) - Number(b));
@@ -342,7 +338,7 @@ export function dashboard() {
     }, continents[k].name || ('Map ' + k))));
     const cont = continents[mapContinent];
     if (!cont) { replace(mapHolder, h('div.muted', {}, T('No map data.'))); return; }
-    const online = (data.bots || []).filter(b => b.online);
+    const online = data ? (data.bots || []).filter(b => b.online) : [];
     const inCont = online.filter(b => String(b.map) === String(mapContinent) && inBounds(b, cont.bounds));
     const zoneCount = {};
     for (const b of inCont) if (b.zoneId) zoneCount[b.zoneId] = (zoneCount[b.zoneId] || 0) + 1;
@@ -402,7 +398,9 @@ export function dashboard() {
     }
     replace(mapSide, h('div.map-zone-list', {}, list));
     mapBack.style.display = selected ? '' : 'none';
-    mapSub.textContent = F('{0} bots on {1}', shown.length, selected ? (selected.title || selected.name) : (cont.name || T('this map')));
+    mapSub.textContent = data
+      ? F('{0} bots on {1}', shown.length, selected ? (selected.title || selected.name) : (cont.name || T('this map')))
+      : T('Map ready · bot data is unavailable. Start the database and server to see bots.');
     const elsewhere = online.length - inCont.length;
     mapElsewhere.textContent = !selected && elsewhere > 0 ? F('{0} more bots are on another map or between maps.', elsewhere) : '';
   }

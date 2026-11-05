@@ -164,6 +164,7 @@ namespace CoAInstaller.Web
         public static string ZoneFile(Install inst, string name)
         {
             name = (name ?? "").Trim();
+            if (name.EndsWith(".png", StringComparison.OrdinalIgnoreCase)) name = name.Substring(0, name.Length - 4);
             if (!Regex.IsMatch(name, @"^[A-Za-z0-9]+$")) return null;
             string file = Path.Combine(MapsDir(inst), "zones", name + ".png");
             return File.Exists(file) ? file : null;

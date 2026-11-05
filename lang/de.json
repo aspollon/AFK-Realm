@@ -2405,6 +2405,7 @@
     "Map images are ready.": "Kartenbilder sind fertig.",
     "Map extraction ended with code {0}.": "Die Kartenextraktion endete mit Code {0}.",
     "Back to the continent": "Zurück zum Kontinent",
-    "Every online bot on the map, with its zone and last known position. Choose a zone in the list to zoom in; click a bot dot for its card.": "Jeder Online-Bot auf der Karte, mit Gebiet und letzter bekannter Position. Wähle ein Gebiet in der Liste, um hineinzuzoomen; klicke auf einen Bot-Punkt für seine Karte."
+    "Every online bot on the map, with its zone and last known position. Choose a zone in the list to zoom in; click a bot dot for its card.": "Jeder Online-Bot auf der Karte, mit Gebiet und letzter bekannter Position. Wähle ein Gebiet in der Liste, um hineinzuzoomen; klicke auf einen Bot-Punkt für seine Karte.",
+    "Map ready · bot data is unavailable. Start the database and server to see bots.": "Karte bereit · Bot-Daten sind nicht verfügbar. Starte Datenbank und Server, um Bots zu sehen."
   }
 }
