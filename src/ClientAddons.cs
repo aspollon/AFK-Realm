@@ -203,6 +203,9 @@ namespace CoAInstaller
             {
                 foreach (var file in Directory.GetFiles(dir, "*", SearchOption.AllDirectories).OrderBy(f => f, StringComparer.OrdinalIgnoreCase))
                 {
+                    // The version marker belongs to the installer, not to the add-on. Excluding it means a
+                    // new AFK Realm version does not make an unchanged embedded add-on look outdated.
+                    if (Path.GetFileName(file).Equals(".afk-version", StringComparison.OrdinalIgnoreCase)) continue;
                     var name = Encoding.UTF8.GetBytes(file.Substring(dir.Length).Replace('\\', '/').ToLowerInvariant() + "\n");
                     sha.TransformBlock(name, 0, name.Length, null, 0);
                     var data = File.ReadAllBytes(file);

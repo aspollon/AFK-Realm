@@ -1,3 +1,11 @@
+# AFK Realm 1.2.76
+
+## No more false “DungeonClear is outdated” after an AFK update
+
+- **The DungeonClear add-on is compared by its actual files now.** Its `.afk-version` marker is metadata of AFK Realm, not part of the add-on, and no longer makes an unchanged add-on look outdated when AFK Realm itself gets a new version.
+- **The client patch warning after race settings were normalized is a one-time rebuild.** It appears when the generated `CharStartOutfit.dbc` really changed; install the client patch once and the check stays current afterwards.
+- **No gameplay or server data is changed by the comparison fix.** The next normal client install/rebuild handles the patch if it is still stale.
+
 # AFK Realm 1.2.75
 
 ## Log in again and download the current client files

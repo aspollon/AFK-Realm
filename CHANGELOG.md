@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.76
+
+- **The embedded DungeonClear add-on no longer looks outdated after every AFK Realm update.** Its installer version marker (`.afk-version`) is no longer part of the content fingerprint; only the add-on files themselves decide whether an update is needed. A changed AFK version alone no longer produces the warning.
+- **A stale `patch-ZZZZZZZZ.MPQ` after race settings were normalized is rebuilt once and then stays current.** The client patch still has to be installed once after a real race/config change; the warning no longer returns without a real input change.
+
 ## 1.2.75
 
 - **Returning players can log in on the public page** with their account name and password and show the downloads again, without creating a second account. The check uses the existing SRP6 salt and verifier read-only; failed attempts are limited per address.
