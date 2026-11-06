@@ -1,3 +1,11 @@
+# AFK Realm 1.2.72
+
+## AFK modules no longer look "added by hand" without reason
+
+- **Junk to Gold, mod-subclass and the other AFK-made modules are shown as installed when they have a Git checkout**, even if an older installation or a copied folder left them out of `Dependencies\modules.txt`.
+- **This restores the normal module status and update handling.** A module that really has no Git checkout is still marked as added by hand, because AFK cannot update that copy reliably.
+- **No server data or modules are changed by the display fix**; the next normal server update handles the code.
+
 # AFK Realm 1.2.71
 
 ## Help ZIPs can be downloaded remotely

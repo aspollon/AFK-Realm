@@ -317,7 +317,11 @@ namespace CoAInstaller
                 bool hasGit = Directory.Exists(Path.Combine(folder, ".git"));
                 // A folder without its own Git history is normally a module that ships with the core - unless it is one of ours, copied in by hand.
                 bool own = OwnModules().Any(o => o.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
-                var state = info != null ? ModuleState.Managed : hasGit || own ? ModuleState.ByHand : ModuleState.PartOfCoA;
+                // An AFK-owned module with a Git checkout is managed by AFK even when an older
+                // installation or a copied module folder left it out of modules.txt. Without this,
+                // a perfectly updatable AFK module (Junk to Gold, mod-subclass, ...) was shown as
+                // "added by hand" and looked unmanaged.
+                var state = info != null || (own && hasGit) ? ModuleState.Managed : hasGit || own ? ModuleState.ByHand : ModuleState.PartOfCoA;
                 string url = info != null ? info[1] : OriginUrl(folder);
                 if (url.Length == 0 && own) url = OwnModules().First(o => o.Name.Equals(name, StringComparison.OrdinalIgnoreCase)).CloneUrl;
                 string full = GitHubName(url);

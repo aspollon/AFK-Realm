@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.72
+
+- **AFK-owned modules with a Git checkout are shown as installed**, even when an old installation or a copied folder left them out of `Dependencies\modules.txt` (for example Junk to Gold). They no longer show as "added by hand" when AFK can update them.
+- A module without a Git checkout is still marked as added by hand, because AFK cannot update that copy reliably.
+
 ## 1.2.71
 
 - **Help ZIPs download like client files:** the support bundle links no longer contain a duplicated `/api/files/download` prefix. The "Get help" dialog always offers a Download button, also when AFK Realm is used through remote access or a remote desktop.
