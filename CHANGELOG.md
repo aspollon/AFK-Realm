@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.75
+
+- **Returning players can log in on the public page** with their account name and password and show the downloads again, without creating a second account. The check uses the existing SRP6 salt and verifier read-only; failed attempts are limited per address.
+- **The public page now tells players when a new AFK client patch or player client pack is available.** It remembers the last client-file date the player downloaded in the browser and shows a notice after login and on the next visit when the server owner has rebuilt the patch or the pack.
+- **No email or push notifications:** the notice is inside the portal and appears the next time the player opens it. The direct download links continue to work as before.
+
 ## 1.2.74
 
 - **The public registration page and the remote admin login now use the AFK Realm artwork as a full background, with centered form text.** The form card is placed below the logo, so the AFK Realm lettering stays visible on desktop and mobile.

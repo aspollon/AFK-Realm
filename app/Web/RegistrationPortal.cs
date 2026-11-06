@@ -42,6 +42,7 @@ namespace CoAInstaller.Web
         public const string DefaultClientUrl = "https://coa-development.org/download";
         static readonly object gate = new object();
         static readonly ConcurrentDictionary<string, List<DateTime>> registrations = new ConcurrentDictionary<string, List<DateTime>>();
+        static readonly ConcurrentDictionary<string, List<DateTime>> loginAttempts = new ConcurrentDictionary<string, List<DateTime>>();
         static WebApplication app;
         static Install current;
         static RegistrationSettings settings = new RegistrationSettings();
@@ -220,6 +221,7 @@ namespace CoAInstaller.Web
             a.MapGet("/register", ctx => Page(ctx, inst, s));
             a.MapGet("/api/public/info", ctx => Info(ctx, inst, s));
             a.MapPost("/api/public/register", ctx => Register(ctx, inst, s));
+            a.MapPost("/api/public/downloads", ctx => Downloads(ctx, inst, s));
             a.MapGet("/download/realmlist.wtf", ctx => TextFile(ctx, "realmlist.wtf", "set realmlist " + Clean(AddressOf(inst, s)) + "\r\n"));
             a.MapGet("/download/Config.wtf", ctx => TextFile(ctx, "Config.wtf", ConfigText(inst, s)));
             a.MapGet("/download/client-patch", ctx => ServeClientPatch(ctx));
@@ -236,7 +238,14 @@ namespace CoAInstaller.Web
             try { realm = Accounts.GetRealmName(inst); } catch { }
             string address = "";
             try { address = AddressOf(inst, s); } catch { }
-            string body = PageHtml(realm, address, PatchFiles().Count > 0, File.Exists(ClientPackFile(inst)), s.ClientUrl);
+            var patchFiles = PatchFiles();
+            bool patch = patchFiles.Count > 0;
+            string pack = ClientPackFile(inst);
+            bool clientPack = File.Exists(pack);
+            string packAt = clientPack
+                ? File.GetLastWriteTimeUtc(pack).ToString("o")
+                : patch ? patchFiles.Max(f => File.GetLastWriteTimeUtc(f)).ToString("o") : "";
+            string body = PageHtml(realm, address, patch, clientPack, packAt, s.ClientUrl);
             ctx.Response.ContentType = "text/html; charset=utf-8";
             ctx.Response.Headers["Cache-Control"] = "no-store";
             ctx.Response.Headers["X-Content-Type-Options"] = "nosniff";
@@ -256,6 +265,9 @@ namespace CoAInstaller.Web
                 address = AddressOf(inst, s),
                 patch = PatchFiles().Count > 0,
                 clientPack = File.Exists(ClientPackFile(inst)),
+                clientPackAt = File.Exists(ClientPackFile(inst))
+                    ? File.GetLastWriteTimeUtc(ClientPackFile(inst)).ToString("o")
+                    : PatchFiles().Count > 0 ? PatchFiles().Max(f => File.GetLastWriteTimeUtc(f)).ToString("o") : null,
                 clientUrl = ClientUrlOf(s.ClientUrl),
                 realmlist = "/download/realmlist.wtf",
                 config = "/download/Config.wtf",
@@ -304,6 +316,78 @@ namespace CoAInstaller.Web
             {
                 try { Program.StartLog("public registration failed for " + name + ": " + ex.Message); } catch { }
                 await Error(ctx, 400, L.T("The account could not be created. Please try again, choose another name or ask the server owner."));
+            }
+        }
+
+        static async Task Downloads(HttpContext ctx, Install inst, RegistrationSettings s)
+        {
+            if (!s.Enabled) { await Error(ctx, 403, L.T("Registration is closed.")); return; }
+            string ip = ctx.Connection.RemoteIpAddress == null ? "" : ctx.Connection.RemoteIpAddress.ToString();
+            string name = "", pw = "";
+            try
+            {
+                using (var doc = await JsonDocument.ParseAsync(ctx.Request.Body))
+                {
+                    var root = doc.RootElement;
+                    name = root.TryGetProperty("name", out var a) ? (a.GetString() ?? "") : "";
+                    pw = root.TryGetProperty("password", out var b) ? (b.GetString() ?? "") : "";
+                }
+            }
+            catch { await Error(ctx, 400, L.T("The request could not be read.")); return; }
+            name = name.Trim();
+            if (!ReserveLogin(ip)) { await Error(ctx, 429, L.T("Too many login attempts from this address. Try again later.")); return; }
+            bool valid = false;
+            try { valid = VerifyAccount(inst, name, pw); }
+            catch (Exception ex)
+            {
+                try { Program.StartLog("public downloads login failed: " + ex.Message); } catch { }
+            }
+            if (!valid) { await Error(ctx, 401, L.T("Wrong account name or password.")); return; }
+            await Json(ctx, new
+            {
+                ok = true,
+                name = name.ToUpperInvariant(),
+                realm = RealmName(inst),
+                address = AddressOf(inst, s),
+                realmlist = "/download/realmlist.wtf",
+                config = "/download/Config.wtf",
+                clientPatch = PatchFiles().Count > 0 ? "/download/client-patch" : null,
+                clientPack = File.Exists(ClientPackFile(inst)) ? "/download/client-pack" : null
+            });
+        }
+
+        static string RealmName(Install inst)
+        {
+            try { return Accounts.GetRealmName(inst); } catch { return ""; }
+        }
+
+        /// <summary>Checks an existing account's SRP6 salt/verifier without changing it.</summary>
+        static bool VerifyAccount(Install inst, string name, string pass)
+        {
+            if (Accounts.Validate(name, pass, pass) != null) return false;
+            EnsureDatabase(inst);
+            string sql = "SELECT HEX(salt), HEX(verifier) FROM acore_auth.account WHERE username=" +
+                MySql.Quote(name.ToUpperInvariant()) + " LIMIT 1;";
+            var rows = MySql.Query(inst, DbLogin.FromConfig(inst), sql);
+            if (rows.Count == 0) return false;
+            string[] parts = rows[0].Split('\t');
+            if (parts.Length < 2 || parts[0].Length == 0 || parts[1].Length == 0) return false;
+            byte[] salt = Convert.FromHexString(parts[0]);
+            byte[] expected = Convert.FromHexString(parts[1]);
+            byte[] actual = Srp6.Verifier(name, pass, salt);
+            return System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(actual, expected);
+        }
+
+        static bool ReserveLogin(string ip)
+        {
+            var list = loginAttempts.GetOrAdd(ip, _ => new List<DateTime>());
+            lock (list)
+            {
+                DateTime since = DateTime.UtcNow.AddMinutes(-10);
+                list.RemoveAll(t => t < since);
+                if (list.Count >= 20) return false;
+                list.Add(DateTime.UtcNow);
+                return true;
             }
         }
 
@@ -645,7 +729,7 @@ namespace CoAInstaller.Web
             }
         }
 
-        static string PageHtml(string realm, string address, bool patch, bool clientPack, string clientUrl)
+        static string PageHtml(string realm, string address, bool patch, bool clientPack, string clientPackAt, string clientUrl)
         {
             string title = WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(realm) ? Product.Name : realm);
             string shownAddress = WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(address) ? "not set yet" : address);
@@ -653,8 +737,9 @@ namespace CoAInstaller.Web
                 ? "<div class=\"small bad\" style=\"margin-top:10px\">The server address is not set yet. Ask the server owner to set it under Settings &gt; Play with others.</div>"
                 : "";
             string clientFiles = clientPack
-                ? "<a class=\"button secondary\" href=\"/download/client-pack\">AFK client pack (add-ons + patches)</a>"
-                : patch ? "<a class=\"button secondary\" href=\"/download/client-patch\">Client patch ZIP</a>" : "";
+                ? "<a class=\"button secondary\" id=\"clientUpdateLink\" href=\"/download/client-pack\">AFK client pack (add-ons + patches)</a>"
+                : patch ? "<a class=\"button secondary\" id=\"clientUpdateLink\" href=\"/download/client-patch\">Client patch ZIP</a>" : "";
+            string clientLabel = clientPack ? "AFK client pack" : "AFK client patch";
             string realmLinks = string.IsNullOrWhiteSpace(address) ? "" :
                 "<a class=\"button secondary\" href=\"/download/realmlist.wtf\">realmlist.wtf</a>" +
                 "<a class=\"button secondary\" href=\"/download/Config.wtf\">Config.wtf</a>";
@@ -678,11 +763,11 @@ body::after{content:"";position:fixed;inset:0;background:linear-gradient(180deg,
 .stage{position:relative;z-index:1;min-height:100dvh;display:flex;flex-direction:column;align-items:center;padding:clamp(18px,3vw,36px)}
 .logo-space{height:clamp(190px,38vh,440px);flex:0 0 auto;width:100%}
 .box{width:min(540px,100%);background:rgba(24,21,34,.88);border:1px solid rgba(151,130,216,.36);border-radius:18px;padding:28px;box-shadow:0 30px 80px #000b;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);margin-bottom:28px;text-align:center}
-h1{margin:0 0 4px;font-size:28px;letter-spacing:.2px}.muted{color:#c2bcd4;font-size:14px}.bad{color:#ff9a9a}.ok{color:#9ef0b4}
+h1{margin:0 0 4px;font-size:28px;letter-spacing:.2px}.muted{color:#c2bcd4;font-size:14px}.bad{color:#ff9a9a}.ok{color:#9ef0b4}.warn{color:#ffd479}
 label{display:block;margin:14px 0 0;font-size:14px}input{width:100%;margin-top:6px;padding:11px;border-radius:9px;border:1px solid #625a7b;background:#15131e;color:inherit;font:inherit;text-align:center}
 input:focus{outline:2px solid #9b7bea;outline-offset:1px;border-color:#9b7bea}
 button,.button{display:inline-flex;align-items:center;justify-content:center;margin:16px 4px 0;padding:11px 18px;border:0;border-radius:9px;background:#7b57d6;color:#fff;font:inherit;font-weight:650;text-decoration:none;cursor:pointer}
-#submit{display:flex;margin:18px auto 0}
+#submit,#loginSubmit{display:flex;margin:18px auto 0}
 button:hover,.button:hover{background:#8d67ec}.secondary{background:#3a344b;color:#e9e7f2}.secondary:hover{background:#4a4360}
 .downloads{display:flex;flex-wrap:wrap;justify-content:center;margin-top:14px;gap:8px}.done{margin-top:18px;padding:14px;border:1px solid #426b51;background:#182b20;border-radius:10px}
 code{background:#15131e;border:1px solid #3d374d;border-radius:5px;padding:2px 5px}.small{font-size:13px}
@@ -691,23 +776,62 @@ code{background:#15131e;border:1px solid #3d374d;border-radius:5px;padding:2px 5
 </style></head>
 <body><div class="stage"><div class="logo-space"></div><main class="box">
 <h1>__TITLE__</h1><div class="muted">Create an account for this server. It is free and needs no email address.</div>
+<div id="updateBanner" class="small warn" style="display:none;margin-top:8px"></div>
 <form id="form"><label>Account name<input id="name" autocomplete="username" maxlength="16" required></label>
 <label>Password<input id="password" type="password" autocomplete="new-password" maxlength="16" required></label>
 <label>Repeat password<input id="password2" type="password" autocomplete="new-password" maxlength="16" required></label>
 <div class="small muted" style="margin-top:8px">Name: 3-16 letters or digits. Password: 4-16 characters.</div>
 <button id="submit">Create account</button></form><div id="msg" class="small"></div>
+<div id="loginBox" style="margin-top:18px;padding-top:16px;border-top:1px solid #3d374d">
+<div class="small muted">Already have an account? Log in to show the downloads again.</div>
+<form id="loginForm" style="margin-top:4px"><label>Account name<input id="loginName" autocomplete="username" maxlength="16" required></label>
+<label>Password<input id="loginPassword" type="password" autocomplete="current-password" maxlength="16" required></label>
+<button id="loginSubmit" class="secondary">Show downloads</button></form><div id="loginMsg" class="small"></div>
+</div>
 __ADDRESS_NOTE__
 <div class="small muted" style="margin-top:18px">Server address: <code>__ADDRESS__</code></div>
-<div id="done" class="done" style="display:none"><b>Account created.</b><div class="small">You can now log in with this account in the game.</div>
+<div id="done" class="done" style="display:none"><b id="doneTitle">Account created.</b><div class="small">You can now log in with this account in the game.</div>
+<div id="updateNotice" class="small warn" style="display:none;margin-top:10px"></div>
 <div class="downloads">__DOWNLOADS__</div>
 <div class="small muted" style="margin-top:10px">__INSTRUCTIONS__</div></div>
 </main></div>
 <script>
 const f=document.getElementById('form'),m=document.getElementById('msg'),d=document.getElementById('done'),b=document.getElementById('submit');
-f.addEventListener('submit',async e=>{e.preventDefault();m.textContent='';b.disabled=true;try{const r=await fetch('/api/public/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:document.getElementById('name').value,password:document.getElementById('password').value,password2:document.getElementById('password2').value})});const j=await r.json();if(!r.ok||!j.ok)throw new Error(j.error||'Registration failed.');f.style.display='none';d.style.display='block';m.textContent='Welcome, '+j.name+'.';m.className='small ok'}catch(err){m.textContent=err.message;m.className='small bad'}finally{b.disabled=false}});
+const lf=document.getElementById('loginForm'),lm=document.getElementById('loginMsg'),lb=document.getElementById('loginBox'),dt=document.getElementById('doneTitle');
+const packAt=__PACK_AT__,packLabel=__CLIENT_LABEL__,ub=document.getElementById('updateBanner'),un=document.getElementById('updateNotice');
+function packKey(){return 'afk-pack-at:'+location.host}
+function seenPack(){try{return localStorage.getItem(packKey())}catch{return null}}
+function updatePackNotice(done){
+  if(!packAt){if(ub)ub.style.display='none';if(un)un.style.display='none';return}
+  const seen=seenPack(),when=new Date(packAt).toLocaleString();
+  const now=Date.parse(packAt)||0,seenAt=Date.parse(seen)||0;
+  const newer=seen && now>seenAt;
+  if(done){
+    if(un){
+      if(newer){un.textContent='A new '+packLabel+' is available ('+when+'). Download it again.';un.className='small warn';un.style.display='block'}
+      else if(!seen){un.textContent=packLabel+' ready ('+when+'). Download it once.';un.className='small muted';un.style.display='block'}
+      else un.style.display='none'
+    }
+    if(ub)ub.style.display='none';
+  }else{
+    if(ub){
+      if(newer){ub.textContent='A new '+packLabel+' is available ('+when+'). Log in to download it again.';ub.className='small warn';ub.style.display='block'}
+      else if(!seen){ub.textContent=packLabel+' is available ('+when+'). Register or log in to download it.';ub.className='small muted';ub.style.display='block'}
+      else ub.style.display='none'
+    }
+  }
+}
+function showDone(heading,text){f.style.display='none';lb.style.display='none';d.style.display='block';dt.textContent=heading;m.textContent=text;m.className='small ok';updatePackNotice(true)}
+const packLink=document.getElementById('clientUpdateLink');
+if(packLink)packLink.addEventListener('click',()=>{try{localStorage.setItem(packKey(),packAt)}catch{}});
+f.addEventListener('submit',async e=>{e.preventDefault();m.textContent='';b.disabled=true;try{const r=await fetch('/api/public/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:document.getElementById('name').value,password:document.getElementById('password').value,password2:document.getElementById('password2').value})});const j=await r.json();if(!r.ok||!j.ok)throw new Error(j.error||'Registration failed.');showDone('Account created.','Welcome, '+j.name+'.')}catch(err){m.textContent=err.message;m.className='small bad'}finally{b.disabled=false}});
+lf.addEventListener('submit',async e=>{e.preventDefault();lm.textContent='';const lbn=document.getElementById('loginSubmit');lbn.disabled=true;try{const r=await fetch('/api/public/downloads',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:document.getElementById('loginName').value,password:document.getElementById('loginPassword').value})});const j=await r.json();if(!r.ok||!j.ok)throw new Error(j.error||'Login failed.');showDone('Your downloads.','Welcome back, '+j.name+'.')}catch(err){lm.textContent=err.message;lm.className='small bad'}finally{lbn.disabled=false}});
+updatePackNotice(false);
 </script></body></html>
 """;
             return page.Replace("__TITLE__", title)
+                .Replace("__PACK_AT__", JsonSerializer.Serialize(clientPackAt ?? ""))
+                .Replace("__CLIENT_LABEL__", JsonSerializer.Serialize(clientLabel))
                 .Replace("__ADDRESS_NOTE__", addressNote)
                 .Replace("__ADDRESS__", shownAddress)
                 .Replace("__DOWNLOADS__", clientLink + clientFiles + realmLinks)

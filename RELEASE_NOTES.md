@@ -1,3 +1,14 @@
+# AFK Realm 1.2.75
+
+## Log in again and download the current client files
+
+- **The public page now has a returning-player login.** Enter the same account name and password used in the game to show the download panel again. It is read-only and uses the account's existing salt/verifier; no second account is created and the password is not stored.
+- **The AFK client pack can be downloaded again at any time.** The panel offers the current pack, `realmlist.wtf`, `Config.wtf` and the game-client link.
+- **Update notice for a rebuilt client patch or client pack.** The page remembers the build date of the client files a player downloaded in that browser. When the server owner builds a newer patch or pack, the next visit or login shows **“A new AFK client patch/pack is available”** with the build time.
+- **No email, push or Discord requirement.** The notice lives in the portal; direct download links keep working, and players can log in whenever they need the files again.
+- **Failed logins are limited per address.** The portal verifies the existing account only, without changing it or exposing account data.
+- Login and downloads use the same public listener; the admin API remains private. The page still uses plain HTTP unless you put it behind your own HTTPS proxy.
+
 # AFK Realm 1.2.74
 
 ## A proper player page and a complete client pack
