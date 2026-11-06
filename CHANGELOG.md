@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.70
+
+- **CoA Custom 1.9.9 subclass compatibility:** `mod-subclass` was brought to Stefan's latest subclass merge (server code, twin features SQL, updated `Ascension_Subclass` addon and the mirrored Thin Twins model). The server core patch now also carries the required `AscensionClassServiceBridge.h`.
+- **World Journey on the new Playerbots:** the journey patch is adapted to the new `mod-playerbots` includes and applies again.
+
 ## 1.2.69
 
 - **Resource compiler command line fixed:** the Visual Studio projects pass every C++ include folder of CoA, Playerbots and the modules to `rc.exe`. With many modules this exceeded Windows' 32,000-character limit and the build stopped with `MSB6003 ... filename or extension too long`. The engine now shortens that list to the folders the `.rc` file needs.

@@ -1,3 +1,16 @@
+# AFK Realm 1.2.70
+
+## CoA Custom 1.9.9: subclassing is current again
+
+- **`mod-subclass` is updated to Stefan's latest 1.9.9 subclass merge.** This includes the current server subclass code, the Thin Twins pet bar and features, the missing twin-feature SQL, and the updated `Ascension_Subclass` addon.
+- **The Thin Twins client model is mirrored correctly.** The new client patch `patch-ZZZZZY.MPQ` is built from the player's own client and must be installed in the game client. The old `patch-ZZZZY.MPQ` stays as the base below it.
+- **The server core patch now includes `AscensionClassServiceBridge.h`.** This fixes the Linux build error `AscensionCompat.cpp: fatal error: AscensionClassServiceBridge.h: file not found`.
+- **Existing servers:** run **Server > Update** once after the app update, then restart the worldserver. The new SQL is applied automatically on the next server start.
+
+## World Journey and Playerbots
+
+- **The World Journey playerbots patch fits the new `mod-playerbots` version again.** It was adapted to the new includes and is applied during the next server update.
+
 # AFK Realm 1.2.69
 
 ## Fix: the build stopped at rc.exe with a long command line
