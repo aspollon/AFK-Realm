@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.74
+
+- **The public registration page and the remote admin login now use the AFK Realm artwork as a full background, with centered form text.** The form card is placed below the logo, so the AFK Realm lettering stays visible on desktop and mobile.
+- **The public page always offers a game-client path:** the official CoA launcher page by default, or a custom download URL set by the owner.
+- **The public page can build a complete player client pack** from the server owner's own client: module add-ons (including custom-race and DungeonClear files), the generated AFK client patch and the current subclass patches, plus a realmlist. The pack is cached and can be rebuilt from the Server page after module, race or client changes.
+- **Full client files stay outside the AFK server.** A 43 GB client is not pushed through the registration listener; use the official launcher or your own download host. The much smaller AFK client pack patches an existing CoA client and provides the custom-race content.
+- **The pack builder reports progress and keeps the previous pack until a new build succeeds.** No admin API or server port is exposed.
+
 ## 1.2.73
 
 - **Public registration without AFK Realm:** the Server page has a new **Public registration** card. It starts a second, small web server with only the player page, open account creation, realm-file downloads and the client patch; the admin page and its API stay private.

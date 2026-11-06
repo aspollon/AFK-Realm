@@ -1,3 +1,17 @@
+# AFK Realm 1.2.74
+
+## A proper player page and a complete client pack
+
+- **New AFK Realm artwork** is now the background of the public registration page and the remote admin login. The form sits below the logo, so the lettering is never covered; portrait screens use a fitted background instead of cropping it. Form labels, inputs and buttons are centered.
+- **The public page now has a clear path for a fresh player:**
+  1. **Game client / launcher** — links to the official CoA download page, or to the URL you set in the registration card.
+  2. **AFK client pack** — the module add-ons, the generated client patch, the current subclass patches and a realmlist in one ZIP. This is the part that makes custom races, class choices and DungeonClear work.
+  3. **realmlist.wtf** and **Config.wtf** — generated with your realm address.
+- **Build the client pack once from Server > Public registration.** The button reports progress and stores the ZIP on the AFK Realm machine. Rebuild it after changing modules, races or the game client. The public page falls back to the client patch ZIP until a pack exists.
+- **The full game client is deliberately not hosted by AFK Realm.** A complete CoA client is about 43 GB; pushing it through the registration server would be slow and fragile. Use the official launcher or point the client link at your own download host. The AFK pack is the smaller patching layer on top.
+- **Only the public routes are exposed.** The registration listener still has no admin API; remote access remains a separate password-protected page.
+- **The public page and remote login are still plain HTTP by default.** Put the public port behind an HTTPS reverse proxy or tunnel if player passwords should be encrypted in transit.
+
 # AFK Realm 1.2.73
 
 ## Players can register from their browser

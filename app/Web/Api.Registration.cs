@@ -1,3 +1,4 @@
+using System.IO;
 using Microsoft.AspNetCore.Builder;
 
 namespace CoAInstaller.Web
@@ -20,6 +21,23 @@ namespace CoAInstaller.Web
                     a.Int("maxAccountsPerIp", old.MaxAccountsPerIp),
                     a.Int("windowMinutes", old.WindowMinutes));
                 return RegistrationPortal.Status(Inst);
+            });
+            Post(app, "/api/registration/client-pack", a =>
+            {
+                var inst = Inst;
+                return Jobs.Run(L.T("Building player client pack ..."), (job, st) =>
+                {
+                    RegistrationPortal.BuildClientPack(inst, (text, x, y) =>
+                    {
+                        job.Status = text;
+                        job.Sub = y > 0 ? (double)x / y : -1;
+                        job.Changed(false);
+                    });
+                    job.Status = L.T("Player client pack ready.");
+                    var file = new FileInfo(RegistrationPortal.ClientPackFile(inst));
+                    job.Message = L.F("Player client pack ready: {0} MB. It includes the module add-ons, client patches and a realmlist.", (file.Length / 1024.0 / 1024.0).ToString("0.0"));
+                    job.Payload = new { size = file.Length, at = file.LastWriteTimeUtc.ToString("o") };
+                }).Snapshot();
             });
         }
     }

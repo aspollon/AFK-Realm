@@ -1,7 +1,7 @@
 // The public registration site: set up a second, small web server that only has the player page and its downloads.
 // It is intentionally separate from this admin page, so a player can never reach the admin API through it.
 import { h, T, F, meta, get, post, replace } from './core.js';
-import { card, primary, secondary, toggle, input, field, alert, toast } from './ui.js';
+import { card, primary, secondary, toggle, input, field, alert, toast, runProgress } from './ui.js';
 
 export function registrationCard() {
   const body = h('div', {}, h('div.muted.small', {}, T('Reading ...')));
@@ -19,7 +19,7 @@ export function registrationCard() {
     const port = input(String(r.port), { style: { width: '90px' }, inputMode: 'numeric' });
     const address = input(r.address || '', { style: { width: '220px' }, placeholder: T('e.g. play.example.com or 26.1.2.3') });
     const publicUrl = input(r.publicUrl || '', { style: { width: '100%' }, placeholder: T('optional: the address players should use') });
-    const clientUrl = input(r.clientUrl || '', { style: { width: '100%' }, placeholder: T('optional: link to the CoA client download') });
+    const clientUrl = input(r.clientUrl || '', { style: { width: '100%' }, placeholder: 'https://coa-development.org/download' });
     const max = input(String(r.maxAccountsPerIp), { style: { width: '65px' }, inputMode: 'numeric' });
     const window = input(String(r.windowMinutes), { style: { width: '65px' }, inputMode: 'numeric' });
     const save = primary(T('Save and apply'), async () => {
@@ -48,8 +48,8 @@ export function registrationCard() {
         field(T('Public address (optional)'), publicUrl,
           T('Use this when players reach the site through a host name, a tunnel or a port forward. Leave it empty to show the direct IP addresses below.'))),
       h('div', { style: { marginTop: '4px' } },
-        field(T('Client download link (optional)'), clientUrl,
-          T('If players can get the game client from a link (for example the CoA download page), it appears on the public page after registration. Leave it empty to offer only the client patch.'))),
+        field(T('Client download link'), clientUrl,
+          T('Use a direct client download or launcher page. Leave it empty to show the official CoA download page.'))),
       h('div.small.muted', {},
         T('The realm address is written into realmlist.wtf and Config.wtf. The authserver sends the address from Settings > Play with others, so set the same address there too; players cannot log in with 127.0.0.1.')),
       h('div.small.muted', {},
@@ -73,7 +73,19 @@ export function registrationCard() {
       parts.push(h('div.small.bad', {}, r.error || T('The setting is on, but the public page is not running. Another program may already use the port, or the app was just started. Save again to retry.')));
     }
 
-    if (!r.patch) parts.push(h('div.small.muted', {}, T('No client patch is available yet. Build the client patch under Client first; players can still download realmlist.wtf and Config.wtf.')));
+    if (!r.patch && !r.clientPack) parts.push(h('div.small.muted', {}, T('No client patch is available yet. Build the client patch under Client first; players can still download realmlist.wtf and Config.wtf.')));
+    const packState = r.clientPack
+      ? F('Player client pack ready ({0}, {1}).', (r.clientPackSize / 1024 / 1024).toFixed(1) + ' MB', r.clientPackAt || '')
+      : T('No player client pack built yet. The portal falls back to the client patch ZIP.');
+    const buildPack = secondary(r.clientPack ? T('Rebuild player client pack') : T('Build player client pack'), async () => {
+      const job = await runProgress(() => post('/api/registration/client-pack'), T('Building player client pack ...'));
+      if (job && job.ok) load();
+    });
+    parts.push(h('div', { style: { marginTop: '14px', paddingTop: '12px', borderTop: '1px solid #343140' } },
+      h('div', { style: { fontWeight: '600' } }, T('Player client pack')),
+      h('div.small.muted', {}, packState),
+      buildPack,
+      h('div.small.muted', {}, T('Build or rebuild this after changing modules, races or the client. It contains the module add-ons, the generated client patch and the current subclass patches; the pack can be several hundred MB. Close the game first.'))));
     if (r.publicUrl) parts.push(h('div.small.muted', {}, T('The configured public address is only a label for players; it does not change where the server listens.')));
     if (r.running) parts.push(h('div.small.muted', {}, F('While public registration is on, {0} keeps running in the background when you close its window, so players can still register. Start {0} again to see the window here; turn this off first if you want {0} to end with its window.', meta.product)));
     replace(body, ...parts);

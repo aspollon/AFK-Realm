@@ -111,6 +111,8 @@ namespace CoAInstaller.Web
                 var path = context.Request.Path.Value ?? "/";
                 RequestRemote.Value = remote;
                 if (path == "/ping") { await context.Response.WriteAsync("AFK Realm"); return; }
+                // The remote login page needs this image before a session exists.
+                if (path == "/assets/afk-realm-background.jpg") { await next(); return; }
                 if (!remote && !LocalHost(context.Request.Host.Host))
                 {
                     // A page of another site that made its name point here (DNS rebinding) gets nothing.
@@ -258,12 +260,42 @@ namespace CoAInstaller.Web
                 error = "<p style=\"color:#c83232\">" + WebUtility.HtmlEncode(L.T("Wrong password.")) + "</p>";
             }
             context.Response.ContentType = "text/html; charset=utf-8";
-            await context.Response.WriteAsync("<!doctype html><html><head><meta charset=utf-8><meta name=viewport content=\"width=device-width,initial-scale=1\"><title>AFK Realm</title>" +
-                "<style>body{font-family:'Segoe UI',system-ui,sans-serif;background:#15131e;color:#e9e7f2;display:grid;place-items:center;min-height:100vh;margin:0}" +
-                "form{background:#211e2c;padding:32px;border-radius:14px;border:1px solid #343140;width:min(340px,90vw)}input{width:100%;box-sizing:border-box;padding:10px;margin:12px 0;border-radius:8px;border:1px solid #545064;background:#15131e;color:inherit}" +
-                "button{background:#6c4cc4;color:#fff;border:0;border-radius:8px;padding:10px 18px;font-weight:600;cursor:pointer}</style></head><body>" +
-                "<form method=post><h2 style=\"margin-top:0\">AFK Realm</h2><label>" + WebUtility.HtmlEncode(L.T("Password")) + "</label><input type=password name=password autofocus>" + error +
-                "<button>" + WebUtility.HtmlEncode(L.T("Log in")) + "</button></form></body></html>");
+            await context.Response.WriteAsync(LoginPage(error));
+        }
+
+        static string LoginPage(string error)
+        {
+            string page = """
+<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AFK Realm - Remote access</title>
+<style>
+*{box-sizing:border-box}
+html{background:#08070d}
+body{margin:0;min-height:100dvh;background:#08070d;color:#e9e7f2;font:16px/1.5 'Segoe UI',system-ui,sans-serif;overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0;background:#08070d url('/assets/afk-realm-background.jpg') center top/cover no-repeat;z-index:0}
+body::after{content:"";position:fixed;inset:0;background:linear-gradient(180deg,rgba(8,6,14,.04) 0%,rgba(8,6,14,.14) 30%,rgba(8,6,14,.82) 100%);z-index:0;pointer-events:none}
+.stage{position:relative;z-index:1;min-height:100dvh;display:flex;flex-direction:column;align-items:center;padding:clamp(18px,3vw,36px)}
+.logo-space{height:clamp(190px,38vh,440px);flex:0 0 auto;width:100%}
+.box{width:min(390px,100%);background:rgba(24,21,34,.9);border:1px solid rgba(151,130,216,.36);border-radius:18px;padding:28px;box-shadow:0 30px 80px #000b;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);margin-bottom:28px;text-align:center}
+h1{margin:0 0 4px;font-size:27px;letter-spacing:.2px}.muted{color:#c2bcd4;font-size:14px}
+label{display:block;margin:16px 0 0;font-size:14px}input{width:100%;margin:7px 0 0;padding:11px;border-radius:9px;border:1px solid #625a7b;background:#15131e;color:inherit;font:inherit;text-align:center}
+input:focus{outline:2px solid #9b7bea;outline-offset:1px;border-color:#9b7bea}
+button{display:flex;align-items:center;justify-content:center;margin:18px auto 0;padding:11px 18px;border:0;border-radius:9px;background:#7b57d6;color:#fff;font:inherit;font-weight:650;cursor:pointer}
+button:hover{background:#8d67ec}
+#error{color:#ff9a9a;font-size:14px}
+@media(max-aspect-ratio:4/3){body::before{background-size:100% auto}.logo-space{height:clamp(210px,32vh,320px)}}
+@media(max-width:560px){.box{padding:22px}}
+</style></head>
+<body><div class="stage"><div class="logo-space"></div><main class="box">
+<h1>Remote access</h1><div class="muted">Log in to manage this server.</div>
+<form method="post"><label>__PASSWORD__<input type="password" name="password" autocomplete="current-password" autofocus></label>
+<div id="error">__ERROR__</div><button>__LOGIN__</button></form>
+</main></div></body></html>
+""";
+            return page.Replace("__PASSWORD__", WebUtility.HtmlEncode(L.T("Password")))
+                .Replace("__LOGIN__", WebUtility.HtmlEncode(L.T("Log in")))
+                .Replace("__ERROR__", error ?? "");
         }
 
         static int FreePort(int preferred)
@@ -317,6 +349,8 @@ namespace CoAInstaller.Web
                 case ".css": return "text/css; charset=utf-8";
                 case ".svg": return "image/svg+xml";
                 case ".png": return "image/png";
+                case ".jpg": return "image/jpeg";
+                case ".jpeg": return "image/jpeg";
                 case ".ico": return "image/x-icon";
                 case ".json": return "application/json; charset=utf-8";
                 case ".woff2": return "font/woff2";
