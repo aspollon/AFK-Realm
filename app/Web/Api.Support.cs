@@ -18,8 +18,8 @@ namespace CoAInstaller.Web
                     var r = SupportBundle.Make(inst, client != null && Directory.Exists(client) ? client : null, s => st(s));
                     job.Payload = new
                     {
-                        zip = r.Zip, name = Path.GetFileName(r.Zip), download = "/api/files/download?k=" + Files.Offer(r.Zip, Path.GetFileName(r.Zip), false),
-                        dumpsDownload = r.Dumps == null ? null : "/api/files/download?k=" + Files.Offer(r.Dumps, Path.GetFileName(r.Dumps), false), folder = r.Folder, mb = Math.Round(r.ZipBytes / 1048576.0, 1), files = r.Files,
+                        zip = r.Zip, name = Path.GetFileName(r.Zip), download = Files.Offer(r.Zip, Path.GetFileName(r.Zip), false),
+                        dumpsDownload = r.Dumps == null ? null : Files.Offer(r.Dumps, Path.GetFileName(r.Dumps), false), folder = r.Folder, mb = Math.Round(r.ZipBytes / 1048576.0, 1), files = r.Files,
                         dumps = r.Dumps, dumpsName = r.Dumps == null ? null : Path.GetFileName(r.Dumps), dumpsMb = Math.Round(r.DumpBytes / 1048576.0, 1), dumpFiles = r.DumpFiles
                     };
                     job.Message = r.Zip;

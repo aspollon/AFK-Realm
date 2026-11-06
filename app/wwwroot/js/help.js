@@ -14,7 +14,7 @@ export async function helpBundle() {
   const r = j.payload;
   const copy = async text => { try { await navigator.clipboard.writeText(text); toast(T('Copied.')); } catch { } return false; };
   const steps = h('ol', { style: { margin: '6px 0 10px', paddingLeft: '20px', lineHeight: '1.6' } },
-    h('li', {}, meta.remote ? T('Download the file with the button below.') : T('Open the folder with the button below - the file is selected there.')),
+    h('li', {}, T('Download the file with the button below.')),
     h('li', {}, T('Drag the file into the AFK Realm channel on Discord (or attach it with the + button).')),
     h('li', {}, T('Write in a few words what you did and what went wrong.')));
   const body = h('div', { style: { maxWidth: '600px' } },
@@ -25,12 +25,11 @@ export async function helpBundle() {
     r.mb > 9.5 ? h('p.small.warn', {}, T('The file is larger than Discord allows without Nitro (10 MB). Upload it to Google Drive, OneDrive or a similar service and post the link instead.')) : null,
     r.dumps ? h('p.small.muted', {}, F('Crash dumps were found as well ({0} MB). They are in a second file next to it ({1}); send it only when you are asked for it - it is usually too large for Discord.', r.dumpsMb, r.dumpsName)) : null);
   const buttons = [];
-  if (meta.remote) {
-    buttons.push({ text: T('Download'), kind: 'primary', onclick: () => { location.href = r.download; return false; } });
-    if (r.dumpsDownload) buttons.unshift({ text: T('Download the crash dumps'), onclick: () => { location.href = r.dumpsDownload; return false; } });
-  } else {
+  buttons.push({ text: T('Download'), kind: 'primary', onclick: () => { location.href = r.download; return false; } });
+  if (r.dumpsDownload) buttons.push({ text: T('Download the crash dumps'), onclick: () => { location.href = r.dumpsDownload; return false; } });
+  if (!meta.remote) {
     buttons.push({ text: T('Copy the path'), onclick: () => copy(r.zip) });
-    buttons.push({ text: T('Open the folder'), kind: 'primary', onclick: async () => { await post('/api/fs/reveal', { path: r.zip }).catch(() => { }); return false; } });
+    buttons.push({ text: T('Open the folder'), onclick: async () => { await post('/api/fs/reveal', { path: r.zip }).catch(() => { }); return false; } });
   }
   buttons.push({ text: T('Close'), value: true });
   await dialog({ title: T('Problem? Get help'), icon: 'check', body, buttons });

@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.71
+
+- **Help ZIPs download like client files:** the support bundle links no longer contain a duplicated `/api/files/download` prefix. The "Get help" dialog always offers a Download button, also when AFK Realm is used through remote access or a remote desktop.
+- **Crash-dump ZIP** uses the same corrected download path.
+
 ## 1.2.70
 
 - **CoA Custom 1.9.9 subclass compatibility:** `mod-subclass` was brought to Stefan's latest subclass merge (server code, twin features SQL, updated `Ascension_Subclass` addon and the mirrored Thin Twins model). The server core patch now also carries the required `AscensionClassServiceBridge.h`.

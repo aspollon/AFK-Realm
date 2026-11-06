@@ -1,3 +1,12 @@
+# AFK Realm 1.2.71
+
+## Help ZIPs can be downloaded remotely
+
+- **Fixed the help-file download link.** The support bundle built its URLs as `/api/files/download?k=/api/files/download?k=...`, so the browser could not download the ZIP. The link is now handed out once, exactly like a client export.
+- **The crash-dump ZIP uses the same fixed link.**
+- **"Get help" now always shows Download**, not only when the page was opened through remote access. This also works over a remote desktop: the ZIP lands on the computer where the browser runs, not on the server.
+- **Open folder and Copy path remain** for a local AFK Realm window.
+
 # AFK Realm 1.2.70
 
 ## CoA Custom 1.9.9: subclassing is current again
