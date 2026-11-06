@@ -1,3 +1,20 @@
+# AFK Realm 1.2.73
+
+## Players can register from their browser
+
+- **New Server page card: Public registration.** Switch it on and AFK Realm starts a second, minimal web server on port `47820` (configurable). Players open the address in any browser and create an account; they do not need AFK Realm, an email address, an invite code or Cloudflare.
+- **Only the public routes are exposed.** That listener has the registration page, the registration request, the realm info and the downloads. It never serves the admin page or the admin API.
+- **After registration the page offers:**
+  - `realmlist.wtf`
+  - a `Config.wtf` line with `SET realmList`
+  - the current AFK client patch as a ZIP (`patch-ZZZZZZZZ.MPQ` and the subclass patches beside it)
+  - optionally a game-client download link you set in the card.
+- **LAN and internet:** the card shows the direct IP addresses. For the internet, forward the public port on the router (or use your VPN/tunnel) and use the shown address. Windows Firewall gets a rule for the port automatically; on Linux the card shows the `ufw` command.
+- **Set the realm address under Settings > Play with others first.** It is written into both files and also makes AFK Realm open the auth- and worldserver ports; without it players can create an account but cannot log in. `127.0.0.1` only works on the server itself.
+- **Open registration with a limit:** no email or invite; default 10 registrations per IP per hour, configurable or unlimited with `0`.
+- **The app keeps running while the portal is on**, even when you close its window, so players can still register. Open AFK Realm again to see the window.
+- **Plain HTTP by default.** If player passwords should be encrypted, put the public port behind an HTTPS reverse proxy or tunnel you control.
+
 # AFK Realm 1.2.72
 
 ## AFK modules no longer look "added by hand" without reason

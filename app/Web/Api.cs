@@ -101,6 +101,7 @@ namespace CoAInstaller.Web
             MapBotMapArt(app);
             MapFiles(app);
             MapRemote(app);
+            MapRegistration(app);
             MapSupport(app);
         }
 

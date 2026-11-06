@@ -144,6 +144,7 @@ export function manager() {
         planState, postpone),
       card(T('Map data'), T('The worldserver needs the maps, vmaps and mmaps of the game and CoA\'s own DBC tables. They are made once from your game client.'), 'globe',
         mapState, secondary(T('Create map data from the game client …'), mapDataDialog)),
+      (() => { const box = h('div'); import('./registration.js').then(m => replace(box, m.registrationCard())); return box; })(),
     ];
     paintServer();
     return out;

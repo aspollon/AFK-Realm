@@ -51,6 +51,7 @@ Pre-built repacks go stale quickly. Building from source keeps you on the latest
 - **Map data**: extracts maps, vmaps, mmaps and the CoA client DBC tables from your game client with one click
 - **Server name**: choose the name shown in the realm list during installation and change it later with one click
 - **Play with others**: set a VPN or LAN address (e.g. Radmin VPN); the tool configures the realm, the CoA remote-client setting and the Windows Firewall
+- **Public registration**: start a browser-only registration page on its own port; players create an account, download `realmlist.wtf`, a `Config.wtf` realmList line and the client patch without installing AFK Realm or giving an email address
 - **Updates**: shows when newer server code or a newer AFK Realm release is available and installs a new AFK Realm with one click; checks the core, Playerbots and your installed modules, and rebuilds only when something changed
 - **Backups and rollback**: before every update the server is saved (programs, settings, all databases and their versions); if a new version causes problems, one click restores the previous state. Backups can also be made by hand; the newest ones are kept — three by default, the number is up to you
 - **Portable**: everything lives in one folder; the database runs without a Windows service

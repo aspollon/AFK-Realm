@@ -86,10 +86,12 @@ namespace CoAInstaller.Web
             CheckForUpdates();
             CheckDownloadUpdates();
             CheckClient(true);
+            try { RegistrationPortal.StartIfEnabled(inst); } catch (Exception ex) { Program.StartLog("public registration: " + ex.Message); }
         }
 
         public static void Close()
         {
+            try { RegistrationPortal.Stop(); } catch { }
             lock (gate) { Inst = null; Ctl = null; Status = null; lastSent = null; }
             Events.Send("status", null);
         }

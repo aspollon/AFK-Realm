@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.73
+
+- **Public registration without AFK Realm:** the Server page has a new **Public registration** card. It starts a second, small web server with only the player page, open account creation, realm-file downloads and the client patch; the admin page and its API stay private.
+- **Works over LAN and the internet:** it listens on all network interfaces on a port of its own (default `47820`), adds a Windows Firewall rule, and shows the direct addresses. Use the router's port forward (or a VPN/tunnel) for players outside your network.
+- **After registration, players get `realmlist.wtf`, a `Config.wtf` realmList line and the current AFK client patch as a ZIP.** An optional game-client download link can be shown too.
+- **Open, but not endlessly:** no email, no invite code; a configurable per-address limit (default 10 per hour) and a 64 KB request limit keep casual abuse away.
+- **No race, module or server behaviour changed.** Existing accounts, modules, races, Dungeon Clear and AFK-owned Git modules are untouched.
+
 ## 1.2.72
 
 - **AFK-owned modules with a Git checkout are shown as installed**, even when an old installation or a copied folder left them out of `Dependencies\modules.txt` (for example Junk to Gold). They no longer show as "added by hand" when AFK can update them.

@@ -83,6 +83,7 @@ namespace CoAInstaller.Web
 
             Watch(remote, localUrl);
             RemoteAccess.Stop();
+            try { RegistrationPortal.Stop(); } catch { }
             try { app.StopAsync().Wait(5000); } catch { }
             Instance.Remove();
             return 0;
@@ -154,6 +155,7 @@ namespace CoAInstaller.Web
                 Stopping.Token.WaitHandle.WaitOne(2000);
                 if (Stopping.IsCancellationRequested) break;
                 if (remote || Program.Opts.NoWindow || RemoteAccess.Running) continue;     // others may still come
+                if (RegistrationPortal.Running) continue;                                  // players may still register
                 if (Jobs.Busy || Manager.AutoRestarting) continue;
                 if (Events.Count > 0 && !everSeen) { everSeen = true; Program.StartLog("the page connected"); }
                 if (tracked)
