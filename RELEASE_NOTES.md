@@ -1,3 +1,10 @@
+# AFK Realm 1.2.80
+
+## The launcher builder always packages the current AFK Client
+
+- **No stale launcher in the player package.** The builder now downloads the latest `AFK-Client.exe` from the release on every build. An old copy in `Dependencies\launcher` is replaced, so players get the current launcher with its background and account setup. If the download fails, the local copy is used.
+- **The builder shows the client date.** The launcher card now displays the date of the bundled `AFK-Client.exe`, so a stale copy is visible at a glance.
+
 # AFK Realm 1.2.79
 
 ## Launcher icon and a safer update check

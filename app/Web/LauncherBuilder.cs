@@ -205,23 +205,31 @@ namespace CoAInstaller.Web
 
         static void EnsureClientExe(Install inst, Action<string, int, int> progress)
         {
-            if (File.Exists(ClientExePath(inst))) return;
+            string target = ClientExePath(inst);
+            string temp = target + ".tmp";
             try
             {
-                progress(L.T("Downloading the AFK Client ..."), 0, 0);
-                using (var http = new HttpClient { Timeout = TimeSpan.FromSeconds(90) })
+                progress(L.T("Downloading the latest AFK Client ..."), 0, 0);
+                using (var http = new HttpClient { Timeout = TimeSpan.FromMinutes(5) })
                 using (var response = http.GetAsync(ClientReleaseUrl, HttpCompletionOption.ResponseHeadersRead).GetAwaiter().GetResult())
                 {
-                    if (!response.IsSuccessStatusCode) return;
+                    if (!response.IsSuccessStatusCode) throw new InvalidOperationException("HTTP " + (int)response.StatusCode);
                     Directory.CreateDirectory(Folder(inst));
-                    string temp = ClientExePath(inst) + ".tmp";
                     using (var input = response.Content.ReadAsStreamAsync().GetAwaiter().GetResult())
                     using (var output = File.Create(temp))
                         input.CopyTo(output);
-                    File.Move(temp, ClientExePath(inst), true);
                 }
+                if (new FileInfo(temp).Length < 1024 * 1024) throw new InvalidOperationException(L.T("The downloaded AFK Client is incomplete."));
+                File.Move(temp, target, true);
             }
-            catch { }
+            catch
+            {
+                try { if (File.Exists(temp)) File.Delete(temp); } catch { }
+                if (File.Exists(target))
+                    progress(L.T("Could not download the latest AFK Client; using the copy on this PC."), 0, 0);
+                else
+                    progress(L.T("AFK-Client.exe could not be downloaded. The package will contain launcher.json only."), 0, 0);
+            }
         }
 
         static void BuildPackage(Install inst, string baseUrl, ManifestFile manifest)

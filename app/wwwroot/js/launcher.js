@@ -29,7 +29,7 @@ export function launcherCard() {
       ? secondary(T('Download player package'), () => { window.open('/api/launcher/package', '_blank'); }, 'download')
       : null;
     const clientNote = r.clientExe
-      ? h('div.small.ok', {}, F('The package includes AFK-Client.exe ({0}).', fmt(r.clientExeSize)))
+      ? h('div.small.ok', {}, F('The package includes AFK-Client.exe ({0}, {1}).', fmt(r.clientExeSize), r.clientExeAt))
       : h('div.small.warn', {}, T('AFK-Client.exe is not on this PC yet. The package contains only launcher.json; download the client from the release page and put it in Dependencies\\launcher.'));
     const parts = [
       h('div', { style: { fontWeight: '600', marginBottom: '4px' } }, status),

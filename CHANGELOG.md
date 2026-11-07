@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.80
+
+- **Launcher builder always uses the current AFK Client:** it downloads the latest `AFK-Client.exe` from the release on every build instead of reusing an old cached copy. If the download fails, the local copy is used.
+- **Visible client date:** the builder shows the date of the bundled `AFK-Client.exe`, so a stale copy is obvious.
+
 ## 1.2.79
 
 - **AFK Client icon:** the player launcher now carries the AFK Realm icon in Explorer, the taskbar and its window title bar.
