@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.83
+
+- **Qiraji body textures:** the Qiraji player models used texture type `11` (Monster Skin) in their M2 files, so the client rendered the body without applying the `CharSections` skin. The module now ships the Qiraji M2 files with texture type `1` (player skin); the client patch applies the selected Qiraji skin, face and hair textures again.
+- **Client patch file paths:** module client files may now target `Creature\` and `Character\` paths inside the generated MPQ, which the Qiraji model patch needs. Existing `Interface\` and `DBFilesClient\` files are unchanged.
+
 ## 1.2.82
 
 - **Qiraji appearance:** the client patch now points the male and female Qiraji character displays at their own `QirajiMale`/`QirajiFemale` models instead of a Thin Human model that a later client patch had put on the male display, and marks both models as player models so their body, skin and customization render.

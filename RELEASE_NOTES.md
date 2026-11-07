@@ -1,3 +1,11 @@
+# AFK Realm 1.2.83
+
+## Qiraji textures
+
+- **The Qiraji body now uses its skin textures.** The Qiraji models marked their body texture as `Monster Skin` (type `11`), which the player character renderer does not fill from the character skin table. The AFK client patch now ships both Qiraji models with the player skin texture type, so the selected skin colour and the character-creation textures are applied.
+- **No other model changes.** Only the texture type in `QirajiMale.m2` and `QirajiFemale.m2` changed; the models and their animations stay as they are.
+- **Client patch path support.** The patch builder now accepts module files under `Creature\` and `Character\` inside the generated MPQ.
+
 # AFK Realm 1.2.82
 
 ## Qiraji

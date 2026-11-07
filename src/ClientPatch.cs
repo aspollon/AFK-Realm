@@ -325,7 +325,7 @@ namespace CoAInstaller
         /// <summary>Only files of the interface and the data tables, by a plain relative name.</summary>
         static bool SafeClientPath(string path)
         {
-            return Regex.IsMatch(path ?? "", @"^(Interface|DBFilesClient)[\\/][\w .\-\\/]+$", RegexOptions.IgnoreCase) && !path.Contains("..");
+            return Regex.IsMatch(path ?? "", @"^(Interface|DBFilesClient|Creature|Character)[\\/][\w .\-\\/]+$", RegexOptions.IgnoreCase) && !path.Contains("..");
         }
 
         /// <summary>The archives of the client, the one that wins last: the game reads the patches after its base archives.</summary>
