@@ -9,6 +9,7 @@
 - **Per-file updates.** Add-ons, the generated client patch, custom-race/root files and subclass patches are downloaded individually only when their size or SHA-256 differs. The full client stays external.
 - **Public page:** when the package exists, the registration page offers an **AFK Client** download. The old client pack remains available as a fallback.
 - **The Windows release now also publishes `AFK-Client.exe`.** The launcher builder automatically uses the latest release asset when it builds a player package.
+- **No more 50 MiB ceiling.** The Windows release no longer has to fit the old WinForms updater; the current updater accepts up to 400 MiB, so larger builds and assets are no longer blocked.
 
 # AFK Realm 1.2.77
 

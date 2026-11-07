@@ -2,9 +2,8 @@
 # everyone can see they were built from this code.
 #
 # Since 1.1.6 the web version is the only one: AFK-Realm.exe in a release IS the web version for Windows. The
-# classic WinForms exe (1.1.5 and older) updates itself from the asset named AFK-Realm.exe, so every classic user is
-# moved to the web version by the update notice they already get. AFK-Realm-web.exe (the same file) stays for the
-# web builds 1.1.0-1.1.5, which update from that name.
+# classic WinForms exe (1.1.5 and older) is no longer built, so its old 50 MiB update limit no longer applies.
+# AFK-Realm-web.exe (the same file) stays for the web builds 1.1.0-1.1.5, which update from that name.
 name: build
 on:
   push:
@@ -72,12 +71,8 @@ jobs:
             -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true \
             -p:DebugType=none -o out
           if [ "${{ matrix.file }}" != "${{ matrix.asset }}" ]; then mv "out/${{ matrix.file }}" "out/${{ matrix.asset }}"; fi
-          # The classic exe refuses an update larger than 50 MiB: the Windows file has to stay below it, or the
-          # classic users are not moved over by themselves.
-          size=$(stat -c %s "out/${{ matrix.asset }}" 2>/dev/null || stat -f %z "out/${{ matrix.asset }}")
-          echo "size: $size bytes"
+          # Keep AFK-Realm-web.exe for the old web builds (1.1.0-1.1.5), which update from that asset name.
           if [ "${{ matrix.rid }}" = "win-x64" ]; then
-            if [ "$size" -ge 52428800 ]; then echo "::error::AFK-Realm.exe is $size bytes; the classic exe accepts at most 52428800"; exit 1; fi
             cp "out/${{ matrix.asset }}" out/AFK-Realm-web.exe
           fi
       - uses: actions/upload-artifact@v4

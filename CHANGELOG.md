@@ -7,6 +7,7 @@
 - **Per-file delivery instead of one large ZIP:** the player client compares the size and SHA-256 of each file and downloads only changed add-ons, client patches, race files and root files. The full game client stays external.
 - **Public page:** when a launcher package exists, players get an **AFK Client** download button; the package contains the preconfigured realm, portal and manifest addresses.
 - **Release build:** the Windows build now publishes `AFK-Client.exe` next to AFK Realm and the Linux builds.
+- **No 50 MiB ceiling:** the Windows build no longer has to stay below the old WinForms updater's limit; the current updater accepts releases up to 400 MiB.
 - **Translations:** all new launcher and client-builder texts are in German, Spanish, French, Portuguese (Brazil), Russian, Simplified Chinese and the template.
 
 ## 1.2.77
