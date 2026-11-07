@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AFK Client</title>
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <div class="atmosphere"></div>
+  <div class="app">
+    <button class="profile" id="profile" type="button" title="Game account">
+      <span class="profile-avatar" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.6"/><path d="M5 21c.6-4.2 3.4-6.5 7-6.5s6.4 2.3 7 6.5"/></svg>
+      </span>
+      <span class="profile-text">
+        <span class="profile-label" id="profileLabel">Game account</span>
+        <span class="profile-name" id="profileName">Create or sign in</span>
+      </span>
+      <svg class="profile-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+    </button>
+
+    <main class="launch-area">
+      <section class="setup-card" id="setupCard" hidden>
+        <span class="setup-icon" aria-hidden="true">
+          <svg class="icon-account" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.6"/><path d="M5 21c.6-4.2 3.4-6.5 7-6.5s6.4 2.3 7 6.5"/></svg>
+          <svg class="icon-folder" viewBox="0 0 24 24" hidden><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+        </span>
+        <div class="setup-copy">
+          <span class="setup-step" id="setupStep"></span>
+          <h2 id="setupTitle"></h2>
+          <p id="setupText"></p>
+        </div>
+        <div class="setup-actions">
+          <button class="btn primary" id="setupPrimary" type="button"></button>
+          <button class="btn" id="setupSecondary" type="button"></button>
+        </div>
+      </section>
+
+      <section class="dock">
+        <div class="dock-info">
+          <div class="eyebrow"><span class="pulse" id="pulse"></span><span id="statusKind">Ready</span></div>
+          <div class="status" id="status">Checking the server ...</div>
+          <div class="detail" id="detail"></div>
+          <div class="progress"><i id="progress"></i></div>
+        </div>
+        <div class="dock-actions">
+          <button class="icon-action" id="update" title="Check for updates" aria-label="Check for updates">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>
+          </button>
+          <button class="icon-action" id="repair" title="Repair" aria-label="Repair">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 6.5a4 4 0 0 0 5 5l-8.5 8.5a2.1 2.1 0 0 1-3-3zM14.5 6.5l3-3"/></svg>
+          </button>
+          <button class="icon-action" id="settings" title="Settings" aria-label="Settings">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2.7v2.4M12 18.9v2.4M2.7 12h2.4M18.9 12h2.4M5.4 5.4l1.7 1.7M16.9 16.9l1.7 1.7M5.4 18.6l1.7-1.7M16.9 7.1l1.7-1.7"/></svg>
+          </button>
+          <button class="btn primary" id="play">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5l11 7-11 7z" fill="currentColor" stroke="none"/></svg>
+            <span>Play</span>
+          </button>
+        </div>
+      </section>
+
+      <div class="settings-pop" id="settingsPop">
+        <div class="settings-row">
+          <div>
+            <span class="settings-label">Game account</span>
+            <span class="settings-value" id="account">Not signed in</span>
+          </div>
+          <button class="btn small" id="accountButton">Sign in</button>
+        </div>
+        <div class="settings-row">
+          <div>
+            <span class="settings-label">Game folder</span>
+            <span class="settings-value" id="folder">Not selected</span>
+          </div>
+          <button class="btn small" id="choose">Choose</button>
+        </div>
+        <div class="settings-sep"></div>
+        <div class="settings-links">
+          <button id="client">Full game client</button>
+          <button id="portal">Server page</button>
+        </div>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <span id="versionLabel">Manifest not checked</span>
+      <span id="portalLabel"></span>
+    </footer>
+  </div>
+
+  <div class="modal" id="accountModal">
+    <div class="modal-card">
+      <div class="card-head">
+        <span class="icon-box gold">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.6"/><path d="M5 21c.6-4.2 3.4-6.5 7-6.5s6.4 2.3 7 6.5"/></svg>
+        </span>
+        <div>
+          <h2 id="accountTitle">Create your game account</h2>
+          <p class="muted" id="accountIntro">You need a game account to play. Create one here, or sign in with an existing account.</p>
+        </div>
+      </div>
+      <div class="account-tabs" role="tablist" aria-label="Account">
+        <button class="account-tab active" id="tabRegister" type="button" role="tab" aria-selected="true">Create account</button>
+        <button class="account-tab" id="tabLogin" type="button" role="tab" aria-selected="false">Log in</button>
+      </div>
+      <form class="form" id="accountForm" autocomplete="on">
+        <label>Account name
+          <input id="accountName" autocomplete="username" maxlength="16" spellcheck="false">
+          <span class="field-note">3 to 16 letters or digits.</span>
+        </label>
+        <label>Password
+          <input id="accountPassword" type="password" autocomplete="current-password" maxlength="16">
+          <span class="field-note">4 to 16 characters.</span>
+        </label>
+        <label id="repeatRow">Repeat password
+          <input id="accountRepeat" type="password" autocomplete="new-password" maxlength="16">
+        </label>
+        <p class="form-note" id="accountNote"></p>
+      </form>
+      <div class="modal-actions">
+        <button class="btn primary" id="accountSubmit" type="button">Create account</button>
+        <button class="btn ghost" id="closeModal" type="button">Cancel</button>
+      </div>
+      <div class="form-message" id="accountMsg"></div>
+    </div>
+  </div>
+
+  <div class="modal" id="missingModal">
+    <div class="modal-card missing">
+      <div class="card-head">
+        <span class="icon-box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9.5 17h-19zM12 9v5M12 17.5h.01"/></svg></span>
+        <div><h2>Launcher not configured</h2><p class="muted">launcher.json was not found next to AFK-Client.exe.</p></div>
+      </div>
+      <p class="muted">Ask your server owner for the AFK Client player package, then unpack it into a folder of its own.</p>
+      <div class="modal-actions"><button class="btn" id="closeMissing">Close</button></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <script src="app.js"></script>
+</body>
+</html>

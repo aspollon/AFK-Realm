@@ -213,6 +213,7 @@ export function manager() {
         clientState,
         h('div.row', {}, clientBtn, testBtn),
         h('div.small.muted', {}, T('The game client on this PC is the source for the client patch. Keep it up to date and closed while the patch is built.'))),
+      (() => { const box = h('div'); import('./launcher.js').then(m => replace(box, m.launcherCard())); return box; })(),
     ];
     paintClient();
     return out;

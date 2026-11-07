@@ -328,6 +328,10 @@ namespace CoAInstaller.Web
             a.MapGet("/download/Config.wtf", ctx => TextFile(ctx, "Config.wtf", ConfigText(inst, s)));
             a.MapGet("/download/client-patch", ctx => ServeClientPatch(ctx));
             a.MapGet("/download/client-pack", ctx => ServeClientPack(ctx, inst));
+            a.MapGet("/api/public/manifest", ctx => LauncherBuilder.Manifest(ctx, inst));
+            a.MapGet("/download/launcher-file", ctx => LauncherBuilder.ServeFile(ctx, inst));
+            a.MapGet("/download/launcher.json", ctx => LauncherBuilder.Config(ctx, inst));
+            a.MapGet("/download/afk-client", ctx => LauncherBuilder.Package(ctx, inst));
             a.MapGet("/assets/afk-realm-background.jpg", ctx => Background(ctx));
             a.MapGet("/favicon.ico", ctx => { ctx.Response.StatusCode = 204; return Task.CompletedTask; });
             a.MapFallback(ctx => { ctx.Response.StatusCode = 404; return Task.CompletedTask; });
@@ -347,7 +351,7 @@ namespace CoAInstaller.Web
             string packAt = clientPack
                 ? File.GetLastWriteTimeUtc(pack).ToString("o")
                 : patch ? patchFiles.Max(f => File.GetLastWriteTimeUtc(f)).ToString("o") : "";
-            string body = PageHtml(realm, address, patch, clientPack, packAt, s.ClientUrl);
+            string body = PageHtml(realm, address, patch, clientPack, packAt, s.ClientUrl, LauncherBuilder.PackageAvailable(inst));
             ctx.Response.ContentType = "text/html; charset=utf-8";
             ctx.Response.Headers["Cache-Control"] = "no-store";
             ctx.Response.Headers["X-Content-Type-Options"] = "nosniff";
@@ -584,6 +588,29 @@ namespace CoAInstaller.Web
                 list.Add(DateTime.UtcNow);
                 return true;
             }
+        }
+
+        /// <summary>The public base URL of the registration page, without a trailing slash.</summary>
+        public static string PublicBaseUrl(Install inst)
+        {
+            var s = Load(inst);
+            string configured = (s.PublicUrl ?? "").Trim().TrimEnd('/');
+            if (WebUrl(configured)) return configured;
+            string address = Clean(AddressOf(inst, s));
+            if (address.Length == 0) address = LanAddress();
+            return address.Length > 0 ? "http://" + address + ":" + s.Port : "";
+        }
+
+        public static string PublicRealmAddress(Install inst)
+        {
+            var s = Load(inst);
+            string address = Clean(AddressOf(inst, s));
+            return address.Length > 0 ? address : LanAddress();
+        }
+
+        public static List<string> ClientPatchFiles()
+        {
+            return PatchFiles();
         }
 
         static List<string> PatchFiles()
@@ -832,14 +859,15 @@ namespace CoAInstaller.Web
             }
         }
 
-        static string PageHtml(string realm, string address, bool patch, bool clientPack, string clientPackAt, string clientUrl)
+        static string PageHtml(string realm, string address, bool patch, bool clientPack, string clientPackAt, string clientUrl, bool launcherPack)
         {
             string title = WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(realm) ? Product.Name : realm);
             string shownAddress = WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(address) ? "not set yet" : address);
             string addressNote = string.IsNullOrWhiteSpace(address)
                 ? "<div class=\"small bad\" style=\"margin-top:10px\">The server address is not set yet. Ask the server owner to set it under Access &gt; Server network.</div>"
                 : "";
-            string clientFiles = clientPack
+            string clientFiles = launcherPack ? "<a class=\"button\" href=\"/download/afk-client\">AFK Client (recommended)</a>" : "";
+            clientFiles += clientPack
                 ? "<a class=\"button secondary\" id=\"clientUpdateLink\" href=\"/download/client-pack\">AFK client pack (add-ons + patches)</a>"
                 : patch ? "<a class=\"button secondary\" id=\"clientUpdateLink\" href=\"/download/client-patch\">Client patch ZIP</a>" : "";
             string clientLabel = clientPack ? "AFK client pack" : "AFK client patch";
@@ -848,7 +876,9 @@ namespace CoAInstaller.Web
                 "<a class=\"button secondary\" href=\"/download/Config.wtf\">Config.wtf</a>";
             string client = ClientUrlOf(clientUrl);
             string clientLink = "<a class=\"button secondary\" href=\"" + WebUtility.HtmlEncode(client) + "\" target=\"_blank\" rel=\"noopener\">Game client / launcher</a>";
-            string instructions = clientPack
+            string instructions = launcherPack
+                ? "Download the <code>AFK Client</code>, unzip it into a folder of its own and start <code>AFK-Client.exe</code>. It chooses the game folder once and keeps add-ons, patches and realmlist up to date."
+                : clientPack
                 ? "Unzip the <code>AFK client pack</code> into the game folder. It contains the module add-ons and the client patches. Then merge <code>Config.wtf</code> into <code>WTF\\Config.wtf</code>."
                 : patch
                     ? "Unzip the <code>client patch ZIP</code> into the game folder, then merge <code>Config.wtf</code> into <code>WTF\\Config.wtf</code>. For custom races, also copy the matching add-ons from the pack."

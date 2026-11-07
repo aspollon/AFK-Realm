@@ -15,6 +15,33 @@ on:
 permissions:
   contents: write
 jobs:
+  # The player-side AFK Client for Windows. It is attached to the same release for the launcher builder.
+  client:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Publish
+        shell: bash
+        run: |
+          dotnet publish client/AfkClient.csproj -c Release -r win-x64 --self-contained true \
+            -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true \
+            -p:DebugType=none -o out-client
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AFK-Client.exe
+          path: out-client/AFK-Client.exe
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: out-client/AFK-Client.exe
+          fail_on_unmatched_files: false
+          body_path: RELEASE_NOTES.md
+          prerelease: ${{ contains(github.ref_name, '-') }}
+
   # The cross-platform build (app/): a local web server with the page in an app window or the browser.
   # Self-contained single files, so neither .NET nor anything else has to be installed first.
   web:

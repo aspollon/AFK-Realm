@@ -1,3 +1,15 @@
+# AFK Realm 1.2.78
+
+## AFK Client and the launcher builder
+
+- **Players get a real launcher.** AFK Client creates or logs into an account, remembers the game folder, checks a SHA-256 manifest, downloads only changed files, writes `realmlist.wtf` and `Config.wtf`, and starts the game.
+- **Guided first start.** A two-step card over the Play bar asks for the game account and then the game folder. The account pill stays visible in the corner, so creating an account or logging in is never hidden in the settings.
+- **The server builds the package under Client build > Launcher builder.** It takes the files from the working client, builds the manifest and launcher config, optionally downloads `AFK-Client.exe`, and creates `AFK-Client.zip` for players.
+- **No per-player settings.** The package already contains the realm name, LAN/internet address, portal URL and manifest URL. Players only choose their game folder once.
+- **Per-file updates.** Add-ons, the generated client patch, custom-race/root files and subclass patches are downloaded individually only when their size or SHA-256 differs. The full client stays external.
+- **Public page:** when the package exists, the registration page offers an **AFK Client** download. The old client pack remains available as a fallback.
+- **The Windows release now also publishes `AFK-Client.exe`.** The launcher builder automatically uses the latest release asset when it builds a player package.
+
 # AFK Realm 1.2.77
 
 ## A clearer menu and LAN-ready defaults

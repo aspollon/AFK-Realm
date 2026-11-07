@@ -102,6 +102,7 @@ namespace CoAInstaller.Web
             MapFiles(app);
             MapRemote(app);
             MapRegistration(app);
+            MapLauncher(app);
             MapSupport(app);
         }
 

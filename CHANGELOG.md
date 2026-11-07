@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.2.78
+
+- **AFK Client for Windows:** a player-side launcher with account creation/login, game-folder detection, update and repair from a per-file manifest, automatic `realmlist.wtf`/`Config.wtf`, and Play. A two-step first-start guide creates or logs in to the game account and then asks for the game folder; a profile pill keeps the account visible. It uses the AFK Realm colours and artwork and needs no server-address setup.
+- **Launcher builder under Client build:** builds the player client pack from the working client, hashes every file with SHA-256, writes `launcher.json` and the public manifest, optionally downloads `AFK-Client.exe` from the release, and produces `AFK-Client.zip` for players.
+- **Per-file delivery instead of one large ZIP:** the player client compares the size and SHA-256 of each file and downloads only changed add-ons, client patches, race files and root files. The full game client stays external.
+- **Public page:** when a launcher package exists, players get an **AFK Client** download button; the package contains the preconfigured realm, portal and manifest addresses.
+- **Release build:** the Windows build now publishes `AFK-Client.exe` next to AFK Realm and the Linux builds.
+- **Translations:** all new launcher and client-builder texts are in German, Spanish, French, Portuguese (Brazil), Russian, Simplified Chinese and the template.
+
 ## 1.2.77
 
 - **Clearer navigation:** **Server**, **Players**, **Client build**, **Modules & races**, **Bots**, **Game master**, **Database**, **Access** and **Maintenance**. The separate Overview page was removed; the server pills and Start/Stop/Restart/Consoles stay in the top bar on every page.
