@@ -5,7 +5,7 @@ import { card, primary, secondary, toggle, input, field, alert, toast, runProgre
 
 export function registrationCard() {
   const body = h('div', {}, h('div.muted.small', {}, T('Reading ...')));
-  const el = card(T('Public registration'), F('Let players create an account from a browser, without installing {0}. The public site is a separate listener: it only has the registration page, the account request and the realm-file downloads. It never exposes the admin page or its API.', meta.product), 'globe', body);
+  const el = card(T('Player access'), F('Let players create an account from a browser, without installing {0}. The public site is a separate listener: it only has the registration page, the account request and the realm-file downloads. It never exposes the admin page or its API.', meta.product), 'globe', body);
   load();
 
   async function load() {
@@ -16,6 +16,13 @@ export function registrationCard() {
 
   function paint(r) {
     const on = toggle(T('Open public registration'), r.enabled);
+    const internet = toggle(T('Allow internet access'), r.allowInternet);
+    const internetNote = h('div.small.muted');
+    const paintInternet = () => internetNote.textContent = internet.checked
+      ? T('The public page may be reached from the internet. Forward the port on the router if players cannot connect.')
+      : T('The public page is limited to your local network. Turn this on to allow access from the internet; forward the port on the router too.');
+    internet.input.addEventListener('change', paintInternet);
+    paintInternet();
     const port = input(String(r.port), { style: { width: '90px' }, inputMode: 'numeric' });
     const address = input(r.address || '', { style: { width: '220px' }, placeholder: T('e.g. play.example.com or 26.1.2.3') });
     const publicUrl = input(r.publicUrl || '', { style: { width: '100%' }, placeholder: T('optional: the address players should use') });
@@ -28,6 +35,7 @@ export function registrationCard() {
         const res = await post('/api/registration', {
           enabled: on.checked, port: Number(port.value) || 0,
           address: address.value.trim(), publicUrl: publicUrl.value.trim(), clientUrl: clientUrl.value.trim(),
+          allowInternet: internet.checked,
           maxAccountsPerIp: Number(max.value) || 0, windowMinutes: Number(window.value) || 0
         });
         paint(res);
@@ -38,6 +46,7 @@ export function registrationCard() {
 
     const parts = [
       h('div', {}, on),
+      h('div', { style: { marginTop: '2px' } }, internet, internetNote),
       h('div.row', { style: { alignItems: 'flex-end', flexWrap: 'wrap' } },
         field(T('Public port'), port),
         field(T('Advertised realm address'), address),
@@ -51,7 +60,7 @@ export function registrationCard() {
         field(T('Client download link'), clientUrl,
           T('Use a direct client download or launcher page. Leave it empty to show the official CoA download page.'))),
       h('div.small.muted', {},
-        T('The realm address is written into realmlist.wtf and Config.wtf. The authserver sends the address from Settings > Play with others, so set the same address there too; players cannot log in with 127.0.0.1.')),
+        T('The realm address is written into realmlist.wtf and Config.wtf. The authserver sends the address from Access > Server network, so set the same address there too; players cannot log in with 127.0.0.1.')),
       h('div.small.muted', {},
         T('Behind a tunnel or reverse proxy, all players may look like one address to the registration limit; set it to 0 to allow unlimited registrations.'))
     ];
@@ -73,7 +82,7 @@ export function registrationCard() {
       parts.push(h('div.small.bad', {}, r.error || T('The setting is on, but the public page is not running. Another program may already use the port, or the app was just started. Save again to retry.')));
     }
 
-    if (!r.patch && !r.clientPack) parts.push(h('div.small.muted', {}, T('No client patch is available yet. Build the client patch under Client first; players can still download realmlist.wtf and Config.wtf.')));
+    if (!r.patch && !r.clientPack) parts.push(h('div.small.muted', {}, T('No client patch is available yet. Build the client patch under Client build first; players can still download realmlist.wtf and Config.wtf.')));
     const packState = r.clientPack
       ? F('Player client pack ready ({0}, {1}).', (r.clientPackSize / 1024 / 1024).toFixed(1) + ' MB', r.clientPackAt || '')
       : T('No player client pack built yet. The portal falls back to the client patch ZIP.');

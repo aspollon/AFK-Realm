@@ -12,15 +12,18 @@ import { helpButton } from './help.js';
 
 const sections = [
   ['server', () => T('Server'), 'server'],
+  ['players', () => T('Players'), 'accounts'],
+  ['client', () => T('Client build'), 'client'],
+  ['modules', () => T('Modules & races'), 'modules'],
   ['bots', () => T('Bots'), 'bots'],
-  ['settings', () => T('Settings'), 'settings'],
-  ['modules', () => T('Modules'), 'modules'],
   ['gm', () => T('Game master'), 'gamemaster'],
-  ['accounts', () => T('Accounts'), 'accounts'],
   ['database', () => T('Database'), 'database'],
+  ['access', () => T('Access'), 'globe'],
   ['maintenance', () => T('Maintenance'), 'maintenance'],
 ];
 
+// Old links and stored tabs keep working: "Settings" moved into Server, "Accounts" became Players.
+const aliases = { settings: 'server', accounts: 'players' };
 let current = sessionStorage.getItem('afk-section') || 'server';
 
 export function manager() {
@@ -45,9 +48,7 @@ export function manager() {
     runTask(() => post('/api/server/restart'));
   }, 'restart');
   const consolesBtn = secondary(T('Open server consoles …'), () => import('./consoles.js').then(m => m.consoles()), 'console');
-  // Play: the realm list of the game set to this PC (realmlist.wtf and WTF\Config.wtf), then CoA64.exe started
-  const playBtn = secondary(T('Play'), () => playGame(), 'client');
-  if (meta.remote || !meta.windows) playBtn.style.display = 'none';
+  // Client build uses this: set the realm list to this PC, then start CoA64.exe for a quick test.
   async function playGame(folder) {
     if (folder === undefined && !s().world && !await confirm(T('The game world is not running yet. Start the game anyway? You can log in once the server is up.'))) return;
     let r;
@@ -62,7 +63,7 @@ export function manager() {
   const notice = h('div.notice.pre');
   const banners = h('div');
   const bar = h('div.statusbar', {}, h('div.pills', {}, pills.db.el, pills.auth.el, pills.world.el),
-    h('div.row', { style: { marginTop: '12px' } }, startBtn, stopBtn, restartBtn, consolesBtn, playBtn), uptime, notice, banners);
+    h('div.row', { style: { marginTop: '12px' } }, startBtn, stopBtn, restartBtn, consolesBtn), uptime, notice, banners);
 
   const main = h('div.main', {}, bar, content);
   const el = h('div.frame', {}, sidebar, main);
@@ -80,6 +81,8 @@ export function manager() {
   }
 
   function selectSection(key) {
+    key = aliases[key] || key;
+    if (!sections.some(x => x[0] === key)) key = 'server';
     current = key;
     sessionStorage.setItem('afk-section', key);
     drawNav();
@@ -92,18 +95,17 @@ export function manager() {
     sectionEls = {};
     switch (key) {
       case 'server': return serverSection();
+      case 'players': return accountsSection();
+      case 'client': return clientSection();
       case 'bots': { const box = h('div'); import('./bots.js').then(m => replace(box, m.dashboard())); return [box]; }
-      case 'settings': return settingsSection();
       case 'modules': return modulesSection();
       case 'gm': return [card(T('Game master tools'), T('Help players on the running server: give, complete and reward quests (found by NPC name or around a character), unstuck, revive, level, gold and mail, announcements, and a console for every other GM command.'), 'gamemaster',
         primary(T('Open game master tools …'), () => { if (!s().db) return alert(T('The database is not running. Start the server first.')); import('./gm.js').then(m => m.gameMaster()); }))];
-      case 'accounts': return accountsSection();
       case 'database': return [
         card(T('Database editor'), T('Look into the server\'s tables, change values and run SQL without a separate program. Read-only until you allow changes; meant for people who know what the tables are for - a wrong change can break the server, so back it up first.'), 'database',
           primary(T('Open the database editor …'), () => { if (!s().db) return alert(T('The database is not running. Start the server first.')); import('./database.js').then(m => m.databaseEditor()); })),
-        card(T('Backups'), F('Before every update and module change {0} saves the whole server: programs, settings, all databases. Restore one when something went wrong.', meta.product), 'database',
-          secondary(T('Backups …'), () => import('./backups.js').then(m => m.backups()))),
       ];
+      case 'access': return accessSection();
       case 'maintenance': return maintenanceSection();
     }
     return [];
@@ -134,6 +136,7 @@ export function manager() {
     const mapState = h('div');
     sectionEls.mapState = mapState;
     const out = [
+      ...serverSettingsCards(),
       card(T('Server presets'), T('Install a complete module and settings set with one click. The built-in AFK Realm preset installs the modules made for AFK Realm; save your own server as a preset or share it with another admin.'), 'server',
         primary(T('Open server presets ...'), () => import('./presets.js').then(x => x.presetsDialog()))),
       meta.windows ? null : card(T('Linux: faster databases'), T('On Linux, the database and world server often run noticeably faster with jemalloc, and Redis helps with caching. Install them once; this is a recommendation, not a requirement.'), 'server',
@@ -144,7 +147,6 @@ export function manager() {
         planState, postpone),
       card(T('Map data'), T('The worldserver needs the maps, vmaps and mmaps of the game and CoA\'s own DBC tables. They are made once from your game client.'), 'globe',
         mapState, secondary(T('Create map data from the game client …'), mapDataDialog)),
-      (() => { const box = h('div'); import('./registration.js').then(m => replace(box, m.registrationCard())); return box; })(),
     ];
     paintServer();
     return out;
@@ -181,12 +183,11 @@ export function manager() {
     if (job && job.ok) alert(job.message);
   }
 
-  // ---- settings ----
-  function settingsSection() {
+  // ---- server settings ----
+  function serverSettingsCards() {
     const name = input('', { maxLength: 32, style: { width: '240px' } });
     const nameNote = note();
-    const addr = input('', { style: { width: '240px' } });
-    get('/api/realm').then(r => { if (r.name != null) name.value = r.name; if (r.address != null) addr.value = r.address; }).catch(() => { });
+    get('/api/realm').then(r => { if (r.name != null) name.value = r.name; }).catch(() => { });
     return [
       card(T('Server settings'), T('XP and drop rates, Playerbots, convenience options and every other setting of the worldserver and its modules, each with its description.'), 'settings',
         primary(T('Open server settings …'), () => import('./settings.js').then(m => m.settingsDialog()))),
@@ -195,14 +196,32 @@ export function manager() {
           const j = await runTask(() => post('/api/realm/name', { name: name.value }));
           if (j && j.ok) setNote(nameNote, j.message, 'ok');
         })), nameNote),
-      card(T('Play with others'), meta.windows
-        ? F('Enter the address other players use to reach your PC, for example your Radmin VPN or Hamachi IP (26.x.x.x / 25.x.x.x) or your LAN IP. {0} then adjusts everything needed and allows the servers through the Windows Firewall. You keep playing via 127.0.0.1 yourself. Other players put this address into their realmlist.wtf.', meta.product)
-        : F('Enter the address other players use to reach this computer, for example its LAN IP or a VPN address. {0} then adjusts everything needed. You keep playing via 127.0.0.1 yourself. Other players put this address into their realmlist.wtf.', meta.product), 'globe',
-        h('div.row', {}, h('span', { style: { width: '190px' } }, T('Realm address')), addr, secondary(T('Apply'), async () => {
-          const j = await runTask(() => post('/api/realm/address', { address: addr.value }));
-          if (j && j.ok) alert(j.message);
-        }))),
     ];
+  }
+
+  // ---- client build ----
+  function clientSection() {
+    const st = s();
+    const clientState = h('div.hint.warn');
+    sectionEls.clientState = clientState;
+    const clientBtn = secondary(st.clientButton || T('Game client …'), () => import('./client.js').then(x => x.clientDialog()), 'client');
+    sectionEls.clientBtn = clientBtn;
+    const testBtn = secondary(T('Test client …'), () => playGame(), 'play');
+    if (meta.remote || !meta.windows) testBtn.style.display = 'none';
+    const out = [
+      card(T('Client build'), T('Build and test the client patch from the server\'s working client. The public page offers the finished files to players.'), 'client',
+        clientState,
+        h('div.row', {}, clientBtn, testBtn),
+        h('div.small.muted', {}, T('The game client on this PC is the source for the client patch. Keep it up to date and closed while the patch is built.'))),
+    ];
+    paintClient();
+    return out;
+  }
+
+  function paintClient() {
+    const st = s();
+    if (sectionEls.clientState) { sectionEls.clientState.textContent = st.clientState || ''; sectionEls.clientState.classList.toggle('hidden', !st.clientState); }
+    if (sectionEls.clientBtn && st.clientButton) sectionEls.clientBtn.lastChild.textContent = st.clientButton;
   }
 
   // ---- modules ----
@@ -211,10 +230,6 @@ export function manager() {
     const m = st.modules || {};
     const setup = (file, fn) => () => import('./' + file).then(x => x[fn]());
     const moduleCard = (on, title, text, ic, btn) => on ? h('div', {}, (() => { const c = card(title, text, ic, btn); c.classList.add('stripe'); return c; })()) : null;
-    const clientState = h('div.hint.warn');
-    sectionEls.clientState = clientState;
-    const clientBtn = secondary(st.clientButton || T('Game client …'), () => import('./client.js').then(x => x.clientDialog()), 'client');
-    sectionEls.clientBtn = clientBtn;
     const coaBtn = primary(st.coaButton || T('Install / update CoA Custom ...'), () => import('./coa.js').then(x => x.coaDialog()), 'client');
     sectionEls.coaBtn = coaBtn;
     const racesBtn = secondary(st.racesButton || T('Base races …'), () => import('./base.js').then(x => x.baseRacesDialog()));
@@ -237,8 +252,6 @@ export function manager() {
         primary(T('Set up Azeroth flying …'), setup('setups.js', 'flyingSetup'))),
       moduleCard(m.immersion, T('Immersion Life'), T('The population of cities and towns, questing, legendary residents, PvP Life and Fishing Life for mod-playerbots-immersion. PvP Life and Fishing Life are off by default; the legendary residents are on.'), 'accounts',
         primary(T('Set up Immersion Life ...'), setup('setups.js', 'immersionSetup'))),
-      card(T('Game client'), F('Some modules bring an add-on or a patch for the game client (for example World Journey\'s map levels and tooltips, or the class choice of the classic classes). {0} puts them into your game and clears its cache when a module asks for it; for other players it packs them into a ZIP.', meta.product), 'client',
-        clientState, clientBtn),
     ];
     paintModules();
     return out;
@@ -246,8 +259,6 @@ export function manager() {
 
   function paintModules() {
     const st = s();
-    if (sectionEls.clientState) { sectionEls.clientState.textContent = st.clientState || ''; sectionEls.clientState.classList.toggle('hidden', !st.clientState); }
-    if (sectionEls.clientBtn && st.clientButton) sectionEls.clientBtn.lastChild.textContent = st.clientButton;
     if (sectionEls.coaBtn && st.coaButton) sectionEls.coaBtn.lastChild.textContent = st.coaButton;
     if (sectionEls.racesBtn && st.racesButton) sectionEls.racesBtn.lastChild.textContent = st.racesButton;
   }
@@ -270,9 +281,33 @@ export function manager() {
     ];
   }
 
+  // ---- access ----
+  function accessSection() {
+    const out = [
+      (() => { const box = h('div'); import('./registration.js').then(m => replace(box, m.registrationCard())); return box; })(),
+      serverNetworkCard(),
+    ];
+    if (!meta.remote) out.push((() => { const box = h('div'); import('./remote.js').then(m => replace(box, m.remoteCard())); return box; })());
+    return out;
+  }
+
+  function serverNetworkCard() {
+    const addr = input('', { style: { width: '240px' } });
+    get('/api/realm').then(r => { if (r.address != null) addr.value = r.address; }).catch(() => { });
+    return card(T('Server network'), meta.windows
+      ? F('Enter the address other players use to reach your PC, for example your Radmin VPN or Hamachi IP (26.x.x.x / 25.x.x.x) or your LAN IP. {0} then adjusts everything needed and allows the servers through the Windows Firewall. You keep playing via 127.0.0.1 yourself. Other players put this address into their realmlist.wtf.', meta.product)
+      : F('Enter the address other players use to reach this computer, for example its LAN IP or a VPN address. {0} then adjusts everything needed. You keep playing via 127.0.0.1 yourself. Other players put this address into their realmlist.wtf.', meta.product), 'globe',
+      h('div.row', {}, h('span', { style: { width: '190px' } }, T('Realm address')), addr, secondary(T('Apply'), async () => {
+        const j = await runTask(() => post('/api/realm/address', { address: addr.value }));
+        if (j && j.ok) alert(j.message);
+      })));
+  }
+
   // ---- maintenance ----
   function maintenanceSection() {
     return [
+      card(T('Backups'), F('Before every update and module change {0} saves the whole server: programs, settings, all databases. Restore one when something went wrong.', meta.product), 'database',
+        secondary(T('Backups …'), () => import('./backups.js').then(m => m.backups()))),
       card(T('Updates'), T('Checks the CoA core, Playerbots and your modules for new versions; the server is backed up first and rebuilt only when something changed.'), 'maintenance',
         h('div.row', {},
           primary(T('Check for updates and install'), () => engine('Update', T('Check for updates?\n\nIf there are new versions of CoA or Playerbots, the current server is backed up first and then recompiled, which can take a while. A running server is stopped cleanly first.') + bleedingEdge())),
@@ -282,7 +317,6 @@ export function manager() {
         h('div.row', {},
           secondary(T('Repair setup'), () => engine('Setup', T('Set up the database and configuration again (without recompiling)?\n\nCharacters and accounts are kept.'))),
           secondary(T('Reset random bots …'), () => resetBots()))),
-      meta.remote ? null : (() => { const box = h('div'); import('./remote.js').then(m => replace(box, m.remoteCard())); return box; })(),
       card(T('Files'), T('The server\'s folder and its logs, or another server.'), 'server',
         h('div.row', {},
           meta.remote ? null : secondary(T('Open folder'), () => post('/api/open', { what: 'folder' }).then(r => { if (!r.ok) alert(r.path); })),
@@ -309,7 +343,7 @@ export function manager() {
     if (st.racesBanner) banners.appendChild(h('button.banner', { type: 'button', onclick: () => import('./coa.js').then(x => x.missingRacesDialog(st.racesBanner)) }, st.racesBanner.text));
     if (st.moduleBanner) banners.appendChild(h('button.banner', { type: 'button', onclick: () => import('./modules.js').then(x => x.installModules(st.moduleBanner.install, st.moduleBanner.text)) }, st.moduleBanner.text));
     drawNav();
-    paintServer(); paintModules();
+    paintServer(); paintClient(); paintModules();
     offers();
   }
 

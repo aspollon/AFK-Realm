@@ -58,7 +58,7 @@ When the installation is finished, three things are left to do in the server man
 
 ## 3. Starting and stopping the server
 
-The **Server management** has a side bar on the left with its parts: **Server** (scheduled restart, map data), **Settings** (server settings, server name, playing with others), **Modules** (modules, their setup pages, the game client), **Game master**, **Accounts**, **Database** (database editor, backups) and **Maintenance** (updates, repair, bot reset, folders). A small mark beside *Modules* or *Maintenance* says that something waits there, for example an update or an add-on for your game.
+The **Server management** has a side bar on the left with its parts: **Server** (settings, server name, presets, scheduled restart, map data), **Players** (accounts and characters), **Client build** (the game client, client patch, test client), **Modules & races** (modules and their setup pages), **Bots**, **Game master**, **Database** (editor), **Access** (player access, server network, admin access) and **Maintenance** (backups, updates, repair, bot reset, folders). A small mark beside *Modules* or *Maintenance* says that something waits there, for example an update or an add-on for your game.
 
 **Several servers.** The top of the side bar shows the server you are looking at, by its server name. Click it for the list of every server you have opened in AFK Realm and switch to another with one click – a test copy next to your real server, say. *Add an existing server …* adds a server folder to the list, *Install a new server …* starts the installation of another one, and *Remove from this list* takes a server off the list (its folder is not touched). A server you switch away from keeps running; AFK Realm then looks after the one shown, and the scheduled restart of the other waits until you switch back. Two servers cannot run at the same time on the same ports: stop one before you start the other.
 
@@ -134,7 +134,7 @@ A separate window runs the extraction and moves the result into the server when 
 
 ## 5. Server settings
 
-**Settings → Open server settings …** edits the configuration files of the worldserver, Playerbots and every module, without opening a text file.
+**Server → Open server settings …** edits the configuration files of the worldserver, Playerbots and every module, without opening a text file.
 
 - The list on the left chooses a file. **★ Popular settings** collects the options people change most: experience, drop and reputation rates, number and levels of bots, flight paths, cross-faction play.
 - **Search** looks through all files at once.
@@ -352,7 +352,7 @@ When *World Journey*, the *auction house bots*, the *classic classes* or the *cu
 
 - **Level window**: how far below and above a character the creatures of a zone stand once they are lifted to it. The bar shows it for a character of the level you choose.
 - **Difficulty**: four presets (*Relaxed, Standard, Challenging, Hard*), **Extra hard** beside them, and the multipliers for health, damage, spell damage and armor by rank. With a part of the world chosen and **Own values for this part of the world** switched on, that part gets values of its own.
-  **Extra hard** switches CoA's own creature multipliers on (`CoA.CreatureScaling.Enable` in `coa.conf`). They come on top of whichever preset is chosen, by health and damage, for the open world, dungeons and raids; the page shows the values your `coa.conf` holds. They are CoA's and may change with its updates – when they came, creatures of the open world had 2.5 times their health and hit twice as hard. World Journey switches them off when it is installed; the values themselves are set in `coa.conf` (*Settings*). It needs a CoA core from October 2026 or later; with an older one the button is greyed out.
+  **Extra hard** switches CoA's own creature multipliers on (`CoA.CreatureScaling.Enable` in `coa.conf`). They come on top of whichever preset is chosen, by health and damage, for the open world, dungeons and raids; the page shows the values your `coa.conf` holds. They are CoA's and may change with its updates – when they came, creatures of the open world had 2.5 times their health and hit twice as hard. World Journey switches them off when it is installed; the values themselves are set in `coa.conf` (Server). It needs a CoA core from October 2026 or later; with an older one the button is greyed out.
 
   ![Difficulty](screenshots/26-world-journey-difficulty.png)
 
@@ -362,7 +362,7 @@ When *World Journey*, the *auction house bots*, the *classic classes* or the *cu
 
 ![Auction house bots setup](screenshots/29-auction-setup.png)
 
-**Custom races** reads the races from your game client (*Game client* names its folder): every race it carries a body for, beyond the stock races – after an update of the game, open the page again and it reads them anew. They are grouped by how their model shows armour; a race the module knows nothing about yet is listed under *Not tried yet*, a race without a female body under *Male only*. Switch a race on and pick the stock race it leans on (its start, quests, racial abilities and faction). Races are bits of a 32-bit mask, so the game knows race numbers up to 31: a race with a row below 32 in the client's race table keeps that number (six in the CoA client), the others take one of the numbers no row has (15 in the CoA client) when you switch them on – the page counts them and says so when all are taken. A race switched off keeps its number, so its characters get their race back; **Free its number** gives it up for another race (its characters stay their base race for good). After a change, build the client patch anew (*Game client → Install*).
+**Custom races** reads the races from your game client (*Client build → Game client* names its folder): every race it carries a body for, beyond the stock races – after an update of the game, open the page again and it reads them anew. They are grouped by how their model shows armour; a race the module knows nothing about yet is listed under *Not tried yet*, a race without a female body under *Male only*. Switch a race on and pick the stock race it leans on (its start, quests, racial abilities and faction). Races are bits of a 32-bit mask, so the game knows race numbers up to 31: a race with a row below 32 in the client's race table keeps that number (six in the CoA client), the others take one of the numbers no row has (15 in the CoA client) when you switch them on – the page counts them and says so when all are taken. A race switched off keeps its number, so its characters get their race back; **Free its number** gives it up for another race (its characters stay their base race for good). After a change, build the client patch anew (*Client build → Game client → Install*).
 
 > **New races need three steps.** Saving the page is not enough: (1) when you save, the *Game client* window opens by itself – click **Install**, which puts the races into your game's client patch; (2) restart the server so it reads them; (3) give every other player the new ZIP (*Export as ZIP …* in the same window) – a player whose game lacks the new patch does not see the races on the race choice.
 
@@ -380,13 +380,13 @@ When *World Journey*, the *auction house bots*, the *classic classes* or the *cu
 
 ![Custom races](screenshots/36-custom-races.png)
 
-**Classic classes** has one page: which of the nine classic classes can be created. The random bots are created in the same ones. After a change, build the client patch anew (*Game client → Install*): the class choice of the game shows the classes the patch was built with; the server refuses the others either way.
+**Classic classes** has one page: which of the nine classic classes can be created. The random bots are created in the same ones. After a change, build the client patch anew (*Client build → Game client → Install*): the class choice of the game shows the classes the patch was built with; the server refuses the others either way.
 
 ![Classic classes setup](screenshots/34-classic-classes.png)
 
 ### The game client: add-ons and the client patch
 
-Some modules bring something for the game – World Journey an add-on that shows its zone levels on the world map and the right values of gems and enchantments, the classic classes a change to the class choice of the character creation. **Modules → Game client …** takes care of both:
+Some modules bring something for the game – World Journey an add-on that shows its zone levels on the world map and the right values of gems and enchantments, the classic classes a change to the class choice of the character creation. **Client build → Game client …** takes care of both:
 
 - **Game folder**: the folder of your game, the one with the `Data` folder. AFK Realm asks once and remembers it.
 - The list shows every add-on of the installed modules and whether your game has it (*up to date*, *older version*, *not installed*). An add-on of a module you removed is listed as *will be taken out*.
@@ -425,7 +425,7 @@ Export and import are how you move a player from one server to another, for exam
 
 ### Server name
 
-Under **Settings → Server name** you can rename the server at any time: type the new name and click **Rename**, then stop and start the server. The name can have up to 32 characters (English letters, digits, spaces, hyphen, apostrophe, dot).
+Under **Server → Server name** you can rename the server at any time: type the new name and click **Rename**, then stop and start the server. The name can have up to 32 characters (English letters, digits, spaces, hyphen, apostrophe, dot).
 
 ![Server name](screenshots/18-server-name.png)
 
@@ -433,10 +433,10 @@ The game client stores each character's interface settings in a folder named aft
 
 ### Letting others in
 
-By default only you can reach the server (`127.0.0.1`). To let others in:
+AFK Realm detects your LAN IPv4 and configures the server and the public registration page for it, so players in your local network can register and log in. To let others in from outside your network:
 
 1. Connect the PCs through a VPN such as Radmin VPN or Hamachi, or use your LAN.
-2. Under **Settings → Play with others**, enter the address the others use to reach your PC (the VPN address of your PC, or its LAN address) and click **Apply**.
+2. Under **Access → Server network**, enter the address the others use to reach your PC (the VPN address of your PC, or its LAN address) and click **Apply**.
 3. Stop and start the server.
 4. The other players set this address in their `realmlist.wtf`. You keep using `127.0.0.1`.
 
@@ -448,7 +448,7 @@ AFK Realm also allows the servers through the Windows Firewall.
 
 **Updating AFK Realm itself.** When the banner says a new AFK Realm is available, click it and confirm. AFK Realm downloads the new version from GitHub, checks that the file is complete and unaltered, replaces itself and restarts; the line under the server buttons then confirms the new version. A running server keeps running. If the download fails, nothing is changed and AFK Realm offers to open the download page instead.
 
-**Database → Backups …** lists the backups. A backup holds the server programs, the settings and all databases, together with the versions they were built from.
+**Maintenance → Backups …** lists the backups. A backup holds the server programs, the settings and all databases, together with the versions they were built from.
 
 - One is made automatically before every update and every module change.
 - **Back up now** makes one by hand, for example before you try something risky.
@@ -500,7 +500,7 @@ C:\CoA-Server\
 | The worldserver closes while starting | AFK Realm shows the end of its log. The full log is `Server\Server.log`. |
 | *DataDir does not hold the CoA client DBC set* | *Create map data* → tick *Only refresh the CoA DBC tables*. |
 | Black screen at the realm selection | Run *Check for updates and install*. |
-| Friends cannot connect | Check the realm address under *Play with others*, restart the server, check the VPN on both PCs. |
+| Friends cannot connect | Check the realm address under *Access → Server network*, restart the server, check the VPN on both PCs. |
 | A value changed in the database editor does not show in the game | The worldserver reads most world tables only at its start: stop and start the server (see [Database editor](#7-database-editor)). For items, also delete the game client's `Cache` folder. |
 | Game master tools: *Stop and start the server once* | Stop and start the server through AFK Realm. |
 | A module does not compile | Nothing to do: it was taken out again. It does not fit CoA. |

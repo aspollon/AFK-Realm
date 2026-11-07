@@ -50,8 +50,8 @@ Pre-built repacks go stale quickly. Building from source keeps you on the latest
 - **Bot reset**: one click deletes all random bots with their characters, guilds and arena teams (your own characters are kept); new bots are created at the next start
 - **Map data**: extracts maps, vmaps, mmaps and the CoA client DBC tables from your game client with one click
 - **Server name**: choose the name shown in the realm list during installation and change it later with one click
-- **Play with others**: set a VPN or LAN address (e.g. Radmin VPN); the tool configures the realm, the CoA remote-client setting and the Windows Firewall
-- **Public registration**: start a browser-only registration page on its own port, with the AFK Realm artwork as background; players create an account, get the official client link, a complete AFK client pack for module add-ons/patches (custom races included), `realmlist.wtf` and a `Config.wtf` realmList line without installing AFK Realm or giving an email address. Returning players log in again to re-download the files and see when the client pack was rebuilt.
+- **Server network (Access)**: set a VPN or LAN address (e.g. Radmin VPN); the tool configures the realm, the CoA remote-client setting and the Windows Firewall
+- **Player access (Access)**: start a browser-only registration page on its own port, with the AFK Realm artwork as background; players create an account, get the official client link, a complete AFK client pack for module add-ons/patches (custom races included), `realmlist.wtf` and a `Config.wtf` realmList line without installing AFK Realm or giving an email address. Returning players log in again to re-download the files and see when the client pack was rebuilt.
 - **Remote admin login** uses the same artwork and centered form; the form sits below the AFK Realm lettering.
 - **Updates**: shows when newer server code or a newer AFK Realm release is available and installs a new AFK Realm with one click; checks the core, Playerbots and your installed modules, and rebuilds only when something changed
 - **Backups and rollback**: before every update the server is saved (programs, settings, all databases and their versions); if a new version causes problems, one click restores the previous state. Backups can also be made by hand; the newest ones are kept — three by default, the number is up to you
@@ -93,7 +93,7 @@ The short version is below; the [user guide](docs/MANUAL.md) explains every step
 
 **On Linux:** download `AFK-Realm-linux-x64` (`AFK-Realm-linux-arm64` for ARM) from the [Releases](../../releases) page, run `chmod +x AFK-Realm-linux-x64` once and start it with `./AFK-Realm-linux-x64`. It opens in an app window or your browser and works like the Windows version; if build tools are missing, it shows the one command that installs them. Choose a folder in your home folder without spaces, e.g. `~/CoA-Server`.
 
-You need the CoA game client yourself, or let **Game client → Download client …** fetch the public CoA client for you. The client data is not part of this project; its own terms apply.
+You need the CoA game client yourself, or let **Client build → Game client → Download client …** fetch the public CoA client for you. The client data is not part of this project; its own terms apply.
 
 ## How it works
 
@@ -169,7 +169,7 @@ C:\CoA-Server\
 - **Black screen at the realm selection**: the core is too old for the client's realm cards; run *Check for updates and install*.
 - **A module does not compile**: it was taken out again automatically and the server is unchanged; the first compiler error in `logs\install.log` names the problem. Many modules are written for the regular AzerothCore and do not fit CoA.
 - **Game master tools say "Stop and start the server once"**: the line to the server is set up when the server is started through AFK Realm; a server that was started earlier or with `START-SERVER.cmd` before the first such start does not have it yet.
-- **Friends cannot connect**: set the realm address under *Play with others*, restart the server, and make sure the VPN is connected on both PCs.
+- **Friends cannot connect**: set the realm address under *Access → Server network*, restart the server, and make sure the VPN is connected on both PCs.
 
 ## Translations
 

@@ -56,6 +56,7 @@ namespace CoAInstaller.Web
         static bool tickBusy;
 
         static string lastSent;
+        static bool realmDefaultsTried;
         public static object Status;
 
         public static void Open(Install inst)
@@ -68,7 +69,7 @@ namespace CoAInstaller.Web
                 restartAt = null; restartTold.Clear(); restartSnooze = DateTime.MinValue; memoryOver = 0; lastAutoRestart = "";
                 tickText = null; tickAsked = DateTime.MinValue;
                 Updates = null; ClientNews = CoaNews = ModuleNews = RacesNews = null; ModuleNewsInstall = new string[0]; RacesNewsIds = new int[0]; ClientPending = ""; OfferClient = false; BotOffer = new List<KeyValuePair<string, string>>();
-                Notice = ""; lastSent = null;
+                Notice = ""; lastSent = null; realmDefaultsTried = false;
             }
             Settings.LastInstall = inst.Root;
             L.AddModules(ModuleCatalog.ModulesDir(inst));
@@ -86,6 +87,8 @@ namespace CoAInstaller.Web
             CheckForUpdates();
             CheckDownloadUpdates();
             CheckClient(true);
+            try { RegistrationPortal.EnsureDefaults(inst); } catch { }
+            try { RegistrationPortal.EnsureRealmDefaults(inst); } catch { }
             try { RegistrationPortal.StartIfEnabled(inst); } catch (Exception ex) { Program.StartLog("public registration: " + ex.Message); }
         }
 
@@ -130,6 +133,10 @@ namespace CoAInstaller.Web
                 maps = inst.HasMapData; dbc = inst.HasClientDbc;
             }
             catch { }
+            if (db && !realmDefaultsTried)
+            {
+                try { realmDefaultsTried = RegistrationPortal.EnsureRealmDefaults(inst); } catch { }
+            }
             if (!worldReady) { tickText = null; tickAsked = DateTime.MinValue; }
             else RefreshTick(inst, ctl);
 
@@ -183,7 +190,7 @@ namespace CoAInstaller.Web
                 clientPending = ClientPending.Length > 0,
                 offerClient = OfferClient,
                 botOffer = BotOffer.Select(b => new { key = b.Key, why = b.Value }).ToArray(),
-                badges = new { modules = ClientPending.Length > 0 ? "!" : null, maintenance = serverBanner != null ? "new" : null },
+                badges = new { client = ClientPending.Length > 0 ? "!" : ClientNews != null ? "new" : null, modules = CoaNews != null ? "new" : null, maintenance = serverBanner != null ? "new" : null },
                 modules = new
                 {
                     journey = has("mod-world-journey"), auction = has("mod-playerbots-auctions"), classic = has("mod-classic-classes"),
@@ -379,7 +386,9 @@ namespace CoAInstaller.Web
                 try
                 {
                     ctl.StopAll(st, false);
-                    ctl.StartDatabase(st); ctl.StartAuth(st);
+                    ctl.StartDatabase(st);
+                    try { RegistrationPortal.EnsureRealmDefaults(inst); } catch { }
+                    ctl.StartAuth(st);
                     try { AdminLink.Prepare(inst); } catch { }
                     Process world = ctl.StartWorld(st);
                     st(L.T("the worldserver is loading."));

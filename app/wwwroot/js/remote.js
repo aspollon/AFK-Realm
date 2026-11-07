@@ -4,7 +4,7 @@ import { card, primary, secondary, toggle, input, password, field, alert, toast 
 
 export function remoteCard() {
   const body = h('div', {}, h('div.muted.small', {}, T('Reading …')));
-  const el = card(T('Access from other computers'),
+  const el = card(T('Admin access'),
     F('Manage this server from your laptop or another PC in your home network or VPN, in the browser. {0} asks for a password there. It is meant for your own networks, not for the internet.', meta.product), 'globe', body);
   load();
 

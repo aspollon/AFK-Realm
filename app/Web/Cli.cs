@@ -65,7 +65,9 @@ namespace CoAInstaller.Web
                         Console.WriteLine("  " + L.T("Game world (worldserver)") + ": " + (ctl.World == null ? L.T("stopped") : Net.PortOpen(ctl.WorldPort) ? L.T("running") : L.T("loading …")));
                         return 0;
                     case "start":
-                        ctl.RestoreAfterBotReset(); ctl.StartDatabase(say); ctl.StartAuth(say);
+                        ctl.RestoreAfterBotReset(); ctl.StartDatabase(say);
+                        try { RegistrationPortal.EnsureRealmDefaults(server); } catch { }
+                        ctl.StartAuth(say);
                         if (ctl.World == null) { try { AdminLink.Prepare(server); } catch { } }
                         var world = ctl.StartWorld(say);
                         say(L.F("The worldserver is loading. You can keep using {0} meanwhile.", Product.Name));

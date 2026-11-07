@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.2.77
+
+- **Clearer navigation:** **Server**, **Players**, **Client build**, **Modules & races**, **Bots**, **Game master**, **Database**, **Access** and **Maintenance**. The separate Overview page was removed; the server pills and Start/Stop/Restart/Consoles stay in the top bar on every page.
+- **Server** now contains server settings, server name, presets, scheduled restart and map data. **Players** contains account creation and player accounts. **Client build** contains the server's working client, the client-patch build and an admin-only **Test client** action; the global Play button is gone.
+- **Access** groups **Player access** (public registration), **Server network** (realm address) and **Admin access** (remote login). Backups moved to **Maintenance**; the **Database** page now only contains the editor.
+- **LAN-ready defaults:** on the first open without a registration config, AFK Realm creates a public registration config on port `47820` with the detected LAN IPv4 address and starts it. The Windows Firewall rule is limited to the local subnet; internet access is an explicit **Allow internet access** toggle.
+- **The realm address is set automatically before the authserver starts** when it still points to `127.0.0.1`: the detected LAN IPv4 is written to the realm list, bind addresses and the CoA remote-client setting. Existing custom addresses are kept. Account registration starts the database if needed.
+- **Translations:** all new and changed texts are present in German, Spanish, French, Portuguese (Brazil), Russian, Simplified Chinese and the template.
+
 ## 1.2.76
 
 - **The embedded DungeonClear add-on no longer looks outdated after every AFK Realm update.** Its installer version marker (`.afk-version`) is no longer part of the content fingerprint; only the add-on files themselves decide whether an update is needed. A changed AFK version alone no longer produces the warning.

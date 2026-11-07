@@ -18,6 +18,7 @@ namespace CoAInstaller.Web
                     a.Has("address") ? a.Str("address") : old.Address,
                     a.Has("publicUrl") ? a.Str("publicUrl") : old.PublicUrl,
                     a.Has("clientUrl") ? a.Str("clientUrl") : old.ClientUrl,
+                    a.Bool("allowInternet", old.AllowInternet),
                     a.Int("maxAccountsPerIp", old.MaxAccountsPerIp),
                     a.Int("windowMinutes", old.WindowMinutes));
                 return RegistrationPortal.Status(Inst);

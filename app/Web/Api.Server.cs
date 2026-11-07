@@ -181,7 +181,9 @@ namespace CoAInstaller.Web
         /// <summary>Database, authserver, worldserver; then the loading of the world is watched in the background.</summary>
         static void StartWork(Install inst, ServerControl ctl, Action<string> st)
         {
-            ctl.RestoreAfterBotReset(); ctl.StartDatabase(st); ctl.StartAuth(st);
+            ctl.RestoreAfterBotReset(); ctl.StartDatabase(st);
+            try { RegistrationPortal.EnsureRealmDefaults(inst); } catch { }
+            ctl.StartAuth(st);
             if (ctl.World == null) { try { AdminLink.Prepare(inst); } catch { } }
             var world = ctl.StartWorld(st);
             Manager.SetNotice(L.F("The worldserver is loading. You can keep using {0} meanwhile.", Product.Name));

@@ -1,3 +1,15 @@
+# AFK Realm 1.2.77
+
+## A clearer menu and LAN-ready defaults
+
+- **The menu now follows the work:** Server (settings, name, presets, restart, map data), Players, Client build, Modules & races, Bots, Game master, Database, Access and Maintenance.
+- **No separate Overview page.** The database/auth/world status and Start, Stop, Restart and Consoles remain in the top bar on every page.
+- **Client build has the working client, the client patch and Test client.** The global Play button is gone; testing the client is an admin action in Client build and stays hidden on Linux and remote sessions.
+- **Access contains Player access, Server network and Admin access.** Public registration is under Player access, the realm address is under Server network, and remote admin login is under Admin access. Backups are in Maintenance; Database only holds the editor.
+- **Public registration works on a LAN from the first start.** AFK Realm creates the registration config with the detected LAN IPv4 address, enables it on port `47820`, opens the firewall for the local subnet only and offers an explicit **Allow internet access** switch.
+- **The realm address defaults to the LAN IPv4 before the authserver starts** when it still points to `127.0.0.1`, so players on the same network can log in without changing realmlist files first. Custom addresses are kept.
+- **All new texts are translated** into German, Spanish, French, Portuguese (Brazil), Russian and Simplified Chinese.
+
 # AFK Realm 1.2.76
 
 ## No more false “DungeonClear is outdated” after an AFK update

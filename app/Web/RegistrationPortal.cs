@@ -28,6 +28,7 @@ namespace CoAInstaller.Web
         public string Address { get; set; } = "";
         public string PublicUrl { get; set; } = "";
         public string ClientUrl { get; set; } = "";
+        public bool AllowInternet { get; set; }
         public int MaxAccountsPerIp { get; set; } = 10;
         public int WindowMinutes { get; set; } = 60;
     }
@@ -107,6 +108,7 @@ namespace CoAInstaller.Web
                 address,
                 publicUrl = s.PublicUrl ?? "",
                 clientUrl = s.ClientUrl ?? "",
+                allowInternet = s.AllowInternet,
                 realm = realm,
                 patch,
                 clientPack,
@@ -119,7 +121,7 @@ namespace CoAInstaller.Web
             };
         }
 
-        public static void Apply(Install inst, bool enabled, int port, string address, string publicUrl, string clientUrl, int maxPerIp, int windowMinutes)
+        public static void Apply(Install inst, bool enabled, int port, string address, string publicUrl, string clientUrl, bool allowInternet, int maxPerIp, int windowMinutes)
         {
             if (inst == null) throw new InvalidOperationException(L.T("Open a server first."));
             if (port < 1024 || port > 65535) throw new InvalidOperationException(L.T("Please choose a port between 1024 and 65535."));
@@ -132,7 +134,7 @@ namespace CoAInstaller.Web
             var s = new RegistrationSettings
             {
                 Enabled = enabled, Port = port, Address = (address ?? "").Trim(),
-                PublicUrl = pu, ClientUrl = cu,
+                PublicUrl = pu, ClientUrl = cu, AllowInternet = allowInternet,
                 MaxAccountsPerIp = maxPerIp, WindowMinutes = windowMinutes
             };
             lock (gate)
@@ -173,12 +175,112 @@ namespace CoAInstaller.Web
             try { ((IDisposable)a).Dispose(); } catch { }
         }
 
+        /// <summary>First-run defaults: make the portal LAN-ready instead of leaving every field empty.</summary>
+        public static void EnsureDefaults(Install inst)
+        {
+            string lan = "";
+            if (!File.Exists(ConfigPath(inst)))
+            {
+                lan = DefaultAddress(inst);
+                var s = new RegistrationSettings
+                {
+                    Enabled = true, Port = DefaultPort, Address = lan,
+                    PublicUrl = lan.Length > 0 ? "http://" + lan + ":" + DefaultPort + "/" : "",
+                    AllowInternet = false
+                };
+                Save(inst, s);
+                return;
+            }
+
+            // An older config may still have empty fields. Fill them once, but never overwrite
+            // an address, port or limit the owner already chose.
+            var current = Load(inst);
+            bool changed = false;
+            if (string.IsNullOrWhiteSpace(current.Address))
+            {
+                lan = DefaultAddress(inst);
+                if (lan.Length > 0) { current.Address = lan; changed = true; }
+            }
+            if (string.IsNullOrWhiteSpace(current.PublicUrl) && !string.IsNullOrWhiteSpace(current.Address))
+            {
+                current.PublicUrl = "http://" + current.Address + ":" + current.Port + "/";
+                changed = true;
+            }
+            if (changed) Save(inst, current);
+        }
+
+        /// <summary>When the realm still points at this PC, use the local network address so LAN players can log in.</summary>
+        public static bool EnsureRealmDefaults(Install inst)
+        {
+            try
+            {
+                string currentAddress = (Accounts.GetRealmAddress(inst) ?? "").Trim();
+                if (currentAddress.Length == 0 || currentAddress == "127.0.0.1" || currentAddress.Equals("localhost", StringComparison.OrdinalIgnoreCase))
+                {
+                    string lan = LanAddress();
+                    if (lan.Length > 0) Accounts.SetRealmAddress(inst, lan);
+                }
+                return true;
+            }
+            catch { return false; }
+        }
+
+        /// <summary>The address players already use, or the detected LAN address when it is still localhost.</summary>
+        static string DefaultAddress(Install inst)
+        {
+            try
+            {
+                string address = (Accounts.GetRealmAddress(inst) ?? "").Trim();
+                if (address.Length > 0 && address != "127.0.0.1" && !address.Equals("localhost", StringComparison.OrdinalIgnoreCase))
+                    return address;
+            }
+            catch { }
+            return LanAddress();
+        }
+
+        /// <summary>The private IPv4 address of this PC, preferring a real LAN interface over VPN adapters.</summary>
+        public static string LanAddress()
+        {
+            string fallback = "";
+            try
+            {
+                foreach (var nic in NetworkInterface.GetAllNetworkInterfaces())
+                {
+                    if (nic.OperationalStatus != OperationalStatus.Up || nic.NetworkInterfaceType == NetworkInterfaceType.Loopback) continue;
+                    var props = nic.GetIPProperties();
+                    bool gateway = props.GatewayAddresses.Any(g => g.Address != null && g.Address.AddressFamily == AddressFamily.InterNetwork && !g.Address.Equals(IPAddress.Any));
+                    foreach (var u in props.UnicastAddresses)
+                    {
+                        if (u.Address.AddressFamily != AddressFamily.InterNetwork || IPAddress.IsLoopback(u.Address)) continue;
+                        string ip = u.Address.ToString();
+                        if (ip.StartsWith("169.254.")) continue;
+                        if (privateAddress(ip))
+                        {
+                            if (gateway) return ip;
+                            if (fallback.Length == 0) fallback = ip;
+                        }
+                        else if (fallback.Length == 0) fallback = ip;
+                    }
+                }
+            }
+            catch { }
+            return fallback;
+        }
+
+        static bool privateAddress(string ip)
+        {
+            IPAddress address;
+            if (!IPAddress.TryParse(ip, out address)) return false;
+            byte[] b = address.GetAddressBytes();
+            return b[0] == 10 || (b[0] == 172 && b[1] >= 16 && b[1] <= 31) || (b[0] == 192 && b[1] == 168);
+        }
+
         static void Start(Install inst, RegistrationSettings s)
         {
             try
             {
                 CheckPort(inst, s.Port);
-                OpenFirewall(s.Port);
+                OpenFirewall(s.Port, s.AllowInternet);
                 var a = Build(inst, s);
                 a.StartAsync().Wait();
                 app = a;
@@ -397,6 +499,7 @@ namespace CoAInstaller.Web
             if (ctl == null || Manager.Inst == null || !string.Equals(Manager.Inst.Root, inst.Root, StringComparison.OrdinalIgnoreCase))
                 ctl = new ServerControl(inst);
             if (ctl.Db == null && !Net.PortOpen(ctl.DbPort)) ctl.StartDatabase(_ => { });
+            try { EnsureRealmDefaults(inst); } catch { }
         }
 
         static string AddressOf(Install inst, RegistrationSettings s)
@@ -521,7 +624,7 @@ namespace CoAInstaller.Web
         {
             string client = ClientAddons.ClientFolder;
             if (string.IsNullOrWhiteSpace(client) || !ClientAddons.IsClientFolder(client))
-                throw new InvalidOperationException(L.T("Choose your game folder under Client first. The client pack is built from your own client."));
+                throw new InvalidOperationException(L.T("Choose your game folder under Client build first. The client pack is built from your own client."));
             if (ClientAddons.ClientRunning(client))
                 throw new InvalidOperationException(L.T("The game or its launcher is running from this folder. Close it before building the player client pack."));
             var addons = ClientAddons.Find(inst, client);
@@ -656,7 +759,7 @@ namespace CoAInstaller.Web
             if (text.Contains("realmlist \r\n") || text.Contains("realmList \"\""))
             {
                 ctx.Response.StatusCode = 404;
-                await ctx.Response.WriteAsync("The realm address is not set yet. Set it in AFK Realm under Settings > Play with others.");
+                await ctx.Response.WriteAsync("The realm address is not set yet. Set it in AFK Realm under Access > Server network.");
                 return;
             }
             ctx.Response.ContentType = "text/plain; charset=utf-8";
@@ -701,15 +804,15 @@ namespace CoAInstaller.Web
 
         const string FirewallRule = "AFK Realm public registration";
 
-        /// <summary>Windows: a port rule for players outside this PC. The portal is meant to be reachable from the
-        /// internet, so unlike the admin page's remote access rule it is not limited to the local subnet.</summary>
-        static void OpenFirewall(int port)
+        /// <summary>Windows: a port rule for the public page. It starts limited to the local network; internet
+        /// access is an explicit opt-in, so an accidentally enabled portal does not open registration to the world.</summary>
+        static void OpenFirewall(int port, bool internet)
         {
             if (!Os.Windows) return;
             try
             {
                 Run("netsh", "advfirewall firewall delete rule name=\"" + FirewallRule + "\"");
-                Run("netsh", "advfirewall firewall add rule name=\"" + FirewallRule + "\" dir=in action=allow protocol=TCP localport=" + port + " remoteip=any profile=any");
+                Run("netsh", "advfirewall firewall add rule name=\"" + FirewallRule + "\" dir=in action=allow protocol=TCP localport=" + port + " remoteip=" + (internet ? "any" : "localsubnet") + " profile=any");
             }
             catch { }
         }
@@ -734,7 +837,7 @@ namespace CoAInstaller.Web
             string title = WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(realm) ? Product.Name : realm);
             string shownAddress = WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(address) ? "not set yet" : address);
             string addressNote = string.IsNullOrWhiteSpace(address)
-                ? "<div class=\"small bad\" style=\"margin-top:10px\">The server address is not set yet. Ask the server owner to set it under Settings &gt; Play with others.</div>"
+                ? "<div class=\"small bad\" style=\"margin-top:10px\">The server address is not set yet. Ask the server owner to set it under Access &gt; Server network.</div>"
                 : "";
             string clientFiles = clientPack
                 ? "<a class=\"button secondary\" id=\"clientUpdateLink\" href=\"/download/client-pack\">AFK client pack (add-ons + patches)</a>"
