@@ -11,7 +11,7 @@
     <OutputType>WinExe</OutputType>
     <AssemblyName>AFK-Realm</AssemblyName>
     <Product>AFK Realm</Product>
-    <Version>1.2.80</Version>
+    <Version>1.2.81</Version>
     <RootNamespace>CoAInstaller</RootNamespace>
     <Nullable>disable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
@@ -36,5 +36,9 @@
     <EmbeddedResource Include="../assets/afk-realm-header.png" LogicalName="CoAInstaller.logo.png" />
     <EmbeddedResource Include="../lang/*.json" LogicalName="CoAInstaller.lang.%(Filename)%(Extension)" />
     <EmbeddedResource Include="wwwroot/**/*" LogicalName="web/%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="SharpCompress" Version="1.0.0" />
+    <PackageReference Include="ZstdSharp.Port" Version="0.8.8" />
   </ItemGroup>
 </Project>

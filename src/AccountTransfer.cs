@@ -32,6 +32,17 @@ namespace CoAInstaller
             public int Items, Rows;
         }
 
+        /// <summary>An account found in a CoASM backup, with the number of characters it would bring.</summary>
+        public sealed class BackupAccount
+        {
+            public int Id;
+            public string Name = "";
+            public int Characters;
+            public string LastLogin = "";
+            public bool IsBot;
+            public bool IsSystem;
+        }
+
         static string Template()
         {
             using (var s = Assembly.GetExecutingAssembly().GetManifestResourceStream("CoAInstaller.account-transfer.sql"))
@@ -175,24 +186,81 @@ namespace CoAInstaller
         public static Summary Import(Install inst, string file, Action<string> status)
         {
             var manifest = ReadManifest(file);
-            var root = DbLogin.FromConfig(inst).AsRoot();
             string temp = Path.Combine(Path.GetTempPath(), "afk-import-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(temp);
             try
             {
                 status(L.T("Reading the account file …"));
                 ZipFile.ExtractToDirectory(file, temp);
-                CreateStaging(inst, root);
-                MySql.RunFile(inst, root, StageAuth, Path.Combine(temp, "auth.sql"));
-                MySql.RunFile(inst, root, StageChars, Path.Combine(temp, "characters.sql"));
+                return ImportSql(inst, Path.Combine(temp, "auth.sql"), Path.Combine(temp, "characters.sql"), manifest["accounts"], status);
+            }
+            finally
+            {
+                try { Directory.Delete(temp, true); } catch { }
+            }
+        }
 
-                status(L.T("Importing the characters with new ids …"));
-                return Transfer(inst, root, Script(StageAuth, StageChars, "acore_auth", "acore_characters", manifest["accounts"], false));
+        /// <summary>Loads the SQL dumps of a CoASM backup into staging and lists the accounts in it.</summary>
+        public static List<BackupAccount> InspectSql(Install inst, string authSql, string charactersSql, string botPrefixes, Action<string> status)
+        {
+            var root = DbLogin.FromConfig(inst).AsRoot();
+            CreateStaging(inst, root);
+            try
+            {
+                status(L.T("Reading the accounts in the CoASM backup …"));
+                MySql.RunFile(inst, root, StageAuth, authSql);
+                MySql.RunFile(inst, root, StageChars, charactersSql);
+                var rows = MySql.Query(inst, root,
+                    "SELECT a.id, a.username, COALESCE(DATE_FORMAT(a.last_login, '%Y-%m-%d %H:%i'), ''), " +
+                    "(SELECT COUNT(*) FROM " + StageChars + ".characters c WHERE c.account = a.id AND (c.deleteDate IS NULL OR c.deleteDate = 0)) " +
+                    "FROM " + StageAuth + ".account a ORDER BY a.username;");
+                var prefixes = (botPrefixes ?? "").Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+                    .Select(p => p.Trim()).Where(p => p.Length > 0).ToList();
+                var list = new List<BackupAccount>();
+                foreach (string row in rows)
+                {
+                    var f = row.Split('\t');
+                    int id, characters;
+                    if (f.Length < 4 || !int.TryParse(f[0], out id) || !int.TryParse(f[3], out characters)) continue;
+                    string name = f[1];
+                    list.Add(new BackupAccount
+                    {
+                        Id = id,
+                        Name = name,
+                        Characters = characters,
+                        LastLogin = f[2],
+                        IsBot = prefixes.Any(p => name.StartsWith(p, StringComparison.OrdinalIgnoreCase)),
+                        IsSystem = name.Equals("AHBOT", StringComparison.OrdinalIgnoreCase) ||
+                                   name.Equals("COAMANAGER", StringComparison.OrdinalIgnoreCase)
+                    });
+                }
+                return list;
             }
             finally
             {
                 DropStaging(inst, root);
-                try { Directory.Delete(temp, true); } catch { }
+            }
+        }
+
+        /// <summary>Imports the named account(s) from SQL dumps prepared by a CoASM backup.</summary>
+        public static Summary ImportSql(Install inst, string authSql, string charactersSql, string accounts, Action<string> status)
+        {
+            if (string.IsNullOrWhiteSpace(accounts))
+                throw new InvalidOperationException(L.T("Choose the account to import."));
+            var root = DbLogin.FromConfig(inst).AsRoot();
+            CreateStaging(inst, root);
+            try
+            {
+                status(L.T("Reading the account file …"));
+                MySql.RunFile(inst, root, StageAuth, authSql);
+                MySql.RunFile(inst, root, StageChars, charactersSql);
+
+                status(L.T("Importing the characters with new ids …"));
+                return Transfer(inst, root, Script(StageAuth, StageChars, "acore_auth", "acore_characters", accounts, false));
+            }
+            finally
+            {
+                DropStaging(inst, root);
             }
         }
     }

@@ -83,21 +83,48 @@ namespace CoAInstaller.Web
 
             Post(app, "/api/accounts/inspect", a =>
             {
-                var m = AccountTransfer.ReadManifest(a.Str("path") ?? "");
+                string path = a.Str("path") ?? "";
+                if (CoasmImport.IsCoasm(path))
+                {
+                    EnsureDatabase(t => { });
+                    var info = CoasmImport.Inspect(Inst, path, t => { });
+                    var shown = info.Accounts.Where(x => !x.IsBot && !x.IsSystem).Select(x => new
+                    {
+                        name = x.Name,
+                        characters = "",
+                        characterCount = x.Characters,
+                        lastLogin = x.LastLogin
+                    }).ToArray();
+                    return new
+                    {
+                        kind = "coasm",
+                        created = info.Created,
+                        managerVersion = info.ManagerVersion,
+                        realm = info.Realm,
+                        accounts = shown,
+                        hiddenBots = info.Accounts.Count(x => x.IsBot),
+                        hiddenSystem = info.Accounts.Count(x => x.IsSystem),
+                        total = info.Accounts.Count
+                    };
+                }
+                var m = AccountTransfer.ReadManifest(path);
                 string chars, created, accounts;
                 m.TryGetValue("characters", out chars); m.TryGetValue("created", out created); m.TryGetValue("accounts", out accounts);
-                return new { accounts, characters = chars, created };
+                return new { kind = "afkaccount", accounts, characters = chars, created };
             });
 
             Post(app, "/api/accounts/import", a =>
             {
                 if (Ctl.World != null) throw new UserError(L.T("Stop the server first. Characters can only be imported while the worldserver is not running."));
                 string file = a.Str("path") ?? "";
+                string accounts = (a.Str("accounts") ?? "").Trim();
                 var inst = Inst;
                 return Jobs.Run(L.T("Importing …"), (job, st) =>
                 {
                     EnsureDatabase(st);
-                    var sum = AccountTransfer.Import(inst, file, st);
+                    var sum = CoasmImport.IsCoasm(file)
+                        ? CoasmImport.Import(inst, file, accounts, st)
+                        : AccountTransfer.Import(inst, file, st);
                     job.Payload = new { accounts = sum.Accounts, characters = sum.Characters, items = sum.Items };
                     job.Message = L.T("Import finished.");
                 }).Snapshot();

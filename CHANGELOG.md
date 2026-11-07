@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.81
+
+- **CoASM backup import:** the account import now accepts CoASM backups as `.7z` or `.zip`. It reads `backup.json`, unpacks `auth.sql.zst` and `characters.sql.zst`, and imports the chosen account with the existing AFK transfer.
+- **Choose the player account:** CoASM backups contain every account. The import lists only player accounts; RNDBOT/CoABotHost bot accounts and AHBOT/COAMANAGER system accounts are hidden.
+- **Only the chosen account moves:** configs, playerbots data and the rest of the CoASM backup are ignored. Characters, items, mail and pets come along as before.
+
 ## 1.2.80
 
 - **Launcher builder always uses the current AFK Client:** it downloads the latest `AFK-Client.exe` from the release on every build instead of reusing an old cached copy. If the download fails, the local copy is used.

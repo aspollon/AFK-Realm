@@ -1,3 +1,11 @@
+# AFK Realm 1.2.81
+
+## Import accounts from CoASM backups
+
+- **CoASM backups work directly.** Choose a CoASM `.7z` or `.zip` backup under Player accounts → Import. AFK Realm reads `auth.sql.zst` and `characters.sql.zst` and imports the chosen account with the normal transfer.
+- **Pick the account.** A CoASM backup contains all accounts; the import shows only player accounts. RNDBOT/CoABotHost bots and the AHBOT/COAMANAGER system accounts are hidden.
+- **Only that account moves.** Characters, items, mail and pets are carried over. Configs, playerbots data and the rest of the CoASM backup are ignored.
+
 # AFK Realm 1.2.80
 
 ## The launcher builder always packages the current AFK Client

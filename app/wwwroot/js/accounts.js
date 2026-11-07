@@ -60,12 +60,47 @@ export async function accountsDialog() {
     } catch (e) { setNote(status, T('The accounts could not be loaded:') + '\n' + e.message, 'bad'); }
   }
 
-  const importBtn = secondary(T('Import account file …'), async () => {
+  const importBtn = secondary(T('Import account or CoASM backup …'), async () => {
     if (data && data.worldRunning) return alert(T('Stop the server first. Characters can only be imported while the worldserver is not running.'));
-    const path = await pickUpload('.afkaccount');
+    const path = await pickUpload('.afkaccount,.7z,.zip');
     if (!path) return;
     let m;
-    try { m = await post('/api/accounts/inspect', { path }); } catch (e) { return alert(e.message); }
+    setNote(status, T('Reading the backup …'));
+    try { m = await post('/api/accounts/inspect', { path }); }
+    catch (e) { setNote(status, ''); return alert(e.message); }
+    setNote(status, '');
+    if (m.kind === 'coasm') {
+      const accounts = m.accounts || [];
+      if (!accounts.length) return alert(T('No player accounts were found in this CoASM backup. Only bot or system accounts are in it.'));
+      let picked = null;
+      const list = table([
+        { title: T('Account'), key: 'name' },
+        { title: T('Characters'), render: a => a.characterCount === 0 ? '–' : String(a.characterCount) },
+        { title: T('Last login'), render: a => a.lastLogin || T('never') },
+      ], accounts, { height: '340px', onpick: a => { picked = a; } });
+      const hidden = (m.hiddenBots || 0) + (m.hiddenSystem || 0);
+      const chosen = await dialog({
+        title: T('Choose the account to import'),
+        icon: 'accounts',
+        wide: true,
+        body: h('div', {},
+          h('p.hint', {}, F('{0} bot or system accounts are hidden. Only player accounts are shown.', hidden)),
+          h('p.hint', {}, m.managerVersion ? F('The backup was made with CoASM {0}. Choose the account whose characters should be imported.', m.managerVersion) : T('Choose the account whose characters should be imported.')),
+          list),
+        buttons: [
+          { text: T('Cancel'), value: null },
+          { text: T('Import this account'), kind: 'primary', onclick: async () => { if (!picked) { await alert(T('Choose an account first.')); return false; } return picked; } }
+        ]
+      });
+      if (!chosen) return;
+      if (!await confirm(F('Import the account {0}?', chosen.name) + '\n\n' + T('Characters:') + ' ' + (chosen.characterCount || T('none')) + '\n' + T('Created:') + ' ' + (m.created || '') + '\n\n' +
+        T('If an account with this name exists here, the characters are added to it and its password becomes the one from the file. Guild, group and arena team memberships are not carried over.'))) return;
+      const j = await runTask(() => post('/api/accounts/import', { path, accounts: chosen.name }));
+      if (!j || !j.ok) return;
+      load(F('Imported {0}.', chosen.name));
+      alert(T('Import finished.') + '\n\n' + T('Account:') + ' ' + j.payload.accounts.join(', ') + '\n' + T('Characters:') + '\n  ' + (j.payload.characters.length ? j.payload.characters.join('\n  ') : T('none')) + '\n' + T('Items:') + ' ' + j.payload.items);
+      return;
+    }
     if (!await confirm(F('Import the account {0}?', m.accounts) + '\n\n' + T('Characters:') + ' ' + (m.characters || T('none')) + '\n' + T('Exported:') + ' ' + m.created + '\n\n' +
       T('If an account with this name exists here, the characters are added to it and its password becomes the one from the file. Guild, group and arena team memberships are not carried over.'))) return;
     const j = await runTask(() => post('/api/accounts/import', { path }));
