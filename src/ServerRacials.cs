@@ -45,6 +45,13 @@ namespace CoAInstaller
             { 111200, new[] { 111205u, 111207u, 111210u, 111211u, 111212u } },           // Venthyr Feast / Hover / Bat
         };
 
+        /// <summary>Rows of Qiraji's login appearance; they travel with its racial file, but are not learned
+        /// (mod-custom-races casts them at login for male Qiraji).</summary>
+        static readonly Dictionary<int, uint[]> LoginHelpers = new Dictionary<int, uint[]>
+        {
+            { 88, new[] { 13990151u } },
+        };
+
         /// <summary>The 1.9.8 scripts that are compiled into the current server build.</summary>
         static readonly Dictionary<uint, string> ScriptBindings = new Dictionary<uint, string>
         {
@@ -279,7 +286,12 @@ namespace CoAInstaller
             var records = string.IsNullOrEmpty(serverDataFolder) || !Directory.Exists(serverDataFolder)
                 ? new Dictionary<uint, List<KeyValuePair<string, object>>>() : Records(serverDataFolder);
             var allIds = new HashSet<uint>();
-            foreach (var race in races) allIds.UnionWith(WithHelpers(ClientSpells(serverDataFolder, race.Name, race.CoaRace)));
+            foreach (var race in races)
+            {
+                allIds.UnionWith(WithHelpers(ClientSpells(serverDataFolder, race.Name, race.CoaRace)));
+                uint[] login;
+                if (LoginHelpers.TryGetValue(race.CoaRace, out login)) allIds.UnionWith(login);
+            }
             var clientRows = allIds.Count > 0 ? ClientRows(client, allIds) : new Dictionary<uint, object[]>();
             Directory.CreateDirectory(outDir);
             // Remove generated files of races that are no longer active. The folder is dedicated to
@@ -298,7 +310,10 @@ namespace CoAInstaller
             }
             foreach (var race in races)
             {
-                var all = WithHelpers(ClientSpells(serverDataFolder, race.Name, race.CoaRace));
+                var all = WithHelpers(ClientSpells(serverDataFolder, race.Name, race.CoaRace)).ToList();
+                uint[] login;
+                if (LoginHelpers.TryGetValue(race.CoaRace, out login)) all.AddRange(login);
+                all = all.Distinct().OrderBy(id => id).ToList();
                 var lines = new List<string>();
                 var spells = new List<uint>();
                 foreach (uint spell in all)
