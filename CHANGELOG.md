@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.82
+
+- **Qiraji appearance:** the client patch now points the male and female Qiraji character displays at their own `QirajiMale`/`QirajiFemale` models instead of a Thin Human model that a later client patch had put on the male display, and marks both models as player models so their body, skin and customization render.
+- **Wings of the Swarm:** the Qiraji racial file now carries the `13990151` spell row, and `mod-custom-races` casts it at login on male Qiraji. It is not learned as an extra racial button; the wings and their slow fall are always present.
+
 ## 1.2.81
 
 - **CoASM backup import:** the account import now accepts CoASM backups as `.7z` or `.zip`. It reads `backup.json`, unpacks `auth.sql.zst` and `characters.sql.zst`, and imports the chosen account with the existing AFK transfer.

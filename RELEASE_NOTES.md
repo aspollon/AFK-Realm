@@ -1,3 +1,10 @@
+# AFK Realm 1.2.82
+
+## Qiraji
+
+- **Qiraji characters show their own body again.** The client data used to give the male Qiraji the display of the Thin Human model, while the real Qiraji models were left as creature models. The AFK client patch now uses `QirajiMale` and `QirajiFemale` for the Qiraji displays and sets both to the same player-model mode as the other custom races. Body, skin and the character-creation options render again.
+- **Wings of the Swarm.** Male Qiraji get the Qiraji wings and their slow fall at login. The spell row ships with the Qiraji racial file; it does not add another learned racial button.
+
 # AFK Realm 1.2.81
 
 ## Import accounts from CoASM backups
