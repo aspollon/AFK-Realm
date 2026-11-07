@@ -23,7 +23,7 @@ namespace CoAInstaller
         public const string Name = "AFK Realm";                   // window titles, dialogs
         public const string ShortName = "AFK Realm";              // desktop shortcut, firewall rules
         public const string FileStem = "AFK-Realm";                // exe name, settings folder
-        public const string Version = "1.2.78";                   // a release; "-preview" marks a pre-release
+        public const string Version = "1.2.79";                   // a release; "-preview" marks a pre-release
         public const string Tagline = "build, run and tweak your own server the lazy way";
         public const string BuildsFor = "Conquest of AzerothCore";
         public const string WindowTitle = Name;
@@ -948,6 +948,18 @@ namespace CoAInstaller
 
         static string TokenFile { get { return Path.Combine(Path.GetDirectoryName(File_), "github-token.txt"); } }
 
+        /// <summary>Decrypts a stored token, or reads one put there by hand as plain text. Anything that still
+        /// contains control characters is not a token (for example an encrypted file from another Windows user).</summary>
+        static string TokenText(byte[] bytes)
+        {
+            string t;
+            try { t = Encoding.UTF8.GetString(ProtectedData.Unprotect(bytes, null, DataProtectionScope.CurrentUser)); }
+            catch { t = Encoding.UTF8.GetString(bytes); }
+            t = (t ?? "").Trim();
+            if (t.Length == 0 || t.Any(ch => char.IsControl(ch) || char.IsWhiteSpace(ch))) return null;
+            return t;
+        }
+
         /// <summary>A GitHub token of the user's own (optional). Without one GitHub answers 60 requests an hour, with one
         /// 5000; the module list and the update check use it. Kept encrypted for the Windows user account (a file put
         /// there by hand as plain text is read too). Null when none is set.</summary>
@@ -958,12 +970,7 @@ namespace CoAInstaller
                 try
                 {
                     if (!File.Exists(TokenFile)) return null;
-                    var bytes = File.ReadAllBytes(TokenFile);
-                    string t;
-                    try { t = Encoding.UTF8.GetString(ProtectedData.Unprotect(bytes, null, DataProtectionScope.CurrentUser)); }
-                    catch { t = Encoding.UTF8.GetString(bytes); }
-                    t = t.Trim();
-                    return t.Length > 0 ? t : null;
+                    return TokenText(File.ReadAllBytes(TokenFile));
                 }
                 catch { return null; }
             }
@@ -1008,12 +1015,7 @@ namespace CoAInstaller
                 try
                 {
                     if (!File.Exists(CoaTokenFile)) return null;
-                    var bytes = File.ReadAllBytes(CoaTokenFile);
-                    string t;
-                    try { t = Encoding.UTF8.GetString(ProtectedData.Unprotect(bytes, null, DataProtectionScope.CurrentUser)); }
-                    catch { t = Encoding.UTF8.GetString(bytes); }
-                    t = t.Trim();
-                    return t.Length > 0 ? t : null;
+                    return TokenText(File.ReadAllBytes(CoaTokenFile));
                 }
                 catch { return null; }
             }

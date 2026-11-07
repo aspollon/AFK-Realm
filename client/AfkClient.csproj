@@ -8,11 +8,12 @@
     <AssemblyName>AFK-Client</AssemblyName>
     <RootNamespace>AfkClient</RootNamespace>
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <ApplicationIcon>../assets/afk-realm.ico</ApplicationIcon>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
   </PropertyGroup>
   <ItemGroup>
     <EmbeddedResource Include="../app/wwwroot/assets/afk-realm-background.jpg" LogicalName="AfkClient.background.jpg" />
-    <EmbeddedResource Include="../app/wwwroot/icon.png" LogicalName="AfkClient.icon.png" />
+    <EmbeddedResource Include="../assets/afk-realm.ico" LogicalName="AfkClient.icon.ico" />
     <EmbeddedResource Include="ui/index.html" LogicalName="AfkClient.ui.index.html" />
     <EmbeddedResource Include="ui/app.css" LogicalName="AfkClient.ui.app.css" />
     <EmbeddedResource Include="ui/app.js" LogicalName="AfkClient.ui.app.js" />

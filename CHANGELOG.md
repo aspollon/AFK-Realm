@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.79
+
+- **AFK Client icon:** the player launcher now carries the AFK Realm icon in Explorer, the taskbar and its window title bar.
+- **Update check survives a broken GitHub token:** if GitHub rejects the stored token, AFK Realm retries without it. A corrupted token file is ignored instead of being sent as a token.
+- **Launcher builder cleanup:** no stray "null" line under the package buttons.
+
 ## 1.2.78
 
 - **AFK Client for Windows:** a player-side launcher with account creation/login, game-folder detection, update and repair from a per-file manifest, automatic `realmlist.wtf`/`Config.wtf`, and Play. A two-step first-start guide creates or logs in to the game account and then asks for the game folder; a profile pill keeps the account visible. It uses the AFK Realm colours and artwork and needs no server-address setup.

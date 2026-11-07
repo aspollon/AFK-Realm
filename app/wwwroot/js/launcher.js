@@ -41,7 +41,7 @@ export function launcherCard() {
       r.package ? h('div.small.muted', {}, F('Player package ready ({0}, {1}).', fmt(r.packageSize), r.packageAt)) : null,
     ];
     if (!r.clientExe) parts.push(secondary(T('Download AFK Client'), () => window.open(r.clientExeUrl, '_blank'), 'download'));
-    body.replaceChildren(...parts);
+    body.replaceChildren(...parts.filter(Boolean));
   }
 
   function fmt(n) {

@@ -1,3 +1,11 @@
+# AFK Realm 1.2.79
+
+## Launcher icon and a safer update check
+
+- **AFK Client now has the AFK Realm icon.** The player launcher uses the same icon as AFK Realm in Explorer, the taskbar and its window title bar.
+- **Update check no longer stops on a bad GitHub token.** If GitHub rejects the stored token, AFK Realm retries without it instead of skipping the release check. A corrupted token file is ignored.
+- **Launcher builder cleanup.** The stray "null" line under the package buttons is gone.
+
 # AFK Realm 1.2.78
 
 ## AFK Client and the launcher builder

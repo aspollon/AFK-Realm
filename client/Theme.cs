@@ -85,8 +85,6 @@ internal static class Theme
 
     [DllImport("dwmapi.dll")]
     static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int value, int size);
-    [DllImport("user32.dll")]
-    static extern bool DestroyIcon(IntPtr hIcon);
 
     static Icon _appIcon;
     public static Icon AppIcon
@@ -96,13 +94,10 @@ internal static class Theme
             if (_appIcon != null) return _appIcon;
             try
             {
-                using var stream = typeof(Theme).Assembly.GetManifestResourceStream("AfkClient.icon.png");
+                using var stream = typeof(Theme).Assembly.GetManifestResourceStream("AfkClient.icon.ico");
                 if (stream == null) return null;
-                using var bitmap = new Bitmap(stream);
-                IntPtr handle = bitmap.GetHicon();
-                using var temporary = Icon.FromHandle(handle);
-                _appIcon = (Icon)temporary.Clone();
-                DestroyIcon(handle);
+                using var icon = new Icon(stream);
+                _appIcon = (Icon)icon.Clone();
             }
             catch { }
             return _appIcon;

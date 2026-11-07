@@ -404,8 +404,11 @@ namespace CoAInstaller
             catch (WebException ex)
             {
                 var resp = ex.Response as HttpWebResponse;
-                // an outdated or mistyped token: the same request once more, without it
-                if (token != null && resp != null && resp.StatusCode == HttpStatusCode.Unauthorized)
+                // an outdated, mistyped or corrupted token: the same request once more, without it
+                if (token != null && resp != null &&
+                    (resp.StatusCode == HttpStatusCode.Unauthorized ||
+                     resp.StatusCode == HttpStatusCode.Forbidden ||
+                     resp.StatusCode == HttpStatusCode.BadRequest))
                 {
                     Settings.RefuseGitHubToken(token);
                     return Get(url, null);
