@@ -2211,6 +2211,14 @@ function Invoke-BuiltInPatches([string]$Git, [switch]$Quiet) {
             $text = [IO.File]::ReadAllText($patch.FullName)
             if ($text.Length -gt 0 -and [int]$text[0] -eq 0xFEFF) { $text = $text.Substring(1) }
             $text = $text.Replace("`r`n", "`n").Replace("`r", "`n")
+            # A patch that only adds files - a stand-in for a header a module needs before the CoA core has it - is left
+            # out quietly once the core brings those files itself (the reset above took out what a patch added before).
+            $added = @([regex]::Matches($text, '(?m)^--- /dev/null\n\+\+\+ b/(\S+)') | ForEach-Object { $_.Groups[1].Value })
+            if ($added.Count -gt 0 -and $text -notmatch '(?m)^--- a/' -and
+                @($added | Where-Object { -not (Test-Path -LiteralPath ([IO.Path]::Combine($Paths.Source, $_))) }).Count -eq 0) {
+                Write-Log "$label - the CoA core brings this itself now, not needed any more."
+                continue
+            }
             $tempPatch = Join-Path ([IO.Path]::GetTempPath()) ('afk-core-patch-' + [guid]::NewGuid().ToString('N') + '.patch')
             [IO.File]::WriteAllText($tempPatch, $text, (New-Object Text.UTF8Encoding($false)))
             $apply = @('-C', $Paths.Source, 'apply', '--ignore-whitespace', '--whitespace=nowarn')

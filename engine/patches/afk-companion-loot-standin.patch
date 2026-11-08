@@ -1,0 +1,30 @@
+diff --git a/src/server/coa/AscensionCompanionLoot.h b/src/server/coa/AscensionCompanionLoot.h
+new file mode 100644
+index 000000000..2734765c0
+--- /dev/null
++++ b/src/server/coa/AscensionCompanionLoot.h
+@@ -0,0 +1,24 @@
++/* Copyright (C) 2016+ AzerothCore, GNU AGPL v3. */
++
++// AFK Realm stand-in. mod-playerbots (coa branch, since 2026-11-08) includes this CoA core header before the
++// public CoA core has it. Here no companion loots and none skins, so the alts' loot pet stays inert and the
++// alts loot as before. AFK Realm leaves this file out as soon as the CoA core brings its own.
++
++#ifndef AFK_ASCENSION_COMPANION_LOOT_STANDIN_H
++#define AFK_ASCENSION_COMPANION_LOOT_STANDIN_H
++
++#include "Define.h"
++
++class Player;
++
++namespace Ascension::CompanionLooting
++{
++    inline bool IsSelfLootingCompanion(uint32 /*creatureEntry*/) { return false; }
++    inline bool HasLootAppearance(Player const* /*player*/) { return false; }
++    inline bool CompanionLoots(Player const* /*player*/) { return false; }
++    inline bool CompanionSkins(Player const* /*player*/) { return false; }
++    inline float LootRadius(Player const* /*player*/) { return 0.0f; }
++    inline float SkinningRadius(Player const* /*player*/) { return 0.0f; }
++}
++
++#endif
