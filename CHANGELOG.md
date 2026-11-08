@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.84
+
+- **Map extraction starts clean:** before a full extraction, the generated script now removes `maps`, `Cameras`, `Buildings`, `vmaps` and `mmaps`. A half-finished run used to leave a `Buildings` folder behind and `vmap4_extractor` then waited forever without progress. The "Only refresh the CoA DBC tables" mode is unchanged and does not touch map data.
+
 ## 1.2.83
 
 - **Qiraji body textures:** the Qiraji player models used texture type `11` (Monster Skin) in their M2 files, so the client rendered the body without applying the `CharSections` skin. The module now ships the Qiraji M2 files with texture type `1` (player skin); the client patch applies the selected Qiraji skin, face and hair textures again.

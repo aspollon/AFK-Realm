@@ -1,3 +1,10 @@
+# AFK Realm 1.2.84
+
+## Map extractor
+
+- **No more hanging at "Step 2: vmaps".** A map extraction that was closed halfway left a `Buildings` folder behind; `vmap4_extractor` then waited forever on it. The generated script now removes `maps`, `Cameras`, `Buildings`, `vmaps` and `mmaps` before a full extraction, so every run starts clean.
+- **DBC refresh is unaffected.** "Only refresh the CoA DBC tables" still extracts only the client DBCs and leaves the map data alone.
+
 # AFK Realm 1.2.83
 
 ## Qiraji textures

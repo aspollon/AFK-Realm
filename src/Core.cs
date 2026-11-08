@@ -23,13 +23,19 @@ namespace CoAInstaller
         public const string Name = "AFK Realm";                   // window titles, dialogs
         public const string ShortName = "AFK Realm";              // desktop shortcut, firewall rules
         public const string FileStem = "AFK-Realm";                // exe name, settings folder
-        public const string Version = "1.2.81";                   // a release; "-preview" marks a pre-release
+        public static readonly string Version = VersionOf();       // from the assembly version; a release, "-preview" marks a pre-release
         public const string Tagline = "build, run and tweak your own server the lazy way";
         public const string BuildsFor = "Conquest of AzerothCore";
         public const string WindowTitle = Name;
         public const string EngineResource = "CoAInstaller.engine.ps1";
         public const string EngineFileName = FileStem + "-Engine.ps1";
         public const string GitHubRepo = "aspollon/AFK-Realm";        // releases are checked for newer versions
+
+        static string VersionOf()
+        {
+            System.Version v = typeof(Product).Assembly.GetName().Version;
+            return v == null || v.Major == 0 ? "1.2.84" : v.Major + "." + v.Minor + "." + v.Build;
+        }
     }
 
     /// <summary>The system AFK Realm runs on: Windows, or Linux (the web version).</summary>

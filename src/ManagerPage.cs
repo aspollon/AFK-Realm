@@ -1342,6 +1342,12 @@ namespace CoAInstaller
             b.AppendLine("cd /d " + Q(dir));
             if (!onlyDbc)
             {
+                // A previous run that was closed halfway leaves Buildings/maps/vmaps behind.
+                // vmap4_extractor waits forever on an existing Buildings folder, and the
+                // extractors otherwise mix old and new files. Always start clean.
+                b.AppendLine("echo Cleaning old map data ...");
+                foreach (var f in new[] { "maps", "Cameras", "Buildings", "vmaps", "mmaps" })
+                    b.AppendLine("if exist \"" + f + "\" rmdir /s /q \"" + f + "\"");
                 b.AppendLine("echo Step 1: dbc, maps and cameras ...");
                 b.AppendLine("map_extractor.exe");
                 b.AppendLine("if not exist maps goto :fail");
