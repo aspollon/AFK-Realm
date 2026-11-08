@@ -65,6 +65,8 @@ namespace CoAInstaller
             string modules = ModuleCatalog.ModulesDir(inst);
             if (!Directory.Exists(modules)) return plan;
             var json = new JavaScriptSerializer();
+            // root files a module brings only for when no other source has them (rootFiles with "fallback": true)
+            var fallbackRoots = new List<RootFile>();
             foreach (var dir in Directory.GetDirectories(modules).OrderBy(d => d, StringComparer.OrdinalIgnoreCase))
             {
                 string file = Path.Combine(dir, ModuleCatalog.ManifestName);
@@ -99,8 +101,19 @@ namespace CoAInstaller
                     // client pack is Ascension.exe in some versions and Ascension-b.exe in others).
                     if (to.Length == 0) to = Path.GetFileName(from);
                     bool gameExe = f.TryGetValue("gameExe", out v) && v is bool && (bool)v;
-                    if (!Regex.IsMatch(to, @"^[A-Za-z0-9_.-]+\.(dll|exe)$") || !SafeRootPath(to, gameExe)) continue;
-                    plan.RootFiles.Add(new RootFile { Module = module, To = to, From = from, GameExe = gameExe });
+                    // A file the module carries itself (a path inside the module, such as an Esteria creator table
+                    // CoA Custom's release lacks). With "fallback" it only goes in when no chosen folder brings one.
+                    bool fallback = f.TryGetValue("fallback", out v) && v is bool && (bool)v;
+                    if (from.Length > 0 && !Path.IsPathRooted(from))
+                    {
+                        string own;
+                        try { own = Path.GetFullPath(Path.Combine(dir, from.Replace('/', Path.DirectorySeparatorChar))); } catch { continue; }
+                        if (!own.StartsWith(root, StringComparison.OrdinalIgnoreCase) || !File.Exists(own)) continue;
+                        from = own;
+                    }
+                    if (!Regex.IsMatch(to, @"^[A-Za-z0-9_.-]+\.(dll|exe|bin)$") || !SafeRootPath(to, gameExe)) continue;
+                    var rootFile = new RootFile { Module = module, To = to, From = from, GameExe = gameExe };
+                    if (fallback) fallbackRoots.Add(rootFile); else plan.RootFiles.Add(rootFile);
                 }
                 // a folder of the user's own whose files all go next to the exe (CoA Custom's files\client_root)
                 foreach (var f in List(patch, "rootFolders"))
@@ -164,6 +177,8 @@ namespace CoAInstaller
                     plan.ClearCache |= clientPart.TryGetValue("clearCache", out v) && v is bool && (bool)v;
                 }
             }
+            foreach (var r in fallbackRoots)
+                if (!plan.RootFiles.Any(x => x.To.Equals(r.To, StringComparison.OrdinalIgnoreCase))) plan.RootFiles.Add(r);
             // The server's merged Spell.dbc carries the custom racial spells (140xxxx and the other
             // server-side rows) that the CoA client's Spell.dbc does not. Put that table into the
             // AFK client patch as well: without it the server learns a racial the client has no row
@@ -1161,6 +1176,8 @@ namespace CoAInstaller
                 string dest = Os.Resolve(client, r.To);
                 if (File.Exists(dest) && RacePacker.IsRacePatch(dest)) r.From = dest;
             }
+            // the skin tables CoA Custom's exe paints creature-model races with: made or completed where they lack
+            EsteriaTables.AddMissing(plan, client);
         }
 
         static bool InstalledRootFilesIntact(Install inst, string client)

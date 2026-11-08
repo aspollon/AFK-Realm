@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.85
+
+- **Qiraji skins:** CoA64.exe paints creature-model races from `Esteria<Race>.bin` (EHM1 table: sex, texture slot 11/12/13, colour, skin texture path). CoA Custom 1.9.9 ships no `EsteriaQiraji.bin`; the exe got an empty table and left the body bare. mod-custom-races 074e49f ships the table and its empty texture list; the type-1 Qiraji models of 1.2.83 are removed again.
+- **Esteria skin tables made and completed:** `src/EsteriaTables.cs` reads the `Esteria<Name>.bin` names from `CoA64.exe`/`EsteriaAppearance.dll`, finds the race by name in ChrRaces, and before every use of the root files (`UseInstalledRootFiles`) builds a missing EHM1 table from the race's CharSections skin rows (texture 1 -> slot 11, texture 2 -> slot 12, slot 13 closes the sex) or adds the colours an existing table lacks before the closing row of their sex. Other formats are not touched; errors never stop the client patch.
+- **Module root files:** `rootFiles` may now name a file inside the module (a relative path) and `.bin` files, and `"fallback": true` puts a file next to the game only when no chosen folder (CoA Custom's client_root) brings one of that name.
+- **Map extraction starts clean in the web version:** the cleanup of 1.2.84 was only in the classic Windows build (`src/ManagerPage.cs`), which the web app does not compile. `MapData` in `app/Web/Api.Server.cs` now removes `maps`, `Cameras`, `Buildings`, `vmaps` and `mmaps` from the game folder before a full extraction.
+- **Exit codes are checked:** each tool's exit code is logged; a failed or empty `vmap4_assembler` or `mmaps_generator` run stops before the data is moved, so half-made map data never replaces the server's.
+
 ## 1.2.84
 
 - **Map extraction starts clean:** before a full extraction, the generated script now removes `maps`, `Cameras`, `Buildings`, `vmaps` and `mmaps`. A half-finished run used to leave a `Buildings` folder behind and `vmap4_extractor` then waited forever without progress. The "Only refresh the CoA DBC tables" mode is unchanged and does not touch map data.

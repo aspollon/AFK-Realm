@@ -1,3 +1,18 @@
+# AFK Realm 1.2.85
+
+## Qiraji
+
+- **Qiraji finally show their skin colours.** CoA64.exe paints races with a creature model (Dreadlord, Sureki, Qiraji ...) from a table next to the exe, `Esteria<Race>.bin`. CoA Custom 1.9.9 has no `EsteriaQiraji.bin`, so the Qiraji body stayed bare. mod-custom-races now brings that table (all 11 male and 12 female skin colours) and AFK Realm puts it next to the game. If a CoA Custom version brings its own copy, that one is used.
+- **The Qiraji models are CoA Custom's own again.** The texture type change of 1.2.83 is undone; the table above needs the original models.
+- **Missing skin tables are made automatically.** When the client patch is installed, AFK Realm reads which `Esteria<Race>.bin` tables the game exe asks for. A table that is missing is built from the race's own skin colours; a table that is there keeps everything and only gets the skin colours it lacks. In CoA Custom 1.9.9 this gives textures to colours that stayed bare before, among them Mo'arg, Mogu, Nerubian, Banshee, Saberon, Sethrak and Wretched. Tables in another format are left alone.
+- **What to do:** update mod-custom-races in the module manager (or rebuild the server), then install the client patch again. Players with an exported client ZIP need the new ZIP.
+
+## Map data
+
+- **The clean start of 1.2.84 now really runs.** 1.2.84 put it only into the old Windows build, which the web version does not contain. "Create map data" now removes `maps`, `Cameras`, `Buildings`, `vmaps` and `mmaps` left in the game folder by an earlier run before it starts, so `vmap4_extractor` no longer hangs on an old `Buildings` folder.
+- **A half-made run no longer reaches the server.** Every tool's exit code is written to `logs\map-data.log`. When `vmap4_assembler` or `mmaps_generator` fails or leaves nothing behind, the run stops with a clear message and the server's own map data stays as it was. Before, half-made mmaps could be moved into the server as "DONE".
+- **Tip:** if your server has no `mmaps` folder (Server\Data), run "Create map data" once more with mmaps and leave AFK Realm open until it is done.
+
 # AFK Realm 1.2.84
 
 ## Map extractor
