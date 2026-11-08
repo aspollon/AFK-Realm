@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.89
+
+- **Stand-in core header for mod-playerbots:** `engine/patches/afk-companion-loot-standin.patch` adds `src/server/coa/AscensionCompanionLoot.h` with `Ascension::CompanionLooting` answering no (no self-looting companion, no loot appearance, no companion looting or skinning, radius 0), so `CoaLootPetAction.cpp` compiles against the public core. `Invoke-BuiltInPatches` leaves a patch that only adds files out quietly when all of them are in the reset core already.
+
 ## 1.2.88
 
 - **Job output keeps flowing:** `Job.Log` sends every line up to 3000 and then about three a second instead of none; `runTaskWithLog` shows the running time and a note after 30 s without output, keeps the newest 1500 lines, and loads `/api/job/log` when it opens.

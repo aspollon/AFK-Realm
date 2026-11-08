@@ -1,3 +1,9 @@
+# AFK Realm 1.2.89
+
+## Server build fix
+
+- **The server builds again.** Since 8 November mod-playerbots expects a file of the CoA core (`AscensionCompanionLoot.h`, for the new "loot pet" of the alts) that the published CoA core does not have yet, so every update stopped with "Cannot open include file: 'AscensionCompanionLoot.h'". AFK Realm now puts a stand-in for it into the core: the server builds, the alts loot as before, and only their new loot pet does nothing yet. As soon as the CoA core brings the real file, AFK Realm leaves the stand-in out by itself.
+
 # AFK Realm 1.2.88
 
 ## Progress you can trust
