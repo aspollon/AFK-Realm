@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.86
+
+- **CoA Custom delta download:** `src/CoaDelta.cs` reads each release ZIP's central directory by HTTP range (ZIP64 included), compares each file with the CoA Custom folder by size and CRC32 (cached in `.afk-coa-custom-files.txt` by size and time), and fetches only differing entries by range (stored or deflate), checked by size and CRC32 before they replace the file. A ZIP with 60 % or more of its bytes or more than 300 files needed, or a server answering without 206, falls back to the whole ZIP (resume and SHA-256 as before), from which only differing files are written. Later ZIPs still win.
+- **CoA Custom setup skips unchanged files without reading them:** `CopyStamps` keeps size and time of each package file and its copy in `.afk-coa-copied.txt` next to the game; a match skips the byte-by-byte comparison.
+
 ## 1.2.85
 
 - **Qiraji skins:** CoA64.exe paints creature-model races from `Esteria<Race>.bin` (EHM1 table: sex, texture slot 11/12/13, colour, skin texture path). CoA Custom 1.9.9 ships no `EsteriaQiraji.bin`; the exe got an empty table and left the body bare. mod-custom-races 074e49f ships the table and its empty texture list; the type-1 Qiraji models of 1.2.83 are removed again.

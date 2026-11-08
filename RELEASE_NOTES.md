@@ -1,3 +1,12 @@
+# AFK Realm 1.2.86
+
+## CoA Custom: only what changed
+
+- **Downloads only the files that changed.** "Download CoA Custom" used to fetch every ZIP of the release (more than 10 GB) on every update. It now reads the file list of each ZIP first (a few KB), compares every file with the ones already in your CoA Custom folder, and downloads only the files that are new or different. Downloading the same version again costs next to nothing; an update fetches only the changed files.
+- **Same result as before.** Every file is checked against the checksum in the release before it is put in place, and a file in a later ZIP still wins over the same file in an earlier one. When most of a ZIP is needed anyway (the very first download) or the server does not allow partial downloads, the whole ZIP is downloaded as before.
+- **Faster install.** The CoA Custom setup remembers size and date of every file it copied. Unchanged files are skipped right away instead of being read and compared byte by byte again (that was many GB on every run).
+- **The first run after the update** reads your CoA Custom folder once to learn its files; after that it is quick.
+
 # AFK Realm 1.2.85
 
 ## Qiraji
