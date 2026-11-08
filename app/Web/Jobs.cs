@@ -128,6 +128,7 @@ namespace CoAInstaller.Web
                 job.Running = false; job.Ended = DateTime.Now;
                 job.Changed();
                 Manager.Poke();
+                Memory.TrimSoon();
             }) { IsBackground = true, Name = "job" };
             thread.Start();
             return job;
@@ -166,6 +167,7 @@ namespace CoAInstaller.Web
                 job.Changed();
                 Manager.Poke();
                 Manager.AfterEngine(mode, ok);
+                Memory.TrimSoon();
             };
             var thread = new Thread(() =>
             {

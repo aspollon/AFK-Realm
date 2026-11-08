@@ -1,3 +1,9 @@
+# AFK Realm 1.2.90
+
+## Less memory
+
+- **AFK Realm no longer holds many GB while it does nothing.** After big tasks (map data, game client, races, downloads) AFK Realm kept the memory they needed, so it could sit at 8-10 GB with no server running. It now gives that memory back a few seconds after each task and stays small while idle.
+
 # AFK Realm 1.2.89
 
 ## Server build fix

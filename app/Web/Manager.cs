@@ -543,6 +543,7 @@ namespace CoAInstaller.Web
                 try { pending = ClientAddons.Pending(inst); } catch { }
                 if (Inst != inst) return;
                 ClientPending = pending; ClientChecking = false;
+                Memory.TrimSoon();
                 if (pending.Length == 0)
                 {
                     // A setup can finish while the page still holds the old offer flag. Clear it

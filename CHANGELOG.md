@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.90
+
+- **Memory goes back after work:** `AfkRealm.csproj` turns the server garbage collector of the web SDK off (`ServerGarbageCollection=false`, concurrent on). `app/Web/Memory.cs` runs an aggressive, LOH-compacting collection 3 s after every job, engine run and client check (`Jobs.Run`, `RunEngine` Finished, `Manager.CheckClient`), so the archives and DBC tables those read no longer stay committed.
+
 ## 1.2.89
 
 - **Stand-in core header for mod-playerbots:** `engine/patches/afk-companion-loot-standin.patch` adds `src/server/coa/AscensionCompanionLoot.h` with `Ascension::CompanionLooting` answering no (no self-looting companion, no loot appearance, no companion looting or skinning, radius 0), so `CoaLootPetAction.cpp` compiles against the public core. `Invoke-BuiltInPatches` leaves a patch that only adds files out quietly when all of them are in the reset core already.
