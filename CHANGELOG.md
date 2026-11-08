@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.88
+
+- **Job output keeps flowing:** `Job.Log` sends every line up to 3000 and then about three a second instead of none; `runTaskWithLog` shows the running time and a note after 30 s without output, keeps the newest 1500 lines, and loads `/api/job/log` when it opens.
+- **Task windows survive a reload:** `app.js` reopens `runTaskWithLog` for a running non-engine job found by `/api/state`.
+
 ## 1.2.87
 
 - **Update schedule:** `src/UpdatePlan.cs` (Dependencies\update-plan.txt: check interval, bar on/off, daily/weekly slot, core/modules, restore on failure, warning minutes, last slot handled) and `app/Web/AutoUpdate.cs`: periodic `CheckForUpdates`, the slot's own update check, in-game warnings, `Update` engine run with `-CoreOnly`/`-ModulesOnly`, start and watch of a server that ran before, and restore of the newest "before update" backup made during the run when the world does not come up. `/api/updateplan`; card in Maintenance. The server-update banner follows the bar setting; the AFK Realm banner does not.

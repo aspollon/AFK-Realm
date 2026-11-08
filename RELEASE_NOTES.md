@@ -1,3 +1,10 @@
+# AFK Realm 1.2.88
+
+## Progress you can trust
+
+- **Long tasks no longer look frozen.** The window of a task (for example "Create map data") stopped showing new output after a few minutes, although the task went on. It now keeps showing the output, how long the task has been running and, when a step works quietly for a while, says so.
+- **F5 no longer loses the task.** Reloading the page (or opening a second window) brings the window of a running task back, with what it printed so far.
+
 # AFK Realm 1.2.87
 
 ## Update schedule
