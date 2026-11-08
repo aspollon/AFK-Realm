@@ -39,6 +39,7 @@ namespace CoAInstaller.Web
 
         readonly List<string> log = new List<string>();
         int logSent;
+        DateTime lastLogSent = DateTime.MinValue;
         public IList<string> LogLines { get { lock (log) return log.ToList(); } }
 
         public void Log(string line)
@@ -48,10 +49,13 @@ namespace CoAInstaller.Web
             {
                 log.Add(line);
                 if (log.Count > 3000) log.RemoveRange(0, 1000);
-                // mmaps_generator can print hundreds of thousands of lines. Sending
-                // every one to the browser made msedge grow to several GB while the
-                // job itself was already done; the file still gets the full log.
-                send = ++logSent <= 3000;
+                // mmaps_generator can print hundreds of thousands of lines. Sending every one to the browser made msedge
+                // grow to several GB while the job itself was already done; the file still gets the full log. After the
+                // first 3000 lines the page gets about three a second - enough to see the task is still working (the
+                // page stopped at line 3000 and looked hung during a map extraction).
+                var now = DateTime.UtcNow;
+                send = ++logSent <= 3000 || (now - lastLogSent).TotalMilliseconds >= 300;
+                if (send) lastLogSent = now;
             }
             if (send) Events.Send("joblog", new { id = Id, line });
         }

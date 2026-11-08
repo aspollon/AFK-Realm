@@ -2545,6 +2545,7 @@
     "Enter how many minutes before the update players are told: 0 to 60.": "",
     "{0} keeps running here, so planned restarts and updates still happen. Double-click the icon to open it again; right-click it to quit.": "",
     "Open {0}": "",
-    "Quit {0}": ""
+    "Quit {0}": "",
+    "no new output for {0} - some steps work quietly for a long time": ""
   }
 }

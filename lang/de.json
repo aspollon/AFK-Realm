@@ -2564,6 +2564,7 @@
     "Enter how many minutes before the update players are told: 0 to 60.": "Gib ein, wie viele Minuten vor dem Update die Spieler gewarnt werden: 0 bis 60.",
     "{0} keeps running here, so planned restarts and updates still happen. Double-click the icon to open it again; right-click it to quit.": "{0} läuft hier weiter, damit geplante Neustarts und Updates trotzdem stattfinden. Doppelklick auf das Symbol öffnet es wieder; Rechtsklick zum Beenden.",
     "Open {0}": "{0} öffnen",
-    "Quit {0}": "{0} beenden"
+    "Quit {0}": "{0} beenden",
+    "no new output for {0} - some steps work quietly for a long time": "seit {0} keine neue Ausgabe – manche Schritte arbeiten lange still"
   }
 }

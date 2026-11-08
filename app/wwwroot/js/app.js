@@ -101,6 +101,9 @@ async function setTheme(choice) {
     });
     on('alert', a => alert(a.text, a.title));
     route();
+    // A task still running when the page was loaded again (F5, a second window): its window comes back.
+    if (state.job && state.job.running && state.job.kind !== 'engine')
+      import('./manager.js').then(m => m.runTaskWithLog(async () => state.job, state.job.title)).catch(() => { });
     if (meta.justUpdated) toast(meta.justUpdated, 6000);
   } catch (e) {
     console.error(e && e.stack); replace(root, h('div.boot', {}, e.message || String(e)));

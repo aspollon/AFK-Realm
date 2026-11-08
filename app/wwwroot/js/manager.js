@@ -498,19 +498,44 @@ export async function runTaskWithLog(call, title) {
   try { job = await call(); } catch (e) { await alert(e.message); return null; }
   if (!job || !job.running) return job;
   const status = h('div.muted', {}, job.status || '');
+  const alive = h('div.small.muted');
   const log = h('div.console');
-  let closeIt;
-  dialog({ title, icon: 'server', wide: true, body: h('div', {}, status, log), buttons: [], noClose: true, onopen: (b, c) => { closeIt = c; } });
+  let closeIt, lastLine = Date.now();
+  dialog({ title: title || job.title, icon: 'server', wide: true, body: h('div', {}, status, alive, log), buttons: [], noClose: true, onopen: (b, c) => { closeIt = c; } });
+  const add = line => {
+    log.appendChild(document.createTextNode(line + '\n'));
+    // the page keeps the newest lines only; the whole run is in the log file
+    while (log.childNodes.length > 1500) log.removeChild(log.firstChild);
+  };
+  // what the task printed before this window opened (after F5, or when another page started it)
+  try {
+    const r = await get('/api/job/log');
+    if (r && r.id === job.id) { for (const line of r.lines.slice(-1500)) add(line); log.scrollTop = log.scrollHeight; }
+  } catch { }
+  const started = job.started ? new Date(job.started).getTime() : Date.now();
+  const tick = () => {
+    const quiet = Math.round((Date.now() - lastLine) / 1000);
+    alive.textContent = F('Running for {0}', clockOf(Math.round((Date.now() - started) / 1000))) +
+      (quiet >= 30 ? '  ·  ' + F('no new output for {0} - some steps work quietly for a long time', clockOf(quiet)) : '');
+  };
+  tick();
+  const timer = setInterval(tick, 1000);
   const offs = [
     on('job', j => { if (j && j.id === job.id) status.textContent = j.status || status.textContent; }),
-    on('joblog', l => { if (l.id !== job.id) return; log.appendChild(document.createTextNode(l.line + '\n')); log.scrollTop = log.scrollHeight; }),
+    on('joblog', l => { if (l.id !== job.id) return; lastLine = Date.now(); add(l.line); log.scrollTop = log.scrollHeight; }),
   ];
   const { waitJob } = await import('./ui.js');
   const end = await waitJob(job);
+  clearInterval(timer);
   offs.forEach(f => f());
   closeIt && closeIt();
   if (end && !end.ok) await alert(end.message);
   return end;
+}
+
+function clockOf(seconds) {
+  const s = Math.max(0, seconds | 0), pad = n => String(n).padStart(2, '0');
+  return (s >= 3600 ? Math.floor(s / 3600) + ':' : '') + pad(Math.floor(s / 60) % 60) + ':' + pad(s % 60);
 }
 
 async function serverMenu(at) {
