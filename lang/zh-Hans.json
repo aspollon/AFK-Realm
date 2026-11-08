@@ -2246,6 +2246,10 @@
     "The player client pack could not be built.": "无法构建玩家客户端包。",
     "Port {0} is used by the AFK Realm admin page. Choose another port.": "端口 {0} 已被 AFK Realm 管理页面使用。请选择其他端口。",
     "Port {0} is used by the remote access to AFK Realm. Choose another port.": "端口 {0} 已被 AFK Realm 远程访问使用。请选择其他端口。",
-    "Port {0} is used by the server. Choose another port.": "端口 {0} 已被服务器使用。请选择其他端口。"
+    "Port {0} is used by the server. Choose another port.": "端口 {0} 已被服务器使用。请选择其他端口。",
+    "Removing {0} left over from an earlier run ...": "",
+    "(exit code {0})": "",
+    "Step 2 (vmaps) did not finish (exit code {0}). The server's map data was not changed; start Create map data again.": "",
+    "Step 3 (mmaps) did not finish (exit code {0}). The server's map data was not changed; start Create map data again.": ""
   }
 }

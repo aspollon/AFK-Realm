@@ -2246,6 +2246,10 @@
     "The player client pack could not be built.": "No se pudo crear el paquete de cliente del jugador.",
     "Port {0} is used by the AFK Realm admin page. Choose another port.": "El puerto {0} lo usa la página de administración de AFK Realm. Elige otro puerto.",
     "Port {0} is used by the remote access to AFK Realm. Choose another port.": "El puerto {0} lo usa el acceso remoto a AFK Realm. Elige otro puerto.",
-    "Port {0} is used by the server. Choose another port.": "El puerto {0} lo usa el servidor. Elige otro puerto."
+    "Port {0} is used by the server. Choose another port.": "El puerto {0} lo usa el servidor. Elige otro puerto.",
+    "Removing {0} left over from an earlier run ...": "",
+    "(exit code {0})": "",
+    "Step 2 (vmaps) did not finish (exit code {0}). The server's map data was not changed; start Create map data again.": "",
+    "Step 3 (mmaps) did not finish (exit code {0}). The server's map data was not changed; start Create map data again.": ""
   }
 }

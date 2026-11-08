@@ -281,11 +281,23 @@ namespace CoAInstaller.Web
                             p.ErrorDataReceived += (s, e) => { if (e.Data != null) note(e.Data); };
                             p.BeginOutputReadLine(); p.BeginErrorReadLine();
                             p.WaitForExit();
+                            note(L.F("(exit code {0})", p.ExitCode));
                             return p.ExitCode;
                         }
                     };
                     if (!onlyDbc)
                     {
+                        // A run that ended halfway (AFK Realm closed, the PC asleep) leaves maps, Buildings, vmaps and
+                        // mmaps in the game folder. vmap4_extractor then waits forever on the old Buildings folder, and
+                        // the tools mix old and new files. Every full run starts clean (1.2.84 did this only in the
+                        // classic Windows build, which the web version no longer contains).
+                        foreach (var f in new[] { "maps", "Cameras", "Buildings", "vmaps", "mmaps" })
+                        {
+                            string old = Path.Combine(dir, f);
+                            if (!Directory.Exists(old)) continue;
+                            note(L.F("Removing {0} left over from an earlier run ...", f));
+                            Directory.Delete(old, true);
+                        }
                         run(L.T("Step 1: dbc, maps and cameras ..."), Path.Combine(dir, Os.Exe("map_extractor")), "");
                         if (!Directory.Exists(Path.Combine(dir, "maps"))) throw new InvalidOperationException(L.T("ERROR during extraction. Is this the right game folder, and is the game closed?"));
                     }
@@ -313,12 +325,17 @@ namespace CoAInstaller.Web
                     {
                         run(L.T("Step 2: vmaps (messages like \"Couldn't open RootWmo\" are normal) ..."), Path.Combine(dir, Os.Exe("vmap4_extractor")), "");
                         Directory.CreateDirectory(Path.Combine(dir, "vmaps"));
-                        run(L.T("Step 2: vmaps (messages like \"Couldn't open RootWmo\" are normal) ..."), Path.Combine(dir, Os.Exe("vmap4_assembler")), "Buildings vmaps");
+                        int assembled = run(L.T("Step 2: vmaps (messages like \"Couldn't open RootWmo\" are normal) ..."), Path.Combine(dir, Os.Exe("vmap4_assembler")), "Buildings vmaps");
                         try { Directory.Delete(Path.Combine(dir, "Buildings"), true); } catch { }
+                        // Half-made data must not reach the server: the server's own maps stay as they are.
+                        if (assembled != 0 || !Directory.EnumerateFileSystemEntries(Path.Combine(dir, "vmaps")).Any())
+                            throw new InvalidOperationException(L.F("Step 2 (vmaps) did not finish (exit code {0}). The server's map data was not changed; start Create map data again.", assembled));
                         if (mmaps)
                         {
                             Directory.CreateDirectory(Path.Combine(dir, "mmaps"));
-                            run(L.T("Step 3: mmaps - this may take a long time ..."), Path.Combine(dir, Os.Exe("mmaps_generator")), "");
+                            int generated = run(L.T("Step 3: mmaps - this may take a long time ..."), Path.Combine(dir, Os.Exe("mmaps_generator")), "");
+                            if (generated != 0 || !Directory.EnumerateFileSystemEntries(Path.Combine(dir, "mmaps")).Any())
+                                throw new InvalidOperationException(L.F("Step 3 (mmaps) did not finish (exit code {0}). The server's map data was not changed; start Create map data again.", generated));
                         }
                     }
                     st(L.T("Moving the data into the server ..."));

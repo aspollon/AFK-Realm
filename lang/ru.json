@@ -2246,6 +2246,10 @@
     "The player client pack could not be built.": "Не удалось собрать пакет клиента игрока.",
     "Port {0} is used by the AFK Realm admin page. Choose another port.": "Порт {0} используется страницей администратора AFK Realm. Выберите другой порт.",
     "Port {0} is used by the remote access to AFK Realm. Choose another port.": "Порт {0} используется удалённым доступом к AFK Realm. Выберите другой порт.",
-    "Port {0} is used by the server. Choose another port.": "Порт {0} используется сервером. Выберите другой порт."
+    "Port {0} is used by the server. Choose another port.": "Порт {0} используется сервером. Выберите другой порт.",
+    "Removing {0} left over from an earlier run ...": "",
+    "(exit code {0})": "",
+    "Step 2 (vmaps) did not finish (exit code {0}). The server's map data was not changed; start Create map data again.": "",
+    "Step 3 (mmaps) did not finish (exit code {0}). The server's map data was not changed; start Create map data again.": ""
   }
 }
