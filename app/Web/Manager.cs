@@ -66,6 +66,7 @@ namespace CoAInstaller.Web
                 Inst = inst;
                 Ctl = new ServerControl(inst);
                 Plan = RestartPlan.Load(inst);
+                AutoUpdate.Load(inst);
                 restartAt = null; restartTold.Clear(); restartSnooze = DateTime.MinValue; memoryOver = 0; lastAutoRestart = "";
                 tickText = null; tickAsked = DateTime.MinValue;
                 Updates = null; ClientNews = CoaNews = ModuleNews = RacesNews = null; ModuleNewsInstall = new string[0]; RacesNewsIds = new int[0]; ClientPending = ""; OfferClient = false; BotOffer = new List<KeyValuePair<string, string>>();
@@ -145,6 +146,9 @@ namespace CoAInstaller.Web
             string uptime = worldReady && worldStart != DateTime.MinValue ? L.F("Running for {0}", Clock(DateTime.Now - worldStart)) + memory + tick : "";
 
             var planState = Schedule(inst, ctl, worldReady, worldStart, worldMemory);
+            try { AutoUpdate.Tick(inst, ctl, worldReady); } catch { }
+            var updateState = AutoUpdate.State();
+            var up = AutoUpdate.Plan;
 
             string mapText = !maps ? L.T("Map data is still missing. The worldserver cannot run without it.")
                 : !dbc ? L.T("The CoA DBC tables are missing. Use \"Create map data\" and tick \"Only refresh the CoA DBC tables\".")
@@ -152,7 +156,8 @@ namespace CoAInstaller.Web
 
             var u = Updates;
             object serverBanner = null, toolBanner = null;
-            if (u != null && u.Server.Count > 0)
+            // server code in the bar only when the admin wants it there (a new AFK Realm is always shown)
+            if (u != null && u.Server.Count > 0 && up.Notify)
                 serverBanner = new
                 {
                     text = L.F("Server update available: {0}  –  click to install", NewsSummary(u.Server)) +
@@ -180,6 +185,8 @@ namespace CoAInstaller.Web
                 plan = new { mode = Plan.Mode, hours = Plan.Hours, daily = Plan.DailyText, memory = Plan.MemoryGb, warn = Plan.WarnMinutes },
                 planState = planState.Item1, planWarn = planState.Item2, postpone = planState.Item3,
                 autoRestarting = AutoRestarting,
+                updatePlan = new { check = up.CheckHours, notify = up.Notify, mode = up.Mode, day = up.Day, time = up.TimeText, core = up.Core, modules = up.Modules, restore = up.Restore, warn = up.WarnMinutes },
+                updateState = updateState.Item1, updateWarn = updateState.Item2,
                 serverBanner, toolBanner,
                 clientBanner = ClientNews, coaBanner = CoaNews,
                 moduleBanner = ModuleNews == null ? null : new { text = ModuleNews, install = ModuleNewsInstall },
@@ -412,6 +419,7 @@ namespace CoAInstaller.Web
         {
             var inst = Inst;
             if (inst == null) return;
+            AutoUpdate.LastCheck = DateTime.Now;
             ThreadPool.QueueUserWorkItem(_ =>
             {
                 try { var r = UpdateCheck.Run(inst); if (Inst == inst) { Updates = r; Poke(); } } catch { }

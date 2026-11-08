@@ -42,6 +42,14 @@ namespace CoAInstaller.Web
                 return Ok;
             });
             Post(app, "/api/plan/postpone", a => { Manager.Postpone(); return Ok; });
+            // how often to look for server updates, whether to show them, and the planned automatic update
+            Post(app, "/api/updateplan", a =>
+            {
+                string error = AutoUpdate.Apply(Inst, a.Int("check"), a.Bool("notify"), a.Int("mode"), a.Int("day"), a.Str("time"),
+                    a.Bool("core"), a.Bool("modules"), a.Bool("restore"), a.Str("warn"));
+                if (error != null) throw new UserError(error);
+                return Ok;
+            });
 
             // Update, Rebuild, Setup (repair), Backup, Restore, RestoreParts, Modules
             Post(app, "/api/engine", a =>

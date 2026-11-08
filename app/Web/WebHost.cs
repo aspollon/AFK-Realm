@@ -82,6 +82,7 @@ namespace CoAInstaller.Web
             }
 
             Watch(remote, localUrl);
+            Tray.Stop();
             RemoteAccess.Stop();
             try { RegistrationPortal.Stop(); } catch { }
             try { app.StopAsync().Wait(5000); } catch { }
@@ -151,6 +152,8 @@ namespace CoAInstaller.Web
         {
             bool tracked = AppWindow.Current != null;
             bool everSeen = false, fallback = false, retried = false;
+            // Windows: an icon in the tray; closing the window then leaves AFK Realm running there
+            if (tracked && localUrl != null && Os.Windows) Tray.Start(() => Reopen(localUrl), Shutdown);
             DateTime started = DateTime.UtcNow;
             while (!Stopping.IsCancellationRequested)
             {
@@ -158,7 +161,7 @@ namespace CoAInstaller.Web
                 if (Stopping.IsCancellationRequested) break;
                 if (remote || Program.Opts.NoWindow || RemoteAccess.Running) continue;     // others may still come
                 if (RegistrationPortal.Running) continue;                                  // players may still register
-                if (Jobs.Busy || Manager.AutoRestarting) continue;
+                if (Jobs.Busy || Manager.AutoRestarting || AutoUpdate.Running) continue;
                 if (Events.Count > 0 && !everSeen) { everSeen = true; Program.StartLog("the page connected"); }
                 if (tracked)
                 {
@@ -191,10 +194,24 @@ namespace CoAInstaller.Web
                         continue;
                     }
                     // Some browsers hand the window to a process that already runs and end at once: then the pages count.
-                    if (closed && Events.Count == 0 && (DateTime.UtcNow - Events.LastSeen).TotalSeconds > 8) break;
+                    if (closed && Events.Count == 0 && (DateTime.UtcNow - Events.LastSeen).TotalSeconds > 8)
+                    {
+                        if (everSeen && Tray.Running) { Tray.TellOnce(); continue; }   // on in the tray until "Quit"
+                        break;
+                    }
                 }
                 else if (Events.Count == 0 && (DateTime.UtcNow - Events.LastSeen).TotalMinutes > 10) break;
             }
+        }
+
+        /// <summary>The tray icon's "Open": the window again, unless it is open.</summary>
+        static void Reopen(string localUrl)
+        {
+            var w = AppWindow.Current;
+            bool open = false;
+            try { open = w != null && !w.HasExited && Events.Count > 0; } catch { }
+            if (open) return;
+            AppWindow.Open(localUrl, true);
         }
 
         static string SafeExit(Process p) { try { return p == null ? "-" : p.ExitCode.ToString(); } catch { return "?"; } }

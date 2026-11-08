@@ -305,8 +305,51 @@ export function manager() {
   }
 
   // ---- maintenance ----
+  // how often server updates are looked for, whether they show in the bar, and the planned automatic update
+  function updatePlanCard() {
+    const up = s().updatePlan || { check: 6, notify: true, mode: 0, day: 5, time: '03:00', core: true, modules: true, restore: true, warn: 10 };
+    const hours = h => h === 0 ? T('only when AFK Realm starts or when I click') : h === 1 ? T('every hour') : F('every {0} hours', h);
+    const checkEvery = select([0, 1, 3, 6, 12, 24].map(x => [x, hours(x)]), up.check);
+    const notify = check(T('Show new server code (core, Playerbots, modules) in the bar at the top'), up.notify);
+    const days = [[1, T('Monday')], [2, T('Tuesday')], [3, T('Wednesday')], [4, T('Thursday')], [5, T('Friday')], [6, T('Saturday')], [0, T('Sunday')]];
+    const mode = select([[0, T('Off')], [1, T('Every day')], [2, T('Once a week')]], up.mode, () => fields());
+    const day = select(days, up.day);
+    const time = input(up.time, { style: { width: '80px' } });
+    const core = check(T('CoA core and Playerbots'), up.core);
+    const modules = check(T('Modules'), up.modules);
+    const onFail = select([[1, T('restore the backup from before the update and start the server')], [0, T('only tell me (the log and the bar)')]], up.restore ? 1 : 0);
+    const warn = input(String(up.warn), { style: { width: '60px' } });
+    const updateState = h('div.hint.pre');
+    sectionEls.updateState = updateState;
+    const planned = h('div', {},
+      h('div.row', {}, day, h('span', {}, T('at')), time, h('span', {}, T('(24-hour clock)'))),
+      h('div.row', {}, h('span', {}, T('Update:')), core, modules),
+      h('div.row', {}, h('span', {}, T('If the server does not start after it:')), onFail),
+      h('div.row', {}, h('span', {}, T('Tell players')), warn, h('span', {}, T('minutes before'))));
+    function fields() {
+      const m = +mode.value;
+      planned.classList.toggle('hidden', m === 0);
+      day.classList.toggle('hidden', m !== 2);
+    }
+    fields();
+    const apply = secondary(T('Apply'), async () => {
+      try {
+        await post('/api/updateplan', { check: +checkEvery.value, notify: notify.checked, mode: +mode.value, day: +day.value, time: time.value,
+          core: core.checked, modules: modules.checked, restore: onFail.value === '1', warn: warn.value });
+        toast(T('Saved.'));
+      } catch (e) { alert(e.message); }
+    });
+    return card(T('Update schedule'), F('How often {0} looks for new server code, and whether it installs it on its own at a quiet time instead of right away. A planned update only runs when there is something new; the server is backed up first, players are told beforehand, and a server that was running is started again. It works while {0} runs (also in the tray). New versions of {0} itself are always shown at once.', meta.product), 'maintenance',
+      h('div.row', {}, h('span', {}, T('Look for updates')), checkEvery),
+      notify,
+      h('div.row', {}, h('span', {}, T('Install automatically')), mode),
+      planned,
+      h('div.row', {}, apply),
+      updateState);
+  }
+
   function maintenanceSection() {
-    return [
+    const out = [
       card(T('Backups'), F('Before every update and module change {0} saves the whole server: programs, settings, all databases. Restore one when something went wrong.', meta.product), 'database',
         secondary(T('Backups …'), () => import('./backups.js').then(m => m.backups()))),
       card(T('Updates'), T('Checks the CoA core, Playerbots and your modules for new versions; the server is backed up first and rebuilt only when something changed.'), 'maintenance',
@@ -314,6 +357,7 @@ export function manager() {
           primary(T('Check for updates and install'), () => engine('Update', T('Check for updates?\n\nIf there are new versions of CoA or Playerbots, the current server is backed up first and then recompiled, which can take a while. A running server is stopped cleanly first.') + bleedingEdge())),
           secondary(T('Update core only'), () => engine('Update', T('Update only the CoA core and Playerbots and build the server again?\n\nYour modules stay at the versions your server has now. The server is backed up first; a running server is stopped cleanly.') + '\n\n⚠ ' + T('A new core can change code your modules rely on; a module that does not fit it any more can make the build fail.') + ' ' + T('If the build fails, your server stays as it is (the new programs are only used after a successful build), and a full update usually fixes it.') + bleedingEdge(), { coreOnly: true })),
           secondary(T('Update modules only'), () => engine('Update', T('Update only the modules and build the server again?\n\nThe CoA core and Playerbots stay at the versions your server has now. Use this for a module fix when you do not want a new core yet. The server is backed up first; a running server is stopped cleanly.') + '\n\n⚠ ' + T('A newer module can need a newer core than yours; then the build can fail.') + ' ' + T('If the build fails, your server stays as it is (the new programs are only used after a successful build), and a full update usually fixes it.') + bleedingEdge(), { modulesOnly: true })))),
+      updatePlanCard(),
       card(T('Repair and reset'), T('"Repair setup" sets up the database and configuration again without recompiling; characters and accounts are kept. "Reset random bots" deletes every random bot and lets the server create new ones.'), 'maintenance',
         h('div.row', {},
           secondary(T('Repair setup'), () => engine('Setup', T('Set up the database and configuration again (without recompiling)?\n\nCharacters and accounts are kept.'))),
@@ -325,6 +369,15 @@ export function manager() {
           secondary(T('Show the logs …'), () => import('./consoles.js').then(m => m.logsDialog())),
           secondary(T('Other server / new install'), async () => { await post('/api/servers/close'); show('welcome'); }))),
     ];
+    paintUpdates();
+    return out;
+  }
+
+  function paintUpdates() {
+    const st = s();
+    if (!sectionEls.updateState) return;
+    sectionEls.updateState.textContent = st.updateState || '';
+    sectionEls.updateState.className = 'hint pre ' + (st.updateWarn ? 'warn' : '');
   }
 
   // ---- the bar ----
@@ -344,7 +397,7 @@ export function manager() {
     if (st.racesBanner) banners.appendChild(h('button.banner', { type: 'button', onclick: () => import('./coa.js').then(x => x.missingRacesDialog(st.racesBanner)) }, st.racesBanner.text));
     if (st.moduleBanner) banners.appendChild(h('button.banner', { type: 'button', onclick: () => import('./modules.js').then(x => x.installModules(st.moduleBanner.install, st.moduleBanner.text)) }, st.moduleBanner.text));
     drawNav();
-    paintServer(); paintClient(); paintModules();
+    paintServer(); paintClient(); paintModules(); paintUpdates();
     offers();
   }
 
