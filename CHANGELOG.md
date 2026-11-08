@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.87
+
+- **Update schedule:** `src/UpdatePlan.cs` (Dependencies\update-plan.txt: check interval, bar on/off, daily/weekly slot, core/modules, restore on failure, warning minutes, last slot handled) and `app/Web/AutoUpdate.cs`: periodic `CheckForUpdates`, the slot's own update check, in-game warnings, `Update` engine run with `-CoreOnly`/`-ModulesOnly`, start and watch of a server that ran before, and restore of the newest "before update" backup made during the run when the world does not come up. `/api/updateplan`; card in Maintenance. The server-update banner follows the bar setting; the AFK Realm banner does not.
+- **Tray icon on Windows:** `app/Web/Tray.cs` (Shell_NotifyIcon on a hidden window, no Windows Forms). `WebHost.Watch` keeps running when the app window closes after the page was seen; "Open" starts the app window again, "Quit" ends AFK Realm. A planned update also keeps AFK Realm alive.
+
 ## 1.2.86
 
 - **CoA Custom delta download:** `src/CoaDelta.cs` reads each release ZIP's central directory by HTTP range (ZIP64 included), compares each file with the CoA Custom folder by size and CRC32 (cached in `.afk-coa-custom-files.txt` by size and time), and fetches only differing entries by range (stored or deflate), checked by size and CRC32 before they replace the file. A ZIP with 60 % or more of its bytes or more than 300 files needed, or a server answering without 206, falls back to the whole ZIP (resume and SHA-256 as before), from which only differing files are written. Later ZIPs still win.

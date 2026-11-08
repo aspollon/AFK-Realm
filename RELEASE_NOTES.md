@@ -1,3 +1,16 @@
+# AFK Realm 1.2.87
+
+## Update schedule
+
+- **You decide how often server updates are looked for.** Maintenance > Update schedule: only when AFK Realm starts (or when you click), or every 1, 3, 6, 12 or 24 hours.
+- **Server updates in the bar are optional.** New CoA core, Playerbots and module code can be left out of the bar at the top. A new version of AFK Realm itself is always shown at once.
+- **Planned automatic updates.** Every day or once a week (for example Friday at 03:00), for the CoA core and Playerbots, the modules, or both. It only runs when there is something new. Players are told in the game beforehand, the server is backed up first as with every update, and a server that was running is started again afterwards.
+- **When it goes wrong:** a failed build leaves the server as it was and it is started again. If the server does not start after a successful update, AFK Realm restores the backup made right before it and starts the server again, or, if you choose so, only tells you. Everything is written to `logs\scheduled-update.log`.
+
+## Tray icon (Windows)
+
+- **Closing the window no longer ends AFK Realm.** It keeps running with an icon in the tray next to the clock, so scheduled restarts and planned updates still happen. Double-click the icon to open the window again; right-click it and choose "Quit" to end AFK Realm.
+
 # AFK Realm 1.2.86
 
 ## CoA Custom: only what changed
