@@ -237,6 +237,7 @@ namespace CoAInstaller
         static int CopyPackage(Options o, Install inst, string files, string clientSource, string clientRoot)
         {
             CoaUninstall.Begin(o.Client);
+            CopyStamps.Load(o.Client);
             int copied = 0, skipped = 0;
             Console.WriteLine(L.T("Copying client MPQs ..."));
             CopyFiles(clientSource, Path.Combine(o.Client, "Data"), "*.MPQ", o.NoBackup, ref copied, ref skipped);
@@ -396,6 +397,7 @@ namespace CoAInstaller
             finally
             {
                 CoaUninstall.Flush();
+                CopyStamps.Save();
             }
 
             Console.WriteLine();
@@ -1141,6 +1143,59 @@ namespace CoAInstaller
                 throw new InvalidOperationException(L.F("The CoA package file is incomplete after the copy: {0}", target));
         }
 
+        /// <summary>The size and time of every package file and its copy at the last setup, so the next setup knows an
+        /// unchanged file without reading both (the MPQs alone are many GB). Kept next to the game.</summary>
+        static class CopyStamps
+        {
+            const string FileName = ".afk-coa-copied.txt";
+            static readonly Dictionary<string, string> known = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            static string file;
+
+            public static void Load(string client)
+            {
+                known.Clear();
+                file = Path.Combine(client, FileName);
+                try
+                {
+                    if (File.Exists(file))
+                        foreach (var line in File.ReadAllLines(file))
+                        {
+                            int tab = line.IndexOf('\t');
+                            if (tab > 0) known[line.Substring(0, tab)] = line.Substring(tab + 1);
+                        }
+                }
+                catch { known.Clear(); }
+            }
+
+            static string Stamp(string source, string target)
+            {
+                FileInfo s = new FileInfo(source), t = new FileInfo(target);
+                if (!s.Exists || !t.Exists) return null;
+                return s.Length + "|" + s.LastWriteTimeUtc.Ticks + "|" + t.Length + "|" + t.LastWriteTimeUtc.Ticks;
+            }
+
+            public static bool Unchanged(string source, string target)
+            {
+                if (file == null) return false;
+                string had, now;
+                try { now = Stamp(source, target); } catch { return false; }
+                return now != null && known.TryGetValue(Path.GetFullPath(target), out had) && had == now;
+            }
+
+            public static void Note(string source, string target)
+            {
+                if (file == null) return;
+                try { string now = Stamp(source, target); if (now != null) known[Path.GetFullPath(target)] = now; } catch { }
+            }
+
+            public static void Save()
+            {
+                if (file == null) return;
+                try { File.WriteAllLines(file, known.Select(k => k.Key + "\t" + k.Value)); } catch { }
+                file = null;
+            }
+        }
+
         static bool SameFile(string a, string b)
         {
             try
@@ -1210,7 +1265,9 @@ namespace CoAInstaller
             Directory.CreateDirectory(Path.GetDirectoryName(target));
             if (File.Exists(target))
             {
-                if (SameFile(source, target)) return false;
+                // unchanged since the last setup (size and time of both files as they were then): not read again
+                if (CopyStamps.Unchanged(source, target)) return false;
+                if (SameFile(source, target)) { CopyStamps.Note(source, target); return false; }
                 if (!noBackup)
                 {
                     string backup = target + ".coa-patcher-backup";
@@ -1220,6 +1277,7 @@ namespace CoAInstaller
             try
             {
                 File.Copy(source, target, true);
+                CopyStamps.Note(source, target);
             }
             catch (Exception ex)
             {

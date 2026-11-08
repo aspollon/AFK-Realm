@@ -266,26 +266,15 @@ namespace CoAInstaller
             }
         }
 
-        static void Extract(string zipFile, string target)
+        /// <summary>Downloads one release ZIP whole, with resume and checksum (the fallback of CoaDelta).</summary>
+        internal static void DownloadAssetTo(Asset asset, string target, Action<string, int, int> report, int index, int count)
         {
-            using (var zip = ZipFile.OpenRead(zipFile))
-                foreach (var entry in zip.Entries)
-                {
-                    string rel = entry.FullName.Replace('\\', '/').TrimStart('/');
-                    if (rel.Length == 0 || rel.Split('/').Any(p => p == ".." || p == "." || p.IndexOf(':') >= 0))
-                        throw new InvalidOperationException(L.F("{0} contains an unsafe path.", Path.GetFileName(zipFile)));
-                    string dest = Os.Resolve(target, rel);
-                    if (entry.Name.Length == 0)
-                    {
-                        Directory.CreateDirectory(dest);
-                        continue;
-                    }
-                    Directory.CreateDirectory(Path.GetDirectoryName(dest));
-                    entry.ExtractToFile(dest, true);
-                }
+            Directory.CreateDirectory(Path.GetDirectoryName(target));
+            DownloadAsset(asset, target, report, index, count);
         }
 
-        /// <summary>Downloads every ZIP of the release and extracts all of them into raceFolder. Returns the version.</summary>
+        /// <summary>Brings raceFolder up to the newest release: only the files that differ from the folder are downloaded
+        /// (CoaDelta), whole ZIPs only where most of one is needed. Returns the version.</summary>
         public static string DownloadAndExtract(string raceFolder, Action<string, int, int> report)
         {
             var release = Latest(true);
@@ -293,35 +282,14 @@ namespace CoAInstaller
             Directory.CreateDirectory(raceFolder);
             string downloads = Path.Combine(raceFolder, ".coa-custom-downloads");
             Directory.CreateDirectory(downloads);
-            var zips = new List<string>();
-            try
-            {
-                for (int i = 0; i < release.Assets.Count; i++)
-                {
-                    var asset = release.Assets[i];
-                    string zip = Path.Combine(downloads, asset.Name);
-                    if (report != null) report(L.F("Downloading CoA Custom {0} ({1}/{2}) ...", asset.Name, i + 1, release.Assets.Count), 0, 0);
-                    DownloadAsset(asset, zip, report, i, release.Assets.Count);
-                    zips.Add(zip);
-                }
-                for (int i = 0; i < zips.Count; i++)
-                {
-                    if (report != null) report(L.F("Extracting {0} ({1}/{2}) ...", Path.GetFileName(zips[i]), i + 1, zips.Count), 0, 0);
-                    Extract(zips[i], raceFolder);
-                }
-                File.WriteAllText(Path.Combine(raceFolder, VersionFile), release.Version, new UTF8Encoding(false));
-                return release.Version;
-            }
-            finally
-            {
-                // The extracted files are what matters; keep the ZIPs only if extraction failed.
-                try
-                {
-                    if (File.Exists(Path.Combine(raceFolder, VersionFile)))
-                        foreach (var zip in zips) if (File.Exists(zip)) File.Delete(zip);
-                }
-                catch { }
-            }
+            string marker = Path.Combine(raceFolder, VersionFile);
+            // the folder is only "this version" again once every file is in place
+            try { if (File.Exists(marker)) File.Delete(marker); } catch { }
+            int written = CoaDelta.Update(release, raceFolder, downloads, report);
+            File.WriteAllText(marker, release.Version, new UTF8Encoding(false));
+            if (report != null) report(L.F("CoA Custom {0}: {1} files updated, the rest was already up to date.", release.Version, written), 1, 1);
+            try { if (!Directory.EnumerateFileSystemEntries(downloads).Any()) Directory.Delete(downloads); } catch { }
+            return release.Version;
         }
     }
 }

@@ -2510,6 +2510,13 @@
     "Removing {0} left over from an earlier run ...": "Entferne {0} aus einem früheren Lauf ...",
     "(exit code {0})": "(Exit-Code {0})",
     "Step 2 (vmaps) did not finish (exit code {0}). The server's map data was not changed; start Create map data again.": "Schritt 2 (vmaps) ist nicht fertig geworden (Exit-Code {0}). Die Kartendaten des Servers wurden nicht verändert; starte „Kartendaten erstellen“ noch einmal.",
-    "Step 3 (mmaps) did not finish (exit code {0}). The server's map data was not changed; start Create map data again.": "Schritt 3 (mmaps) ist nicht fertig geworden (Exit-Code {0}). Die Kartendaten des Servers wurden nicht verändert; starte „Kartendaten erstellen“ noch einmal."
+    "Step 3 (mmaps) did not finish (exit code {0}). The server's map data was not changed; start Create map data again.": "Schritt 3 (mmaps) ist nicht fertig geworden (Exit-Code {0}). Die Kartendaten des Servers wurden nicht verändert; starte „Kartendaten erstellen“ noch einmal.",
+    "Reading the file list of {0} ({1}/{2}) ...": "Lese die Dateiliste von {0} ({1}/{2}) ...",
+    "Comparing the CoA Custom files ({0}/{1}) ...": "Vergleiche die CoA-Custom-Dateien ({0}/{1}) ...",
+    "Updating {0} ({1}/{2}) ...": "Aktualisiere {0} ({1}/{2}) ...",
+    "The download of {0} was cut off.": "Der Download von {0} wurde abgebrochen.",
+    "{0} is not a ZIP file.": "{0} ist keine ZIP-Datei.",
+    "CoA Custom {0}: {1} files updated, the rest was already up to date.": "CoA Custom {0}: {1} Dateien aktualisiert, der Rest war schon aktuell.",
+    "Files that are already in the folder unchanged are not downloaded again: an update or a repeated download usually needs far less.": "Dateien, die schon unverändert im Ordner liegen, werden nicht noch einmal geladen: Ein Update oder ein erneuter Download braucht meist deutlich weniger."
   }
 }

@@ -138,6 +138,7 @@ namespace CoAInstaller.Web
                 try { Directory.CreateDirectory(target); free = new DriveInfo(Os.Windows ? Path.GetPathRoot(Path.GetFullPath(target)) : target).AvailableFreeSpace; } catch { }
                 string text = L.F("{0} CoA Custom {1}?\n\nIt downloads all {2} ZIP files of the release (client and server), about {3}, and extracts them into:\n{4}\n\nExisting files are overwritten. After that the race selection opens.",
                     action, release.Version, release.Assets.Count, ClientDownload.FormatBytes(release.Assets.Sum(x => x.Size)), target);
+                text += "\n\n" + L.T("Files that are already in the folder unchanged are not downloaded again: an update or a repeated download usually needs far less.");
                 if (free > 0 && free < release.Assets.Sum(x => x.Size) + 512L * 1024 * 1024) text += "\n\n" + L.F("Only {0} is free on that drive.", ClientDownload.FormatBytes(free));
                 return new { text, title = L.F("{0} CoA Custom {1} ...", action, release.Version) };
             });
