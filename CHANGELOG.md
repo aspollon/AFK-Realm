@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.14
+
+- **EsteriaWoW character tables:** `esteria-character-look-tables.patch` adds `pending_db_characters/rev_20260901000000000_afk_retail_look_tables.sql` with `character_retail_look` (binary 132, RetailLookWire.h) and `character_body_shape` (binary 49, BodyShapeWire.h): the core prepares statements for them, but no SQL of the repository creates them ("Could not prepare statements of the Character database"). A check of all prepared statements against the repository's CREATE TABLEs found no other missing table.
+- **Nemesis order by the engine:** the rename of mod-nemesis-system's base SQL moved from a patch into `Repair-EsteriaSqlOrder`. Module folders are not cleaned on a download, so the renamed copy stayed and the patch no longer applied; the engine replaces an old copy now.
+
 ## 1.3.13
 
 - **EsteriaWoW pending SQL in the order it was written:** `Repair-EsteriaSqlOrder` (before every dbimport) renames `data/sql/updates/pending_db_*/rev_<n>*.sql` to `rev_<yyyyMMddHHmmss><ms>_<n>*`: EsteriaWoW mixes dated names (14/17 digits) with Unix times in ms (13) and ns (19), and by file name an October Unix-time update ran before the September one that creates `custom_race_start_spell` (ERROR 1146). The updater knows a renamed file by its hash.

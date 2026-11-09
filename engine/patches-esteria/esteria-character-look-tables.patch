@@ -1,0 +1,21 @@
+diff --git a/data/sql/updates/pending_db_characters/rev_20260901000000000_afk_retail_look_tables.sql b/data/sql/updates/pending_db_characters/rev_20260901000000000_afk_retail_look_tables.sql
+new file mode 100644
+--- /dev/null
++++ b/data/sql/updates/pending_db_characters/rev_20260901000000000_afk_retail_look_tables.sql
+@@ -0,0 +1,16 @@
++-- Added by AFK Realm: the EsteriaWoW core reads and writes character_retail_look and character_body_shape
++-- (CharacterDatabase.cpp, Player::LoadRetailLook / LoadBodyShape), but no SQL file of the repository creates them;
++-- a new database stopped with "Could not prepare statements of the Character database".
++-- Layouts from src/server/shared: RetailLookWire.h (4 + 2 * 64 = 132 bytes, like character_form_look) and
++-- BodyShapeWire.h (1 + 48 = 49 bytes).
++CREATE TABLE IF NOT EXISTS `character_retail_look` (
++  `guid` int unsigned NOT NULL,
++  `data` binary(132) NOT NULL,
++  PRIMARY KEY (`guid`)
++) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
++
++CREATE TABLE IF NOT EXISTS `character_body_shape` (
++  `guid` int unsigned NOT NULL,
++  `data` binary(49) NOT NULL,
++  PRIMARY KEY (`guid`)
++) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
