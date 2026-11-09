@@ -44,7 +44,7 @@ namespace CoAInstaller
                     var m = Regex.Match(f[1], @"github\.com[/:]([^/]+)/([^/.]+)");
                     if (!m.Success || !Regex.IsMatch(f[3], "^[0-9a-f]{40}$")) continue;
                     int before = r.Server.Count;
-                    Ask(r, git, f[0] == "core" ? L.T("CoA core") : "Playerbots", m.Groups[1].Value + "/" + m.Groups[2].Value, f[2], f[3]);
+                    Ask(r, git, f[0] == "core" ? (inst.IsCoa ? L.T("CoA core") : "AzerothCore") : "Playerbots", m.Groups[1].Value + "/" + m.Groups[2].Value, f[2], f[3]);
                     if (r.Server.Count > before) r.BaseNew = true;
                 }
             }

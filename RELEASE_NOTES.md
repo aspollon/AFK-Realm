@@ -1,3 +1,12 @@
+# AFK Realm 1.3.0
+
+## Conquest of Azeroth or AzerothCore
+
+- **Choose your server.** When you set up a new server, AFK Realm now asks which one: **Conquest of Azeroth**, as before, or the stock **AzerothCore** (WotLK 3.3.5a) with Playerbots. Both are built from source and managed the same way: start and stop, updates, update schedule, backups, accounts, bots, modules, game master tools, map data.
+- **AzerothCore** uses the core and Playerbots of the mod-playerbots project and Dungeon Clear, and needs a normal 3.3.5a game client (build 12340). The modules by AFK Realm (World Journey, the auction house bots, classic classes, custom races …) are made for CoA, so they are not offered there; everything from the AzerothCore module catalog is.
+- Your existing server stays a Conquest of Azeroth server; nothing changes for it.
+- **Experimental:** the AzerothCore build is new and has had little testing. Please report what does not work.
+
 # AFK Realm 1.2.90
 
 ## Less memory

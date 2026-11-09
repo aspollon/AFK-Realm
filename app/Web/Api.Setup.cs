@@ -65,6 +65,12 @@ namespace CoAInstaller.Web
                 string mode = a.Str("mode") ?? "Install";
                 if (mode != "Install") mode = "Install";
                 bool shortcut = a.Bool("shortcut", true);
+                // The kind of server is chosen once, for a new server; an installed one keeps its own.
+                if (!installed)
+                {
+                    string kind = (a.Str("kind") ?? Install.KindCoa).Trim().ToLowerInvariant();
+                    inst.SetKind(kind == Install.KindAzerothCore ? Install.KindAzerothCore : Install.KindCoa);
+                }
                 return Jobs.RunEngine(inst, mode, password, 3307, null, name, false, job =>
                 {
                     CopySelf(inst, shortcut);

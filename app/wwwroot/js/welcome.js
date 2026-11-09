@@ -4,7 +4,15 @@ import { primary, secondary, ghost, input, password, check, field, choose, alert
 import { icon } from './icons.js';
 import { languageMenu, themeMenu, show } from './app.js';
 
-const wiz = { path: '', name: 'AzerothCore', password: '', password2: '', installed: false, shortcut: true };
+const wiz = { path: '', name: 'AzerothCore', password: '', password2: '', installed: false, shortcut: true, kind: 'coa' };
+
+// The kinds of server AFK Realm can build, by their official names.
+// group: 'standard' = the plain WotLK core, 'custom' = projects built on top of it (more follow there).
+const kinds = () => [
+  { id: 'coa', group: 'custom', name: 'Conquest of Azeroth', tags: [T('21 classes'), T('Modules by AFK Realm')], text: T('The Conquest of Azeroth core with its 21 classes, Playerbots and the CoA world data. All modules by AFK Realm work here. Needs the CoA game client.') },
+  { id: 'azerothcore', group: 'standard', name: 'AzerothCore', tags: [T('WotLK 3.3.5a'), T('Module catalog')], text: T('The stock AzerothCore (WotLK 3.3.5a) with Playerbots. The modules by AFK Realm are made for CoA and are not offered. Needs a normal 3.3.5a game client (build 12340).') },
+];
+const kindName = id => (kinds().find(k => k.id === id) || kinds()[0]).name;
 
 export function header() {
   const lang = h('button', { type: 'button', title: T('Language') }, icon('language'), (meta.languages.find(l => l.code === meta.language) || { name: 'English' }).name);
@@ -24,15 +32,16 @@ function footer(...buttons) { return h('footer', {}, ...buttons); }
 
 export function welcome(step) {
   if (step === 'folder') return folderPage();
+  if (step === 'kind') return kindPage();
   if (step === 'name') return namePage();
   if (step === 'password') return passwordPage();
   if (step === 'summary') return summaryPage();
   const tile = (title, text, ic, onclick) => h('button.tile', { type: 'button', onclick }, h('span.ic', {}, icon(ic)), h('span', {}, h('b', {}, title), h('span', {}, text)));
   return page(T('Welcome'),
-    h('p', {}, T('This program builds your own Conquest of Azeroth server with Playerbots, straight from the current source code. It downloads every tool it needs, compiles the server and sets up the database including the CoA world data.')),
+    h('p', {}, T('This program builds your own World of Warcraft server with Playerbots - Conquest of Azeroth or AzerothCore - straight from the current source code. It downloads every tool it needs, compiles the server and sets up the database.')),
     h('p.hint', {}, meta.windows
-      ? T('You need: Windows 10 or 11 (64-bit), about 40 GB of free disk space, an internet connection and some patience. Bring your own CoA game client; it is not included.')
-      : T('You need: a 64-bit Linux (Ubuntu, Debian, Fedora, Arch …), about 40 GB of free disk space, an internet connection and some patience. The build tools of the distribution are installed once with one command that AFK Realm shows. Bring your own CoA game client; it is not included.')),
+      ? T('You need: Windows 10 or 11 (64-bit), about 40 GB of free disk space, an internet connection and some patience. Bring your own game client; it is not included.')
+      : T('You need: a 64-bit Linux (Ubuntu, Debian, Fedora, Arch …), about 40 GB of free disk space, an internet connection and some patience. The build tools of the distribution are installed once with one command that AFK Realm shows. Bring your own game client; it is not included.')),
     tile(T('Install a new server'), T('Set everything up from scratch.'), 'server', () => show('welcome', 'folder')),
     tile(T('Manage an existing server'), T('Start, stop, updates, accounts, map data …'), 'settings', openExisting),
     knownServers());
@@ -88,8 +97,33 @@ function folderPage() {
       await evaluate();
       if (lastError) return alert(lastError);
       if (wiz.installed && !await confirm(T('A server is already installed here. Recompile it completely?\n\nDatabase, characters and map data are kept.'))) return;
-      show('welcome', wiz.installed ? 'password' : 'name');
+      show('welcome', wiz.installed ? 'password' : 'kind');
     })));
+}
+
+function kindPage() {
+  const box = h('div');
+  const groups = [
+    ['standard', T('Standard'), T('The plain World of Warcraft 3.3.5a core, as the AzerothCore project publishes it.')],
+    ['custom', T('Custom'), T('Projects built on AzerothCore with their own classes, races and content. They need their own game client.')],
+  ];
+  const tag = t => h('span', { style: { display: 'inline-block', fontSize: '11px', fontWeight: '600', padding: '1px 8px', marginRight: '6px', marginTop: '6px',
+    borderRadius: '999px', background: 'var(--accent-soft)', color: 'var(--accent-text)' } }, t);
+  const tile = k => h('button.tile' + (wiz.kind === k.id ? '.on' : ''), {
+    type: 'button', 'aria-pressed': wiz.kind === k.id ? 'true' : 'false',
+    style: wiz.kind === k.id ? { outline: '2px solid var(--accent)', outlineOffset: '-2px' } : {},
+    onclick: () => { wiz.kind = k.id; paint(); }
+  }, h('span.ic', {}, icon(wiz.kind === k.id ? 'check' : 'server')),
+    h('span', {}, h('b', {}, k.name), h('span', {}, k.text), h('span', { style: { display: 'block' } }, ...k.tags.map(tag))));
+  const paint = () => replace(box, ...groups.map(([id, title, text]) => h('section', { style: { marginTop: '14px' } },
+    h('div', { style: { fontSize: '12px', fontWeight: '700', letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--muted)' } }, title),
+    h('div.small.muted', { style: { margin: '2px 0 8px' } }, text),
+    ...kinds().filter(k => k.group === id).map(tile))));
+  paint();
+  return page(T('Which server?'),
+    h('p', {}, T('Choose the kind of server. It is set once for this server folder; for the other kind, install a second server in another folder.')),
+    box,
+    footer(secondary(T('Back'), () => show('welcome', 'folder')), primary(T('Next'), () => show('welcome', 'name'))));
 }
 
 function namePage() {
@@ -99,7 +133,7 @@ function namePage() {
     h('p', {}, T('This is the name players see in the realm list when they log in. You can change it later in the server management.')),
     field(T('Server name'), name),
     h('p.hint', {}, T('Up to 32 characters: English letters, digits, spaces, hyphen, apostrophe and dot. It has to start with a letter or digit.')),
-    footer(secondary(T('Back'), () => show('welcome', 'folder')), primary(T('Next'), async () => {
+    footer(secondary(T('Back'), () => show('welcome', 'kind')), primary(T('Next'), async () => {
       const r = await post('/api/setup/name', { name: name.value.trim() });
       if (r.error) return alert(r.error);
       wiz.name = name.value.trim();
@@ -125,15 +159,18 @@ function passwordPage() {
     })));
 }
 
-const phaseTitles = () => meta.windows
-  ? [T('Check tools (Git, CMake)'), T('Visual Studio C++ Build Tools'), T('Libraries (OpenSSL, Boost)'), T('Portable MySQL database'), T('Download the server source code'), T('Prepare the build (CMake)'), T('Compile the server'), T('Set up the database'), T('Import the CoA world data'), T('Configuration and final checks')]
-  : [T('Check tools (Git, CMake)'), T('Compiler and libraries'), T('Portable MySQL database'), T('Download the server source code'), T('Prepare the build (CMake)'), T('Compile the server'), T('Set up the database'), T('Import the CoA world data'), T('Configuration and final checks')];
+const phaseTitles = () => {
+  const world = wiz.kind === 'coa' || wiz.installed ? [T('Import the CoA world data')] : [];
+  return meta.windows
+    ? [T('Check tools (Git, CMake)'), T('Visual Studio C++ Build Tools'), T('Libraries (OpenSSL, Boost)'), T('Portable MySQL database'), T('Download the server source code'), T('Prepare the build (CMake)'), T('Compile the server'), T('Set up the database'), ...world, T('Configuration and final checks')]
+    : [T('Check tools (Git, CMake)'), T('Compiler and libraries'), T('Portable MySQL database'), T('Download the server source code'), T('Prepare the build (CMake)'), T('Compile the server'), T('Set up the database'), ...world, T('Configuration and final checks')];
+};
 
 function summaryPage() {
   const shortcut = check(meta.windows ? F('Create a "{0}" shortcut on the desktop', 'AFK Realm') : F('Add "{0}" to the application menu', 'AFK Realm'), wiz.shortcut, v => wiz.shortcut = v);
   const understood = check(T('I understand the installation may take a long time, depending on my PC.'), false);
   return page(T('Ready to install'),
-    h('p', {}, T('Target:') + ' ', h('span.mono', {}, wiz.path), wiz.installed ? null : [h('br'), T('Server name:') + ' ' + wiz.name]),
+    h('p', {}, T('Target:') + ' ', h('span.mono', {}, wiz.path), wiz.installed ? null : [h('br'), T('Server:') + ' ' + kindName(wiz.kind), h('br'), T('Server name:') + ' ' + wiz.name]),
     h('h3', {}, T('What happens now')),
     h('ul', {}, phaseTitles().map(t => h('li', {}, t))),
     h('p.hint', {}, meta.windows
@@ -143,7 +180,7 @@ function summaryPage() {
     footer(secondary(T('Back'), () => show('welcome', 'password')), primary(T('Install'), async () => {
       if (!understood.checked) return alert(T('Please confirm that you have the time.'));
       try {
-        const job = await post('/api/setup/install', { path: wiz.path, name: wiz.name, password: wiz.password, password2: wiz.password2, shortcut: wiz.shortcut });
+        const job = await post('/api/setup/install', { path: wiz.path, name: wiz.name, password: wiz.password, password2: wiz.password2, shortcut: wiz.shortcut, kind: wiz.kind });
         state.job = job;
         show('progress');
       } catch (e) { alert(e.message); }

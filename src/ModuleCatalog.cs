@@ -292,7 +292,13 @@ namespace CoAInstaller
         public static List<ModuleEntry> Merge(Install inst, List<ModuleEntry> catalog)
         {
             var result = new List<ModuleEntry>(catalog ?? new List<ModuleEntry>());
-            foreach (var own in OwnModules())
+            // The modules by AFK Realm are made for the CoA core: a stock AzerothCore server neither lists nor offers them.
+            if (!inst.IsCoa)
+            {
+                var ownNames = new HashSet<string>(OwnModules().Select(o => o.FullName), StringComparer.OrdinalIgnoreCase);
+                result.RemoveAll(e => ownNames.Contains(e.FullName));
+            }
+            foreach (var own in inst.IsCoa ? OwnModules() : new ModuleEntry[0])
             {
                 var listed = result.FirstOrDefault(e => e.FullName.Equals(own.FullName, StringComparison.OrdinalIgnoreCase));
                 if (listed != null) { listed.Own = true; listed.Hidden = own.Hidden; if (listed.Description.Length == 0) listed.Description = own.Description; }
@@ -357,7 +363,7 @@ namespace CoAInstaller
             {
                 dungeon = new ModuleEntry
                 {
-                    Name = "mod-dungeon-clear", FullName = "Zyth45/mod-dungeon-clear", Branch = "coa",
+                    Name = "mod-dungeon-clear", FullName = "Zyth45/mod-dungeon-clear", Branch = inst.IsCoa ? "coa" : "master",
                     Url = "https://github.com/Zyth45/mod-dungeon-clear", CloneUrl = "https://github.com/Zyth45/mod-dungeon-clear.git",
                     Description = L.N("Zyth45's Dungeon Clear for the Playerbots: the tank clears a dungeon boss by boss. Included in every AFK Realm server, like Playerbots; the DungeonClear add-on is installed automatically.")
                 };

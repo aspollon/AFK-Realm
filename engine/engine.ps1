@@ -136,6 +136,24 @@ $Paths = @{
     ModuleTrash = Join-Path $InstallRoot 'Dependencies\ModulesRemoved'
     ModuleSettings = Join-Path $InstallRoot 'Dependencies\module-settings.txt'
 }
+# The kind of server, chosen when it was set up (Dependencies\server-kind.txt, written by AFK Realm before the first
+# run): 'coa' = Conquest of Azeroth (the default, also for every server set up before there was a choice),
+# 'azerothcore' = stock AzerothCore with the Playerbots module of the mod-playerbots project.
+$ServerKind = 'coa'
+$kindFile = Join-Path $Paths.Deps 'server-kind.txt'
+if (Test-Path -LiteralPath $kindFile) {
+    $k = ([IO.File]::ReadAllText($kindFile)).Trim().ToLowerInvariant()
+    if ($k -eq 'azerothcore') { $ServerKind = $k }
+}
+if ($ServerKind -eq 'azerothcore') {
+    $Project.Name = 'AzerothCore'
+    # mod-playerbots needs this fork of AzerothCore (the stock core plus the hooks the bots use), branch Playerbot.
+    $Project.Core = @{ Repo = 'https://github.com/mod-playerbots/azerothcore-wotlk.git'; Branch = 'Playerbot'; Revision = ''; Moved = @() }
+    $Project.Playerbots = @{ Repo = 'https://github.com/mod-playerbots/mod-playerbots.git'; Branch = 'master'; Revision = ''; Folder = 'mod-playerbots'
+                             Moved = @('https://github.com/liyunfan1223/mod-playerbots.git') }
+    $Project.DungeonClear = @{ Repo = 'https://github.com/Zyth45/mod-dungeon-clear.git'; Branch = 'master'; Revision = ''; Folder = 'mod-dungeon-clear'; Moved = @() }
+}
+$IsCoa = $ServerKind -eq 'coa'
 $Paths.Modules = Join-Path $Paths.Source 'modules'
 $Paths.Playerbots = Join-Path $Paths.Modules $Project.Playerbots.Folder
 $Paths.DungeonClear = Join-Path $Paths.Modules $Project.DungeonClear.Folder
@@ -1098,6 +1116,8 @@ function Save-Revisions {
 # Without it, an app update with new racial scripts could report "up to date" while the old worldserver
 # (built before the patch) keeps running.
 function Get-PatchStamp {
+    # The built-in patches are made for the CoA core only.
+    if (-not $IsCoa) { return '' }
     $folder = Join-Path $PSScriptRoot 'patches'
     if (-not (Test-Path -LiteralPath $folder)) { return '' }
     $parts = foreach ($file in @(Get-ChildItem -LiteralPath $folder -Filter '*.patch' | Sort-Object Name)) {
@@ -1146,7 +1166,7 @@ function Resolve-LatestRevisions([string]$Git) {
     $Project.Core.Revision = Get-RemoteHead $Git $Project.Core
     $Project.Playerbots.Revision = Get-RemoteHead $Git $Project.Playerbots
     $Project.DungeonClear.Revision = Get-RemoteHead $Git $Project.DungeonClear
-    Write-Log ('Newest version: CoA core {0}, Playerbots {1}, Dungeon Clear {2}' -f $Project.Core.Revision.Substring(0, 8), $Project.Playerbots.Revision.Substring(0, 8), $Project.DungeonClear.Revision.Substring(0, 8)) Cyan
+    Write-Log ('Newest version: ' + $(if ($IsCoa) { 'CoA core' } else { 'AzerothCore' }) + ' {0}, Playerbots {1}, Dungeon Clear {2}' -f $Project.Core.Revision.Substring(0, 8), $Project.Playerbots.Revision.Substring(0, 8), $Project.DungeonClear.Revision.Substring(0, 8)) Cyan
 }
 
 # Looks for new commits. Core and Playerbots move to the branch head; additional
@@ -1477,10 +1497,13 @@ function Set-ServerConfig([string]$Password) {
     if ($bots) {
         Set-ConfigValue $bots.FullName 'PlayerbotsDatabaseInfo' (& $connection 'acore_playerbots')
         # AFK Realm's bot dashboard reads this snapshot: on from the first start, not after a manual click.
-        $status = Join-Path $Paths.Logs 'bot-status.json'
-        [void][IO.Directory]::CreateDirectory($Paths.Logs)
-        Set-ConfigValue $bots.FullName 'AiPlayerbot.CoaStatusFile' ('"' + $status.Replace('\', '/') + '"')
-        Set-ConfigValue $bots.FullName 'AiPlayerbot.CoaStatusIntervalSeconds' '5'
+        # (Settings of the CoA fork of mod-playerbots only.)
+        if ($IsCoa) {
+            $status = Join-Path $Paths.Logs 'bot-status.json'
+            [void][IO.Directory]::CreateDirectory($Paths.Logs)
+            Set-ConfigValue $bots.FullName 'AiPlayerbot.CoaStatusFile' ('"' + $status.Replace('\', '/') + '"')
+            Set-ConfigValue $bots.FullName 'AiPlayerbot.CoaStatusIntervalSeconds' '5'
+        }
     }
     Write-Log 'Server configuration updated.'
 }
@@ -2197,6 +2220,8 @@ function Get-ModuleLinkageArgs {
 # that cannot apply it must stop instead of producing a worldserver that looks complete but has no racial scripts.
 $script:RequiredBuiltInPatches = @('afk-1.9.8-racials.patch')
 function Invoke-BuiltInPatches([string]$Git, [switch]$Quiet) {
+    # AFK Realm's core patches are made for the CoA core; a stock AzerothCore is built as it is.
+    if (-not $IsCoa) { return }
     $folder = Join-Path $PSScriptRoot 'patches'
     foreach ($required in $script:RequiredBuiltInPatches) {
         if (-not (Test-Path -LiteralPath (Join-Path $folder $required))) {
@@ -2836,8 +2861,13 @@ try {
     Start-Database
     Initialize-Database $password
     if ($moduleState) { Complete-ModuleChange $password $moduleState }
-    Enter-Phase 'world' 'Importing the CoA world data'
-    Import-WorldData $password
+    if ($IsCoa) {
+        Enter-Phase 'world' 'Importing the CoA world data'
+        Import-WorldData $password
+    } else {
+        # A stock AzerothCore brings its world database as SQL; dbimport creates it in the next step.
+        Enter-Phase 'world' 'World data check'
+    }
     Enter-Phase 'finish' 'Configuration and final checks'
     Set-ServerConfig $password
     Set-ModuleSettings

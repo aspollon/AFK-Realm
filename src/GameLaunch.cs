@@ -19,10 +19,11 @@ namespace CoAInstaller
     {
         public const string LocalAddress = "127.0.0.1";
 
-        /// <summary>The exe "Play" starts: CoA64.exe, else Ascension.exe; null when the folder has neither.</summary>
+        /// <summary>The exe "Play" starts: CoA64.exe, else Ascension.exe, else Wow.exe (a normal 3.3.5a client for a
+        /// stock AzerothCore server); null when the folder has none of them.</summary>
         public static string GameExe(string client)
         {
-            foreach (string name in new[] { "CoA64.exe", "Ascension.exe" })
+            foreach (string name in new[] { "CoA64.exe", "Ascension.exe", "Wow.exe" })
             {
                 string file = Os.Resolve(client, name);
                 if (File.Exists(file)) return file;
@@ -100,7 +101,7 @@ namespace CoAInstaller
         public static string Play(string client)
         {
             string exe = GameExe(client);
-            if (exe == null) throw new InvalidOperationException(L.F("The game folder {0} has neither CoA64.exe nor Ascension.exe.", client));
+            if (exe == null) throw new InvalidOperationException(L.F("The game folder {0} has no CoA64.exe, Ascension.exe or Wow.exe.", client));
             if (ClientAddons.ClientRunning(client)) throw new InvalidOperationException(L.T("The game is already running."));
             SetRealmlist(client, LocalAddress);
             var start = new ProcessStartInfo(exe) { WorkingDirectory = client, UseShellExecute = true };

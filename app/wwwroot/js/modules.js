@@ -1,6 +1,8 @@
 // Module manager: the AzerothCore module catalog with the installed modules ticked; applying rebuilds the server.
-import { h, T, F, meta, post, get, replace, debounce } from './core.js';
+import { h, T, F, meta, post, get, replace, debounce, state } from './core.js';
 import { primary, secondary, dialog, alert, input, select, check, toast } from './ui.js';
+// The server is a Conquest of Azeroth one (not a stock AzerothCore).
+const coa = () => !state.status || state.status.kind !== 'azerothcore';
 
 export async function modulesDialog() {
   let data;
@@ -36,7 +38,7 @@ export async function modulesDialog() {
   function statusText(m) {
     const tick = ticked.has(m.id);
     switch (m.state) {
-      case 'PartOfCoA': return m.playerbots ? T('included') : T('part of CoA');
+      case 'PartOfCoA': return m.playerbots ? T('included') : coa() ? T('part of CoA') : T('part of the core');
       case 'Managed':
         if (!tick) return T('will be removed');
         return m.status === 'sql-failed' ? T('database step failed') : m.status === 'missing' ? T('folder missing') : T('installed');
@@ -131,12 +133,17 @@ export async function modulesDialog() {
       m.url && m.url.startsWith('http') ? h('a.small', { href: m.url, target: '_blank', rel: 'noopener' }, T('Open on GitHub')) : null,
       h('div', { style: { marginTop: '8px' } }, checks), readme);
     const add = (l, t) => checks.appendChild(checkRow(l, t));
+    if (m.playerbots && !coa()) {
+      add(0, F('Playerbots is already included: {0} always builds mod-playerbots (branch master) and keeps it up to date with every server update.', meta.product));
+      if (m.fullName && m.fullName.toLowerCase() !== 'mod-playerbots/mod-playerbots' && m.fullName.toLowerCase() !== 'liyunfan1223/mod-playerbots') add(-1, F('This entry is a different version ({0}). Nothing needs to be installed here.', m.fullName));
+      return;
+    }
     if (m.playerbots) {
       add(0, F('Playerbots is already included: {0} always builds the CoA version (Zyth45/mod-playerbots, branch coa) and keeps it up to date with every server update.', meta.product));
       if (m.fullName && m.fullName.toLowerCase() !== 'zyth45/mod-playerbots') add(-1, F('This entry is a different version ({0}) that does not fit CoA. Nothing needs to be installed here.', m.fullName));
       return;
     }
-    if (m.state === 'PartOfCoA') return add(0, T('This module is already part of the CoA core.'));
+    if (m.state === 'PartOfCoA') return add(0, coa() ? T('This module is already part of the CoA core.') : T('This module is already part of the core.'));
     if (m.own) add(0, F('Made for {0} and the CoA server it builds.', meta.product));
     if (m.state === 'Managed') {
       add(0, (m.installedOn ? F('Installed through {0} on {1}.', meta.product, m.installedOn) : F('Installed through {0}.', meta.product)) + ' ' + T('Removing it undoes its recorded database changes.'));

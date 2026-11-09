@@ -30,12 +30,13 @@ export async function clientDialog(reason) {
     // complete CoA player ZIP, so it must not disappear after the CoA setup.
     exportBtn.disabled = !(look.canExport || look.coa);
     exportBtn.style.display = '';
-    exportBtn.lastChild.textContent = look.coa ? T('Create player ZIP �?�') : T('Export AFK-only ZIP �?�');
+    exportBtn.lastChild.textContent = look.coa ? T('Create player ZIP …') : T('Export AFK-only ZIP …');
     installBtn.disabled = !look.canInstall;
     installBtn.lastChild.textContent = look.installText;
     state.textContent = look.state;
     state.className = 'small ' + (look.stateWarn ? 'warn' : 'muted');
-    post('/api/client/version', { folder: look.folder }).then(r => { downloadBtn.lastChild.textContent = r.text; }).catch(() => { });
+    downloadBtn.style.display = look.serverCoa ? '' : 'none';
+    if (look.serverCoa) post('/api/client/version', { folder: look.folder }).then(r => { downloadBtn.lastChild.textContent = r.text; }).catch(() => { });
   }
 
   folder.addEventListener('change', () => { if (folder.value.trim() !== checked) refresh(folder.value.trim()); });

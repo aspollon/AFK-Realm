@@ -34,7 +34,7 @@ namespace CoAInstaller
         static string VersionOf()
         {
             System.Version v = typeof(Product).Assembly.GetName().Version;
-            return v == null || v.Major == 0 ? "1.2.90" : v.Major + "." + v.Minor + "." + v.Build;
+            return v == null || v.Major == 0 ? "1.3.0" : v.Major + "." + v.Minor + "." + v.Build;
         }
     }
 
@@ -119,6 +119,27 @@ namespace CoAInstaller
         public string WorldConf { get { return Path.Combine(ConfigDir, "worldserver.conf"); } }
         public string AuthConf { get { return Path.Combine(ConfigDir, "authserver.conf"); } }
         public string CoaConf { get { return Path.Combine(ConfigDir, "modules", "coa.conf"); } }
+
+        /// <summary>The kind of server: "coa" (Conquest of Azeroth) or "azerothcore" (stock AzerothCore with Playerbots).</summary>
+        public const string KindCoa = "coa", KindAzerothCore = "azerothcore";
+        public string KindFile { get { return Path.Combine(Root, "Dependencies", "server-kind.txt"); } }
+        /// <summary>Chosen when the server was set up; a server without the file is a CoA server (made before there was a choice).</summary>
+        public string Kind
+        {
+            get
+            {
+                try { if (File.Exists(KindFile) && File.ReadAllText(KindFile).Trim().Equals(KindAzerothCore, StringComparison.OrdinalIgnoreCase)) return KindAzerothCore; }
+                catch { }
+                return KindCoa;
+            }
+        }
+        public bool IsCoa { get { return Kind == KindCoa; } }
+        /// <summary>Records the kind before the first engine run (the engine reads the same file).</summary>
+        public void SetKind(string kind)
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(KindFile));
+            File.WriteAllText(KindFile, kind == KindAzerothCore ? KindAzerothCore : KindCoa);
+        }
 
         public bool IsInstalled
         {

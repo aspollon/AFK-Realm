@@ -37,6 +37,13 @@ namespace CoAInstaller
             new Phase("finish",    L.T("Configuration and final checks"), 3),
         };
 
+        /// <summary>A stock AzerothCore has no world package to import: dbimport builds its world database later.</summary>
+        static Phase[] ForKind(Phase[] phases, bool coa)
+        {
+            if (coa) return phases;
+            return phases.Select(p => p.Id == "world" && p.Title == L.T("Import the CoA world data") ? new Phase("world", L.T("World data check"), 1) : p).ToArray();
+        }
+
         /// <summary>The steps shown for a mode. Updates back up the server right after the update check.</summary>
         public static Phase[] For(string mode)
         {
@@ -70,7 +77,7 @@ namespace CoAInstaller
         }
 
         public readonly Phase[] Phases;
-        public EngineRunner(string mode) { Phases = For(mode); }
+        public EngineRunner(string mode, bool coa = true) { Phases = ForKind(For(mode), coa); }
 
         // Events are raised on the reader thread; the UI marshals them.
         public event Action<int> PhaseStarted;            // index into Phases

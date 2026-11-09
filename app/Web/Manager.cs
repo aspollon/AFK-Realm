@@ -177,6 +177,7 @@ namespace CoAInstaller.Web
             var status = new
             {
                 root = inst.Root,
+                kind = inst.Kind,
                 db, auth, world, worldReady,
                 uptime,
                 notice = Notice, noticeKind = NoticeKind,
@@ -191,8 +192,8 @@ namespace CoAInstaller.Web
                 clientBanner = ClientNews, coaBanner = CoaNews,
                 moduleBanner = ModuleNews == null ? null : new { text = ModuleNews, install = ModuleNewsInstall },
                 racesBanner = RacesNews == null ? null : new { text = RacesNews, ids = RacesNewsIds },
-                clientButton = InstalledClient != null && InstalledClient != ClientVersion ? L.F("Update game client to {0} …", ClientVersion) : L.T("Game client …"),
-                racesButton = InstalledCoa != null && InstalledCoa != CoaVersion ? L.F("Update custom races to {0} …", CoaVersion) : L.T("Set up the races …"),
+                clientButton = !inst.IsCoa ? L.T("Game client …") : InstalledClient != null && InstalledClient != ClientVersion ? L.F("Update game client to {0} …", ClientVersion) : L.T("Game client …"),
+                racesButton = !inst.IsCoa ? null : InstalledCoa != null && InstalledCoa != CoaVersion ? L.F("Update custom races to {0} …", CoaVersion) : L.T("Set up the races …"),
                 clientState = ClientChecking ? L.T("Checking the game client …") : ClientPending.Length == 0 ? "" : L.T("Not everything the installed modules bring for the game client is in your game yet."),
                 clientPending = ClientPending.Length > 0,
                 offerClient = OfferClient,
@@ -467,7 +468,8 @@ namespace CoAInstaller.Web
                 string clientNews = null, coaNews = null, clientVersion = null, installedClient = null, coaVersion = null, installedCoa = null;
                 try
                 {
-                    string client = ClientAddons.ClientFolder;
+                    // The game client download and CoA Custom are CoA things; a stock AzerothCore server has neither.
+                    string client = inst.IsCoa ? ClientAddons.ClientFolder : null;
                     if (client != null && ClientAddons.IsClientFolder(client))
                     {
                         var manifest = ClientDownload.Latest();
@@ -478,7 +480,7 @@ namespace CoAInstaller.Web
                     }
                 }
                 catch { }
-                try
+                if (inst.IsCoa) try
                 {
                     var release = CoaCustom.Latest();
                     coaVersion = release.Version;
@@ -489,7 +491,7 @@ namespace CoAInstaller.Web
                 catch { }
                 // CoA Custom is installed, but the race settings name no race (the file was deleted or made again from
                 // its .dist): nobody can create or play a custom race until the setup writes them again.
-                try { if (CoaRacesMissing(inst)) coaNews = L.T("The race settings (mod_custom_races.conf) contain no races. Click here and run CoA Custom > Install / update to set them up again."); }
+                try { if (inst.IsCoa && CoaRacesMissing(inst)) coaNews = L.T("The race settings (mod_custom_races.conf) contain no races. Click here and run CoA Custom > Install / update to set them up again."); }
                 catch { }
                 string moduleNews = null; string[] moduleInstall = new string[0];
                 try

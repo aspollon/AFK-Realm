@@ -167,7 +167,9 @@ namespace CoAInstaller
 
         public static List<ServerPreset> All(Install inst)
         {
-            var list = new List<ServerPreset> { BuiltInAfkRealm() };
+            // The built-in preset is made of CoA modules and CoA settings: a stock AzerothCore server does not get it.
+            var list = new List<ServerPreset>();
+            if (inst.IsCoa) list.Add(BuiltInAfkRealm());
             string dir = Dir(inst);
             if (!Directory.Exists(dir)) return list;
 

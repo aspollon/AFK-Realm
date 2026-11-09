@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.3.0
+
+- **Server kind:** a new server is either Conquest of Azeroth or stock AzerothCore, chosen on a new wizard page (`welcome.js` `kindPage`, `/api/setup/install` `kind`, `cli install --kind`). Stored in `Dependencies\server-kind.txt` (`Install.Kind`/`IsCoa`/`SetKind`); a server without the file is CoA.
+- **Engine:** `$ServerKind` from that file. AzerothCore builds `mod-playerbots/azerothcore-wotlk` (branch Playerbot) with `mod-playerbots/mod-playerbots` (master) and `Zyth45/mod-dungeon-clear` (master); no built-in core patches (and none in the build stamp), no CoA world import (phase "World data check"), no CoA status-file settings in playerbots.conf.
+- **Hidden on AzerothCore:** the modules by AFK Realm (`ModuleCatalog.Merge`), the CoA Custom card, the CoA client download and its banners, CoA Custom update checks, the built-in AFK Realm preset. Module manager texts and the update check name the core accordingly.
+- **Play** starts `Wow.exe` when a client has neither CoA64.exe nor Ascension.exe.
+- `client.js`: the two export button texts lost their "…" to a broken encoding and were not translated; fixed.
+
 ## 1.2.90
 
 - **Memory goes back after work:** `AfkRealm.csproj` turns the server garbage collector of the web SDK off (`ServerGarbageCollection=false`, concurrent on). `app/Web/Memory.cs` runs an aggressive, LOH-compacting collection 3 s after every job, engine run and client check (`Jobs.Run`, `RunEngine` Finished, `Manager.CheckClient`), so the archives and DBC tables those read no longer stay committed.

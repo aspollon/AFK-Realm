@@ -71,7 +71,9 @@ namespace CoAInstaller.Web
             {
                 folder = k.Folder, client, rows, state, stateWarn = client != null && (due || longPath != null),
                 cacheShown, cacheChecked = cacheShown && (k.Addons.Any(a => a.ClearCache && a.State != AddonState.Current) || (k.Patch.ClearCache && patchDue)),
-                coa = !string.IsNullOrEmpty(Settings.CoaPackage),
+                coa = (Inst == null || Inst.IsCoa) && !string.IsNullOrEmpty(Settings.CoaPackage),
+                // The client download is the CoA game client; a stock AzerothCore server brings its own 3.3.5a client.
+                serverCoa = Inst == null || Inst.IsCoa,
                 canExport = k.Addons.Count > 0 || !k.Patch.Empty, canInstall = client != null && anything,
                 installText = due || !anything ? L.T("Install") : L.T("Install again"),
                 patchNeedsClient = !k.Patch.Empty
