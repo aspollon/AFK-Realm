@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.6
+
+- **EsteriaWoW: mod-attunement-plus is not built.** Its folder is the old standalone copy of the Echoes attunement that mod-custom-server carries now ("superseded" in EsteriaWoW's module status); it calls `Player::HandleStatModifier`/`ApplyStatBuffMod`, which the core no longer has (C2039). `$Project.Core.NotBuilt` turns such folders off with `-DMODULE_<NAME>=disabled`.
+
 ## 1.3.5
 
 - **AzerothCore with Playerbots again:** the engine builds `mod-playerbots/azerothcore-wotlk` (Playerbot) with `mod-playerbots/mod-playerbots` (master) and `Zyth45/mod-dungeon-clear` (master) as separate parts, as in 1.3.0; the catalog shows both as included again, and the DungeonClear add-on comes with the module as on CoA (`AddEmbeddedDungeonClear`).

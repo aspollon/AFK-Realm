@@ -163,7 +163,11 @@ if ($ServerKind -eq 'azerothcore') {
     # the server is built and its database set up from is checked out (partial clone, sparse checkout); Eluna is
     # a submodule.
     $Project.Core = @{ Repo = 'https://github.com/STRHercules/EsteriaWoW.git'; Branch = 'main'; Revision = ''; Moved = @()
-                       Sparse = @('apps', 'conf', 'data/sql', 'deps', 'env/dist/etc', 'modules', 'src'); Submodules = @('src/server/game/LuaEngine') }
+                       Sparse = @('apps', 'conf', 'data/sql', 'deps', 'env/dist/etc', 'modules', 'src'); Submodules = @('src/server/game/LuaEngine')
+                       # Module folders of the repository that are not built: mod-attunement-plus is the old standalone
+                       # copy of what mod-custom-server does now ("superseded" in its docs/status/Modules.md); its stat
+                       # calls no longer exist in the core.
+                       NotBuilt = @('mod-attunement-plus') }
     $Project.Playerbots.Separate = $false
     $Project.DungeonClear.Separate = $false
 }
@@ -2277,6 +2281,11 @@ $script:ModuleLinkage = @{}
 
 function Get-ModuleLinkageArgs {
     foreach ($name in $script:ModuleLinkage.Keys) { "-DMODULE_$($name.ToUpperInvariant())=$($script:ModuleLinkage[$name])" }
+    if ($Project.Core.ContainsKey('NotBuilt')) {
+        foreach ($name in @($Project.Core.NotBuilt)) {
+            if (-not $script:ModuleLinkage.ContainsKey($name)) { "-DMODULE_$($name.ToUpperInvariant())=disabled" }
+        }
+    }
 }
 
 # AFK's own core patches (Builder\patches next to the engine, written from the copies embedded in AFK Realm).

@@ -1,3 +1,7 @@
+# AFK Realm 1.3.6
+
+- **EsteriaWoW builds further:** an old copy of a module that EsteriaWoW replaced long ago (mod-attunement-plus; the current one is part of mod-custom-server) is left out of the build, as it no longer fits the core.
+
 # AFK Realm 1.3.5
 
 - **AzerothCore comes with Playerbots and Dungeon Clear** again, kept up to date with every update like on Conquest of Azeroth; the DungeonClear add-on is installed into the game and handed out to players by itself. Players who do not want bots switch them off in the bot settings.
