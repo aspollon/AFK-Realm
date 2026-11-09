@@ -1,3 +1,7 @@
+# AFK Realm 1.3.9
+
+- **EsteriaWoW:** the modules are now built in four parts, each well below the 4 GB Visual Studio allows for one file. (The way 1.3.7 tried did not get around the limit with Visual Studio.)
+
 # AFK Realm 1.3.8
 
 - **EsteriaWoW:** the build preparation (CMake) accepts the new way the modules are built.

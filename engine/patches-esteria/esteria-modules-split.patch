@@ -1,0 +1,71 @@
+diff --git a/modules/CMakeLists.txt b/modules/CMakeLists.txt
+index a4b8c14c..8eca807a 100644
+--- a/modules/CMakeLists.txt
++++ b/modules/CMakeLists.txt
+@@ -283,10 +283,48 @@ if (MOD_ALE_FOUND)
+   list(REMOVE_ITEM PRIVATE_SOURCES_MODULES ${MOD_ALE_PATH}/lualib/luac.c)
+ endif()
+ 
++# AFK Realm: with all of EsteriaWoW's modules one static library grows past the 4 GB Visual Studio's librarian can
++# write (LNK1248, also for an OBJECT library, which the Visual Studio generator builds as a .lib as well). With MSVC
++# the module sources are spread over several static libraries; the linker of MSVC resolves symbols between them in
++# any order. Elsewhere everything stays in one library.
++set(AFK_MODULES_EXTRA)
++set(AFK_MODULES_FIRST ${PRIVATE_SOURCES_MODULES})
++if (MSVC)
++  set(AFK_MODULES_PARTS 4)
++  list(LENGTH PRIVATE_SOURCES_MODULES AFK_MODULES_COUNT)
++  math(EXPR AFK_MODULES_CHUNK "(${AFK_MODULES_COUNT} + ${AFK_MODULES_PARTS} - 1) / ${AFK_MODULES_PARTS}")
++  if (AFK_MODULES_CHUNK GREATER 0)
++    list(SUBLIST PRIVATE_SOURCES_MODULES 0 ${AFK_MODULES_CHUNK} AFK_MODULES_FIRST)
++    math(EXPR AFK_MODULES_LAST "${AFK_MODULES_PARTS} - 1")
++    foreach(AFK_PART RANGE 1 ${AFK_MODULES_LAST})
++      math(EXPR AFK_START "${AFK_PART} * ${AFK_MODULES_CHUNK}")
++      if (AFK_START LESS AFK_MODULES_COUNT)
++        list(SUBLIST PRIVATE_SOURCES_MODULES ${AFK_START} ${AFK_MODULES_CHUNK} AFK_PART_SOURCES)
++        add_library(modules_part${AFK_PART} STATIC ${AFK_PART_SOURCES})
++        list(APPEND AFK_MODULES_EXTRA modules_part${AFK_PART})
++      endif()
++    endforeach()
++  endif()
++endif()
++
+ add_library(modules STATIC
+     ModulesScriptLoader.h
+     ${SCRIPT_MODULE_PRIVATE_SCRIPTLOADER}
+-    ${PRIVATE_SOURCES_MODULES})
++    ${AFK_MODULES_FIRST})
++
++foreach(AFK_EXTRA ${AFK_MODULES_EXTRA})
++  target_link_libraries(${AFK_EXTRA}
++    PRIVATE
++      acore-core-interface
++      mysql
++    PUBLIC
++      game-interface)
++  if (MOD_ALE_FOUND)
++    target_link_libraries(${AFK_EXTRA} PUBLIC lualib)
++  endif()
++  set_target_properties(${AFK_EXTRA} PROPERTIES FOLDER "modules")
++  target_link_libraries(modules PUBLIC ${AFK_EXTRA})
++endforeach()
+ 
+ if (MOD_ALE_FOUND)
+     target_link_libraries(modules PUBLIC lualib)
+@@ -319,6 +357,16 @@ set_target_properties(modules
+     FOLDER
+       "modules")
+ 
++# AFK Realm: what the modules' own .cmake files set on the target modules applies to the other parts as well.
++foreach(AFK_EXTRA ${AFK_MODULES_EXTRA})
++  foreach(AFK_PROP COMPILE_DEFINITIONS COMPILE_OPTIONS INCLUDE_DIRECTORIES)
++    get_target_property(AFK_VALUE modules ${AFK_PROP})
++    if (AFK_VALUE)
++      set_property(TARGET ${AFK_EXTRA} APPEND PROPERTY ${AFK_PROP} ${AFK_VALUE})
++    endif()
++  endforeach()
++endforeach()
++
+ # Generate precompiled header
+ # if (USE_SCRIPTPCH)
+ #   list(APPEND ALL_SCRIPT_PROJECTS modules ${DYNAMIC_SCRIPT_MODULE_PROJECTS})
