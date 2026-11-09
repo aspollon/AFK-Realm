@@ -4,7 +4,7 @@ namespace AfkClient;
 
 internal static class Game
 {
-    static readonly string[] ExeNames = { "CoA64.exe", "Ascension.exe", "Ascension-b.exe" };
+    static readonly string[] ExeNames = { "CoA64.exe", "Ascension.exe", "Ascension-b.exe", "Wow.exe" };
 
     public static bool IsClientFolder(string folder)
     {
@@ -53,7 +53,7 @@ internal static class Game
     public static void Launch(string folder)
     {
         string exe = FindExe(folder);
-        if (exe == null) throw new InvalidOperationException("The game folder has neither CoA64.exe nor Ascension.exe.");
+        if (exe == null) throw new InvalidOperationException("The game folder has no CoA64.exe, Ascension.exe or Wow.exe.");
         if (IsRunning(folder)) throw new InvalidOperationException("The game is already running.");
         Process.Start(new ProcessStartInfo(exe) { WorkingDirectory = folder, UseShellExecute = true });
     }

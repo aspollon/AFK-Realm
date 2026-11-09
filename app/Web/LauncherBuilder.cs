@@ -55,7 +55,7 @@ namespace CoAInstaller.Web
             public string RealmAddress { get; set; } = "";
             public string PortalUrl { get; set; } = "";
             public string ManifestUrl { get; set; } = "";
-            public string ClientDownloadUrl { get; set; } = RegistrationPortal.DefaultClientUrl;
+            public string ClientDownloadUrl { get; set; } = "";
             public string BuiltAt { get; set; } = "";
         }
 
@@ -185,7 +185,7 @@ namespace CoAInstaller.Web
                     return url;
             }
             catch { }
-            return RegistrationPortal.DefaultClientUrl;
+            return RegistrationPortal.DefaultClientUrlFor(inst);
         }
 
         static bool Skip(string path)

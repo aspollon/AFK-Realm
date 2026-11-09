@@ -2587,6 +2587,20 @@
     "Module catalog": "Modulkatalog",
     "Custom": "Custom",
     "The plain World of Warcraft 3.3.5a core, as the AzerothCore project publishes it.": "Der reine World-of-Warcraft-3.3.5a-Core, so wie ihn das AzerothCore-Projekt veröffentlicht.",
-    "Projects built on AzerothCore with their own classes, races and content. They need their own game client.": "Projekte auf Basis von AzerothCore mit eigenen Klassen, Rassen und Inhalten. Sie brauchen ihren eigenen Spielclient."
+    "Projects built on AzerothCore with their own classes, races and content. They need their own game client.": "Projekte auf Basis von AzerothCore mit eigenen Klassen, Rassen und Inhalten. Sie brauchen ihren eigenen Spielclient.",
+    "64 races": "64 Rassen",
+    "Eluna": "Eluna",
+    "EsteriaWoW with its new races, the third faction, Eluna and its own modules, Playerbots and Dungeon Clear among them, set up as its realm runs. Needs the EsteriaWoW game client.": "EsteriaWoW mit seinen neuen Rassen, der dritten Fraktion, Eluna und seinen eigenen Modulen, darunter Playerbots und Dungeon Clear, eingerichtet wie sein Realm läuft. Braucht den EsteriaWoW-Spielclient.",
+    "The stock AzerothCore (WotLK 3.3.5a), exactly as published: no Playerbots, no other module. Add modules from the catalog later if you like. Needs a normal 3.3.5a game client (build 12340).": "Der normale AzerothCore (WotLK 3.3.5a), genau wie veröffentlicht: ohne Playerbots, ohne andere Module. Module aus dem Katalog kannst du später hinzufügen. Braucht einen normalen 3.3.5a-Spielclient (Build 12340).",
+    "This program builds your own World of Warcraft server - Conquest of Azeroth, EsteriaWoW or AzerothCore - straight from the current source code. It downloads every tool it needs, compiles the server and sets up the database.": "Dieses Programm baut deinen eigenen World-of-Warcraft-Server – Conquest of Azeroth, EsteriaWoW oder AzerothCore – direkt aus dem aktuellen Quellcode. Es lädt jedes Werkzeug herunter, das es braucht, kompiliert den Server und richtet die Datenbank ein.",
+    "Get a 3.3.5a client …": "3.3.5a-Client holen …",
+    "{0} could not be read: {1}": "{0} konnte nicht gelesen werden: {1}",
+    "The game client has no DBC tables. Is this the EsteriaWoW client folder, and is the game closed?": "Der Spielclient enthält keine DBC-Tabellen. Ist das der EsteriaWoW-Clientordner, und ist das Spiel geschlossen?",
+    "{0} DBC tables taken from the client archives ({1} archives).": "{0} DBC-Tabellen aus den Client-Archiven übernommen ({1} Archive).",
+    "Server table {0} from {1}.": "Server-Tabelle {0} aus {1}.",
+    "DBC continuation {0}.": "DBC-Fortsetzung {0}.",
+    "DBC tables from the client archives ...": "DBC-Tabellen aus den Client-Archiven ...",
+    "The DBC tables of the EsteriaWoW client are missing. Use \"Create map data\" with the EsteriaWoW client.": "Die DBC-Tabellen des EsteriaWoW-Clients fehlen. Nutze \"Kartendaten erstellen\" mit dem EsteriaWoW-Client.",
+    "{0} is part of the core and cannot be removed.": "{0} gehört zum Core und kann nicht entfernt werden."
   }
 }

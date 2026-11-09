@@ -68,8 +68,7 @@ namespace CoAInstaller.Web
                 // The kind of server is chosen once, for a new server; an installed one keeps its own.
                 if (!installed)
                 {
-                    string kind = (a.Str("kind") ?? Install.KindCoa).Trim().ToLowerInvariant();
-                    inst.SetKind(kind == Install.KindAzerothCore ? Install.KindAzerothCore : Install.KindCoa);
+                    inst.SetKind(Install.KindOf(a.Str("kind")));
                 }
                 return Jobs.RunEngine(inst, mode, password, 3307, null, name, false, job =>
                 {

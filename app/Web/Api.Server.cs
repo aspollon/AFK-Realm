@@ -228,13 +228,15 @@ namespace CoAInstaller.Web
             if (dir == null) throw new UserError(L.T("This is not a game folder: it needs a \"Data\" folder with the game's .MPQ archives.") + " " + L.T("You can also choose the \"Data\" folder itself."));
             if (Manager.Ctl != null && Manager.Ctl.World != null) throw new UserError(L.T("Stop the server first."));
             string clientData = Path.Combine(dir, "Data");
-            bool coaDbc = inst.NeedsClientDbc;
+            // EsteriaWoW takes its tables from the client archives itself (EsteriaServer); CoA uses the fork's tool.
+            bool esteria = inst.IsEsteria;
+            bool coaDbc = !esteria && File.Exists(inst.DbcScript);
             // Ticking "Only refresh the CoA DBC tables" must never fall back to the
             // full map extraction: that is what the users hit when the server already
             // had maps but the DBC refresh failed and started the extractors.
             bool onlyDbc = dbcOnly;
             string python = Os.Windows ? inst.PythonExe : FindOnPath("python3");
-            if ((coaDbc || onlyDbc) && (python == null || !File.Exists(python) || !File.Exists(inst.MpqCliExe)))
+            if ((coaDbc || (onlyDbc && !esteria)) && (python == null || !File.Exists(python) || !File.Exists(inst.MpqCliExe)))
                 throw new UserError(L.T("The tools for the CoA DBC extraction are missing. Run \"Repair\" once, then try again."));
             return Jobs.Run(L.T("Create map data"), (job, st) =>
             {
@@ -309,7 +311,13 @@ namespace CoAInstaller.Web
                         run(L.T("Step 1: dbc, maps and cameras ..."), Path.Combine(dir, Os.Exe("map_extractor")), "");
                         if (!Directory.Exists(Path.Combine(dir, "maps"))) throw new InvalidOperationException(L.T("ERROR during extraction. Is this the right game folder, and is the game closed?"));
                     }
-                    if (coaDbc || onlyDbc)
+                    if (esteria)
+                    {
+                        st(L.T("DBC tables from the client archives ..."));
+                        note("== " + L.T("DBC tables from the client archives ..."));
+                        EsteriaServer.ExtractClientDbc(dir, Path.Combine(dir, "dbc"), note);
+                    }
+                    else if (coaDbc || onlyDbc)
                     {
                         string coa = Path.Combine(dir, "coa-dbc");
                         if (Directory.Exists(coa)) Directory.Delete(coa, true);
@@ -353,6 +361,7 @@ namespace CoAInstaller.Web
                         string src = Path.Combine(dir, f);
                         if (Directory.Exists(src)) MoveMerge(src, Path.Combine(inst.DataDir, f));
                     }
+                    EsteriaServer.ApplyServerFiles(inst, note);
                     job.Message = L.T("DONE. The data is now in the server.");
                     Manager.SetNotice(L.T("Map data is present."), "ok");
                 }

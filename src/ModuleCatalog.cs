@@ -317,7 +317,7 @@ namespace CoAInstaller
             var folders = Directory.Exists(dir) ? Directory.GetDirectories(dir).Select(Path.GetFileName).ToList() : new List<string>();
             foreach (var name in folders.Concat(managed.Keys).Distinct(StringComparer.OrdinalIgnoreCase))
             {
-                if (name.Equals("mod-playerbots", StringComparison.OrdinalIgnoreCase) || name.Equals("mod-dungeon-clear", StringComparison.OrdinalIgnoreCase)) continue;
+                if (inst.Kind != Install.KindAzerothCore && (name.Equals("mod-playerbots", StringComparison.OrdinalIgnoreCase) || name.Equals("mod-dungeon-clear", StringComparison.OrdinalIgnoreCase))) continue;
                 string folder = Path.Combine(dir, name);
                 string[] info; managed.TryGetValue(name, out info);
                 bool hasGit = Directory.Exists(Path.Combine(folder, ".git"));
@@ -355,6 +355,13 @@ namespace CoAInstaller
                     entry.ManualTables = info[7].Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
                     if (!Directory.Exists(folder)) entry.Status = "missing";
                 }
+            }
+            // The stock AzerothCore is built without any module. Playerbots needs another core (the Playerbot fork of
+            // AzerothCore) and Dungeon Clear needs Playerbots, so neither is offered there.
+            if (inst.Kind == Install.KindAzerothCore)
+            {
+                result.RemoveAll(e => (e.IsPlayerbots || e.IsDungeonClear) && !e.Installed);
+                return result;
             }
             // Playerbots and Dungeon Clear are always built in, so catalog entries are shown as included, not installable.
             foreach (var bots in result.Where(e => e.IsPlayerbots)) bots.State = ModuleState.PartOfCoA;

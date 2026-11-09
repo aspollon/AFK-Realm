@@ -74,6 +74,8 @@ namespace CoAInstaller.Web
                 coa = (Inst == null || Inst.IsCoa) && !string.IsNullOrEmpty(Settings.CoaPackage),
                 // The client download is the CoA game client; a stock AzerothCore server brings its own 3.3.5a client.
                 serverCoa = Inst == null || Inst.IsCoa,
+                // Where a stock AzerothCore server's players get a clean 3.3.5a client (ChromieCraft, an AzerothCore realm).
+                clientPage = Inst != null && Inst.Kind == Install.KindAzerothCore ? "https://chromiecraft.com/en/downloads/" : null,
                 canExport = k.Addons.Count > 0 || !k.Patch.Empty, canInstall = client != null && anything,
                 installText = due || !anything ? L.T("Install") : L.T("Install again"),
                 patchNeedsClient = !k.Patch.Empty

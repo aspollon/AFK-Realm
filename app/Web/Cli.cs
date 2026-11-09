@@ -18,7 +18,7 @@ namespace CoAInstaller.Web
             {
                 Console.WriteLine(Product.Name + " " + Product.Version + " - command line");
                 Console.WriteLine();
-                Console.WriteLine("  cli install --path <folder> --name <server name> [--password <db password>] [--kind coa|azerothcore]");
+                Console.WriteLine("  cli install --path <folder> --name <server name> [--password <db password>] [--kind coa|azerothcore|esteria]");
                 Console.WriteLine("  cli status   [--server <folder>]   database, authserver and worldserver");
                 Console.WriteLine("  cli start    [--server <folder>]");
                 Console.WriteLine("  cli stop     [--server <folder>]   saves every player and shuts down cleanly");
@@ -49,7 +49,7 @@ namespace CoAInstaller.Web
                     if (err != null) { Console.Error.WriteLine(err); return 2; }
                     var inst = new Install(path);
                     string kind = (opt("kind") ?? "").Trim().ToLowerInvariant();
-                    if (kind.Length > 0 && kind != Install.KindCoa && kind != Install.KindAzerothCore) { Console.Error.WriteLine("--kind is coa or azerothcore."); return 2; }
+                    if (kind.Length > 0 && Install.KindOf(kind) != kind) { Console.Error.WriteLine("--kind is coa, azerothcore or esteria."); return 2; }
                     // An existing server keeps its kind; a new one gets the one asked for (CoA when none was).
                     if (!inst.IsInstalled) inst.SetKind(kind.Length > 0 ? kind : Install.KindCoa);
                     Settings.LastInstall = inst.Root; Settings.Remember(inst.Root, name);

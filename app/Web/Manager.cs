@@ -151,6 +151,7 @@ namespace CoAInstaller.Web
             var up = AutoUpdate.Plan;
 
             string mapText = !maps ? L.T("Map data is still missing. The worldserver cannot run without it.")
+                : !dbc && inst.IsEsteria ? L.T("The DBC tables of the EsteriaWoW client are missing. Use \"Create map data\" with the EsteriaWoW client.")
                 : !dbc ? L.T("The CoA DBC tables are missing. Use \"Create map data\" and tick \"Only refresh the CoA DBC tables\".")
                 : L.T("Map data is present.");
 
@@ -592,6 +593,8 @@ namespace CoAInstaller.Web
             if (ok && (mode == "Update" || mode == "Modules" || mode == "Install" || mode == "Rebuild" || mode == "Restore"))
             {
                 L.AddModules(ModuleCatalog.ModulesDir(inst));
+                // EsteriaWoW: an update can bring new server-only DBC files and continuations.
+                try { EsteriaServer.ApplyServerFiles(inst, _ => { }); } catch { }
                 CheckForUpdates();
                 CheckClient(true);
             }

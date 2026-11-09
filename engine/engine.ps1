@@ -138,25 +138,46 @@ $Paths = @{
 }
 # The kind of server, chosen when it was set up (Dependencies\server-kind.txt, written by AFK Realm before the first
 # run): 'coa' = Conquest of Azeroth (the default, also for every server set up before there was a choice),
-# 'azerothcore' = stock AzerothCore with the Playerbots module of the mod-playerbots project.
+# 'azerothcore' = the stock AzerothCore without any module, 'esteria' = EsteriaWoW (AzerothCore with its own races,
+# Eluna and its modules, Playerbots and Dungeon Clear among them, all in one repository).
 $ServerKind = 'coa'
 $kindFile = Join-Path $Paths.Deps 'server-kind.txt'
 if (Test-Path -LiteralPath $kindFile) {
     $k = ([IO.File]::ReadAllText($kindFile)).Trim().ToLowerInvariant()
-    if ($k -eq 'azerothcore') { $ServerKind = $k }
+    if ($k -eq 'azerothcore' -or $k -eq 'esteria') { $ServerKind = $k }
 }
+# Playerbots and Dungeon Clear are repositories of their own only on CoA (Separate); elsewhere they are left out
+# (AzerothCore) or part of the core's repository (EsteriaWoW).
+$Project.Playerbots.Separate = $true
+$Project.DungeonClear.Separate = $true
 if ($ServerKind -eq 'azerothcore') {
     $Project.Name = 'AzerothCore'
-    # mod-playerbots needs this fork of AzerothCore (the stock core plus the hooks the bots use), branch Playerbot.
-    $Project.Core = @{ Repo = 'https://github.com/mod-playerbots/azerothcore-wotlk.git'; Branch = 'Playerbot'; Revision = ''; Moved = @() }
-    $Project.Playerbots = @{ Repo = 'https://github.com/mod-playerbots/mod-playerbots.git'; Branch = 'master'; Revision = ''; Folder = 'mod-playerbots'
-                             Moved = @('https://github.com/liyunfan1223/mod-playerbots.git') }
-    $Project.DungeonClear = @{ Repo = 'https://github.com/Zyth45/mod-dungeon-clear.git'; Branch = 'master'; Revision = ''; Folder = 'mod-dungeon-clear'; Moved = @() }
+    $Project.Core = @{ Repo = 'https://github.com/azerothcore/azerothcore-wotlk.git'; Branch = 'master'; Revision = ''; Moved = @() }
+    $Project.Playerbots.Separate = $false
+    $Project.DungeonClear.Separate = $false
+} elseif ($ServerKind -eq 'esteria') {
+    $Project.Name = 'EsteriaWoW'
+    # The repository is about 6 GB, most of it race material, design work and a copy of another core. Only what
+    # the server is built and its database set up from is checked out (partial clone, sparse checkout); Eluna is
+    # a submodule.
+    $Project.Core = @{ Repo = 'https://github.com/STRHercules/EsteriaWoW.git'; Branch = 'main'; Revision = ''; Moved = @()
+                       Sparse = @('apps', 'conf', 'data/sql', 'deps', 'env/dist/etc', 'modules', 'src'); Submodules = @('src/server/game/LuaEngine') }
+    $Project.Playerbots.Separate = $false
+    $Project.DungeonClear.Separate = $false
 }
 $IsCoa = $ServerKind -eq 'coa'
 $Paths.Modules = Join-Path $Paths.Source 'modules'
 $Paths.Playerbots = Join-Path $Paths.Modules $Project.Playerbots.Folder
 $Paths.DungeonClear = Join-Path $Paths.Modules $Project.DungeonClear.Folder
+# The repositories downloaded next to the core (Playerbots and Dungeon Clear on CoA), with their folders.
+# MovesWithCore: updated together with the core (-CoreOnly), not with the modules.
+function Get-ExtraParts {
+    $list = @()
+    if ($Project.Playerbots.Separate) { $list += @{ Name = 'Playerbots'; Key = 'playerbots'; Item = $Project.Playerbots; Folder = $Paths.Playerbots; MovesWithCore = $true } }
+    if ($Project.DungeonClear.Separate) { $list += @{ Name = 'Dungeon Clear'; Key = 'dungeon'; Item = $Project.DungeonClear; Folder = $Paths.DungeonClear; MovesWithCore = $false } }
+    # unrolled: callers wrap the call in @() (an empty list gives nothing)
+    return $list
+}
 # A long server folder makes the paths of the build longer than Windows' 260 characters: Boost's installer, the
 # compiler and MSBuild then fail. A new server in a folder longer than 24 characters therefore builds through a short
 # junction, <drive>\afk\<8 characters>, that leads to its Dependencies folder - the files stay where they are, only the
@@ -1101,16 +1122,15 @@ function Read-Revisions {
     foreach ($line in [IO.File]::ReadAllLines($Paths.Revisions)) {
         $f = $line.Split('|')
         if ($f.Count -ne 4 -or $f[3] -notmatch '^[0-9a-f]{40}$') { continue }
-        foreach ($part in @(@{ Key = 'core'; Item = $Project.Core }, @{ Key = 'module'; Item = $Project.Playerbots }, @{ Key = 'module'; Item = $Project.DungeonClear })) {
+        foreach ($part in @(@{ Key = 'core'; Item = $Project.Core }) + @((Get-ExtraParts) | ForEach-Object { @{ Key = 'module'; Item = $_.Item } })) {
             if ($f[0] -eq $part.Key -and ($f[1] -eq $part.Item.Repo -or @($part.Item.Moved) -contains $f[1]) -and $f[2] -eq $part.Item.Branch) { $part.Item.Revision = $f[3] }
         }
     }
 }
 function Save-Revisions {
-    [IO.File]::WriteAllLines($Paths.Revisions, @(
-        ('core|{0}|{1}|{2}' -f $Project.Core.Repo, $Project.Core.Branch, $Project.Core.Revision),
-        ('module|{0}|{1}|{2}' -f $Project.Playerbots.Repo, $Project.Playerbots.Branch, $Project.Playerbots.Revision),
-        ('module|{0}|{1}|{2}' -f $Project.DungeonClear.Repo, $Project.DungeonClear.Branch, $Project.DungeonClear.Revision)))
+    $lines = @('core|{0}|{1}|{2}' -f $Project.Core.Repo, $Project.Core.Branch, $Project.Core.Revision)
+    foreach ($part in @(Get-ExtraParts)) { $lines += 'module|{0}|{1}|{2}' -f $part.Item.Repo, $part.Item.Branch, $part.Item.Revision }
+    [IO.File]::WriteAllLines($Paths.Revisions, [string[]]$lines)
 }
 # The built-in patches are part of the compiled server, so their content belongs in the build stamp.
 # Without it, an app update with new racial scripts could report "up to date" while the old worldserver
@@ -1126,15 +1146,25 @@ function Get-PatchStamp {
     }
     return ($parts -join ';')
 }
-function Get-BuildStamp { return ('{0}|{1}|{2}|{3}' -f $Project.Core.Revision, $Project.Playerbots.Revision, $Project.DungeonClear.Revision, (Get-PatchStamp)) }
+function Get-BuildStamp {
+    $parts = @($Project.Core.Revision) + @((Get-ExtraParts) | ForEach-Object { $_.Item.Revision }) + @(Get-PatchStamp)
+    return ($parts -join '|')
+}
 
 # Brings a repository to an exact revision. Additional module folders inside the
 # core's modules\ directory are never touched.
 function Sync-Repository([string]$Git, [hashtable]$Item, [string]$Folder, [switch]$KeepModules) {
+    $sparse = if ($Item.ContainsKey('Sparse')) { @($Item.Sparse) } else { @() }
     if (-not (Test-Path (Join-Path $Folder '.git'))) {
         Remove-Item $Folder -Recurse -Force -ErrorAction SilentlyContinue
-        [void](Invoke-Program $Git @('clone', '--branch', $Item.Branch, '--no-tags', $Item.Repo, $Folder))
+        if ($sparse.Count -gt 0) {
+            # Only the history, no files yet: the files come with the checkout, for the chosen folders only.
+            [void](Invoke-Program $Git @('clone', '--filter=blob:none', '--no-checkout', '--branch', $Item.Branch, '--no-tags', $Item.Repo, $Folder))
+        } else {
+            [void](Invoke-Program $Git @('clone', '--branch', $Item.Branch, '--no-tags', $Item.Repo, $Folder))
+        }
     }
+    if ($sparse.Count -gt 0) { [void](Invoke-Program $Git (@('-C', $Folder, 'sparse-checkout', 'set', '--cone') + $sparse)) }
     [void](Invoke-Program $Git @('-C', $Folder, 'remote', 'set-url', 'origin', $Item.Repo))
     [void](Invoke-Program $Git @('-C', $Folder, 'fetch', '--no-tags', 'origin', $Item.Branch))
     [void](Invoke-Program $Git @('-C', $Folder, 'checkout', '--force', $Item.Revision))
@@ -1142,6 +1172,9 @@ function Sync-Repository([string]$Git, [hashtable]$Item, [string]$Folder, [switc
     $clean = @('-C', $Folder, 'clean', '-ffd')
     if ($KeepModules) { $clean += @('-e', 'modules/') }
     [void](Invoke-Program $Git $clean)
+    if ($Item.ContainsKey('Submodules')) {
+        foreach ($sub in @($Item.Submodules)) { [void](Invoke-Program $Git @('-C', $Folder, 'submodule', 'update', '--init', '--force', '--depth', '1', '--', $sub)) }
+    }
     $head = Get-ProgramOutput $Git @('-C', $Folder, 'rev-parse', 'HEAD')
     if ($head -ne $Item.Revision) { throw (Tr '{0} is at {1} instead of {2}.' $Folder $head $Item.Revision) }
 }
@@ -1149,8 +1182,7 @@ function Sync-Repository([string]$Git, [hashtable]$Item, [string]$Folder, [switc
 function Sync-Sources([string]$Git) {
     Sync-Repository $Git $Project.Core $Paths.Source -KeepModules
     New-Item -ItemType Directory -Force -Path (Join-Path $Paths.Source 'modules') | Out-Null
-    Sync-Repository $Git $Project.Playerbots $Paths.Playerbots
-    Sync-Repository $Git $Project.DungeonClear $Paths.DungeonClear
+    foreach ($part in @(Get-ExtraParts)) { Sync-Repository $Git $part.Item $part.Folder }
     Save-Revisions
 }
 
@@ -1164,9 +1196,12 @@ function Get-RemoteHead([string]$Git, [hashtable]$Item) {
 # Installs and rebuilds always use the newest code of both branches.
 function Resolve-LatestRevisions([string]$Git) {
     $Project.Core.Revision = Get-RemoteHead $Git $Project.Core
-    $Project.Playerbots.Revision = Get-RemoteHead $Git $Project.Playerbots
-    $Project.DungeonClear.Revision = Get-RemoteHead $Git $Project.DungeonClear
-    Write-Log ('Newest version: ' + $(if ($IsCoa) { 'CoA core' } else { 'AzerothCore' }) + ' {0}, Playerbots {1}, Dungeon Clear {2}' -f $Project.Core.Revision.Substring(0, 8), $Project.Playerbots.Revision.Substring(0, 8), $Project.DungeonClear.Revision.Substring(0, 8)) Cyan
+    $text = 'Newest version: {0} {1}' -f $(if ($IsCoa) { 'CoA core' } else { $Project.Name }), $Project.Core.Revision.Substring(0, 8)
+    foreach ($part in @(Get-ExtraParts)) {
+        $part.Item.Revision = Get-RemoteHead $Git $part.Item
+        $text += ', {0} {1}' -f $part.Name, $part.Item.Revision.Substring(0, 8)
+    }
+    Write-Log $text Cyan
 }
 
 # Looks for new commits. Core and Playerbots move to the branch head; additional
@@ -1176,22 +1211,21 @@ function Find-Updates([string]$Git) {
     $pinned = @()
     if ($ModulesOnly) {
         Write-Log 'Modules only: the CoA core and Playerbots stay at the versions the server has.' Cyan
-        foreach ($keep in @(@{ Item = $Project.Core; Folder = $Paths.Source }, @{ Item = $Project.Playerbots; Folder = $Paths.Playerbots }, @{ Item = $Project.DungeonClear; Folder = $Paths.DungeonClear })) {
+        foreach ($keep in @(@{ Item = $Project.Core; Folder = $Paths.Source }) + @(Get-ExtraParts)) {
             if (-not $keep.Item.Revision -and (Test-Path (Join-Path $keep.Folder '.git'))) {
                 $keep.Item.Revision = Get-ProgramOutput $Git @('-C', $keep.Folder, 'rev-parse', 'HEAD')
             }
             if (-not $keep.Item.Revision) { throw (Tr 'The server has no source code yet; run a full update first.') }
         }
     } else {
-        $pinned = @(@{ Name = 'Core'; Item = $Project.Core; Folder = $Paths.Source },
-                    @{ Name = 'Playerbots'; Item = $Project.Playerbots; Folder = $Paths.Playerbots })
-        if (-not $CoreOnly) {
-            $pinned += @{ Name = 'Dungeon Clear'; Item = $Project.DungeonClear; Folder = $Paths.DungeonClear }
-        } else {
-            if (-not $Project.DungeonClear.Revision -and (Test-Path (Join-Path $Paths.DungeonClear '.git'))) {
-                $Project.DungeonClear.Revision = Get-ProgramOutput $Git @('-C', $Paths.DungeonClear, 'rev-parse', 'HEAD')
+        $pinned = @(@{ Name = 'Core'; Item = $Project.Core; Folder = $Paths.Source })
+        foreach ($part in @(Get-ExtraParts)) {
+            if (-not $CoreOnly -or $part.MovesWithCore) { $pinned += $part; continue }
+            # Core only: a part that counts as a module (Dungeon Clear) stays where it is.
+            if (-not $part.Item.Revision -and (Test-Path (Join-Path $part.Folder '.git'))) {
+                $part.Item.Revision = Get-ProgramOutput $Git @('-C', $part.Folder, 'rev-parse', 'HEAD')
             }
-            if (-not $Project.DungeonClear.Revision) { throw (Tr 'The server has no source code yet; run a full update first.') }
+            if (-not $part.Item.Revision) { throw (Tr 'The server has no source code yet; run a full update first.') }
         }
     }
     foreach ($entry in $pinned) {
@@ -1463,7 +1497,28 @@ function Update-ConfigFiles {
     }
 }
 
+# EsteriaWoW keeps the configuration its realm runs with in env/dist/etc (which modules are on and how they are
+# set). A new server starts from those files instead of the bare templates; a .conf the server has already is
+# never replaced. The database lines, paths and the like are set by Set-ServerConfig afterwards, as on any server.
+function Copy-EsteriaConfigs {
+    if ($ServerKind -ne 'esteria') { return }
+    $shipped = Join-Path $Paths.Source 'env\dist\etc'
+    if (-not (Test-Path $shipped)) { return }
+    $copied = 0
+    foreach ($file in @(Get-ChildItem $shipped -Recurse -File -Filter '*.conf')) {
+        $relative = $file.FullName.Substring($shipped.Length).TrimStart('\', '/')
+        $target = Join-Path $Paths.Configs $relative
+        if (Test-Path $target) { continue }
+        # Only for what the build installed: a .conf whose module is not built would be a leftover.
+        if (-not (Test-Path ($target + '.dist'))) { continue }
+        Copy-Item $file.FullName $target
+        $copied++
+    }
+    if ($copied -gt 0) { Write-Log "EsteriaWoW: $copied configuration file(s) taken from the realm's own settings (env/dist/etc)." }
+}
+
 function Set-ServerConfig([string]$Password) {
+    Copy-EsteriaConfigs
     Update-ConfigFiles
     $auth = Join-Path $Paths.Configs 'authserver.conf'
     $world = Join-Path $Paths.Configs 'worldserver.conf'
@@ -1483,6 +1538,11 @@ function Set-ServerConfig([string]$Password) {
     Set-ConfigValue $world 'PlayerbotsDatabaseInfo' (& $connection 'acore_playerbots')
     Set-ConfigValue $world 'MySQLExecutable' $mysql
     Set-ConfigValue $world 'DataDir' ('"' + $Paths.Data.Replace('\', '/') + '"')
+    if ($ServerKind -eq 'esteria') {
+        # The Eluna scripts of EsteriaWoW (AIO and the race scripts) are read from the module that brings them.
+        $lua = [IO.Path]::Combine($Paths.Source, 'modules', 'mod-worgoblin-high-elf', 'lua_scripts')
+        if (Test-Path $lua) { Set-ConfigValue $world 'Eluna.ScriptPath' ('"' + $lua.Replace('\', '/') + '"') }
+    }
     # Lets the worldserver apply the fork's later SQL updates from the source tree.
     Set-ConfigValue $world 'SourceDirectory' ('"' + $Paths.Source.Replace('\', '/') + '"')
     $import = Join-Path $Paths.Configs 'dbimport.conf'
@@ -1912,10 +1972,10 @@ function Edit-ModuleFolders([string]$Git, [string[]]$Add, [string[]]$Remove) {
     New-Item -ItemType Directory -Force -Path $Paths.Modules | Out-Null
     try {
     foreach ($name in $Remove) {
-        if ($name -notmatch '^[\w.\-]+$' -or $name -eq $Project.Playerbots.Folder -or $name -eq $Project.DungeonClear.Folder) { throw (Tr 'The module {0} cannot be removed.' $name) }
+        if ($name -notmatch '^[\w.\-]+$' -or ($Project.Playerbots.Separate -and $name -eq $Project.Playerbots.Folder) -or ($Project.DungeonClear.Separate -and $name -eq $Project.DungeonClear.Folder)) { throw (Tr 'The module {0} cannot be removed.' $name) }
         $folder = Join-Path $Paths.Modules $name
         if (-not (Test-Path $folder)) { Write-Log "$($name): the folder is already gone."; $state.Removed.Add(@{ Name = $name; Folder = $folder; Aside = $null }); continue }
-        if (Get-ProgramOutput $Git @('-C', $Paths.Source, 'ls-files', "modules/$name")) { throw (Tr '{0} is part of the CoA core and cannot be removed.' $name) }
+        if (Get-ProgramOutput $Git @('-C', $Paths.Source, 'ls-files', "modules/$name")) { throw $(if ($IsCoa) { Tr '{0} is part of the CoA core and cannot be removed.' $name } else { Tr '{0} is part of the core and cannot be removed.' $name }) }
         New-Item -ItemType Directory -Force -Path $Paths.ModuleTrash | Out-Null
         $aside = Join-Path $Paths.ModuleTrash ("{0}-{1:yyyyMMddHHmmss}" -f $name, (Get-Date))
         Move-Item $folder $aside
@@ -2564,7 +2624,7 @@ function Restore-Snapshot([string]$Name, [string]$Password) {
 
     # The sources go back to the snapshot's versions, so "Check for updates" offers the newer code again.
     $git = Resolve-Git
-    foreach ($part in @(@{ Item = $Project.Core; Folder = $Paths.Source; Key = 'core' }, @{ Item = $Project.Playerbots; Folder = $Paths.Playerbots; Key = 'playerbots' }, @{ Item = $Project.DungeonClear; Folder = $Paths.DungeonClear; Key = 'dungeon' })) {
+    foreach ($part in @(@{ Item = $Project.Core; Folder = $Paths.Source; Key = 'core' }) + @(Get-ExtraParts)) {
         $revision = $manifest[$part.Key]
         if ($revision -notmatch '^[0-9a-f]{40}$' -or -not (Test-Path (Join-Path $part.Folder '.git'))) { continue }
         $part.Item.Revision = $revision

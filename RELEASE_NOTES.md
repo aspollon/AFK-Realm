@@ -1,3 +1,18 @@
+# AFK Realm 1.3.1
+
+## EsteriaWoW
+
+- **A third server: EsteriaWoW.** Choose it when you set up a new server (under "Custom"). AFK Realm downloads only what the server is built from (about 2.5 GB of the 7 GB project), builds it natively - no Docker - and sets it up with the settings the EsteriaWoW realm runs with: its races, the third faction, Eluna, Playerbots, Dungeon Clear and its other modules.
+- **Map data from the EsteriaWoW client:** "Create map data" takes the race, look and spell tables straight from the client's patch archives, so the server knows the same races as the game.
+- The EsteriaWoW game client is not downloaded by AFK Realm yet; point AFK Realm at the client you have.
+
+## AzerothCore
+
+- **AzerothCore is now the plain core,** exactly as published: no Playerbots, no Dungeon Clear, no other module. Modules from the catalog can be added later.
+- **Getting a client:** the Game client window, the registration page and the AFK Client send players to ChromieCraft's clean 3.3.5a client.
+
+**Experimental:** EsteriaWoW and AzerothCore are new in AFK Realm and have had little testing. Please report what does not work.
+
 # AFK Realm 1.3.0
 
 ## Conquest of Azeroth or AzerothCore

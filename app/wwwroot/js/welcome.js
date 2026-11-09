@@ -10,7 +10,8 @@ const wiz = { path: '', name: 'AzerothCore', password: '', password2: '', instal
 // group: 'standard' = the plain WotLK core, 'custom' = projects built on top of it (more follow there).
 const kinds = () => [
   { id: 'coa', group: 'custom', name: 'Conquest of Azeroth', tags: [T('21 classes'), T('Modules by AFK Realm')], text: T('The Conquest of Azeroth core with its 21 classes, Playerbots and the CoA world data. All modules by AFK Realm work here. Needs the CoA game client.') },
-  { id: 'azerothcore', group: 'standard', name: 'AzerothCore', tags: [T('WotLK 3.3.5a'), T('Module catalog')], text: T('The stock AzerothCore (WotLK 3.3.5a) with Playerbots. The modules by AFK Realm are made for CoA and are not offered. Needs a normal 3.3.5a game client (build 12340).') },
+  { id: 'esteria', group: 'custom', name: 'EsteriaWoW', tags: [T('64 races'), T('Eluna'), T('Playerbots')], text: T('EsteriaWoW with its new races, the third faction, Eluna and its own modules, Playerbots and Dungeon Clear among them, set up as its realm runs. Needs the EsteriaWoW game client.') },
+  { id: 'azerothcore', group: 'standard', name: 'AzerothCore', tags: [T('WotLK 3.3.5a'), T('Module catalog')], text: T('The stock AzerothCore (WotLK 3.3.5a), exactly as published: no Playerbots, no other module. Add modules from the catalog later if you like. Needs a normal 3.3.5a game client (build 12340).') },
 ];
 const kindName = id => (kinds().find(k => k.id === id) || kinds()[0]).name;
 
@@ -38,7 +39,7 @@ export function welcome(step) {
   if (step === 'summary') return summaryPage();
   const tile = (title, text, ic, onclick) => h('button.tile', { type: 'button', onclick }, h('span.ic', {}, icon(ic)), h('span', {}, h('b', {}, title), h('span', {}, text)));
   return page(T('Welcome'),
-    h('p', {}, T('This program builds your own World of Warcraft server with Playerbots - Conquest of Azeroth or AzerothCore - straight from the current source code. It downloads every tool it needs, compiles the server and sets up the database.')),
+    h('p', {}, T('This program builds your own World of Warcraft server - Conquest of Azeroth, EsteriaWoW or AzerothCore - straight from the current source code. It downloads every tool it needs, compiles the server and sets up the database.')),
     h('p.hint', {}, meta.windows
       ? T('You need: Windows 10 or 11 (64-bit), about 40 GB of free disk space, an internet connection and some patience. Bring your own game client; it is not included.')
       : T('You need: a 64-bit Linux (Ubuntu, Debian, Fedora, Arch …), about 40 GB of free disk space, an internet connection and some patience. The build tools of the distribution are installed once with one command that AFK Realm shows. Bring your own game client; it is not included.')),

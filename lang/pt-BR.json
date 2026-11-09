@@ -2327,6 +2327,20 @@
     "Module catalog": "",
     "Custom": "",
     "The plain World of Warcraft 3.3.5a core, as the AzerothCore project publishes it.": "",
-    "Projects built on AzerothCore with their own classes, races and content. They need their own game client.": ""
+    "Projects built on AzerothCore with their own classes, races and content. They need their own game client.": "",
+    "64 races": "",
+    "Eluna": "",
+    "EsteriaWoW with its new races, the third faction, Eluna and its own modules, Playerbots and Dungeon Clear among them, set up as its realm runs. Needs the EsteriaWoW game client.": "",
+    "The stock AzerothCore (WotLK 3.3.5a), exactly as published: no Playerbots, no other module. Add modules from the catalog later if you like. Needs a normal 3.3.5a game client (build 12340).": "",
+    "This program builds your own World of Warcraft server - Conquest of Azeroth, EsteriaWoW or AzerothCore - straight from the current source code. It downloads every tool it needs, compiles the server and sets up the database.": "",
+    "Get a 3.3.5a client …": "",
+    "{0} could not be read: {1}": "",
+    "The game client has no DBC tables. Is this the EsteriaWoW client folder, and is the game closed?": "",
+    "{0} DBC tables taken from the client archives ({1} archives).": "",
+    "Server table {0} from {1}.": "",
+    "DBC continuation {0}.": "",
+    "DBC tables from the client archives ...": "",
+    "The DBC tables of the EsteriaWoW client are missing. Use \"Create map data\" with the EsteriaWoW client.": "",
+    "{0} is part of the core and cannot be removed.": ""
   }
 }

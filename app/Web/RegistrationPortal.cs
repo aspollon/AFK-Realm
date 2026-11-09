@@ -40,7 +40,14 @@ namespace CoAInstaller.Web
     static class RegistrationPortal
     {
         public const int DefaultPort = 47820;
-        public const string DefaultClientUrl = "https://coa-development.org/download";
+        /// <summary>Where players get the game client when the owner named no page of his own: the CoA download, or for a
+        /// stock AzerothCore server ChromieCraft's clean 3.3.5a client. EsteriaWoW has no public download yet (empty: no link).</summary>
+        public static string DefaultClientUrl { get { return DefaultClientUrlFor(Manager.Inst); } }
+        public static string DefaultClientUrlFor(Install inst)
+        {
+            string kind = inst == null ? Install.KindCoa : inst.Kind;
+            return kind == Install.KindAzerothCore ? "https://chromiecraft.com/en/downloads/" : kind == Install.KindEsteria ? "" : "https://coa-development.org/download";
+        }
         static readonly object gate = new object();
         static readonly ConcurrentDictionary<string, List<DateTime>> registrations = new ConcurrentDictionary<string, List<DateTime>>();
         static readonly ConcurrentDictionary<string, List<DateTime>> loginAttempts = new ConcurrentDictionary<string, List<DateTime>>();
@@ -875,7 +882,7 @@ namespace CoAInstaller.Web
                 "<a class=\"button secondary\" href=\"/download/realmlist.wtf\">realmlist.wtf</a>" +
                 "<a class=\"button secondary\" href=\"/download/Config.wtf\">Config.wtf</a>";
             string client = ClientUrlOf(clientUrl);
-            string clientLink = "<a class=\"button secondary\" href=\"" + WebUtility.HtmlEncode(client) + "\" target=\"_blank\" rel=\"noopener\">Game client / launcher</a>";
+            string clientLink = client.Length == 0 ? "" : "<a class=\"button secondary\" href=\"" + WebUtility.HtmlEncode(client) + "\" target=\"_blank\" rel=\"noopener\">Game client / launcher</a>";
             string instructions = launcherPack
                 ? "Download the <code>AFK Client</code>, unzip it into a folder of its own and start <code>AFK-Client.exe</code>. It chooses the game folder once and keeps add-ons, patches and realmlist up to date."
                 : clientPack

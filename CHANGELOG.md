@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.3.1
+
+- **EsteriaWoW** as a third server kind (`esteria`, group Custom). The engine clones STRHercules/EsteriaWoW (main) as a partial clone with a sparse checkout (`apps conf data/sql deps env/dist/etc modules src`, about 2.5 GB instead of 7) and the Eluna submodule; Playerbots and Dungeon Clear are part of that repository (`Get-ExtraParts` lists the separately downloaded parts: only CoA has any). `Copy-EsteriaConfigs` starts a new server from the realm's own `env/dist/etc` configs (only where the build installed a `.dist` and no `.conf` exists); `Eluna.ScriptPath` points at `mod-worgoblin-high-elf/lua_scripts`.
+- **Esteria map data:** `EsteriaServer.ExtractClientDbc` writes every `DBFilesClient\*.dbc` from the archive the game reads last (map_extractor only opens the base archives and patch-2 to 5); `ApplyServerFiles` lays the source's server-only AreaTable and SkillRaceClassInfo over them and copies the mod-wxl-dbc continuations to `Data/dbc-continuations` (also after every update).
+- **AzerothCore is now the plain core:** azerothcore/azerothcore-wotlk master, no Playerbots and no Dungeon Clear; the catalog does not offer either there (Playerbots needs another core).
+- **Client links:** the default game-client link of the registration page and the AFK Client is ChromieCraft's 3.3.5a download for AzerothCore and none yet for EsteriaWoW; the Game client window has "Get a 3.3.5a client …" on AzerothCore. The AFK Client starts `Wow.exe` too.
+
 ## 1.3.0
 
 - **Server kind:** a new server is either Conquest of Azeroth or stock AzerothCore, chosen on a new wizard page (`welcome.js` `kindPage`, `/api/setup/install` `kind`, `cli install --kind`). Stored in `Dependencies\server-kind.txt` (`Install.Kind`/`IsCoa`/`SetKind`); a server without the file is CoA.

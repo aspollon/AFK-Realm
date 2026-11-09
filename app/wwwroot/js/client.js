@@ -35,7 +35,8 @@ export async function clientDialog(reason) {
     installBtn.lastChild.textContent = look.installText;
     state.textContent = look.state;
     state.className = 'small ' + (look.stateWarn ? 'warn' : 'muted');
-    downloadBtn.style.display = look.serverCoa ? '' : 'none';
+    downloadBtn.style.display = look.serverCoa || look.clientPage ? '' : 'none';
+    if (look.clientPage) downloadBtn.lastChild.textContent = T('Get a 3.3.5a client …');
     if (look.serverCoa) post('/api/client/version', { folder: look.folder }).then(r => { downloadBtn.lastChild.textContent = r.text; }).catch(() => { });
   }
 
@@ -64,6 +65,8 @@ export async function clientDialog(reason) {
   }
 
   async function downloadClient() {
+    // A stock AzerothCore server: a clean 3.3.5a client from ChromieCraft's download page.
+    if (look && look.clientPage) { window.open(look.clientPage, '_blank'); return; }
     let target = look && look.client ? look.client : folder.value.trim();
     if (!target) {
       target = await choose({ title: T('Choose the folder for the game client. It can be empty; about 43 GB will be downloaded into it.'), hint: T('Choose the folder for the game client. It can be empty; about 43 GB will be downloaded into it.') });
