@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.10
+
+- **EsteriaWoW links:** `esteria-custom-script-loader.patch` adds the empty `src/server/scripts/Custom/custom_script_loader.cpp` of stock AzerothCore. EsteriaWoW's .gitignore keeps that folder out of the repository (only README.md), while the generated script loader still calls `AddCustomScripts()` (LNK2019 in ScriptLoader.obj).
+
 ## 1.3.9
 
 - **EsteriaWoW: the modules in four static libraries.** The Visual Studio generator builds an OBJECT library as a `.lib` too, so 1.3.7/1.3.8 hit LNK1248 again. `esteria-modules-split.patch` (replacing `esteria-modules-object-library.patch`) spreads the module sources over `modules` and `modules_part1-3` with MSVC; the parts get the links of `modules` and, after the modules' own .cmake files ran, its compile definitions, options and include directories. Other compilers keep one library.

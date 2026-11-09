@@ -1,3 +1,7 @@
+# AFK Realm 1.3.10
+
+- **EsteriaWoW:** the worldserver links - a small file EsteriaWoW keeps out of its repository (the empty loader for custom scripts) is added by AFK Realm.
+
 # AFK Realm 1.3.9
 
 - **EsteriaWoW:** the modules are now built in four parts, each well below the 4 GB Visual Studio allows for one file. (The way 1.3.7 tried did not get around the limit with Visual Studio.)

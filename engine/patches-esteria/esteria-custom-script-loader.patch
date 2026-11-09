@@ -1,0 +1,17 @@
+diff --git a/src/server/scripts/Custom/custom_script_loader.cpp b/src/server/scripts/Custom/custom_script_loader.cpp
+new file mode 100644
+--- /dev/null
++++ b/src/server/scripts/Custom/custom_script_loader.cpp
+@@ -0,0 +1,12 @@
++/*
++ * Added by AFK Realm: EsteriaWoW keeps its src/server/scripts/Custom folder out of Git (only README.md is tracked),
++ * but the generated script loader still calls AddCustomScripts(). This is the empty loader stock AzerothCore ships.
++ */
++
++// This is where scripts' loading functions should be declared:
++
++// The name of this function should match:
++// void Add${NameOfDirectory}Scripts()
++void AddCustomScripts()
++{
++}
