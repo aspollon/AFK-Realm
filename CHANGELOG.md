@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.4
+
+- **EsteriaWoW builds with Visual Studio:** core patches per server kind (`engine/patches-esteria`, `Get-BuiltInPatchFolder`, embedded as `CoAInstaller.engine.patches-esteria.*` and extracted to `Builder\patches-esteria`). `esteria-windows-names.patch`: `PerkRules.h` returns `EsteriaPerkWire::Unknown` (Windows' winioctl.h has an `Unknown` too, C2872/C2440), and mod-esteria-housing calls its `near` variables `nearObject` (`near` is an empty Windows macro, C2059).
+
 ## 1.3.3
 
 - `ClientAddons.AddFoundAddons` runs on CoA servers too (a module added by hand there); the CoA core's own module folders carry no add-on, the modules by AFK Realm name theirs in afk-realm.json as before.

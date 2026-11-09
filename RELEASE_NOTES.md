@@ -1,3 +1,7 @@
+# AFK Realm 1.3.4
+
+- **EsteriaWoW compiles on Windows.** Two places of the EsteriaWoW code used names Windows reserves for itself, so Visual Studio stopped with hundreds of errors. AFK Realm now fixes them in the downloaded code before it builds, and leaves the fix out by itself once EsteriaWoW changes those places.
+
 # AFK Realm 1.3.3
 
 - **Add-ons of modules on every server.** A module with an add-on in its folder now gets it into your game and to your players on Conquest of Azeroth servers too, not only on AzerothCore and EsteriaWoW - also when the module was not made for AFK Realm.

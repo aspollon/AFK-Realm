@@ -128,13 +128,18 @@ namespace CoAInstaller
             string patches = Path.Combine(dir, "patches");
             try { if (Directory.Exists(patches)) Directory.Delete(patches, true); } catch { }
             Directory.CreateDirectory(patches);
+            // The patches for another core (patches-esteria\) go into a folder of their own the same way.
+            string esteria = Path.Combine(dir, "patches-esteria");
+            try { if (Directory.Exists(esteria)) Directory.Delete(esteria, true); } catch { }
+            Directory.CreateDirectory(esteria);
             foreach (string name in Assembly.GetExecutingAssembly().GetManifestResourceNames())
             {
-                const string prefix = "CoAInstaller.engine.patches.";
-                if (!name.StartsWith(prefix, StringComparison.Ordinal)) continue;
+                const string prefix = "CoAInstaller.engine.patches.", esteriaPrefix = "CoAInstaller.engine.patches-esteria.";
+                string folder = name.StartsWith(prefix, StringComparison.Ordinal) ? patches : name.StartsWith(esteriaPrefix, StringComparison.Ordinal) ? esteria : null;
+                if (folder == null) continue;
                 using (var s = Assembly.GetExecutingAssembly().GetManifestResourceStream(name))
                 using (var r = new StreamReader(s, Encoding.UTF8))
-                    File.WriteAllText(Path.Combine(patches, name.Substring(prefix.Length)), r.ReadToEnd(), new UTF8Encoding(false));
+                    File.WriteAllText(Path.Combine(folder, name.Substring(folder == patches ? prefix.Length : esteriaPrefix.Length)), r.ReadToEnd(), new UTF8Encoding(false));
             }
             return path;
         }

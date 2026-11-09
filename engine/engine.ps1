@@ -1135,10 +1135,14 @@ function Save-Revisions {
 # The built-in patches are part of the compiled server, so their content belongs in the build stamp.
 # Without it, an app update with new racial scripts could report "up to date" while the old worldserver
 # (built before the patch) keeps running.
+# AFK Realm's own core patches: patches\ for the CoA core, patches-<kind>\ for another core (patches-esteria: what
+# the EsteriaWoW code needs to compile with Visual Studio). A stock AzerothCore has none.
+function Get-BuiltInPatchFolder {
+    if ($IsCoa) { return (Join-Path $PSScriptRoot 'patches') }
+    return (Join-Path $PSScriptRoot "patches-$ServerKind")
+}
 function Get-PatchStamp {
-    # The built-in patches are made for the CoA core only.
-    if (-not $IsCoa) { return '' }
-    $folder = Join-Path $PSScriptRoot 'patches'
+    $folder = Get-BuiltInPatchFolder
     if (-not (Test-Path -LiteralPath $folder)) { return '' }
     $parts = foreach ($file in @(Get-ChildItem -LiteralPath $folder -Filter '*.patch' | Sort-Object Name)) {
         $digest = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -2280,10 +2284,9 @@ function Get-ModuleLinkageArgs {
 # that cannot apply it must stop instead of producing a worldserver that looks complete but has no racial scripts.
 $script:RequiredBuiltInPatches = @('afk-1.9.8-racials.patch')
 function Invoke-BuiltInPatches([string]$Git, [switch]$Quiet) {
-    # AFK Realm's core patches are made for the CoA core; a stock AzerothCore is built as it is.
-    if (-not $IsCoa) { return }
-    $folder = Join-Path $PSScriptRoot 'patches'
-    foreach ($required in $script:RequiredBuiltInPatches) {
+    $folder = Get-BuiltInPatchFolder
+    $coreName = if ($IsCoa) { 'the CoA core' } else { $Project.Name }
+    foreach ($required in $(if ($IsCoa) { $script:RequiredBuiltInPatches } else { @() })) {
         if (-not (Test-Path -LiteralPath (Join-Path $folder $required))) {
             throw (Tr 'The server was not built: the racial patch {0} is missing. Update AFK Realm.' $required)
         }
@@ -2301,23 +2304,23 @@ function Invoke-BuiltInPatches([string]$Git, [switch]$Quiet) {
             $added = @([regex]::Matches($text, '(?m)^--- /dev/null\n\+\+\+ b/(\S+)') | ForEach-Object { $_.Groups[1].Value })
             if ($added.Count -gt 0 -and $text -notmatch '(?m)^--- a/' -and
                 @($added | Where-Object { -not (Test-Path -LiteralPath ([IO.Path]::Combine($Paths.Source, $_))) }).Count -eq 0) {
-                Write-Log "$label - the CoA core brings this itself now, not needed any more."
+                Write-Log "$label - $coreName brings this itself now, not needed any more."
                 continue
             }
             $tempPatch = Join-Path ([IO.Path]::GetTempPath()) ('afk-core-patch-' + [guid]::NewGuid().ToString('N') + '.patch')
             [IO.File]::WriteAllText($tempPatch, $text, (New-Object Text.UTF8Encoding($false)))
             $apply = @('-C', $Paths.Source, 'apply', '--ignore-whitespace', '--whitespace=nowarn')
             if ((Invoke-Program $Git ($apply + @('--check', $tempPatch)) -AllowFailure) -eq 0 -and (Invoke-Program $Git ($apply + @($tempPatch)) -AllowFailure) -eq 0) {
-                Write-Log "$label - applied to the CoA core." Green
+                Write-Log "$label - applied to $coreName." Green
             } elseif ((Invoke-Program $Git ($apply + @('--reverse', '--check', '--quiet', $tempPatch)) -AllowFailure) -eq 0) {
-                Write-Log "$label - already part of the CoA core, not needed any more."
+                Write-Log "$label - already part of $coreName, not needed any more."
             } elseif (Invoke-ThreeWayPatch $Git $Paths.Source $apply $tempPatch $text) {
-                Write-Log "$label - applied to the CoA core with a three-way merge." Green
+                Write-Log "$label - applied to $coreName with a three-way merge." Green
             } else {
                 if ($script:RequiredBuiltInPatches -contains $patch.Name) {
                     throw (Tr 'The server was not built: {0} could not be applied to the current CoA core. AFK Realm needs this change for the racial abilities. Update AFK Realm, or report this CoA version.' $label)
                 }
-                Write-Log "$label - does not fit the current CoA core any more; the server is built without it." Yellow
+                Write-Log "$label - does not fit the current $coreName any more; the server is built without it." Yellow
                 if (-not $Quiet) { Send-Event 'NOTE' (Tr '{0} could not be applied: the code it changes has changed. The server is built without it.' (Tr $label)) }
             }
         } finally {

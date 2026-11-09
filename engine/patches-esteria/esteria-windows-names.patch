@@ -1,0 +1,65 @@
+diff --git a/modules/mod-esteria-housing/src/HousingCommerce.inc b/modules/mod-esteria-housing/src/HousingCommerce.inc
+index 6901fa75..ae1f808d 100644
+--- a/modules/mod-esteria-housing/src/HousingCommerce.inc
++++ b/modules/mod-esteria-housing/src/HousingCommerce.inc
+@@ -538,13 +538,13 @@
+         auto view = s_shopView.find(player->GetGUID());
+         if (view == s_shopView.end())
+             return nullptr;
+-        WorldObject* near = ObjectAccessor::GetWorldObject(*player, view->second.object);
++        WorldObject* nearObject = ObjectAccessor::GetWorldObject(*player, view->second.object);
+         auto shop = s_shops.find(view->second.shop);
+-        if (!near || shop == s_shops.end()
+-            || !player->IsWithinDistInMap(near, shop->second.account == player->GetSession()->GetAccountId() ? ServiceRangeOwner : ServiceRange))
++        if (!nearObject || shop == s_shops.end()
++            || !player->IsWithinDistInMap(nearObject, shop->second.account == player->GetSession()->GetAccountId() ? ServiceRangeOwner : ServiceRange))
+             return nullptr;
+         if (object)
+-            *object = near;
++            *object = nearObject;
+         return &shop->second;
+     }
+ 
+diff --git a/modules/mod-esteria-housing/src/HousingHousehold.inc b/modules/mod-esteria-housing/src/HousingHousehold.inc
+index 328d268b..9ee99275 100644
+--- a/modules/mod-esteria-housing/src/HousingHousehold.inc
++++ b/modules/mod-esteria-housing/src/HousingHousehold.inc
+@@ -1145,7 +1145,7 @@
+             if (!s_config.enabled || !s_loaded)
+                 return;
+             uint32 const focus = spell->GetSpellInfo()->RequiresSpellFocus;
+-            bool near = false, allowed = false;
++            bool nearObject = false, allowed = false;
+             for (auto const& [placed, e] : s_extras)
+             {
+                 if (e.instance != player->GetInstanceId())
+@@ -1156,14 +1156,14 @@
+                     if (!go || go->GetGOInfo()->type != GAMEOBJECT_TYPE_SPELL_FOCUS || go->GetGOInfo()->spellFocus.focusId != focus
+                         || !go->IsWithinDistInMap(player, float(go->GetGOInfo()->spellFocus.dist)))
+                         continue;
+-                    near = true;
++                    nearObject = true;
+                     House* house = HouseOfPlaced(placed);
+                     auto d = s_displays.find(placed);
+                     if (house && (d == s_displays.end() || MayUse(player, *house, d->second.access)))
+                         allowed = true;
+                 }
+             }
+-            if (near && !allowed)
++            if (nearObject && !allowed)
+                 res = SPELL_FAILED_REQUIRES_SPELL_FOCUS;
+         }
+     };
+diff --git a/src/server/shared/PerkRules.h b/src/server/shared/PerkRules.h
+index 42d46847..d45daf97 100644
+--- a/src/server/shared/PerkRules.h
++++ b/src/server/shared/PerkRules.h
+@@ -107,7 +107,7 @@ namespace EsteriaPerks
+     {
+         using namespace EsteriaPerkWire;
+         if (index < 0 || size_t(index) >= CardCount)
+-            return Unknown;
++            return EsteriaPerkWire::Unknown;   // Windows names Unknown too (MEDIA_TYPE in winioctl.h)
+         Card const& card = Cards[index];
+         if (!ClassCanUse(card, classId))
+             return Class;
