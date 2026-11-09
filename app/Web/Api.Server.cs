@@ -242,7 +242,8 @@ namespace CoAInstaller.Web
                 throw new UserError(L.T("The tools for the CoA DBC extraction are missing. Run \"Repair\" once, then try again."));
             return Jobs.Run(L.T("Create map data"), (job, st) =>
             {
-                string[] tools = onlyDbc ? new string[0] : new[] { Os.Exe("map_extractor"), Os.Exe("vmap4_extractor"), Os.Exe("vmap4_assembler"), Os.Exe("mmaps_generator") };
+                // EsteriaWoW: "only the DBC tables" still needs map_extractor for the stock tables under the client's seven.
+                string[] tools = onlyDbc ? (esteria ? new[] { Os.Exe("map_extractor") } : new string[0]) : new[] { Os.Exe("map_extractor"), Os.Exe("vmap4_extractor"), Os.Exe("vmap4_assembler"), Os.Exe("mmaps_generator") };
                 var copied = new List<string>();
                 try
                 {
@@ -256,7 +257,7 @@ namespace CoAInstaller.Web
                         if (!Os.Windows) File.SetUnixFileMode(dst, File.GetUnixFileMode(src));
                         copied.Add(dst);
                     }
-                    if (!onlyDbc && Os.Windows)
+                    if ((!onlyDbc || esteria) && Os.Windows)
                     {
                         foreach (var dll in Directory.GetFiles(inst.ServerDir, "*.dll")) { string dst = Path.Combine(dir, Path.GetFileName(dll)); File.Copy(dll, dst, true); copied.Add(dst); }
                         // vmap4_extractor and the other tools need z.dll. It is built into
@@ -315,6 +316,12 @@ namespace CoAInstaller.Web
                     }
                     if (esteria)
                     {
+                        if (onlyDbc)
+                        {
+                            string old = Path.Combine(dir, "dbc");
+                            if (Directory.Exists(old)) Directory.Delete(old, true);
+                            run(L.T("Step 1: dbc, maps and cameras ..."), Path.Combine(dir, Os.Exe("map_extractor")), "-e 2");
+                        }
                         st(L.T("DBC tables from the client archives ..."));
                         note("== " + L.T("DBC tables from the client archives ..."));
                         EsteriaServer.ExtractClientDbc(dir, Path.Combine(dir, "dbc"), note);

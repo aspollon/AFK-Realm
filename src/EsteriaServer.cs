@@ -6,54 +6,42 @@ using System.Linq;
 namespace CoAInstaller
 {
     /// <summary>
-    /// What an EsteriaWoW server needs beyond the stock map data. Its races, looks and spells are in the DBC tables of
-    /// the Esteria client, spread over dozens of patch archives the stock map_extractor never opens (it reads the
-    /// base archives and patch-2 to patch-5 only). The server gets the table the game itself reads - from the
-    /// archive it loads last - for every table. The Docker setup of EsteriaWoW then lays a few server-only files
-    /// over them (AreaTable of mod-fly-anywhere, SkillRaceClassInfo of mod-custom-server) and puts the DBC
-    /// continuations of mod-wxl-dbc next to them; AFK Realm does the same from the server's source.
+    /// What an EsteriaWoW server needs beyond the stock map data. The stock tables come from map_extractor; the
+    /// races, looks and spells are in seven tables of the Esteria client, spread over patch archives the stock
+    /// map_extractor never opens. Exactly those seven are taken as the game reads them (from the archive it loads
+    /// last) - the list EsteriaWoW's own Docker setup lays over the stock set. Not every table: other tables in the
+    /// client's patches (from CoA and other projects) have layouts the EsteriaWoW core does not read, and the
+    /// worldserver stopped on them (Vehicle.dbc, "stringOffset &lt; file.stringSize"). Then the server-only files of
+    /// the source (AreaTable of mod-fly-anywhere, SkillRaceClassInfo of mod-custom-server) and the DBC continuations
+    /// of mod-wxl-dbc, as in that Docker setup.
     /// </summary>
     static class EsteriaServer
     {
         const string Folder = "DBFilesClient\\";
 
-        /// <summary>Writes every DBC table of the client into <paramref name="target"/>, as the game reads it.
-        /// Tables already in the folder (from map_extractor) are replaced. Returns how many were written.</summary>
+        /// <summary>The tables EsteriaWoW's docker-compose.override.yml mounts from its race work over the stock set; the
+        /// client carries the same content (RaceGuide/08-OUTPUTS-AND-DEPLOYMENT.md compares them).</summary>
+        public static readonly string[] ClientTables =
+            { "ChrRaces.dbc", "CharStartOutfit.dbc", "CharSections.dbc", "BarberShopStyle.dbc", "CreatureDisplayInfo.dbc", "CreatureModelData.dbc", "Spell.dbc" };
+
+        /// <summary>Writes the <see cref="ClientTables"/> into <paramref name="target"/> as the game reads them, over what
+        /// map_extractor put there. Returns how many were written.</summary>
         public static int ExtractClientDbc(string client, string target, Action<string> note)
         {
             Directory.CreateDirectory(target);
             var order = ClientPatch.ClientArchives(client, true);
-            // table file name -> the archive that has it and is read last
+            // table -> the archive that has it and is read last (the archives are in the order the game reads them)
             var newest = new Dictionary<string, KeyValuePair<string, string>>(StringComparer.OrdinalIgnoreCase);
-            var unlisted = new List<string>();
             foreach (var path in order)
             {
                 try
                 {
                     using (var mpq = new MpqArchive(path))
-                    {
-                        var names = mpq.Names();
-                        if (names == null || names.Count == 0) { unlisted.Add(path); continue; }
-                        foreach (var name in names)
-                        {
-                            string n = name.Replace('/', '\\');
-                            if (!n.StartsWith(Folder, StringComparison.OrdinalIgnoreCase) || !n.EndsWith(".dbc", StringComparison.OrdinalIgnoreCase)) continue;
-                            if (!mpq.Contains(n)) continue;
-                            newest[n.Substring(Folder.Length)] = new KeyValuePair<string, string>(path, n);
-                        }
-                    }
+                        foreach (var table in ClientTables)
+                            if (mpq.Contains(Folder + table)) newest[table] = new KeyValuePair<string, string>(path, Folder + table);
                 }
                 catch (Exception ex) { note(L.F("{0} could not be read: {1}", Path.GetFileName(path), ex.Message)); }
             }
-            // Archives without a file list can still hold tables: the names map_extractor wrote are looked for there too.
-            if (unlisted.Count > 0 && Directory.Exists(target))
-                foreach (var file in Directory.GetFiles(target, "*.dbc"))
-                {
-                    string n = Folder + Path.GetFileName(file);
-                    foreach (var path in unlisted)
-                        try { using (var mpq = new MpqArchive(path)) if (mpq.Contains(n)) newest[Path.GetFileName(file)] = new KeyValuePair<string, string>(path, n); }
-                        catch { }
-                }
             if (newest.Count == 0) throw new InvalidOperationException(L.T("The game client has no DBC tables. Is this the EsteriaWoW client folder, and is the game closed?"));
 
             int written = 0;

@@ -1,3 +1,7 @@
+# AFK Realm 1.3.17
+
+- **EsteriaWoW:** the worldserver no longer stops while loading its data. AFK Realm had taken all game tables from the EsteriaWoW client, including some in a format the server cannot read; now it takes only the seven tables with EsteriaWoW's races, looks and spells, as EsteriaWoW's own setup does. Run "Create map data" once more with "Only refresh the DBC tables" ticked - that takes about a minute.
+
 # AFK Realm 1.3.16
 
 - **EsteriaWoW:** the server can be started - AFK Realm took EsteriaWoW's map data for incomplete because it counted the DBC tables like for CoA, and asked for "CoA DBC tables". The map data window speaks of the right client now.

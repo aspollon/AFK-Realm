@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.17
+
+- **EsteriaWoW worldserver starts:** `EsteriaServer.ExtractClientDbc` took every table from the client's last archive, and some of them (from the CoA and other patches in that client) have layouts the EsteriaWoW core does not read: the worldserver stopped on Vehicle.dbc (assert `stringOffset < file.stringSize`). It now takes only the seven tables EsteriaWoW's docker-compose.override.yml lays over the stock set (ChrRaces, CharStartOutfit, CharSections, BarberShopStyle, CreatureDisplayInfo, CreatureModelData, Spell); the rest stays map_extractor's. The winner is looked up per table in load order (the same order as EsteriaWoW's own resolver, `tools/esteria_satchel.py`).
+- "Only refresh the DBC tables" on EsteriaWoW runs `map_extractor -e 2` first, so the stock tables are put back too.
+
 ## 1.3.16
 
 - **EsteriaWoW server starts:** `Install.HasClientDbc` asked for more than 300 tables, CoA's count; EsteriaWoW has the stock set (250, its own content inside), so "Start" refused with the CoA DBC message. For EsteriaWoW it now needs ChrRaces.dbc and 240 tables. The start refusal, the map data dialog and its "only refresh" option name EsteriaWoW / a 3.3.5a client instead of CoA.
