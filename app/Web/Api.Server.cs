@@ -181,6 +181,8 @@ namespace CoAInstaller.Web
             RefuseDuringRestart();
             var inst = Inst; var ctl = Ctl;
             if (!inst.HasMapData && !force) throw new NeedsConfirmation(L.T("Map data is missing. The worldserver will not run properly without it.\n\nStart anyway?"));
+            if (inst.HasMapData && !inst.HasClientDbc && inst.IsEsteria)
+                throw new UserError(L.T("The DBC tables of the EsteriaWoW client are missing, so the worldserver would stop right away.\n\nOpen \"Create map data\" and choose your EsteriaWoW game folder."));
             if (inst.HasMapData && !inst.HasClientDbc)
                 throw new UserError(L.T("The CoA DBC tables are missing, so the worldserver would stop right away.\n\nOpen \"Create map data\", choose your CoA game folder and tick \"Only refresh the CoA DBC tables\"."));
             return Jobs.Run(L.T("Start server"), (job, st) => StartWork(inst, ctl, st));

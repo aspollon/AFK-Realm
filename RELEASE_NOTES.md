@@ -1,3 +1,7 @@
+# AFK Realm 1.3.16
+
+- **EsteriaWoW:** the server can be started - AFK Realm took EsteriaWoW's map data for incomplete because it counted the DBC tables like for CoA, and asked for "CoA DBC tables". The map data window speaks of the right client now.
+
 # AFK Realm 1.3.15
 
 - **Important fix: server updates of Conquest of Azeroth servers work again.** Since 1.3.1, every update, rebuild and new installation of a CoA (and AzerothCore) server stopped at "Downloading the server source code" with "The property 'Count' cannot be found on this object". Your server was not changed by it: the backup was made and nothing was built. Update AFK Realm and run the server update again.

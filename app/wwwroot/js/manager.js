@@ -170,10 +170,13 @@ export function manager() {
     const folder = input('', { style: { flex: '1' } });
     get('/api/mapdata/client').then(r => { if (r.folder && !folder.value) folder.value = r.folder; }).catch(() => { });
     const mmaps = check(T('Also create mmaps (pathfinding for bots and creatures, highly recommended; may take a long time)'), true);
-    const dbcOnly = check(T('Only refresh the CoA DBC tables (for a server that already has maps)'), false, v => { mmaps.input.disabled = v; });
+    const kind = st.kind || 'coa';
+    const dbcOnly = check(kind === 'esteria' ? T('Only refresh the DBC tables (for a server that already has maps)') : T('Only refresh the CoA DBC tables (for a server that already has maps)'), false, v => { mmaps.input.disabled = v; });
     const r = await dialog({
       title: T('Create map data'), icon: 'globe',
-      body: h('div', {}, h('p', {}, T('Choose the folder of your CoA game client (the one with the "Data" folder). When the extraction finishes, the data is moved into the server automatically. Keep the game and its launcher closed meanwhile.')),
+      body: h('div', {}, h('p', {}, kind === 'esteria' ? T('Choose the folder of your EsteriaWoW game client (the one with the "Data" folder). When the extraction finishes, the data is moved into the server automatically. Keep the game closed meanwhile.')
+          : kind === 'azerothcore' ? T('Choose the folder of your 3.3.5a game client (the one with the "Data" folder). When the extraction finishes, the data is moved into the server automatically. Keep the game closed meanwhile.')
+          : T('Choose the folder of your CoA game client (the one with the "Data" folder). When the extraction finishes, the data is moved into the server automatically. Keep the game and its launcher closed meanwhile.')),
         h('div.row.nowrap', {}, folder, secondary(T('Browse …'), async () => { const p = await choose({ title: T('Choose the game folder (it contains the "Data" folder)'), start: folder.value, newFolder: false }); if (p) folder.value = p; }, 'folder')),
         mmaps, st.needsClientDbc ? dbcOnly : null),
       buttons: [{ text: T('Cancel'), value: null }, { text: T('Start extraction'), kind: 'primary', value: true }]

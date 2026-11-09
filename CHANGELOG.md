@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.16
+
+- **EsteriaWoW server starts:** `Install.HasClientDbc` asked for more than 300 tables, CoA's count; EsteriaWoW has the stock set (250, its own content inside), so "Start" refused with the CoA DBC message. For EsteriaWoW it now needs ChrRaces.dbc and 240 tables. The start refusal, the map data dialog and its "only refresh" option name EsteriaWoW / a 3.3.5a client instead of CoA.
+
 ## 1.3.15
 
 - **CoA updates and builds work again:** `Sync-Repository` set `$sparse` with `if … else { @() }`, which gives `$null` for a repository without a sparse list (every CoA and AzerothCore repository); `$sparse.Count` then stopped the engine under strict mode ("The property 'Count' cannot be found on this object") right at "Downloading the server source code". Broken since 1.3.1.

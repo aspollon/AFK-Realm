@@ -34,7 +34,7 @@ namespace CoAInstaller
         static string VersionOf()
         {
             System.Version v = typeof(Product).Assembly.GetName().Version;
-            return v == null || v.Major == 0 ? "1.3.15" : v.Major + "." + v.Minor + "." + v.Build;
+            return v == null || v.Major == 0 ? "1.3.16" : v.Major + "." + v.Minor + "." + v.Build;
         }
     }
 
@@ -159,7 +159,10 @@ namespace CoAInstaller
             {
                 if (!NeedsClientDbc) return true;
                 string dbc = Path.Combine(DataDir, "dbc");
-                return Directory.Exists(dbc) && Directory.EnumerateFiles(dbc, "*.dbc").Count() >= 300;
+                if (!Directory.Exists(dbc)) return false;
+                // EsteriaWoW has the stock set of tables (about 250, its own content inside them); CoA has more than 300.
+                if (IsEsteria) return File.Exists(Path.Combine(dbc, "ChrRaces.dbc")) && Directory.EnumerateFiles(dbc, "*.dbc").Count() >= 240;
+                return Directory.EnumerateFiles(dbc, "*.dbc").Count() >= 300;
             }
         }
         public bool HasMapData

@@ -2592,6 +2592,10 @@
     "Your game has no add-ons of its own.": "",
     "{0} add-on(s) will go to your players with the next player package (Client build).": "",
     "No add-on of your own is handed out.": "",
-    "AzerothCore (WotLK 3.3.5a) with Playerbots and Dungeon Clear, the bots can be switched off. The modules by AFK Realm are made for CoA and are not offered; the AzerothCore module catalog is. Needs a normal 3.3.5a game client (build 12340).": ""
+    "AzerothCore (WotLK 3.3.5a) with Playerbots and Dungeon Clear, the bots can be switched off. The modules by AFK Realm are made for CoA and are not offered; the AzerothCore module catalog is. Needs a normal 3.3.5a game client (build 12340).": "",
+    "The DBC tables of the EsteriaWoW client are missing, so the worldserver would stop right away.\n\nOpen \"Create map data\" and choose your EsteriaWoW game folder.": "",
+    "Only refresh the DBC tables (for a server that already has maps)": "",
+    "Choose the folder of your EsteriaWoW game client (the one with the \"Data\" folder). When the extraction finishes, the data is moved into the server automatically. Keep the game closed meanwhile.": "",
+    "Choose the folder of your 3.3.5a game client (the one with the \"Data\" folder). When the extraction finishes, the data is moved into the server automatically. Keep the game closed meanwhile.": ""
   }
 }
