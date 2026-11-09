@@ -1,3 +1,7 @@
+# AFK Realm 1.3.19
+
+- **EsteriaWoW:** the tables of EsteriaWoW's housing are set up. The module keeps its SQL where the server's updater does not look, so the worldserver stopped on startup when it looked for them.
+
 # AFK Realm 1.3.18
 
 - **Each server remembers its own game client.** AFK Realm remembered one game folder for all servers, so the EsteriaWoW server was given the tables of the CoA client and its worldserver stopped. Now Conquest of Azeroth, EsteriaWoW and AzerothCore each keep their own client folder, and "Create map data" refuses a client that does not belong to the server.

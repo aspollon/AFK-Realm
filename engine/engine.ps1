@@ -1066,6 +1066,31 @@ function Repair-EsteriaSqlOrder {
     if ($renamed -gt 0) { Write-Log "EsteriaWoW: $renamed SQL file(s) renamed so the updater applies them in the order they were written." }
 }
 
+# mod-esteria-housing keeps its SQL in sql\ instead of data\sql\, so the updater never applies it (its README: the files
+# are applied by hand, in this order). The EsteriaWoW realm runs with housing on (env/dist/etc), and the module reads its
+# tables at startup: without them the worldserver stopped ("housing_decor_catalog doesn't exist"). A database without
+# the tables gets the files once, in the README's order; they are written to be applied again without harm.
+$EsteriaHousingSql = @(
+    @{ Db = 'acore_world'; Check = 'housing_decor_catalog'; Files = @('world\housing_world.sql', 'world\housing_commerce_world.sql',
+        'world\housing_adventure_world.sql', 'world\housing_collections_world.sql', 'world\housing_household_world.sql') },
+    @{ Db = 'acore_characters'; Check = 'housing_house'; Files = @('characters\housing_characters.sql') }
+)
+function Install-EsteriaHousingSql([string]$Options) {
+    if ($ServerKind -ne 'esteria') { return }
+    $folder = [IO.Path]::Combine($Paths.Source, 'modules', 'mod-esteria-housing', 'sql')
+    if (-not (Test-Path $folder)) { return }
+    foreach ($part in $EsteriaHousingSql) {
+        $found = Get-SqlValue $Options ("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '{0}' AND table_name = '{1}';" -f $part.Db, $part.Check)
+        if ($found -eq '1') { continue }
+        foreach ($file in $part.Files) {
+            $path = Join-Path $folder $file
+            if (-not (Test-Path $path)) { Write-Log "EsteriaWoW housing: $file is missing, skipped." Yellow; continue }
+            Write-Log "EsteriaWoW housing: applying $file to $($part.Db) ..."
+            [void](Invoke-Sql $Options ("USE $($part.Db);`n" + [IO.File]::ReadAllText($path)))
+        }
+    }
+}
+
 function Update-Databases([string]$Password) {
     Repair-EsteriaSqlOrder
     $dbimport = Join-Path $Paths.ServerBin (Exe 'dbimport')
@@ -1100,6 +1125,7 @@ function Update-Databases([string]$Password) {
                 if ($revision) { [void](Invoke-Sql $root ('UPDATE afk_modules.modules SET revision = {0} WHERE name = {1};' -f (ConvertTo-SqlString $revision), (ConvertTo-SqlString $m.Name))) }
             }
             try { Repair-ManastormReturnPads $root } catch { Write-Log "Manastorm return pads could not be checked: $($_.Exception.Message)" Yellow }
+            Install-EsteriaHousingSql $root
         } finally { Save-ModuleList $root }
     } finally { Remove-Item $root -Force -ErrorAction SilentlyContinue }
     Write-Log 'Databases are complete and up to date.'

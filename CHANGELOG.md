@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.19
+
+- **EsteriaWoW housing tables:** `Install-EsteriaHousingSql` (after the database updates) applies mod-esteria-housing's `sql\` files, which the updater never reads, in its README's order (world: housing_world, commerce, adventure, collections, household; characters: housing_characters) to a database that lacks `housing_decor_catalog` / `housing_house`. The realm's config has housing on, and the module reads the tables at startup (ERROR 1146, worldserver aborted).
+
 ## 1.3.18
 
 - **One game client per server kind:** the client folder AFK Realm remembers (`ClientAddons.ClientFolder`) was one for all servers, so the map data window of the EsteriaWoW server offered the CoA client, and its tables (Spell.dbc with 225,630 rows) stopped the EsteriaWoW worldserver. It is kept per kind now (`client-folder-esteria.txt`, `client-folder-azerothcore.txt`; CoA keeps `client-folder.txt`), and "Create map data" remembers the folder it used.
