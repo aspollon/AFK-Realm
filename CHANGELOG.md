@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.3
+
+- `ClientAddons.AddFoundAddons` runs on CoA servers too (a module added by hand there); the CoA core's own module folders carry no add-on, the modules by AFK Realm name theirs in afk-realm.json as before.
+
 ## 1.3.2
 
 - **Add-ons of catalog modules:** on AzerothCore and EsteriaWoW a module without an afk-realm.json counts every folder with a `.toc` of its own name (up to four levels down, not inside another add-on, not `Blizzard_*`) as its add-on (`ClientAddons.AddFoundAddons`); they are installed, packed and handed out like the add-ons modules name.

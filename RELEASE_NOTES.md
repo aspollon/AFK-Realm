@@ -1,3 +1,7 @@
+# AFK Realm 1.3.3
+
+- **Add-ons of modules on every server.** A module with an add-on in its folder now gets it into your game and to your players on Conquest of Azeroth servers too, not only on AzerothCore and EsteriaWoW - also when the module was not made for AFK Realm.
+
 # AFK Realm 1.3.2
 
 ## Add-ons for your players

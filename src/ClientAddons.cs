@@ -108,8 +108,7 @@ namespace CoAInstaller
             foreach (var dir in Directory.GetDirectories(modules).OrderBy(d => d, StringComparer.OrdinalIgnoreCase))
             {
                 string file = Path.Combine(dir, ModuleCatalog.ManifestName);
-                // (CoA keeps to the add-ons its modules name: the CoA core's own module folders are not looked into.)
-                if (!File.Exists(file)) { if (!inst.IsCoa) AddFoundAddons(dir, client, result); continue; }
+                if (!File.Exists(file)) { AddFoundAddons(dir, client, result); continue; }
                 Dictionary<string, object> clientPart = null;
                 object v;
                 try
@@ -143,7 +142,8 @@ namespace CoAInstaller
         }
 
         /// <summary>
-        /// A module without an afk-realm.json - most modules of the AzerothCore catalog, and those EsteriaWoW brings -
+        /// A module without an afk-realm.json - most modules of the AzerothCore catalog, those EsteriaWoW brings, a module
+        /// added by hand to a CoA server -
         /// can still carry an add-on for the game: a folder with a .toc file of its own name (Battlemon/Battlemon.toc).
         /// Such folders count as the module's add-ons; folders inside an add-on (its libraries) do not.
         /// </summary>
