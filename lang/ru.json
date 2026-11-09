@@ -2355,6 +2355,9 @@
     "The DBC tables of the EsteriaWoW client are missing, so the worldserver would stop right away.\n\nOpen \"Create map data\" and choose your EsteriaWoW game folder.": "",
     "Only refresh the DBC tables (for a server that already has maps)": "",
     "Choose the folder of your EsteriaWoW game client (the one with the \"Data\" folder). When the extraction finishes, the data is moved into the server automatically. Keep the game closed meanwhile.": "",
-    "Choose the folder of your 3.3.5a game client (the one with the \"Data\" folder). When the extraction finishes, the data is moved into the server automatically. Keep the game closed meanwhile.": ""
+    "Choose the folder of your 3.3.5a game client (the one with the \"Data\" folder). When the extraction finishes, the data is moved into the server automatically. Keep the game closed meanwhile.": "",
+    "{0} is not the EsteriaWoW game client (it has no EsteriaWoW archives in Data). Choose the folder of the EsteriaWoW client.": "",
+    "{0} is the EsteriaWoW game client. This server needs its own client.": "",
+    "{0} is a Conquest of Azeroth game client. An AzerothCore server needs a normal 3.3.5a client.": ""
   }
 }

@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.18
+
+- **One game client per server kind:** the client folder AFK Realm remembers (`ClientAddons.ClientFolder`) was one for all servers, so the map data window of the EsteriaWoW server offered the CoA client, and its tables (Spell.dbc with 225,630 rows) stopped the EsteriaWoW worldserver. It is kept per kind now (`client-folder-esteria.txt`, `client-folder-azerothcore.txt`; CoA keeps `client-folder.txt`), and "Create map data" remembers the folder it used.
+- **Create map data refuses the wrong client:** EsteriaWoW needs a client with EsteriaWoW archives (`*EsteriaClient*.mpq`); the other kinds refuse it; AzerothCore refuses a CoA client (CoA64.exe/Ascension.exe).
+
 ## 1.3.17
 
 - **EsteriaWoW worldserver starts:** `EsteriaServer.ExtractClientDbc` took every table from the client's last archive, and some of them (from the CoA and other patches in that client) have layouts the EsteriaWoW core does not read: the worldserver stopped on Vehicle.dbc (assert `stringOffset < file.stringSize`). It now takes only the seven tables EsteriaWoW's docker-compose.override.yml lays over the stock set (ChrRaces, CharStartOutfit, CharSections, BarberShopStyle, CreatureDisplayInfo, CreatureModelData, Spell); the rest stays map_extractor's. The winner is looked up per table in load order (the same order as EsteriaWoW's own resolver, `tools/esteria_satchel.py`).

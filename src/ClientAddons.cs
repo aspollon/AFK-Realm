@@ -39,7 +39,36 @@ namespace CoAInstaller
     static class ClientAddons
     {
         static string RecordFile(Install inst) { return Path.Combine(inst.Root, "Dependencies", "client-addons.txt"); }
-        static string FolderFile { get { return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), Product.FileStem, "client-folder.txt"); } }
+        /// <summary>The kind of the server opened (Install.Kind): each kind has a game client of its own - CoA, EsteriaWoW
+        /// and a stock 3.3.5a client are different folders - so the folder remembered is kept per kind.</summary>
+        public static string ServerKind = global::CoAInstaller.Install.KindCoa;
+        static string FolderFile
+        {
+            get
+            {
+                string name = ServerKind == global::CoAInstaller.Install.KindCoa ? "client-folder.txt" : "client-folder-" + ServerKind + ".txt";
+                return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), Product.FileStem, name);
+            }
+        }
+
+        /// <summary>The EsteriaWoW client: its own archives (Patch-ZzzzzzzEsteriaClient.MPQ and the like).</summary>
+        public static bool IsEsteriaClient(string client)
+        {
+            try
+            {
+                string data = Os.Resolve(client ?? "", "Data");
+                return Directory.Exists(data) && Directory.EnumerateFiles(data, "*.mpq", SearchOption.TopDirectoryOnly)
+                    .Any(f => Path.GetFileName(f).IndexOf("EsteriaClient", StringComparison.OrdinalIgnoreCase) >= 0);
+            }
+            catch { return false; }
+        }
+
+        /// <summary>A Conquest of Azeroth client: CoA64.exe or Ascension.exe in the game folder.</summary>
+        public static bool IsCoaClient(string client)
+        {
+            try { return File.Exists(Os.Resolve(client ?? "", "CoA64.exe")) || File.Exists(Os.Resolve(client ?? "", "Ascension.exe")); }
+            catch { return false; }
+        }
 
         /// <summary>The game client folder chosen last time, or null.</summary>
         public static string ClientFolder

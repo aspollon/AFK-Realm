@@ -1,3 +1,7 @@
+# AFK Realm 1.3.18
+
+- **Each server remembers its own game client.** AFK Realm remembered one game folder for all servers, so the EsteriaWoW server was given the tables of the CoA client and its worldserver stopped. Now Conquest of Azeroth, EsteriaWoW and AzerothCore each keep their own client folder, and "Create map data" refuses a client that does not belong to the server.
+
 # AFK Realm 1.3.17
 
 - **EsteriaWoW:** the worldserver no longer stops while loading its data. AFK Realm had taken all game tables from the EsteriaWoW client, including some in a format the server cannot read; now it takes only the seven tables with EsteriaWoW's races, looks and spells, as EsteriaWoW's own setup does. Run "Create map data" once more with "Only refresh the DBC tables" ticked - that takes about a minute.

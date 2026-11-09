@@ -230,6 +230,13 @@ namespace CoAInstaller.Web
             if (dir == null) throw new UserError(L.T("This is not a game folder: it needs a \"Data\" folder with the game's .MPQ archives.") + " " + L.T("You can also choose the \"Data\" folder itself."));
             if (Manager.Ctl != null && Manager.Ctl.World != null) throw new UserError(L.T("Stop the server first."));
             string clientData = Path.Combine(dir, "Data");
+            // The tables of the wrong client break the worldserver (CoA's Spell.dbc in an EsteriaWoW server stops it on load).
+            if (inst.IsEsteria && !ClientAddons.IsEsteriaClient(dir))
+                throw new UserError(L.F("{0} is not the EsteriaWoW game client (it has no EsteriaWoW archives in Data). Choose the folder of the EsteriaWoW client.", dir));
+            if (!inst.IsEsteria && ClientAddons.IsEsteriaClient(dir))
+                throw new UserError(L.F("{0} is the EsteriaWoW game client. This server needs its own client.", dir));
+            if (inst.Kind == Install.KindAzerothCore && ClientAddons.IsCoaClient(dir))
+                throw new UserError(L.F("{0} is a Conquest of Azeroth game client. An AzerothCore server needs a normal 3.3.5a client.", dir));
             // EsteriaWoW takes its tables from the client archives itself (EsteriaServer); CoA uses the fork's tool.
             bool esteria = inst.IsEsteria;
             bool coaDbc = !esteria && File.Exists(inst.DbcScript);
@@ -372,6 +379,8 @@ namespace CoAInstaller.Web
                     }
                     EsteriaServer.ApplyServerFiles(inst, note);
                     job.Message = L.T("DONE. The data is now in the server.");
+                    // the next time (and the Game client window) offers this server's client
+                    ClientAddons.ClientFolder = dir;
                     Manager.SetNotice(L.T("Map data is present."), "ok");
                 }
                 finally
