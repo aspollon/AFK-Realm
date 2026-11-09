@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.15
+
+- **CoA updates and builds work again:** `Sync-Repository` set `$sparse` with `if … else { @() }`, which gives `$null` for a repository without a sparse list (every CoA and AzerothCore repository); `$sparse.Count` then stopped the engine under strict mode ("The property 'Count' cannot be found on this object") right at "Downloading the server source code". Broken since 1.3.1.
+
 ## 1.3.14
 
 - **EsteriaWoW character tables:** `esteria-character-look-tables.patch` adds `pending_db_characters/rev_20260901000000000_afk_retail_look_tables.sql` with `character_retail_look` (binary 132, RetailLookWire.h) and `character_body_shape` (binary 49, BodyShapeWire.h): the core prepares statements for them, but no SQL of the repository creates them ("Could not prepare statements of the Character database"). A check of all prepared statements against the repository's CREATE TABLEs found no other missing table.

@@ -1207,7 +1207,10 @@ function Get-BuildStamp {
 # Brings a repository to an exact revision. Additional module folders inside the
 # core's modules\ directory are never touched.
 function Sync-Repository([string]$Git, [hashtable]$Item, [string]$Folder, [switch]$KeepModules) {
-    $sparse = if ($Item.ContainsKey('Sparse')) { @($Item.Sparse) } else { @() }
+    # (Not "$sparse = if ... else { @() }": an empty array from an if is no value at all, and .Count on it then
+    # stops the engine under strict mode - every CoA update did in 1.3.1-1.3.14.)
+    $sparse = @()
+    if ($Item.ContainsKey('Sparse')) { $sparse = @($Item.Sparse) }
     if (-not (Test-Path (Join-Path $Folder '.git'))) {
         Remove-Item $Folder -Recurse -Force -ErrorAction SilentlyContinue
         if ($sparse.Count -gt 0) {

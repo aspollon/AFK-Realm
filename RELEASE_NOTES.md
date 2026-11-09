@@ -1,3 +1,7 @@
+# AFK Realm 1.3.15
+
+- **Important fix: server updates of Conquest of Azeroth servers work again.** Since 1.3.1, every update, rebuild and new installation of a CoA (and AzerothCore) server stopped at "Downloading the server source code" with "The property 'Count' cannot be found on this object". Your server was not changed by it: the backup was made and nothing was built. Update AFK Realm and run the server update again.
+
 # AFK Realm 1.3.14
 
 - **EsteriaWoW:** two character tables the EsteriaWoW server needs (for the retail looks and body shapes of characters) are created by AFK Realm - the EsteriaWoW repository has no SQL for them, so a new server could not start its character database.
