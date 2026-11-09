@@ -1,3 +1,7 @@
+# AFK Realm 1.3.7
+
+- **EsteriaWoW builds further:** with all its modules, the module part of the server became larger than Windows' build tools allow for one library file (4 GB). AFK Realm now builds it in a way that has no such limit.
+
 # AFK Realm 1.3.6
 
 - **EsteriaWoW builds further:** an old copy of a module that EsteriaWoW replaced long ago (mod-attunement-plus; the current one is part of mod-custom-server) is left out of the build, as it no longer fits the core.

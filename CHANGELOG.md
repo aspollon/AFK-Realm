@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.7
+
+- **EsteriaWoW: modules as an object library.** `esteria-modules-object-library.patch` makes `modules` an OBJECT library: the static `modules.lib` of all EsteriaWoW modules came to 4 GB plus 16 KB (1316 objects) and MSVC's librarian stops at 4 GB (LNK1248). The objects now go straight into the worldserver.
+
 ## 1.3.6
 
 - **EsteriaWoW: mod-attunement-plus is not built.** Its folder is the old standalone copy of the Echoes attunement that mod-custom-server carries now ("superseded" in EsteriaWoW's module status); it calls `Player::HandleStatModifier`/`ApplyStatBuffMod`, which the core no longer has (C2039). `$Project.Core.NotBuilt` turns such folders off with `-DMODULE_<NAME>=disabled`.

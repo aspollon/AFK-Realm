@@ -1,0 +1,15 @@
+diff --git a/modules/CMakeLists.txt b/modules/CMakeLists.txt
+index a4b8c14c..f638d229 100644
+--- a/modules/CMakeLists.txt
++++ b/modules/CMakeLists.txt
+@@ -283,7 +283,9 @@ if (MOD_ALE_FOUND)
+   list(REMOVE_ITEM PRIVATE_SOURCES_MODULES ${MOD_ALE_PATH}/lualib/luac.c)
+ endif()
+ 
+-add_library(modules STATIC
++# AFK Realm (Windows): with all of EsteriaWoW's modules the static library grew past the 4 GB a .lib can hold
++# (LNK1248). As an object library its files go straight into the worldserver instead.
++add_library(modules OBJECT
+     ModulesScriptLoader.h
+     ${SCRIPT_MODULE_PRIVATE_SCRIPTLOADER}
+     ${PRIVATE_SOURCES_MODULES})
