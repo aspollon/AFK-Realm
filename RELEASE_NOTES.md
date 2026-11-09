@@ -1,3 +1,7 @@
+# AFK Realm 1.3.5
+
+- **AzerothCore comes with Playerbots and Dungeon Clear** again, kept up to date with every update like on Conquest of Azeroth; the DungeonClear add-on is installed into the game and handed out to players by itself. Players who do not want bots switch them off in the bot settings.
+
 # AFK Realm 1.3.4
 
 - **EsteriaWoW compiles on Windows.** Two places of the EsteriaWoW code used names Windows reserves for itself, so Visual Studio stopped with hundreds of errors. AFK Realm now fixes them in the downloaded code before it builds, and leaves the fix out by itself once EsteriaWoW changes those places.

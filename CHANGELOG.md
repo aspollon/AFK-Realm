@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.5
+
+- **AzerothCore with Playerbots again:** the engine builds `mod-playerbots/azerothcore-wotlk` (Playerbot) with `mod-playerbots/mod-playerbots` (master) and `Zyth45/mod-dungeon-clear` (master) as separate parts, as in 1.3.0; the catalog shows both as included again, and the DungeonClear add-on comes with the module as on CoA (`AddEmbeddedDungeonClear`).
+
 ## 1.3.4
 
 - **EsteriaWoW builds with Visual Studio:** core patches per server kind (`engine/patches-esteria`, `Get-BuiltInPatchFolder`, embedded as `CoAInstaller.engine.patches-esteria.*` and extracted to `Builder\patches-esteria`). `esteria-windows-names.patch`: `PerkRules.h` returns `EsteriaPerkWire::Unknown` (Windows' winioctl.h has an `Unknown` too, C2872/C2440), and mod-esteria-housing calls its `near` variables `nearObject` (`near` is an empty Windows macro, C2059).

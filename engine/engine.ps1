@@ -138,7 +138,8 @@ $Paths = @{
 }
 # The kind of server, chosen when it was set up (Dependencies\server-kind.txt, written by AFK Realm before the first
 # run): 'coa' = Conquest of Azeroth (the default, also for every server set up before there was a choice),
-# 'azerothcore' = the stock AzerothCore without any module, 'esteria' = EsteriaWoW (AzerothCore with its own races,
+# 'azerothcore' = AzerothCore with Playerbots and Dungeon Clear (the Playerbot branch of the mod-playerbots project's
+# AzerothCore: the stock core plus the hooks the bots need), 'esteria' = EsteriaWoW (AzerothCore with its own races,
 # Eluna and its modules, Playerbots and Dungeon Clear among them, all in one repository).
 $ServerKind = 'coa'
 $kindFile = Join-Path $Paths.Deps 'server-kind.txt'
@@ -146,15 +147,16 @@ if (Test-Path -LiteralPath $kindFile) {
     $k = ([IO.File]::ReadAllText($kindFile)).Trim().ToLowerInvariant()
     if ($k -eq 'azerothcore' -or $k -eq 'esteria') { $ServerKind = $k }
 }
-# Playerbots and Dungeon Clear are repositories of their own only on CoA (Separate); elsewhere they are left out
-# (AzerothCore) or part of the core's repository (EsteriaWoW).
+# Playerbots and Dungeon Clear are repositories of their own on CoA and AzerothCore (Separate); on EsteriaWoW they are
+# part of the core's repository.
 $Project.Playerbots.Separate = $true
 $Project.DungeonClear.Separate = $true
 if ($ServerKind -eq 'azerothcore') {
     $Project.Name = 'AzerothCore'
-    $Project.Core = @{ Repo = 'https://github.com/azerothcore/azerothcore-wotlk.git'; Branch = 'master'; Revision = ''; Moved = @() }
-    $Project.Playerbots.Separate = $false
-    $Project.DungeonClear.Separate = $false
+    $Project.Core = @{ Repo = 'https://github.com/mod-playerbots/azerothcore-wotlk.git'; Branch = 'Playerbot'; Revision = ''; Moved = @() }
+    $Project.Playerbots = @{ Repo = 'https://github.com/mod-playerbots/mod-playerbots.git'; Branch = 'master'; Revision = ''; Folder = 'mod-playerbots'
+                             Moved = @('https://github.com/liyunfan1223/mod-playerbots.git'); Separate = $true }
+    $Project.DungeonClear = @{ Repo = 'https://github.com/Zyth45/mod-dungeon-clear.git'; Branch = 'master'; Revision = ''; Folder = 'mod-dungeon-clear'; Moved = @(); Separate = $true }
 } elseif ($ServerKind -eq 'esteria') {
     $Project.Name = 'EsteriaWoW'
     # The repository is about 6 GB, most of it race material, design work and a copy of another core. Only what

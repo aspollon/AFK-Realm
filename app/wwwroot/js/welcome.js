@@ -11,7 +11,7 @@ const wiz = { path: '', name: 'AzerothCore', password: '', password2: '', instal
 const kinds = () => [
   { id: 'coa', group: 'custom', name: 'Conquest of Azeroth', tags: [T('21 classes'), T('Modules by AFK Realm')], text: T('The Conquest of Azeroth core with its 21 classes, Playerbots and the CoA world data. All modules by AFK Realm work here. Needs the CoA game client.') },
   { id: 'esteria', group: 'custom', name: 'EsteriaWoW', tags: [T('64 races'), T('Eluna'), T('Playerbots')], text: T('EsteriaWoW with its new races, the third faction, Eluna and its own modules, Playerbots and Dungeon Clear among them, set up as its realm runs. Needs the EsteriaWoW game client.') },
-  { id: 'azerothcore', group: 'standard', name: 'AzerothCore', tags: [T('WotLK 3.3.5a'), T('Module catalog')], text: T('The stock AzerothCore (WotLK 3.3.5a), exactly as published: no Playerbots, no other module. Add modules from the catalog later if you like. Needs a normal 3.3.5a game client (build 12340).') },
+  { id: 'azerothcore', group: 'standard', name: 'AzerothCore', tags: [T('WotLK 3.3.5a'), T('Playerbots'), T('Module catalog')], text: T('AzerothCore (WotLK 3.3.5a) with Playerbots and Dungeon Clear, the bots can be switched off. The modules by AFK Realm are made for CoA and are not offered; the AzerothCore module catalog is. Needs a normal 3.3.5a game client (build 12340).') },
 ];
 const kindName = id => (kinds().find(k => k.id === id) || kinds()[0]).name;
 

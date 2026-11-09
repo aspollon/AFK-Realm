@@ -9,7 +9,7 @@
 > [!WARNING]
 > **Work in progress and highly experimental.** AFK Realm is unfinished and changes all the time. Every release and every new function has to be seen as experimental. New features are often tested on only one PC before they are published, so it is very likely that one thing or another does not work properly yet. Keep backups of anything you care about (AFK Realm makes one before every update and module change), and if something breaks, please report it with `logs\install.log` attached.
 
-Build, run and tweak your own **Conquest of Azeroth** server (an AzerothCore fork with Playerbots) on Windows 10/11 or Linux, compiled straight from source, all through a point-and-click interface. Since 1.3 it can also build **EsteriaWoW** and the plain stock **AzerothCore** (chosen when a new server is set up); the modules by AFK Realm are made for CoA and are offered only there.
+Build, run and tweak your own **Conquest of Azeroth** server (an AzerothCore fork with Playerbots) on Windows 10/11 or Linux, compiled straight from source, all through a point-and-click interface. Since 1.3 it can also build **EsteriaWoW** and **AzerothCore** with Playerbots (chosen when a new server is set up); the modules by AFK Realm are made for CoA and are offered only there.
 
 ![Server management](docs/screenshots/8-server-management.png)
 

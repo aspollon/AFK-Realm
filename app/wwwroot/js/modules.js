@@ -133,7 +133,12 @@ export async function modulesDialog() {
       m.url && m.url.startsWith('http') ? h('a.small', { href: m.url, target: '_blank', rel: 'noopener' }, T('Open on GitHub')) : null,
       h('div', { style: { marginTop: '8px' } }, checks), readme);
     const add = (l, t) => checks.appendChild(checkRow(l, t));
-    if (m.playerbots && !coa()) return add(0, T('This module is already part of the core.'));
+    if (m.playerbots && state.status && state.status.kind === 'esteria') return add(0, T('This module is already part of the core.'));
+    if (m.playerbots && !coa()) {
+      add(0, F('Playerbots is already included: {0} always builds mod-playerbots (branch master) and keeps it up to date with every server update.', meta.product));
+      if (m.fullName && !['mod-playerbots/mod-playerbots', 'liyunfan1223/mod-playerbots'].includes(m.fullName.toLowerCase())) add(-1, F('This entry is a different version ({0}). Nothing needs to be installed here.', m.fullName));
+      return;
+    }
     if (m.playerbots) {
       add(0, F('Playerbots is already included: {0} always builds the CoA version (Zyth45/mod-playerbots, branch coa) and keeps it up to date with every server update.', meta.product));
       if (m.fullName && m.fullName.toLowerCase() !== 'zyth45/mod-playerbots') add(-1, F('This entry is a different version ({0}) that does not fit CoA. Nothing needs to be installed here.', m.fullName));

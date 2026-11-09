@@ -2610,6 +2610,7 @@
     "The add-ons ticked here are taken from your game and handed out to your players: in the client pack of the registration page and by the AFK Client, which keeps them up to date. Add-ons of the installed modules are handed out anyway. Blizzard's own interface parts are not listed.": "Die hier angehakten Add-ons werden aus deinem Spiel genommen und an deine Spieler verteilt: im Client-Paket der Registrierungsseite und über den AFK Client, der sie aktuell hält. Add-ons der installierten Module werden sowieso verteilt. Blizzards eigene Oberflächenteile stehen nicht in der Liste.",
     "Your game has no add-ons of its own.": "Dein Spiel hat keine eigenen Add-ons.",
     "{0} add-on(s) will go to your players with the next player package (Client build).": "{0} Add-on(s) gehen mit dem nächsten Spielerpaket (Client-Build) an deine Spieler.",
-    "No add-on of your own is handed out.": "Es wird kein eigenes Add-on verteilt."
+    "No add-on of your own is handed out.": "Es wird kein eigenes Add-on verteilt.",
+    "AzerothCore (WotLK 3.3.5a) with Playerbots and Dungeon Clear, the bots can be switched off. The modules by AFK Realm are made for CoA and are not offered; the AzerothCore module catalog is. Needs a normal 3.3.5a game client (build 12340).": "AzerothCore (WotLK 3.3.5a) mit Playerbots und Dungeon Clear, die Bots lassen sich abschalten. Die Module von AFK Realm sind für CoA gemacht und werden hier nicht angeboten, der AzerothCore-Modulkatalog schon. Braucht einen normalen 3.3.5a-Spielclient (Build 12340)."
   }
 }
