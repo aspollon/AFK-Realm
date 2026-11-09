@@ -13,3 +13,20 @@ index a4b8c14c..f638d229 100644
      ModulesScriptLoader.h
      ${SCRIPT_MODULE_PRIVATE_SCRIPTLOADER}
      ${PRIVATE_SOURCES_MODULES})
+diff --git a/src/cmake/macros/ConfigInstall.cmake b/src/cmake/macros/ConfigInstall.cmake
+index 090e3dba..8edcf64e 100644
+--- a/src/cmake/macros/ConfigInstall.cmake
++++ b/src/cmake/macros/ConfigInstall.cmake
+@@ -78,8 +78,11 @@ endfunction()
+ 
+ function(CopyModuleConfig configDir)
+   set(postPath "configs/modules")
++  # AFK Realm: an OBJECT library (modules, see modules/CMakeLists.txt) cannot have POST_BUILD steps. The copy into
++  # the build folder is only a convenience; install() below puts the configs where the server reads them.
++  get_target_property(MODULES_TARGET_TYPE modules TYPE)
+ 
+-  if(WIN32)
++  if(WIN32 AND NOT MODULES_TARGET_TYPE STREQUAL "OBJECT_LIBRARY")
+     if("${CMAKE_MAKE_PROGRAM}" MATCHES "MSBuild")
+       add_custom_command(TARGET modules
+         POST_BUILD

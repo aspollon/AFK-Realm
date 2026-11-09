@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.8
+
+- `esteria-modules-object-library.patch` also changes `CopyModuleConfig` (ConfigInstall.cmake): an OBJECT library cannot have POST_BUILD steps, so the copy of the module configs into the build folder is left out for it; `install()` still puts them into Server\configs\modules. (CMake stopped with "Target modules is an OBJECT library that may not have ... POST_BUILD commands".)
+
 ## 1.3.7
 
 - **EsteriaWoW: modules as an object library.** `esteria-modules-object-library.patch` makes `modules` an OBJECT library: the static `modules.lib` of all EsteriaWoW modules came to 4 GB plus 16 KB (1316 objects) and MSVC's librarian stops at 4 GB (LNK1248). The objects now go straight into the worldserver.

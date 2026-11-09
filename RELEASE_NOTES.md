@@ -1,3 +1,7 @@
+# AFK Realm 1.3.8
+
+- **EsteriaWoW:** the build preparation (CMake) accepts the new way the modules are built.
+
 # AFK Realm 1.3.7
 
 - **EsteriaWoW builds further:** with all its modules, the module part of the server became larger than Windows' build tools allow for one library file (4 GB). AFK Realm now builds it in a way that has no such limit.
