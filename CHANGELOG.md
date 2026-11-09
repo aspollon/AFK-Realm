@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.2
+
+- **Add-ons of catalog modules:** on AzerothCore and EsteriaWoW a module without an afk-realm.json counts every folder with a `.toc` of its own name (up to four levels down, not inside another add-on, not `Blizzard_*`) as its add-on (`ClientAddons.AddFoundAddons`); they are installed, packed and handed out like the add-ons modules name.
+- **Add-ons for your players:** Game client > "Add-ons for your players …" (`/api/client/shared`, `Dependencies\shared-addons.txt`) picks add-ons of the owner's own `Interface\AddOns`; `BuildClientPack` adds them to the client pack, so the registration page and the AFK Client hand them out and keep them up to date.
+
 ## 1.3.1
 
 - **EsteriaWoW** as a third server kind (`esteria`, group Custom). The engine clones STRHercules/EsteriaWoW (main) as a partial clone with a sparse checkout (`apps conf data/sql deps env/dist/etc modules src`, about 2.5 GB instead of 7) and the Eluna submodule; Playerbots and Dungeon Clear are part of that repository (`Get-ExtraParts` lists the separately downloaded parts: only CoA has any). `Copy-EsteriaConfigs` starts a new server from the realm's own `env/dist/etc` configs (only where the build installed a `.dist` and no `.conf` exists); `Eluna.ScriptPath` points at `mod-worgoblin-high-elf/lua_scripts`.

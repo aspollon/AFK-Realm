@@ -2341,6 +2341,15 @@
     "DBC continuation {0}.": "",
     "DBC tables from the client archives ...": "",
     "The DBC tables of the EsteriaWoW client are missing. Use \"Create map data\" with the EsteriaWoW client.": "",
-    "{0} is part of the core and cannot be removed.": ""
+    "{0} is part of the core and cannot be removed.": "",
+    "An add-on in the module's folder.": "",
+    "An add-on from the server owner's game.": "",
+    "Add-ons for your players …": "",
+    "Add-ons for your players": "",
+    "a module brings it": "",
+    "The add-ons ticked here are taken from your game and handed out to your players: in the client pack of the registration page and by the AFK Client, which keeps them up to date. Add-ons of the installed modules are handed out anyway. Blizzard's own interface parts are not listed.": "",
+    "Your game has no add-ons of its own.": "",
+    "{0} add-on(s) will go to your players with the next player package (Client build).": "",
+    "No add-on of your own is handed out.": ""
   }
 }

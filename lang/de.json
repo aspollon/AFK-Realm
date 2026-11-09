@@ -2601,6 +2601,15 @@
     "DBC continuation {0}.": "DBC-Fortsetzung {0}.",
     "DBC tables from the client archives ...": "DBC-Tabellen aus den Client-Archiven ...",
     "The DBC tables of the EsteriaWoW client are missing. Use \"Create map data\" with the EsteriaWoW client.": "Die DBC-Tabellen des EsteriaWoW-Clients fehlen. Nutze \"Kartendaten erstellen\" mit dem EsteriaWoW-Client.",
-    "{0} is part of the core and cannot be removed.": "{0} gehört zum Core und kann nicht entfernt werden."
+    "{0} is part of the core and cannot be removed.": "{0} gehört zum Core und kann nicht entfernt werden.",
+    "An add-on in the module's folder.": "Ein Add-on im Ordner des Moduls.",
+    "An add-on from the server owner's game.": "Ein Add-on aus dem Spiel des Server-Betreibers.",
+    "Add-ons for your players …": "Add-ons für deine Spieler …",
+    "Add-ons for your players": "Add-ons für deine Spieler",
+    "a module brings it": "kommt von einem Modul",
+    "The add-ons ticked here are taken from your game and handed out to your players: in the client pack of the registration page and by the AFK Client, which keeps them up to date. Add-ons of the installed modules are handed out anyway. Blizzard's own interface parts are not listed.": "Die hier angehakten Add-ons werden aus deinem Spiel genommen und an deine Spieler verteilt: im Client-Paket der Registrierungsseite und über den AFK Client, der sie aktuell hält. Add-ons der installierten Module werden sowieso verteilt. Blizzards eigene Oberflächenteile stehen nicht in der Liste.",
+    "Your game has no add-ons of its own.": "Dein Spiel hat keine eigenen Add-ons.",
+    "{0} add-on(s) will go to your players with the next player package (Client build).": "{0} Add-on(s) gehen mit dem nächsten Spielerpaket (Client-Build) an deine Spieler.",
+    "No add-on of your own is handed out.": "Es wird kein eigenes Add-on verteilt."
   }
 }

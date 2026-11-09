@@ -1,6 +1,6 @@
 // The game client: add-ons and the client patch of the modules, the ZIP for other players, the client download.
 import { h, T, F, meta, post, replace, download } from './core.js';
-import { primary, secondary, dialog, alert, confirm, input, toggle, table, choose, runProgress } from './ui.js';
+import { primary, secondary, dialog, alert, confirm, input, toggle, table, choose, runProgress, check } from './ui.js';
 
 export async function clientDialog(reason) {
   const folder = input('', { style: { flex: '1', minWidth: '300px' } });
@@ -10,6 +10,7 @@ export async function clientDialog(reason) {
   const installBtn = primary(T('Install add-ons'), () => install());
   const exportBtn = secondary(T('Export AFK-only ZIP …'), () => exportZip());
   const downloadBtn = secondary(T('Download / update client …'), () => downloadClient());
+  const sharedBtn = secondary(T('Add-ons for your players …'), () => sharedAddons());
   let look = null, checked = null;
 
   async function refresh(value) {
@@ -64,6 +65,26 @@ export async function clientDialog(reason) {
     }
   }
 
+  // Add-ons of the owner's own game that go to the players with the client pack and the AFK Client.
+  async function sharedAddons() {
+    let r;
+    try { r = await post('/api/client/shared', { folder: folder.value.trim() }); } catch (e) { return alert(e.message); }
+    if (!r.client) return alert(T('Choose your game folder, the one with the "Data" folder.'));
+    const boxes = r.addons.map(a => ({ a, box: check(a.name + (a.module ? ' (' + T('a module brings it') + ')' : ''), a.chosen || a.module) }));
+    boxes.filter(b => b.a.module).forEach(b => { b.box.input.disabled = true; });
+    const list = h('div', { style: { maxHeight: '45vh', overflow: 'auto', columns: '2', margin: '8px 0' } }, ...boxes.map(b => h('div', {}, b.box)));
+    const ok = await dialog({
+      title: T('Add-ons for your players'), icon: 'client',
+      body: h('div', {}, h('p.muted', {}, T('The add-ons ticked here are taken from your game and handed out to your players: in the client pack of the registration page and by the AFK Client, which keeps them up to date. Add-ons of the installed modules are handed out anyway. Blizzard\'s own interface parts are not listed.')),
+        r.addons.length ? list : h('p', {}, T('Your game has no add-ons of its own.'))),
+      buttons: [{ text: T('Cancel'), value: false }, { text: T('Save'), kind: 'primary', value: true }]
+    });
+    if (!ok) return;
+    const chosen = boxes.filter(b => !b.a.module && b.box.checked).map(b => b.a.name);
+    await post('/api/client/shared', { folder: folder.value.trim(), names: chosen });
+    alert(chosen.length ? F('{0} add-on(s) will go to your players with the next player package (Client build).', chosen.length) : T('No add-on of your own is handed out.'));
+  }
+
   async function downloadClient() {
     // A stock AzerothCore server: a clean 3.3.5a client from ChromieCraft's download page.
     if (look && look.clientPage) { window.open(look.clientPage, '_blank'); return; }
@@ -89,7 +110,7 @@ export async function clientDialog(reason) {
   refresh();
   await dialog({
     title: meta.product + ' – ' + T('Game client'), icon: 'client', wide: true, body,
-    left: [installBtn, exportBtn],
+    left: [installBtn, exportBtn, sharedBtn],
     buttons: [{ text: T('Close'), value: null }]
   });
 }

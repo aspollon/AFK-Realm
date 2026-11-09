@@ -1,3 +1,10 @@
+# AFK Realm 1.3.2
+
+## Add-ons for your players
+
+- **Hand out your own add-ons.** Game client > "Add-ons for your players …" lists the add-ons in your game; the ones you tick go to your players with the client pack and the AFK Client, which keeps them up to date - on every kind of server.
+- **Add-ons of modules are found by themselves.** On AzerothCore and EsteriaWoW, a module that carries an add-on in its folder gets it into your game and to your players, even when the module was not made for AFK Realm.
+
 # AFK Realm 1.3.1
 
 ## EsteriaWoW

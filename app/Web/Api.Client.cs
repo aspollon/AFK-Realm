@@ -123,6 +123,25 @@ namespace CoAInstaller.Web
                 catch { return new { text = L.T("Download / update client …") }; }
             });
 
+            // The add-ons of the owner's own game he hands out to his players (client pack, AFK Client).
+            Post(app, "/api/client/shared", a =>
+            {
+                var inst = Inst;
+                string client = ClientAddons.GameRoot(a.Str("folder") ?? ClientAddons.ClientFolder ?? "");
+                if (a.Has("names")) ClientAddons.SetSharedNames(inst, a.List("names"));
+                var chosen = ClientAddons.SharedNames(inst);
+                var fromModules = ClientAddons.Find(inst, client).Select(x => x.Name).ToList();
+                return new
+                {
+                    client,
+                    addons = ClientAddons.OwnAddonFolders(client).Select(n => new
+                    {
+                        name = n, chosen = chosen.Contains(n, StringComparer.OrdinalIgnoreCase),
+                        module = fromModules.Contains(n, StringComparer.OrdinalIgnoreCase)
+                    }).ToArray()
+                };
+            });
+
             Post(app, "/api/client/install", a =>
             {
                 var inst = Inst;

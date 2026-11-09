@@ -662,6 +662,8 @@ namespace CoAInstaller.Web
             if (ClientAddons.ClientRunning(client))
                 throw new InvalidOperationException(L.T("The game or its launcher is running from this folder. Close it before building the player client pack."));
             var addons = ClientAddons.Find(inst, client);
+            // the add-ons of his own game the owner hands out (Game client > Add-ons for your players)
+            addons.AddRange(ClientAddons.Shared(inst, client, addons));
             var patch = ClientPatch.Collect(inst);
             if (addons.Count == 0 && patch.Empty)
                 throw new InvalidOperationException(L.T("None of the installed modules brings an add-on or a client patch for the game client."));

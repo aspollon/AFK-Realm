@@ -108,7 +108,8 @@ namespace CoAInstaller
             foreach (var dir in Directory.GetDirectories(modules).OrderBy(d => d, StringComparer.OrdinalIgnoreCase))
             {
                 string file = Path.Combine(dir, ModuleCatalog.ManifestName);
-                if (!File.Exists(file)) continue;
+                // (CoA keeps to the add-ons its modules name: the CoA core's own module folders are not looked into.)
+                if (!File.Exists(file)) { if (!inst.IsCoa) AddFoundAddons(dir, client, result); continue; }
                 Dictionary<string, object> clientPart = null;
                 object v;
                 try
@@ -138,6 +139,83 @@ namespace CoAInstaller
                 }
             }
             AddEmbeddedDungeonClear(inst, client, result);
+            return result;
+        }
+
+        /// <summary>
+        /// A module without an afk-realm.json - most modules of the AzerothCore catalog, and those EsteriaWoW brings -
+        /// can still carry an add-on for the game: a folder with a .toc file of its own name (Battlemon/Battlemon.toc).
+        /// Such folders count as the module's add-ons; folders inside an add-on (its libraries) do not.
+        /// </summary>
+        static void AddFoundAddons(string module, string client, List<ClientAddon> result)
+        {
+            const string why = "An add-on in the module's folder.";
+            var found = new List<string>();
+            Action<string, int> look = null;
+            look = (folder, depth) =>
+            {
+                string name = Path.GetFileName(folder);
+                if (name.StartsWith(".")) return;
+                if (Regex.IsMatch(name, @"^[\w.\-]+$") && File.Exists(Path.Combine(folder, name + ".toc"))) { found.Add(folder); return; }
+                if (depth == 0) return;
+                string[] subs;
+                try { subs = Directory.GetDirectories(folder); } catch { return; }
+                foreach (var sub in subs.OrderBy(x => x, StringComparer.OrdinalIgnoreCase)) look(sub, depth - 1);
+            };
+            string[] top;
+            try { top = Directory.GetDirectories(module); } catch { return; }
+            foreach (var sub in top.OrderBy(x => x, StringComparer.OrdinalIgnoreCase)) look(sub, 4);
+            foreach (var source in found)
+            {
+                string name = Path.GetFileName(source);
+                // Blizzard's own interface parts are part of every client; two modules with the same add-on give it once.
+                if (name.StartsWith("Blizzard_", StringComparison.OrdinalIgnoreCase) || result.Any(a => a.Name.Equals(name, StringComparison.OrdinalIgnoreCase))) continue;
+                var addon = new ClientAddon { Module = Path.GetFileName(module), Name = name, Source = source, Why = L.T(why), WhyEnglish = why };
+                addon.State = client == null ? AddonState.Missing : StateOf(addon, client);
+                result.Add(addon);
+            }
+        }
+
+        // ---------------------------------------------------------------- add-ons of the owner's own game
+
+        static string SharedFile(Install inst) { return Path.Combine(inst.Root, "Dependencies", "shared-addons.txt"); }
+
+        /// <summary>The add-ons of the owner's game he hands out to his players with the client pack and the AFK Client.</summary>
+        public static List<string> SharedNames(Install inst)
+        {
+            try { return File.Exists(SharedFile(inst)) ? File.ReadAllLines(SharedFile(inst)).Select(l => l.Trim()).Where(l => Regex.IsMatch(l, @"^[\w.\- ]+$")).Distinct(StringComparer.OrdinalIgnoreCase).ToList() : new List<string>(); }
+            catch { return new List<string>(); }
+        }
+
+        public static void SetSharedNames(Install inst, IEnumerable<string> names)
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(SharedFile(inst)));
+            File.WriteAllLines(SharedFile(inst), names.Where(n => Regex.IsMatch(n ?? "", @"^[\w.\- ]+$")).Distinct(StringComparer.OrdinalIgnoreCase), new UTF8Encoding(false));
+        }
+
+        /// <summary>The add-ons in the game's Interface\AddOns that are not Blizzard's own (they come with every client).</summary>
+        public static List<string> OwnAddonFolders(string client)
+        {
+            string dir = client == null ? null : AddonsDir(client);
+            if (dir == null || !Directory.Exists(dir)) return new List<string>();
+            return Directory.GetDirectories(dir).Select(Path.GetFileName)
+                .Where(n => !n.StartsWith("Blizzard_", StringComparison.OrdinalIgnoreCase) && Regex.IsMatch(n, @"^[\w.\- ]+$"))
+                .OrderBy(n => n, StringComparer.OrdinalIgnoreCase).ToList();
+        }
+
+        /// <summary>The chosen add-ons as entries of the pack, read from the owner's game; one a module brings already is left to the module.</summary>
+        public static List<ClientAddon> Shared(Install inst, string client, List<ClientAddon> fromModules)
+        {
+            const string why = "An add-on from the server owner's game.";
+            var result = new List<ClientAddon>();
+            string dir = client == null ? null : AddonsDir(client);
+            if (dir == null) return result;
+            foreach (var name in SharedNames(inst))
+            {
+                string source = Path.Combine(dir, name);
+                if (!Directory.Exists(source) || fromModules.Any(a => a.Name.Equals(name, StringComparison.OrdinalIgnoreCase))) continue;
+                result.Add(new ClientAddon { Module = "-", Name = name, Source = source, Why = L.T(why), WhyEnglish = why, State = AddonState.Current });
+            }
             return result;
         }
 
