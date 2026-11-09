@@ -1,0 +1,4 @@
+diff --git a/modules/mod-nemesis-system/data/sql/db-characters/base/nemesis_system.sql b/modules/mod-nemesis-system/data/sql/db-characters/base/2026_01_01_00_nemesis_system.sql
+similarity index 100%
+rename from modules/mod-nemesis-system/data/sql/db-characters/base/nemesis_system.sql
+rename to modules/mod-nemesis-system/data/sql/db-characters/base/2026_01_01_00_nemesis_system.sql

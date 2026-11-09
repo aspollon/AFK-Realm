@@ -1,3 +1,7 @@
+# AFK Realm 1.3.11
+
+- **EsteriaWoW:** the database of a new server is set up completely - one module's tables were created only after its updates, which stopped the setup.
+
 # AFK Realm 1.3.10
 
 - **EsteriaWoW:** the worldserver links - a small file EsteriaWoW keeps out of its repository (the empty loader for custom scripts) is added by AFK Realm.

@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.11
+
+- **EsteriaWoW database on a new server:** `esteria-nemesis-sql-order.patch` renames mod-nemesis-system's `base/nemesis_system.sql` to `2026_01_01_00_nemesis_system.sql`. The updater applies module SQL by file name, so its updates (2026_03_22, 2026_04_05) ran before the table existed (ERROR 1146 `character_nemesis`); an existing EsteriaWoW database had the table from before the updates were written.
+- **CI:** one release job publishes all files after the builds (the two Linux jobs created the release at the same moment and removed each other's).
+
 ## 1.3.10
 
 - **EsteriaWoW links:** `esteria-custom-script-loader.patch` adds the empty `src/server/scripts/Custom/custom_script_loader.cpp` of stock AzerothCore. EsteriaWoW's .gitignore keeps that folder out of the repository (only README.md), while the generated script loader still calls `AddCustomScripts()` (LNK2019 in ScriptLoader.obj).
