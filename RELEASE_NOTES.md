@@ -1,3 +1,7 @@
+# AFK Realm 1.3.12
+
+- **"Repair" uses AFK Realm's fixes too.** Setting up the database and configuration again without compiling now also brings in AFK Realm's corrections to the server's files, so the EsteriaWoW database fix of 1.3.11 works from "Repair" as well.
+
 # AFK Realm 1.3.11
 
 - **EsteriaWoW:** the database of a new server is set up completely - one module's tables were created only after its updates, which stopped the setup.

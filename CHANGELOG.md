@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.12
+
+- **Patches also without compiling:** Setup ("Repair") runs `Invoke-ModulePatches` before the database step, so a patch that fixes SQL files (EsteriaWoW's nemesis order) reaches the database even when nothing is compiled. Patched files keep their times.
+
 ## 1.3.11
 
 - **EsteriaWoW database on a new server:** `esteria-nemesis-sql-order.patch` renames mod-nemesis-system's `base/nemesis_system.sql` to `2026_01_01_00_nemesis_system.sql`. The updater applies module SQL by file name, so its updates (2026_03_22, 2026_04_05) ran before the table existed (ERROR 1146 `character_nemesis`); an existing EsteriaWoW database had the table from before the updates were written.

@@ -2930,6 +2930,12 @@ try {
         [IO.File]::WriteAllText($Paths.BuildMarker, (Get-BuildStamp))
     }
 
+    # Without compiling (Setup, "Repair") the source is not downloaded again, but the patches still have to be in it:
+    # some fix SQL files the database step below reads (EsteriaWoW: esteria-nemesis-sql-order.patch). Applying them
+    # again changes nothing that was patched already (the patched files keep their times).
+    if (-not $compile -and (Test-Path (Join-Path $Paths.Source '.git'))) {
+        try { Invoke-ModulePatches $git -Quiet } catch { Write-Log "The patches could not be applied again: $($_.Exception.Message)" Yellow }
+    }
     Enter-Phase 'database' 'Setting up the database'
     if (-not $password) { $password = Read-Password }
     Start-Database
