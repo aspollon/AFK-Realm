@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.13
+
+- **EsteriaWoW pending SQL in the order it was written:** `Repair-EsteriaSqlOrder` (before every dbimport) renames `data/sql/updates/pending_db_*/rev_<n>*.sql` to `rev_<yyyyMMddHHmmss><ms>_<n>*`: EsteriaWoW mixes dated names (14/17 digits) with Unix times in ms (13) and ns (19), and by file name an October Unix-time update ran before the September one that creates `custom_race_start_spell` (ERROR 1146). The updater knows a renamed file by its hash.
+
 ## 1.3.12
 
 - **Patches also without compiling:** Setup ("Repair") runs `Invoke-ModulePatches` before the database step, so a patch that fixes SQL files (EsteriaWoW's nemesis order) reaches the database even when nothing is compiled. Patched files keep their times.

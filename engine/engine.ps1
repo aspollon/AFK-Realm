@@ -1024,7 +1024,39 @@ function Set-RealmName([string]$Password) {
     } finally { Remove-Item $options -Force -ErrorAction SilentlyContinue }
 }
 
+# EsteriaWoW names its pending SQL in four ways: rev_<date and time> (14 or 17 digits) and rev_<Unix time> in
+# milliseconds (13 digits) or nanoseconds (19 digits). The updater applies them by file name, so on a new database a
+# Unix-time file of October ran before a dated one of September that creates the table it changes (ERROR 1146
+# custom_race_start_spell). Every name is brought to rev_<yyyyMMddHHmmss><milliseconds>, the original number kept
+# behind it; the updater recognises a renamed file by its content and does not apply it twice. The next download
+# (git reset) brings the original names back, and this runs again before every database update.
+function Repair-EsteriaSqlOrder {
+    if ($ServerKind -ne 'esteria') { return }
+    $updates = [IO.Path]::Combine($Paths.Source, 'data', 'sql', 'updates')
+    if (-not (Test-Path $updates)) { return }
+    $renamed = 0
+    foreach ($dir in @(Get-ChildItem $updates -Directory -Filter 'pending_db_*')) {
+        foreach ($file in @(Get-ChildItem $dir.FullName -File -Filter 'rev_*.sql')) {
+            $m = [regex]::Match($file.Name, '^rev_(\d+)(.*)$')
+            if (-not $m.Success) { continue }
+            $digits = $m.Groups[1].Value; $rest = $m.Groups[2].Value
+            $name = $null
+            if ($digits.Length -eq 14 -and $digits.StartsWith('20')) { $name = 'rev_{0}000_{1}{2}' -f $digits, $digits, $rest }
+            elseif ($digits.Length -eq 13 -or $digits.Length -eq 19) {
+                $ms = [long]$digits.Substring(0, 13)
+                $time = [DateTimeOffset]::FromUnixTimeMilliseconds($ms).UtcDateTime
+                $name = 'rev_{0}{1:000}_{2}{3}' -f $time.ToString('yyyyMMddHHmmss', [Globalization.CultureInfo]::InvariantCulture), ($ms % 1000), $digits, $rest
+            }
+            if (-not $name -or $name -eq $file.Name -or (Test-Path (Join-Path $dir.FullName $name))) { continue }
+            Rename-Item -LiteralPath $file.FullName -NewName $name
+            $renamed++
+        }
+    }
+    if ($renamed -gt 0) { Write-Log "EsteriaWoW: $renamed pending SQL file(s) renamed so the updater applies them in the order they were written." }
+}
+
 function Update-Databases([string]$Password) {
+    Repair-EsteriaSqlOrder
     $dbimport = Join-Path $Paths.ServerBin (Exe 'dbimport')
     if (-not (Test-Path $dbimport)) { Write-Log 'dbimport.exe was not built; the worldserver applies the updates on its first start.' Yellow; return }
     $root = New-ClientOptions 'root' $Password

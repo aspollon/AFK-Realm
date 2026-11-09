@@ -1,3 +1,7 @@
+# AFK Realm 1.3.13
+
+- **EsteriaWoW:** the database updates of EsteriaWoW are applied in the order they were written - two naming styles mixed in its update files made a newer update come before the older one it builds on.
+
 # AFK Realm 1.3.12
 
 - **"Repair" uses AFK Realm's fixes too.** Setting up the database and configuration again without compiling now also brings in AFK Realm's corrections to the server's files, so the EsteriaWoW database fix of 1.3.11 works from "Repair" as well.
