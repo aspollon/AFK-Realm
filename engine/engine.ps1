@@ -462,6 +462,12 @@ function Use-Git([string]$Git) {
     Set-Item "env:GIT_CONFIG_KEY_$count" 'safe.directory'
     Set-Item "env:GIT_CONFIG_VALUE_$count" '*'
     $env:GIT_CONFIG_COUNT = [string]($count + 1)
+    # The portable copy AFK Realm set up (MinGit in Dependencies\Git) also gets it in its own system settings, in case
+    # a Git does not take it from the environment. A Git the user installed is never changed.
+    if ($Git.StartsWith($Paths.Deps, [StringComparison]::OrdinalIgnoreCase) -or $Git.StartsWith($InstallRoot, [StringComparison]::OrdinalIgnoreCase)) {
+        $have = Get-ProgramOutput $Git @('config', '--system', '--get-all', 'safe.directory')
+        if (-not (@($have) -contains '*')) { [void](Invoke-Program $Git @('config', '--system', '--add', 'safe.directory', '*') -AllowFailure) }
+    }
     Write-Log "Git: $Git"
     return $Git
 }

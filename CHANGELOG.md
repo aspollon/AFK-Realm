@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.25
+
+- **Dubious ownership, second line of defence:** the portable MinGit AFK Realm sets up (in the server's `Dependencies\Git`) also gets `safe.directory = *` in its own system settings (`git config --system`), in case a Git does not take it from the environment (1.3.23). A Git the user installed is not changed.
+
 ## 1.3.24
 
 - **Update texts name the server's own core:** the Updates card, its three questions, the update dialog for core and modules, the bleeding-edge warning and the update plan's checkbox said "CoA core and Playerbots" on every kind. They now say *CoA core and Playerbots*, *AzerothCore and Playerbots* or *EsteriaWoW and its game client* (`coreParts()` in manager.js). The backups list's column is "Core" outside CoA.

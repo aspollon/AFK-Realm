@@ -1,3 +1,7 @@
+# AFK Realm 1.3.25
+
+- **More robust fix for "detected dubious ownership"** (servers on exFAT/FAT32, USB or network drives): AFK Realm's own portable Git now also trusts the server folders in its own settings.
+
 # AFK Realm 1.3.24
 
 - The update texts under *Maintenance* name your server's own core: CoA core and Playerbots, AzerothCore and Playerbots, or EsteriaWoW and its game client.
