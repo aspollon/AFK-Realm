@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.32
+
+- **New files of your own in the source are kept:** saving hand changes only looked at files the repository already knew (`git add -u`), so a file the user had added to the core or to Playerbots was not saved into the hand-changes patch and was then deleted by the clean-up before the build. New files go into the patch now (`git add -A`, the core's `modules` folder left out). A state recorded by an older version is still compared the old way, so files added by patches are not mistaken for changes of the user's.
+- **Update stopped at Dungeon Clear** ("... mod-dungeon-clear is at 913cf20 instead of ."): a part found up to date kept no revision, and a server whose Dungeon Clear revision had never been recorded checked it out at nothing. An up-to-date part keeps its revision now, and a missing one falls back to the folder's own.
+
 ## 1.3.31
 
 - **Ollama chat page:** card *Thinking and remembering* (after the paper "Generative Agents"): embedding model for recalling memories by meaning (`OllamaChat.Recall.EmbedModel`), reflection, goals, thoughts per hour, rumours between bots and their chance.

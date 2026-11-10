@@ -1,3 +1,8 @@
+# AFK Realm 1.3.32
+
+- **New files you added to the server's source code are kept** when the server is updated or built again: they go into your hand-changes patch with your other changes instead of being deleted.
+- **Fix:** an update could stop with "mod-dungeon-clear is at ... instead of ." on servers set up before Dungeon Clear was downloaded on its own.
+
 # AFK Realm 1.3.31
 
 - **Ollama chat:** settings for the new memory of the bots - they recall what matters, reflect on what they went through, have goals of their own and tell each other about you. Optional: an embedding model (nomic-embed-text) so they remember by meaning.

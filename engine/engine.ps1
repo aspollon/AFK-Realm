@@ -1297,6 +1297,11 @@ function Sync-Repository([string]$Git, [hashtable]$Item, [string]$Folder, [switc
     if ($sparse.Count -gt 0) { [void](Invoke-Program $Git (@('-C', $Folder, 'sparse-checkout', 'set', '--cone') + $sparse)) }
     [void](Invoke-Program $Git @('-C', $Folder, 'remote', 'set-url', 'origin', $Item.Repo))
     [void](Invoke-Program $Git @('-C', $Folder, 'fetch', '--no-tags', 'origin', $Item.Branch))
+    if (-not $Item.Revision) {
+        # No revision recorded: the one the folder is at, or else the newest of the branch.
+        $Item.Revision = Get-ProgramOutput $Git @('-C', $Folder, 'rev-parse', '--verify', '--quiet', 'HEAD')
+        if (-not $Item.Revision) { $Item.Revision = Get-ProgramOutput $Git @('-C', $Folder, 'rev-parse', 'FETCH_HEAD') }
+    }
     [void](Invoke-Program $Git @('-C', $Folder, 'checkout', '--force', $Item.Revision))
     [void](Invoke-Program $Git @('-C', $Folder, 'reset', '--hard', $Item.Revision))
     $clean = @('-C', $Folder, 'clean', '-ffd')
@@ -1363,7 +1368,13 @@ function Find-Updates([string]$Git) {
     foreach ($entry in $pinned) {
         $latest = Get-RemoteHead $Git $entry.Item
         $current = if (Test-Path (Join-Path $entry.Folder '.git')) { Get-ProgramOutput $Git @('-C', $entry.Folder, 'rev-parse', 'HEAD') } else { $null }
-        if ($current -eq $latest) { Write-Log "$($entry.Name) is up to date."; continue }
+        if ($current -eq $latest) {
+            # Up to date still means "build this one": a part whose revision was never recorded (Dungeon Clear on
+            # servers set up before it was a repository of its own) would otherwise be checked out at nothing.
+            $entry.Item.Revision = $latest
+            Write-Log "$($entry.Name) is up to date."
+            continue
+        }
         $from = if ($current) { $current.Substring(0, 8) } else { Tr 'none' }
         $changes.Add((Tr '{0}: {1} -> {2}' $entry.Name $from $latest.Substring(0, 8)))
         $entry.Item.Revision = $latest
@@ -2483,7 +2494,7 @@ function Get-SourceTargets {
     @(@{ Name = 'core'; Folder = $Paths.Source }, @{ Name = 'mod-playerbots'; Folder = $Paths.Playerbots }) |
         Where-Object { Test-Path (Join-Path $_.Folder '.git') }
 }
-function Get-WorkingTree([string]$Git, [string]$Folder) {
+function Get-WorkingTree([string]$Git, [string]$Folder, [switch]$NewFiles) {
     $index = Join-Path ([IO.Path]::GetTempPath()) ('afk-index-' + [guid]::NewGuid().ToString('N'))
     $previous = $env:GIT_INDEX_FILE
     try {
@@ -2492,7 +2503,10 @@ function Get-WorkingTree([string]$Git, [string]$Folder) {
         if (Test-Path -LiteralPath $own) { Copy-Item -LiteralPath $own $index -Force }
         $env:GIT_INDEX_FILE = $index
         if (-not (Test-Path -LiteralPath $index) -and (Invoke-Program $Git @('-C', $Folder, 'read-tree', 'HEAD') -AllowFailure) -ne 0) { return $null }
-        if ((Invoke-Program $Git @('-C', $Folder, 'add', '-u') -AllowFailure) -ne 0) { return $null }
+        # -A takes files that were not there before as well (a new source file of the user's), -u only changed ones.
+        # The modules folder of the core is left out: its modules are repositories of their own.
+        $add = if ($NewFiles) { @('-C', $Folder, 'add', '-A', '--', '.', ':(exclude)modules') } else { @('-C', $Folder, 'add', '-u') }
+        if ((Invoke-Program $Git $add -AllowFailure) -ne 0) { return $null }
         return (Get-ProgramOutput $Git @('-C', $Folder, 'write-tree'))
     } finally {
         $env:GIT_INDEX_FILE = $previous
@@ -2502,9 +2516,10 @@ function Get-WorkingTree([string]$Git, [string]$Folder) {
 function Save-SourceBaseline([string]$Git) {
     $lines = @()
     foreach ($t in @(Get-SourceTargets)) {
-        $tree = Get-WorkingTree $Git $t.Folder
+        $tree = Get-WorkingTree $Git $t.Folder -NewFiles
         $head = Get-ProgramOutput $Git @('-C', $t.Folder, 'rev-parse', 'HEAD')
-        if ($tree -and $head) { $lines += '{0}|{1}|{2}' -f $t.Name, ([string]$tree).Trim(), ([string]$head).Trim() }
+        # "|A": recorded with new files (1.3.32 and later).
+        if ($tree -and $head) { $lines += '{0}|{1}|{2}|A' -f $t.Name, ([string]$tree).Trim(), ([string]$head).Trim() }
     }
     try { [IO.File]::WriteAllLines((Join-Path $Paths.Deps 'source-baseline.txt'), [string[]]$lines) } catch { }
 }
@@ -2514,13 +2529,15 @@ function Save-HandChanges([string]$Git) {
     $baseline = @{}
     foreach ($line in [IO.File]::ReadAllLines($file)) {
         $f = $line.Split('|')
-        if ($f.Count -eq 3) { $baseline[$f[0]] = @{ Tree = $f[1]; Head = $f[2] } }
+        if ($f.Count -ge 3) { $baseline[$f[0]] = @{ Tree = $f[1]; Head = $f[2]; NewFiles = ($f.Count -ge 4 -and $f[3] -eq 'A') } }
     }
     foreach ($t in @(Get-SourceTargets)) {
         if (-not $baseline.ContainsKey($t.Name)) { continue }
         $head = Get-ProgramOutput $Git @('-C', $t.Folder, 'rev-parse', 'HEAD')
         if (-not $head -or ([string]$head).Trim() -ne $baseline[$t.Name].Head) { continue }
-        $tree = Get-WorkingTree $Git $t.Folder
+        # Compared the way the state was recorded: one recorded without new files (before 1.3.32) would otherwise show
+        # every file a patch added as a change of the user's.
+        $tree = if ($baseline[$t.Name].NewFiles) { Get-WorkingTree $Git $t.Folder -NewFiles } else { Get-WorkingTree $Git $t.Folder }
         if (-not $tree -or ([string]$tree).Trim() -eq $baseline[$t.Name].Tree) { continue }
         $folder = Join-Path $Paths.OwnPatches $t.Name
         [void](New-Item -ItemType Directory -Force -Path $folder)
