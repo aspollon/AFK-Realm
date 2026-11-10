@@ -382,6 +382,7 @@ export function ollamaSetup() {
       })));
       con.add(result);
       p.choice(con, O + 'ThinkMode', T('Thinking'), ['off', 'auto', 'on'], [T('Off'), T('Automatic'), T('On')], T('Models like qwen3 can think before they answer. Off answers in seconds; on is slower and rarely better for chat.'));
+      p.choice(con, O + 'NumCtx', T('Prompt length'), ['4096', '8192', '16384'], [T('Short'), T('Normal'), T('Long')], T('How much the model reads at once: voice, knowledge, memory and the conversation. Shorter needs less graphics memory, but a prompt that does not fit loses its instructions.'));
       p.slider(con, O + 'MaxConcurrentQueries', T('Answers at once'), 0, 8, 1, v => v === 0 ? T('automatic') : String(Math.trunc(v)), T('How many lines the model writes at the same time. More needs more graphics memory.'));
 
       p.tab(T('Talking'));
@@ -390,14 +391,16 @@ export function ollamaSetup() {
       p.pair(own, O + 'MinRandomInterval', O + 'MaxRandomInterval', T('Time between'), 10, 900, 5, sec);
       p.slider(own, O + 'RandomChatterBotCommentChance', T('Others answer'), 0, 100, 1, pct, T('How likely another bot nearby answers what a bot said on its own.'));
       p.slider(own, O + 'RandomChatterMaxBotsPerPlayer', T('Bots per player'), 1, 6, 1, v => String(Math.trunc(v)));
+      p.slider(own, O + 'Approach.Chance', T('Bots speak to you first'), 0, 100, 1, pct, T('When a bot\'s turn to talk comes while you stand near it, it speaks to you by name: a question, a request, a remark about what it is doing. Answer it without naming it.'));
+      p.toggle(own, O + 'Chatter.UseGeneralChannel', T('Also in the General channel'));
+      p.toggle(own, O + 'Chatter.UseTradeChannel', T('Also in the Trade channel'));
       p.slider(own, O + 'BotConversation.MaxChainDepth', T('Conversation length'), 0, 8, 1, v => String(Math.trunc(v)), T('How many times bots answer each other in a row before one lets it rest.'));
       const ev = p.card(T('Things that happen'), T('Bots comment on quests, rare loot, deaths, level-ups, duels and kills.'), 'journey');
       p.toggle(ev, O + 'EnableEventChatter', T('Bots comment on what happens'));
       p.slider(ev, O + 'EventChatterBotCommentChance', T('Chance'), 0, 100, 1, pct);
       p.toggle(ev, O + 'EnableGuildRandomAmbientChatter', T('Guild members talk in the guild chat'));
-      const you = p.card(T('When you talk to them'), T('A bot you name answers alone; without a name, a few bots nearby may answer.'), 'accounts');
+      const you = p.card(T('When you talk to them'), T('The bot you name, target or are already talking with answers alone, without being named every time. A line to nobody in particular gets one answer.'), 'accounts');
       p.slider(you, O + 'SayDistance', T('Hearing distance'), 5, 100, 1, v => F('{0} yards', Math.trunc(v)));
-      p.slider(you, O + 'MaxBotsToPick', T('Bots that answer'), 1, 5, 1, v => String(Math.trunc(v)));
       p.toggle(you, O + 'EnableWhisperReplies', T('Bots answer whispers'));
       p.toggle(you, O + 'DisableRepliesInCombat', T('No chatting in combat'));
       p.toggle(you, O + 'EnableTypingSimulation', T('Bots take time to type'), T('A longer answer arrives a little later, as if it were typed.'));
@@ -409,10 +412,16 @@ export function ollamaSetup() {
       p.toggle(rp, O + 'EnableRPPersonalities', T('A temperament for every bot'));
       p.toggle(rp, O + 'Roleplay.CrossFactionGibberish', T('No answers across the factions'), T('The game shows the other faction\'s speech as gibberish, so an answer would only be noise.'));
       p.toggle(rp, O + 'EnableBotEmotes', T('Bots use emotes that fit what they say'));
+      p.toggle(rp, O + 'Lore.Enable', T('Bots know the world'), T('The story of their people, the tradition of their class, the place they stand in, and the persons, peoples and events you name - Arthas, Gilneas, the Scourge. Built into the module.'));
+      p.slider(rp, O + 'Lore.MaxTopics', T('Things recalled at once'), 0, 4, 1, v => String(Math.trunc(v)), T('How many things named in your message a bot recalls.'));
       const mem = p.card(T('Memory and relationships'), T('Bots remember what they talked about with whom, and form an opinion of the people they talk to often - players and other bots.'), 'database');
       p.toggle(mem, O + 'EnableChatHistory', T('Recent conversation'));
+      p.slider(mem, O + 'MaxConversationHistory', T('Exchanges remembered'), 2, 20, 1, v => String(Math.trunc(v)), T('How many of the last exchanges with a person a bot keeps in mind while talking.'));
       p.toggle(mem, O + 'Memory.Enable', T('Long-term memory'));
       p.toggle(mem, O + 'Relationship.Enable', T('Relationships'));
+      p.toggle(mem, O + 'Bond.Enable', T('Bonds'), T('From stranger to friend or enemy: friendly or hostile words and fights, tasks and trades gone through together move it. Bots also know when they last spoke with you and what about.'));
+      p.toggle(mem, O + 'Bond.Romance', T('Romance'), T('A friend you flirt with can become more - always tasteful, never explicit.'));
+      p.toggle(mem, O + 'Voice.Enable', T('Auctions and Immersion speak through the model'), T('The trade whispers of Playerbots Auctions (items and prices stay exact) and the lines of the Immersion residents are said in the bot\'s own words.'));
       p.toggle(mem, O + 'EnableSentimentTracking', T('Mood towards each player'), T('Rates every message to a bot as friendly or not; costs one extra request per message.'));
       p.note(T('Changes take effect after .ollama reload in the game (GM account) or a restart of the server.'));
     }

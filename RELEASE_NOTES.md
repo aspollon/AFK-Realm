@@ -1,3 +1,8 @@
+# AFK Realm 1.3.29
+
+- **Module updates bring their new recommended settings along.** Until now a module's recommended setting was set once at install; a better value in a later version of the module only reached new servers. Now it is taken over too, unless you changed the option yourself.
+- **Ollama chat page:** bots that speak to you on their own, chatter in the General and Trade channels on or off, how many exchanges a bot remembers, the bots' knowledge of the world, bonds and romance, Auctions and Immersion speaking through the model, and the prompt length.
+
 # AFK Realm 1.3.28
 
 - **Ollama chat has its own setup page** under *Modules & races*: the connection to Ollama with a connection check that lists your models, how often bots talk on their own and to each other, and roleplay, memory and relationships.

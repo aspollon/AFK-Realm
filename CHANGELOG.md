@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.29
+
+- **A module's new recommendations reach existing servers:** `Set-ModuleSettings` used to set a module's `afk-realm.json` setting once and then never look at it again, so a newer value in a module update reached only new installs. When the recommended value changes and the option still holds the value the module set before, the new one is written (a value the user chose stays). Logged and reported as a note.
+- **Ollama chat page:** *Bots speak to you first* (`OllamaChat.Approach.Chance`), General and Trade channel for chatter, *Exchanges remembered* (`MaxConversationHistory`), *Bots know the world* and *Things recalled at once* (`Lore.Enable`, `Lore.MaxTopics`), *Prompt length* (`NumCtx`), *Bonds*, *Romance* and *Auctions and Immersion speak through the model* (`Bond.Enable`, `Bond.Romance`, `Voice.Enable`); *Bots that answer* is gone (a line to nobody in particular now gets one answer).
+
 ## 1.3.28
 
 - **Setup page for Ollama chat** (mod-ollama-chat-coa, `ollamaSetup` in setups.js): connection (service, address, model, API key, thinking, answers at once) with *Check the connection* (`/api/setups/ollama/check` asks the address's host for `/api/tags` and says whether the model entered is there), talking (on their own, time between, answers among bots, conversation length, events, guild, hearing distance, bots that answer, whispers, combat, typing) and roleplay (voices, strictness, temperaments, cross-faction, emotes, memory, relationships, mood). Card under *Modules & races* when the module is installed.

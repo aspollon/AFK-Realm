@@ -2827,7 +2827,21 @@ function Set-ModuleSettings {
             if ($name -notmatch '^[\w.\-]+\.conf\z' -or $key -notmatch '^[A-Za-z][\w.]*\z' -or $value -match '[\r\n|]') {
                 Write-Log "$($manifest.Name): the setting $key in $name is not valid; ignored." Yellow; continue
             }
-            if ($kept | Where-Object { $_.Module -eq $manifest.Name -and $_.File -eq $name -and $_.Key -eq $key }) { continue }
+            $earlier = @($kept | Where-Object { $_.Module -eq $manifest.Name -and $_.File -eq $name -and $_.Key -eq $key }) | Select-Object -First 1
+            if ($earlier) {
+                # A newer version of the module recommends another value. It replaces the old one only
+                # where the option still has the value the module set: a value the user chose stays.
+                if ($earlier.Value -ne $value) {
+                    $config = & $find $name
+                    if ($config -and (Get-ConfigValue $config.FullName $key) -eq $earlier.Value) {
+                        Set-ConfigValue $config.FullName $key $value
+                        Write-Log "$($manifest.Name): $key in $name set to $value (the module's new recommendation)." Green
+                        Send-Event 'NOTE' (Tr '{0} set {1} to {2} in {3} (the module recommends a new value).' $manifest.Name $key $value $name)
+                        $earlier.Value = $value
+                    }
+                }
+                continue
+            }
             $config = & $find $name
             if (-not $config) { Write-Log "$($manifest.Name): $name was not found, $key was not set." Yellow; continue }
             $previous = Get-ConfigValue $config.FullName $key
