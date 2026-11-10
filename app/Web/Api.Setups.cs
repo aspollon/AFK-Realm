@@ -97,6 +97,31 @@ namespace CoAInstaller.Web
             });
 
             // The zones and dungeons World Journey knows (data/journey-ui.json of the module).
+            // mod-ollama-chat-coa: is Ollama there, and which models does it have? The address comes from the setup page
+            // (OllamaChat.Url, e.g. http://localhost:11434/api/generate); its host is asked for /api/tags.
+            Post(app, "/api/setups/ollama/check", a =>
+            {
+                string url = (a.Str("url") ?? "").Trim();
+                Uri u;
+                if (!Uri.TryCreate(url, UriKind.Absolute, out u) || (u.Scheme != "http" && u.Scheme != "https"))
+                    throw new UserError(L.T("This is not a valid address."));
+                string tags = u.GetLeftPart(UriPartial.Authority) + "/api/tags";
+                try
+                {
+                    using (var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(8) })
+                    {
+                        string body = http.GetStringAsync(tags).GetAwaiter().GetResult();
+                        var models = new List<string>();
+                        using (var doc = System.Text.Json.JsonDocument.Parse(body))
+                            if (doc.RootElement.TryGetProperty("models", out var list))
+                                foreach (var m in list.EnumerateArray())
+                                    if (m.TryGetProperty("name", out var n)) models.Add(n.GetString());
+                        return new { ok = true, models };
+                    }
+                }
+                catch (Exception ex) { return new { ok = false, error = ex.Message, models = new List<string>() }; }
+            });
+
             Get(app, "/api/setups/journey/places", c =>
             {
                 string file = Path.Combine(ModuleCatalog.ModulesDir(Inst), "mod-world-journey", "data", "journey-ui.json");

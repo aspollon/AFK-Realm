@@ -352,3 +352,69 @@ export function junkSetup() {
     }
   });
 }
+// ---------------------------------------------------------------- Ollama chat (mod-ollama-chat-coa)
+
+export function ollamaSetup() {
+  const O = 'OllamaChat.';
+  const sec = v => F('{0} s', Math.trunc(v));
+  const pct = v => F('{0} %', Math.trunc(v));
+  return setupPage({
+    file: 'modules/mod_ollama_chat.conf', title: T('Ollama chat'), subtitle: T('mod-ollama-chat-coa  -  modules\\mod_ollama_chat.conf'),
+    icon: 'accounts', masterKey: O + 'Enable', masterText: T('Ollama chat on'),
+    build(p) {
+      p.tab(T('Connection'));
+      const con = p.card(T('Language model'), T('Ollama runs the language model on your own PC. Install it from ollama.com, load a model once (for example: ollama pull qwen3:8b) and enter its name here. An online service that speaks the OpenAI or Anthropic format works as well.'), 'server');
+      p.choice(con, O + 'Provider', T('Service'), ['ollama', 'openai', 'anthropic'], [T('Ollama'), T('OpenAI format'), T('Anthropic')]);
+      const url = p.text(con, O + 'Url', T('Address'), T('Ollama on this PC: http://localhost:11434/api/generate'));
+      const model = p.text(con, O + 'Model', T('Model'), T('8 billion parameters (qwen3:8b, llama3.1:8b) is the least for good roleplay; 4b models need less graphics memory but speak plainer.'));
+      p.text(con, O + 'ApiKey', T('API key'), T('Only for an online service; Ollama on your PC needs none.'));
+      const result = h('div.small', { style: { margin: '4px 0 0 258px' } });
+      con.add(h('div.row', { style: { marginLeft: '258px' } }, secondary(T('Check the connection'), async () => {
+        result.textContent = T('Asking Ollama …'); result.className = 'small muted';
+        try {
+          const r = await post('/api/setups/ollama/check', { url: url.value });
+          if (!r.ok) { result.textContent = F('Ollama does not answer at this address: {0}', r.error); result.className = 'small bad'; return; }
+          const has = r.models.some(m => m === model.value || m === model.value + ':latest');
+          result.textContent = (r.models.length ? F('Ollama answers. Models: {0}.', r.models.join(', ')) : T('Ollama answers, but has no model yet.')) + ' ' +
+            (has ? T('The model entered is there.') : F('The model "{0}" is not there: load it with ollama pull {0}.', model.value));
+          result.className = 'small ' + (has ? 'ok' : 'warn');
+        } catch (e) { result.textContent = e.message; result.className = 'small bad'; }
+      })));
+      con.add(result);
+      p.choice(con, O + 'ThinkMode', T('Thinking'), ['off', 'auto', 'on'], [T('Off'), T('Automatic'), T('On')], T('Models like qwen3 can think before they answer. Off answers in seconds; on is slower and rarely better for chat.'));
+      p.slider(con, O + 'MaxConcurrentQueries', T('Answers at once'), 0, 8, 1, v => v === 0 ? T('automatic') : String(Math.trunc(v)), T('How many lines the model writes at the same time. More needs more graphics memory.'));
+
+      p.tab(T('Talking'));
+      const own = p.card(T('Bots talking on their own'), T('Bots near a real player say something from time to time, ask questions and answer each other. Without a real player nearby they stay quiet, so the language model is not busy for nothing.'), 'accounts');
+      p.toggle(own, O + 'EnableRandomChatter', T('Bots talk on their own'));
+      p.pair(own, O + 'MinRandomInterval', O + 'MaxRandomInterval', T('Time between'), 10, 900, 5, sec);
+      p.slider(own, O + 'RandomChatterBotCommentChance', T('Others answer'), 0, 100, 1, pct, T('How likely another bot nearby answers what a bot said on its own.'));
+      p.slider(own, O + 'RandomChatterMaxBotsPerPlayer', T('Bots per player'), 1, 6, 1, v => String(Math.trunc(v)));
+      p.slider(own, O + 'BotConversation.MaxChainDepth', T('Conversation length'), 0, 8, 1, v => String(Math.trunc(v)), T('How many times bots answer each other in a row before one lets it rest.'));
+      const ev = p.card(T('Things that happen'), T('Bots comment on quests, rare loot, deaths, level-ups, duels and kills.'), 'journey');
+      p.toggle(ev, O + 'EnableEventChatter', T('Bots comment on what happens'));
+      p.slider(ev, O + 'EventChatterBotCommentChance', T('Chance'), 0, 100, 1, pct);
+      p.toggle(ev, O + 'EnableGuildRandomAmbientChatter', T('Guild members talk in the guild chat'));
+      const you = p.card(T('When you talk to them'), T('A bot you name answers alone; without a name, a few bots nearby may answer.'), 'accounts');
+      p.slider(you, O + 'SayDistance', T('Hearing distance'), 5, 100, 1, v => F('{0} yards', Math.trunc(v)));
+      p.slider(you, O + 'MaxBotsToPick', T('Bots that answer'), 1, 5, 1, v => String(Math.trunc(v)));
+      p.toggle(you, O + 'EnableWhisperReplies', T('Bots answer whispers'));
+      p.toggle(you, O + 'DisableRepliesInCombat', T('No chatting in combat'));
+      p.toggle(you, O + 'EnableTypingSimulation', T('Bots take time to type'), T('A longer answer arrives a little later, as if it were typed.'));
+
+      p.tab(T('Roleplay'));
+      const rp = p.card(T('Roleplay'), T('Every race of Conquest of Azeroth and CoA Custom and every class has its own voice: how it speaks, what it cares about, where it comes from. On top of that, each bot has a temperament of its own.'), 'races');
+      p.toggle(rp, O + 'Roleplay.Enable', T('Race and class voices'));
+      p.choice(rp, O + 'Roleplay.Strictness', T('Staying in character'), ['0', '1', '2'], [T('Flavour only'), T('In character'), T('Strictly')], T('In character: no game terms such as dps or lfg. Strictly: also injuries and distances in words, and in-world topics for chatter.'));
+      p.toggle(rp, O + 'EnableRPPersonalities', T('A temperament for every bot'));
+      p.toggle(rp, O + 'Roleplay.CrossFactionGibberish', T('No answers across the factions'), T('The game shows the other faction\'s speech as gibberish, so an answer would only be noise.'));
+      p.toggle(rp, O + 'EnableBotEmotes', T('Bots use emotes that fit what they say'));
+      const mem = p.card(T('Memory and relationships'), T('Bots remember what they talked about with whom, and form an opinion of the people they talk to often - players and other bots.'), 'database');
+      p.toggle(mem, O + 'EnableChatHistory', T('Recent conversation'));
+      p.toggle(mem, O + 'Memory.Enable', T('Long-term memory'));
+      p.toggle(mem, O + 'Relationship.Enable', T('Relationships'));
+      p.toggle(mem, O + 'EnableSentimentTracking', T('Mood towards each player'), T('Rates every message to a bot as friendly or not; costs one extra request per message.'));
+      p.note(T('Changes take effect after .ollama reload in the game (GM account) or a restart of the server.'));
+    }
+  });
+}

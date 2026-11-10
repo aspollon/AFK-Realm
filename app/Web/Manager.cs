@@ -205,7 +205,7 @@ namespace CoAInstaller.Web
                 {
                     journey = has("mod-world-journey"), auction = has("mod-playerbots-auctions"), classic = has("mod-classic-classes"),
                     races = has("mod-custom-races"), flying = has("mod-azeroth-flying"), immersion = has("mod-playerbots-immersion"),
-                    junk = has("mod-afk-junk-to-gold")
+                    junk = has("mod-afk-junk-to-gold"), ollama = has("mod-ollama-chat-coa")
                 },
                 busy = Jobs.Busy,
             };

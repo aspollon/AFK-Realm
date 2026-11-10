@@ -1,3 +1,7 @@
+# AFK Realm 1.3.28
+
+- **Ollama chat has its own setup page** under *Modules & races*: the connection to Ollama with a connection check that lists your models, how often bots talk on their own and to each other, and roleplay, memory and relationships.
+
 # AFK Realm 1.3.27
 
 - **Immersion works without the extra click.** Its database tables used to be installed only by the button on its setup page; without them the module spawned no city, fishing, legendary or PvP bots. AFK Realm now puts them in by itself when the server starts.

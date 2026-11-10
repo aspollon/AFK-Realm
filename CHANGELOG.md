@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.28
+
+- **Setup page for Ollama chat** (mod-ollama-chat-coa, `ollamaSetup` in setups.js): connection (service, address, model, API key, thinking, answers at once) with *Check the connection* (`/api/setups/ollama/check` asks the address's host for `/api/tags` and says whether the model entered is there), talking (on their own, time between, answers among bots, conversation length, events, guild, hearing distance, bots that answer, whispers, combat, typing) and roleplay (voices, strictness, temperaments, cross-faction, emotes, memory, relationships, mood). Card under *Modules & races* when the module is installed.
+
 ## 1.3.27
 
 - **Immersion's tables are put in by themselves:** they live in `data/sql/manual`, which the server's updater never reads, and only the button on the setup page installed them. A server where nobody pressed it had the module but no city, fishing, legendary or PvP bots (`Missing WORLD table city_life_hub`, `enable=0 database=0`). `Api.EnsureImmersionTables` runs the same SQL before the worldserver starts when `acore_world.city_life_hub` is missing.
