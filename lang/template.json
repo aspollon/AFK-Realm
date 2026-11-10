@@ -2613,6 +2613,16 @@
     "Recommended by {0}": "",
     "by {0}": "",
     "recommended by {0}": "",
-    "Tick a module to install it, untick it to remove it, then choose \"Apply changes\". {0} backs up the server, downloads the modules and rebuilds the server. Database changes of modules installed here are recorded, so removing a module also undoes them. \"Modules by {0}\" are made for this server, \"Recommended by {0}\" are modules by others that work with it; the AzerothCore module catalog lists everything else, and not every module there works with CoA. The search looks through all three.": ""
+    "Tick a module to install it, untick it to remove it, then choose \"Apply changes\". {0} backs up the server, downloads the modules and rebuilds the server. Database changes of modules installed here are recorded, so removing a module also undoes them. \"Modules by {0}\" are made for this server, \"Recommended by {0}\" are modules by others that work with it; the AzerothCore module catalog lists everything else, and not every module there works with CoA. The search looks through all three.": "",
+    "Building the game client": "",
+    "Build the game client": "",
+    "An AFK Realm fix for the EsteriaWoW game client ({0}) does not fit its current code any more; the client is built without it.": "",
+    "The build finished, but {0} is missing.": "",
+    "The EsteriaWoW game client (WowClient64.exe) was built anew. AFK Realm puts it into your game; give your players the new client pack.": "",
+    "The EsteriaWoW game client could not be built; the server is not affected, and your game keeps its client. The first error is in logs\\install.log. ({0})": "",
+    "The EsteriaWoW game client is built.": "",
+    "WowClient64.exe built from wowdecomp put into the game": "",
+    "The game is running from this folder. Close it so that the new WowClient64.exe can be put in.": "",
+    "EsteriaWoW game client": ""
   }
 }

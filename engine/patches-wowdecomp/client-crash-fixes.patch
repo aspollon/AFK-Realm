@@ -1,0 +1,428 @@
+diff --git a/Engine/Source/Model2/M2Model.cpp b/Engine/Source/Model2/M2Model.cpp
+index 1edd0fe..1f5e2a1 100644
+--- a/Engine/Source/Model2/M2Model.cpp
++++ b/Engine/Source/Model2/M2Model.cpp
+@@ -2598,6 +2598,17 @@ uint32_t CM2Model::GetNumPrimitives() {
+     return primitives;
+ }
+ 
++// Converted models (EsteriaWoW Retail races) can carry tracks whose key arrays are shorter than their
++// time arrays, or keys left over from a longer sequence. Clamp before indexing (Highmountain crash).
++static inline void M2ClampKeys(uint32_t count, uint32_t& key0, uint32_t& key1) {
++    if (key0 >= count) {
++        key0 = count ? count - 1 : 0;
++    }
++    if (key1 >= count) {
++        key1 = count ? count - 1 : 0;
++    }
++}
++
+ // VERIFY: 89dd83b7 manual
+ // OFFSET: 0x008284D0
+ void CM2Model::FindKey(M2ModelBoneSeq* sequence, const M2TrackBase& track, uint32_t& key0, uint32_t& key1, float& ratio) {
+@@ -2653,22 +2664,23 @@ void CM2Model::FindKey(M2ModelBoneSeq* sequence, const M2TrackBase& track, uint3
+                 key++;
+             }
+         } else {
++            // Upper-bound search: the last key with keys[key] <= time. The original search set high = mid - 1,
++            // which wraps to 0xFFFFFFFF when the first key lies after the time (converted EsteriaWoW tracks do
++            // not always start at 0) and then read far past the array (Highmountain crash).
++            uint32_t low = 0;
+             uint32_t high = count;
+ 
+-            while (key < high) {
+-                uint32_t mid = (high + key) >> 1;
++            while (low < high) {
++                uint32_t mid = low + ((high - low) >> 1);
+ 
+-                if (time < keys[mid]) {
+-                    high = mid - 1;
++                if (keys[mid] <= time) {
++                    low = mid + 1;
+                 } else {
+-                    key = mid + 1;
+-
+-                    if (key >= count || time < keys[key]) {
+-                        key = mid;
+-                        break;
+-                    }
++                    high = mid;
+                 }
+             }
++
++            key = low ? low - 1 : 0;
+         }
+     }
+ 
+@@ -2679,7 +2691,14 @@ void CM2Model::FindKey(M2ModelBoneSeq* sequence, const M2TrackBase& track, uint3
+     } else {
+         key0 = key;
+         key1 = key + 1;
+-        ratio = static_cast<float>(time - keys[key]) / static_cast<float>(keys[key + 1] - keys[key]);
++        // Converted tracks can have equal or unsorted keys, or a time before the first key: keep the ratio in 0..1.
++        if (keys[key + 1] <= keys[key] || time <= keys[key]) {
++            ratio = 0.0f;
++        } else if (time >= keys[key + 1]) {
++            ratio = 1.0f;
++        } else {
++            ratio = static_cast<float>(time - keys[key]) / static_cast<float>(keys[key + 1] - keys[key]);
++        }
+     }
+ }
+ 
+@@ -2694,6 +2713,7 @@ void M2AnimateTrack<M2CompQuat, C4Quaternion>(CM2Model* model, M2ModelBone* bone
+         uint32_t key1;
+         float ratio;
+         model->FindKey(&bone->m_sequence, track, modelTrack.m_currentKey, key1, ratio);
++        M2ClampKeys(keys.m_count, modelTrack.m_currentKey, key1);
+ 
+         if (!track.m_trackType) {
+             M2CompQuat& key = keys[modelTrack.m_currentKey];
+@@ -2734,6 +2754,7 @@ void M2AnimateTrack<M2CompQuat, C4Quaternion>(CM2Model* model, M2ModelBone* bone
+             uint32_t key1;
+             float ratio;
+             model->FindKey(&bone->m_secondarySequence, track, modelTrack.m_secondaryKey, key1, ratio);
++            M2ClampKeys(blendKeys.m_count, modelTrack.m_secondaryKey, key1);
+             M2CompQuat& k0 = blendKeys[modelTrack.m_secondaryKey];
+             M2CompQuat& k1 = blendKeys[key1];
+             C4Quaternion q0;
+@@ -3550,6 +3571,7 @@ void M2AnimateTrack<C4Quaternion, C4Quaternion>(CM2Model* model, M2ModelBone* bo
+         uint32_t key1;
+         float ratio;
+         model->FindKey(&bone->m_sequence, track, modelTrack.m_currentKey, key1, ratio);
++        M2ClampKeys(keys.m_count, modelTrack.m_currentKey, key1);
+ 
+         if (!track.m_trackType) {
+             modelTrack.m_currentValue = keys[modelTrack.m_currentKey];
+@@ -3574,6 +3596,7 @@ void M2AnimateTrack<C4Quaternion, C4Quaternion>(CM2Model* model, M2ModelBone* bo
+             uint32_t key1;
+             float ratio;
+             model->FindKey(&bone->m_secondarySequence, track, modelTrack.m_secondaryKey, key1, ratio);
++            M2ClampKeys(blendKeys.m_count, modelTrack.m_secondaryKey, key1);
+             blend = C4Quaternion::Nlerp(ratio, blendKeys[modelTrack.m_secondaryKey], blendKeys[key1]);
+         } else {
+             blend = defaultValue;
+@@ -3594,6 +3617,7 @@ void M2AnimateTrack<fixed16, float>(CM2Model* model, M2ModelBone* bone, const M2
+         uint32_t key1;
+         float ratio;
+         model->FindKey(&bone->m_sequence, track, modelTrack.m_currentKey, key1, ratio);
++        M2ClampKeys(keys.m_count, modelTrack.m_currentKey, key1);
+ 
+         if (!track.m_trackType) {
+             modelTrack.m_currentValue = keys[modelTrack.m_currentKey].m_value * 0.000030518509f;
+@@ -3619,6 +3643,7 @@ void M2AnimateTrack<fixed16, float>(CM2Model* model, M2ModelBone* bone, const M2
+             uint32_t key1;
+             float ratio;
+             model->FindKey(&bone->m_secondarySequence, track, modelTrack.m_secondaryKey, key1, ratio);
++            M2ClampKeys(blendKeys.m_count, modelTrack.m_secondaryKey, key1);
+             float value0 = blendKeys[modelTrack.m_secondaryKey].m_value * 0.000030518509f;
+             blend = value0 + (blendKeys[key1].m_value * 0.000030518509f - value0) * ratio;
+         } else {
+@@ -3640,6 +3665,7 @@ void M2AnimateTrack<C3Vector, C3Vector>(CM2Model* model, M2ModelBone* bone, cons
+         uint32_t key1;
+         float ratio;
+         model->FindKey(&bone->m_sequence, track, modelTrack.m_currentKey, key1, ratio);
++        M2ClampKeys(keys.m_count, modelTrack.m_currentKey, key1);
+ 
+         if (!track.m_trackType) {
+             modelTrack.m_currentValue = keys[modelTrack.m_currentKey];
+@@ -3668,6 +3694,7 @@ void M2AnimateTrack<C3Vector, C3Vector>(CM2Model* model, M2ModelBone* bone, cons
+             uint32_t key1;
+             float ratio;
+             model->FindKey(&bone->m_secondarySequence, track, modelTrack.m_secondaryKey, key1, ratio);
++            M2ClampKeys(blendKeys.m_count, modelTrack.m_secondaryKey, key1);
+             C3Vector& value0 = blendKeys[modelTrack.m_secondaryKey];
+             C3Vector& value1 = blendKeys[key1];
+             blend.x = (value1.x - value0.x) * ratio + value0.x;
+@@ -3695,6 +3722,7 @@ void M2AnimateTrack<uint8_t, uint8_t>(CM2Model* model, M2ModelBone* bone, const
+ 
+     if (keys.m_count) {
+         model->FindKey(&bone->m_sequence, track, modelTrack.m_currentKey, key1, ratio);
++        M2ClampKeys(keys.m_count, modelTrack.m_currentKey, key1);
+ 
+         if (!track.m_trackType) {
+             modelTrack.m_currentValue = keys[modelTrack.m_currentKey];
+@@ -3730,6 +3758,7 @@ void M2AnimateTrack<float, float>(CM2Model* model, M2ModelBone* bone, const M2Tr
+ 
+     if (keys.m_count) {
+         model->FindKey(&bone->m_sequence, track, modelTrack.m_currentKey, key1, ratio);
++        M2ClampKeys(keys.m_count, modelTrack.m_currentKey, key1);
+ 
+         if (!track.m_trackType) {
+             modelTrack.m_currentValue = keys[modelTrack.m_currentKey];
+@@ -3753,6 +3782,7 @@ void M2AnimateTrack<float, float>(CM2Model* model, M2ModelBone* bone, const M2Tr
+ 
+         if (blendKeys.m_count) {
+             model->FindKey(&bone->m_secondarySequence, track, modelTrack.m_secondaryKey, key1, ratio);
++            M2ClampKeys(blendKeys.m_count, modelTrack.m_secondaryKey, key1);
+             float value0 = blendKeys[modelTrack.m_secondaryKey];
+             blend = value0 + (blendKeys[key1] - value0) * ratio;
+         } else {
+@@ -3774,6 +3804,7 @@ void M2AnimateSplineTrack<M2SplineKey<C3Vector>, C3Vector>(CM2Model* model, M2Mo
+ 
+     if (keys.m_count) {
+         model->FindKey(&bone->m_sequence, track, modelTrack.m_currentKey, key1, ratio);
++        M2ClampKeys(keys.m_count, modelTrack.m_currentKey, key1);
+ 
+         if (!track.m_trackType) {
+             modelTrack.m_currentValue = keys[modelTrack.m_currentKey].m_value;
+@@ -3832,6 +3863,7 @@ void M2AnimateSplineTrack<M2SplineKey<C3Vector>, C3Vector>(CM2Model* model, M2Mo
+ 
+         if (blendKeys.m_count) {
+             model->FindKey(&bone->m_secondarySequence, track, modelTrack.m_secondaryKey, key1, ratio);
++            M2ClampKeys(blendKeys.m_count, modelTrack.m_secondaryKey, key1);
+             M2SplineKey<C3Vector>& k0 = blendKeys[modelTrack.m_secondaryKey];
+             M2SplineKey<C3Vector>& k1 = blendKeys[key1];
+ 
+@@ -3882,6 +3914,7 @@ void M2AnimateSplineTrack<M2SplineKey<float>, float>(CM2Model* model, M2ModelBon
+ 
+     if (keys.m_count) {
+         model->FindKey(&bone->m_sequence, track, modelTrack.m_currentKey, key1, ratio);
++        M2ClampKeys(keys.m_count, modelTrack.m_currentKey, key1);
+ 
+         if (!track.m_trackType) {
+             modelTrack.m_currentValue = keys[modelTrack.m_currentKey].m_value;
+@@ -3924,6 +3957,7 @@ void M2AnimateSplineTrack<M2SplineKey<float>, float>(CM2Model* model, M2ModelBon
+ 
+         if (blendKeys.m_count) {
+             model->FindKey(&bone->m_secondarySequence, track, modelTrack.m_secondaryKey, key1, ratio);
++            M2ClampKeys(blendKeys.m_count, modelTrack.m_secondaryKey, key1);
+             M2SplineKey<float>& k0 = blendKeys[modelTrack.m_secondaryKey];
+             M2SplineKey<float>& k1 = blendKeys[key1];
+ 
+@@ -3955,6 +3989,7 @@ void M2AnimateTrack<uint16_t, uint16_t>(CM2Model* model, M2ModelBone* bone, cons
+ 
+     if (keys.m_count) {
+         model->FindKey(&bone->m_sequence, track, modelTrack.m_currentKey, key1, ratio);
++        M2ClampKeys(keys.m_count, modelTrack.m_currentKey, key1);
+ 
+         if (!track.m_trackType) {
+             modelTrack.m_currentValue = keys[modelTrack.m_currentKey];
+@@ -5541,6 +5576,17 @@ void CM2Model::AnimateMT(const C44Matrix* view, const C3Vector& diffuse, const C
+             }
+         }
+ 
++        // Not in the original: never animate from a sequence whose .anim data is not loaded (its arrays still hold
++        // file offsets). Converted models with open alias chains could get there; fall back to sequence 0 (Stand).
++        if (bone->m_sequence.m_animIndex < data->m_sequences.m_count
++            && !(data->m_sequences[bone->m_sequence.m_animIndex].m_flags & 0x20)) {
++            bone->m_sequence.m_animIndex = 0;
++        }
++        if (bone->m_secondarySequence.m_animIndex < data->m_sequences.m_count
++            && !(data->m_sequences[bone->m_secondarySequence.m_animIndex].m_flags & 0x20)) {
++            bone->m_secondarySequence.m_animIndex = 0;
++        }
++
+         if (bone->m_sequence.m_sequenceIndex == 0xFFFF && bone->m_secondarySequence.m_sequenceIndex == 0xFFFF) {
+             uint16_t parentIndex = boneData->m_parentIndex;
+ 
+@@ -6669,8 +6715,10 @@ void CM2Model::SetBoneSequenceDeferred(uint16_t sequenceIndex, M2Data* data, uin
+ 
+     if (data->m_sequences[sequenceIndex].m_flags & 0x10) {
+         uint16_t index = sequenceIndex;
++        // Bounded alias walk: see CM2Shared::LoadLowPrioritySequence (converted models can carry open chains).
++        uint32_t aliasSteps = 0;
+ 
+-        while (true) {
++        while (aliasSteps++ <= data->m_sequences.m_count) {
+             TSList<CM2SequenceLoad>& loads = this->m_shared->m_sequenceLoads;
+ 
+             for (CM2SequenceLoad* load = loads.Head(); !loads.IsEnd(load); load = loads.RawNext(load)) {
+@@ -6691,10 +6739,11 @@ void CM2Model::SetBoneSequenceDeferred(uint16_t sequenceIndex, M2Data* data, uin
+ 
+             index = data->m_sequences[index].m_aliasNext;
+ 
+-            if (index == sequenceIndex) {
++            if (index == sequenceIndex || index >= data->m_sequences.m_count) {
+                 return;
+             }
+         }
++        return;
+     } else {
+         CM2SequenceLoad* load = this->m_shared->LoadLowPrioritySequence(sequenceIndex);
+ 
+diff --git a/Engine/Source/Model2/M2Shared.cpp b/Engine/Source/Model2/M2Shared.cpp
+index ab054fa..2f5c572 100644
+--- a/Engine/Source/Model2/M2Shared.cpp
++++ b/Engine/Source/Model2/M2Shared.cpp
+@@ -57,6 +57,26 @@ static uint8_t* s_sequenceData;
+ // STATIC: 0x00D4125C
+ static uint32_t s_sequenceSize;
+ 
++// Not in the original: bounds of the .anim buffer being relocated. Converted models (EsteriaWoW Retail races) can
++// carry sequence arrays that point outside their .anim file; those are emptied instead of relocated, so the
++// animation falls back to the default value rather than reading foreign memory (Highmountain crash).
++static const uint8_t* s_sequenceBegin;
++static const uint8_t* s_sequenceEnd;
++
++template <class T>
++static void RelocateSequenceArray(M2Array<T>& array, const uint8_t* base) {
++    if (array.m_count && s_sequenceEnd) {
++        const uint64_t start = static_cast<uint64_t>(reinterpret_cast<uintptr_t>(base)) + array.m_offset;
++        const uint64_t end = start + static_cast<uint64_t>(array.m_count) * sizeof(T);
++        if (start < reinterpret_cast<uintptr_t>(s_sequenceBegin) || end > reinterpret_cast<uintptr_t>(s_sequenceEnd)) {
++            array.m_count = 0;
++            array.m_offset = 0;
++            return;
++        }
++    }
++    array.Relocate(base);
++}
++
+ #if defined(WOWDECOMP_RETAIL_ASSETS)
+ static uint8_t* s_sequenceBoneData;
+ static uint8_t* s_sequenceAttachmentData;
+@@ -211,7 +231,7 @@ int32_t M2Init(uint8_t* base, uint32_t size, const M2Data& data, M2TrackBase& tr
+             return 0;
+         }
+     } else if (s_sequenceIndex < track.m_sequenceTimes.m_count) {
+-        track.m_sequenceTimes[s_sequenceIndex].Relocate(s_sequenceData);
++        RelocateSequenceArray(track.m_sequenceTimes[s_sequenceIndex], s_sequenceData);
+     }
+ 
+     return 1;
+@@ -246,11 +266,11 @@ int32_t M2Init(uint8_t* base, uint32_t size, const M2Data& data, M2Track<T>& tra
+         }
+     } else {
+         if (s_sequenceIndex < track.m_sequenceTimes.m_count) {
+-            track.m_sequenceTimes[s_sequenceIndex].Relocate(s_sequenceData);
++            RelocateSequenceArray(track.m_sequenceTimes[s_sequenceIndex], s_sequenceData);
+         }
+ 
+         if (s_sequenceIndex < track.m_sequenceKeys.m_count) {
+-            track.m_sequenceKeys[s_sequenceIndex].Relocate(s_sequenceData);
++            RelocateSequenceArray(track.m_sequenceKeys[s_sequenceIndex], s_sequenceData);
+         }
+     }
+ 
+@@ -1694,6 +1714,14 @@ int32_t M2Init(uint8_t* base, uint32_t size, M2Data& data) {
+ // VERIFY: 8000b812 manual
+ // OFFSET: 0x0083C6E0
+ int32_t CM2Shared::FinishLoadingLowPrioritySequence(uint32_t sequenceIndex, uint8_t* buffer, uint32_t size) {
++    // Not in the original: with open alias chains a sequence can be reached by two loads. Relocating it a second
++    // time would turn its already relocated offsets into garbage, so a loaded sequence is left alone.
++    if (sequenceIndex >= this->m_data->m_sequences.m_count) {
++        return 0;
++    }
++    if (this->m_data->m_sequences[sequenceIndex].m_flags & 0x20) {
++        return 1;
++    }
+ #if defined(WOWDECOMP_RETAIL_ASSETS)
+     Retail::AnimationLayout layout;
+     const bool retail = Retail::IsCdnPath(this->m_fileName);
+@@ -1708,6 +1736,8 @@ int32_t CM2Shared::FinishLoadingLowPrioritySequence(uint32_t sequenceIndex, uint
+     s_sequenceIndex = sequenceIndex;
+     s_sequenceData = buffer;
+     s_sequenceSize = size;
++    s_sequenceBegin = buffer;
++    s_sequenceEnd = buffer + size;
+ #if defined(WOWDECOMP_RETAIL_ASSETS)
+     if (retail && layout.chunked) {
+         if (layout.model.present) s_sequenceData = buffer + layout.model.offset;
+@@ -1722,6 +1752,8 @@ int32_t CM2Shared::FinishLoadingLowPrioritySequence(uint32_t sequenceIndex, uint
+     s_sequenceIndex = 0xFFFFFFFF;
+     s_sequenceData = nullptr;
+     s_sequenceSize = 0;
++    s_sequenceBegin = nullptr;
++    s_sequenceEnd = nullptr;
+ #if defined(WOWDECOMP_RETAIL_ASSETS)
+     s_sequenceBoneData = nullptr;
+     s_sequenceAttachmentData = nullptr;
+@@ -1749,7 +1781,10 @@ int32_t CM2Shared::FinishLoadingLowPrioritySequence(uint32_t sequenceIndex, CAsy
+         return 0;
+     }
+ 
+-    for (uint16_t* alias = &sequence->m_aliasNext; *alias != sequenceIndex; alias = &this->m_data->m_sequences[*alias].m_aliasNext) {
++    // Bounded alias walk: see LoadLowPrioritySequence (converted models can carry open chains).
++    uint32_t aliasSteps = 0;
++    for (uint16_t* alias = &sequence->m_aliasNext; *alias != sequenceIndex && *alias < this->m_data->m_sequences.m_count
++         && aliasSteps++ < this->m_data->m_sequences.m_count; alias = &this->m_data->m_sequences[*alias].m_aliasNext) {
+         if (!this->FinishLoadingLowPrioritySequence(*alias, static_cast<uint8_t*>(object->m_buffer), object->m_size)) {
+             return 0;
+         }
+@@ -2138,6 +2173,13 @@ void CM2Shared::LowPrioritySequenceLoadedCallback(void* param) {
+ 
+         CM2Model* model = playback->m_model;
+ 
++        // Not in the original: a sequence whose .anim failed to load keeps unrelocated arrays; never play it.
++        if (!(shared->m_data->m_sequences[load->m_sequenceIndex].m_flags & 0x20)) {
++            playback->m_model = nullptr;
++            playback = next;
++            continue;
++        }
++
+         if (model->OnSequenceInterrupted(shared->m_data->m_bones[playback->m_boneIndex].m_boneId, playback->m_boneIndex)) {
+             uint16_t boneIndex = playback->m_boneIndex;
+             M2ModelBone* bone = &model->m_bones[boneIndex];
+@@ -2191,8 +2233,13 @@ CM2SequenceLoad* CM2Shared::LoadLowPrioritySequence(uint16_t sequenceIndex) {
+     load->m_shared = this;
+ 
+     M2Sequence* source = sequence;
++    // The alias chains below are rings in Blizzard's models. Models converted from later clients (EsteriaWoW's
++    // Retail races) can carry chains that never come back to the start, and both loops then ran forever (the game
++    // froze in the character selection). Each walk is bounded by the number of sequences.
++    const uint32_t sequenceCount = this->m_data->m_sequences.m_count;
++    uint32_t aliasSteps = 0;
+ 
+-    while (source->m_flags & 0x40) {
++    while ((source->m_flags & 0x40) && source->m_aliasNext < sequenceCount && aliasSteps++ < sequenceCount) {
+         source = &this->m_data->m_sequences[source->m_aliasNext];
+     }
+ 
+@@ -2238,7 +2285,9 @@ CM2SequenceLoad* CM2Shared::LoadLowPrioritySequence(uint16_t sequenceIndex) {
+ 
+     sequence->m_flags |= 0x10;
+ 
+-    for (uint16_t i = sequence->m_aliasNext; i != sequenceIndex; i = this->m_data->m_sequences[i].m_aliasNext) {
++    aliasSteps = 0;
++    for (uint16_t i = sequence->m_aliasNext; i != sequenceIndex && i < sequenceCount && aliasSteps++ < sequenceCount;
++         i = this->m_data->m_sequences[i].m_aliasNext) {
+         this->m_data->m_sequences[i].m_flags |= 0x10;
+     }
+ 
+diff --git a/WoW/Source/Object/ObjectClient/Unit_C.cpp b/WoW/Source/Object/ObjectClient/Unit_C.cpp
+index 7663b2d..0192220 100644
+--- a/WoW/Source/Object/ObjectClient/Unit_C.cpp
++++ b/WoW/Source/Object/ObjectClient/Unit_C.cpp
+@@ -2284,7 +2284,16 @@ void CGUnit_C::UpdateDelayedSpellVisualKits() {
+             }
+         }
+ 
+-        delayed->m_flags &= ~0x8;
++        // PlaySpellVisualKit can delay another kit (DelaySpellVisualKit grows the array, which may move it), so
++        // `delayed` can point into freed memory here. Index again, as ConnectToLightningThisFrame does.
++        this->m_delayedSpellVisualKits.m_data[i].m_flags &= ~0x8;
++    }
++
++    // Kits delayed while the ones above played are still waiting; clearing the array would drop them.
++    for (uint32_t i = count; i < this->m_delayedSpellVisualKits.m_count; i++) {
++        if (this->m_delayedSpellVisualKits.m_data[i].m_flags & 0x8) {
++            pending++;
++        }
+     }
+ 
+     if (!pending && count) {
+@@ -9902,8 +9911,12 @@ void CGUnit_C::UpdateAuraEffectMask() {
+         }
+ 
+         for (int32_t effect = 0; effect < 3; effect++) {
+-            if (aura->m_flags & (1 << effect)) {
+-                this->m_auraEffectMask[spell.m_effectAura[effect] / 8] |= 1 << (spell.m_effectAura[effect] % 8);
++            // The mask has room for aura types 0-319 (WotLK has up to 316). Custom spells of other projects (CoA's
++            // Fetid Ward: aura type 354) wrote past it into m_delayedSpellVisualKits right behind, and the next frame
++            // read a corrupt array there (crash in UpdateDelayedSpellVisualKits).
++            const uint32_t type = static_cast<uint32_t>(spell.m_effectAura[effect]);
++            if ((aura->m_flags & (1 << effect)) && type < sizeof(this->m_auraEffectMask) * 8) {
++                this->m_auraEffectMask[type / 8] |= 1 << (type % 8);
+             }
+         }
+     }
+@@ -10080,6 +10093,8 @@ void CGUnit_C::UpdateObjectEffectAnimationStates() {
+ // VERIFY: 91123c63 manual
+ // OFFSET: 0x005A1120
+ bool CGUnit_C::HasAuraEffect(int32_t auraType) const {
++    // Same bound as UpdateAuraEffectMask: a type beyond the mask is never set.
++    if (auraType < 0 || static_cast<uint32_t>(auraType) >= sizeof(this->m_auraEffectMask) * 8) return false;
+     return (this->m_auraEffectMask[auraType / 8] & (1 << (auraType % 8))) != 0;
+ }
+ 

@@ -44,7 +44,13 @@ namespace CoAInstaller
                     var m = Regex.Match(f[1], @"github\.com[/:]([^/]+)/([^/.]+)");
                     if (!m.Success || !Regex.IsMatch(f[3], "^[0-9a-f]{40}$")) continue;
                     int before = r.Server.Count;
-                    Ask(r, git, f[0] == "core" ? (inst.IsCoa ? L.T("CoA core") : "AzerothCore") : "Playerbots", m.Groups[1].Value + "/" + m.Groups[2].Value, f[2], f[3]);
+                    string repo = m.Groups[1].Value + "/" + m.Groups[2].Value, branch = f[2];
+                    // EsteriaWoW is built from its AFKRealm branch (since 1.3.22); a server built from main moves there.
+                    if (inst.IsEsteria && repo.Equals("STRHercules/EsteriaWoW", StringComparison.OrdinalIgnoreCase)) branch = "AFKRealm";
+                    string label = f[0] == "core" ? (inst.IsCoa ? L.T("CoA core") : inst.IsEsteria ? "EsteriaWoW" : "AzerothCore")
+                        : repo.EndsWith("/wowdecomp", StringComparison.OrdinalIgnoreCase) ? L.T("EsteriaWoW game client")
+                        : repo.EndsWith("/mod-dungeon-clear", StringComparison.OrdinalIgnoreCase) ? "Dungeon Clear" : "Playerbots";
+                    Ask(r, git, label, repo, branch, f[3]);
                     if (r.Server.Count > before) r.BaseNew = true;
                 }
             }

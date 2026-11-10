@@ -1,3 +1,8 @@
+# AFK Realm 1.3.22
+
+- **EsteriaWoW uses its AFKRealm branch**, the state its author keeps for AFK Realm. Run an update once to move your server there.
+- **The EsteriaWoW game client is built too.** With every update that brings new client code, AFK Realm builds `WowClient64.exe` from wowdecomp (with its fixes for crashes and freezes of the custom races), puts it into your game folder and into the client pack for your players. The first build of the client takes a while. If it fails, the server update still finishes and your game keeps its program.
+
 # AFK Realm 1.3.21
 
 - **The module list uses the whole window again.** *Modules by AFK Realm*, *Recommended by AFK Realm* and the *AzerothCore module catalog* are now tabs, each with the full height; the search looks through all of them.

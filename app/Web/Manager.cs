@@ -596,6 +596,10 @@ namespace CoAInstaller.Web
                 L.AddModules(ModuleCatalog.ModulesDir(inst));
                 // EsteriaWoW: an update can bring new server-only DBC files and continuations.
                 try { EsteriaServer.ApplyServerFiles(inst, _ => { }); } catch { }
+                // EsteriaWoW: the client program the update built goes into the owner's game (unless the game runs;
+                // then the Game client window offers it with the next Install).
+                if (inst.IsEsteria)
+                    try { EsteriaServer.InstallClientExe(inst, ClientAddons.ClientFolder); } catch { }
                 CheckForUpdates();
                 CheckClient(true);
             }

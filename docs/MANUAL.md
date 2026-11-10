@@ -466,6 +466,8 @@ Map data is not part of a backup; updates do not touch it.
 
 The build is incremental (only what changed is compiled again). *Clean build* compiles everything anew; that takes much longer and is only worth it when an incremental build misbehaves.
 
+**EsteriaWoW: the game client.** An EsteriaWoW server is built from the `AFKRealm` branch of EsteriaWoW, and its game client program (`WowClient64.exe`) from the `AFKRealm` branch of wowdecomp, with AFK Realm's crash fixes for the client. The client is downloaded to `Dependencies\ClientSource` and built after the server – the first time this takes a while, later only what changed – whenever an update brings new client code (Windows only). AFK Realm then puts it into your game folder (*Client build → Game client*; the program that was there is kept once as `WowClient64.exe.afk-backup`; if the game is running, *Install* in that window does it later) and into the players' client pack. If the client does not build, the server's update still finishes, and your game keeps its program.
+
 **Maintenance → Repair setup** sets up the database and configuration again without rebuilding the server. Characters and accounts are kept. Use it when the server does not start after something was interrupted.
 
 ## 12. The random bots

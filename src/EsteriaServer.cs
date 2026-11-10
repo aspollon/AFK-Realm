@@ -61,6 +61,42 @@ namespace CoAInstaller
             return written;
         }
 
+        /// <summary>The game client program the engine built from wowdecomp (Dependencies\ClientExe\WowClient64.exe), or null.</summary>
+        public static string BuiltClientExe(Install inst)
+        {
+            if (!inst.IsEsteria) return null;
+            string exe = Path.Combine(inst.Root, "Dependencies", "ClientExe", "WowClient64.exe");
+            return File.Exists(exe) ? exe : null;
+        }
+
+        /// <summary>Puts the built WowClient64.exe (with its .pdb for the crash log, and XvidDecoder.dll) into an EsteriaWoW
+        /// game folder. The program that was there first is kept once as WowClient64.exe.afk-backup. Returns what was done,
+        /// "" when nothing had to be done; throws when the game is running.</summary>
+        public static string InstallClientExe(Install inst, string client)
+        {
+            string built = BuiltClientExe(inst);
+            if (built == null || string.IsNullOrEmpty(client) || !ClientAddons.IsEsteriaClient(client)) return "";
+            string target = Path.Combine(client, "WowClient64.exe");
+            if (File.Exists(target) && SameFile(built, target)) return "";
+            if (ClientAddons.ClientRunning(client))
+                throw new InvalidOperationException(L.T("The game is running from this folder. Close it so that the new WowClient64.exe can be put in."));
+            string backup = target + ".afk-backup";
+            if (File.Exists(target) && !File.Exists(backup)) File.Copy(target, backup);
+            string from = Path.GetDirectoryName(built);
+            foreach (string name in new[] { "WowClient64.exe", "WowClient64.pdb", "XvidDecoder.dll" })
+                if (File.Exists(Path.Combine(from, name))) File.Copy(Path.Combine(from, name), Path.Combine(client, name), true);
+            return L.T("WowClient64.exe built from wowdecomp put into the game");
+        }
+
+        static bool SameFile(string a, string b)
+        {
+            var fa = new FileInfo(a); var fb = new FileInfo(b);
+            if (fa.Length != fb.Length) return false;
+            using (var sha = System.Security.Cryptography.SHA256.Create())
+            using (var sa = File.OpenRead(a)) using (var sb = File.OpenRead(b))
+                return sha.ComputeHash(sa).SequenceEqual(sha.ComputeHash(sb));
+        }
+
         /// <summary>The server-only DBC files of the EsteriaWoW source, laid over the tables in Server/Data/dbc, and the
         /// DBC continuations of mod-wxl-dbc in Server/Data/dbc-continuations. Nothing happens before the map data exists.</summary>
         public static void ApplyServerFiles(Install inst, Action<string> note)

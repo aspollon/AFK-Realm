@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.3.22
+
+- **EsteriaWoW from its AFKRealm branch:** `$Project.Core.Branch = 'AFKRealm'` (the state the EsteriaWoW author keeps for AFK Realm). A server built from `main` has no matching line in `revisions.txt`, so its next update moves it; the update banner asks the AFKRealm branch for EsteriaWoW lines and names the core "EsteriaWoW". A rebuild takes the revision a part's folder has when none is recorded, and the newest only for a part never downloaded.
+- **EsteriaWoW game client built with the server:** wowdecomp (`AFKRealm` branch) is a part of its own (`Get-ExtraParts`, key `client`, moves with the core; Windows only) in `Dependencies\ClientSource`, cloned with `core.autocrlf=false`. `Invoke-ClientBuild` runs after a successful server build when `client-build.txt` (revision + the patch sums of `patches-wowdecomp\`) is not current: resets the tree (keeping `bin\`), applies `engine\patches-wowdecomp\*.patch` (`client-crash-fixes.patch`: the bounded M2 alias walks, the key clamp and the binary search in `CM2Model::FindKey`, the checked .anim relocation, the aura-type bound in `Unit_C`), corrects the ASECM3 input sums that only differ by line ends (`Repair-ClientGeneratedHashes`: the author computed some on CRLF, some on LF files, so no checkout passed CMake's stale checks), configures with `-DWOWDECOMP_DISABLE_SIGNATURE_CHECKS=ON -DWOWDECOMP_RETAIL_ASSETS=ON` on the server's Visual Studio instance, builds `WowClient` (RelWithDebInfo) and copies `WowClient64.exe`, `.pdb` and `XvidDecoder.dll` to `Dependencies\ClientExe`. A failure is a NOTE, never a failed update. The update counts a client that is not current as something to do. Phase "client" in the progress list.
+- **Into the game and to the players:** `EsteriaServer.InstallClientExe` after an engine run and with *Install* of the Game client window (backup `WowClient64.exe.afk-backup` once; refused while the game runs); the player client pack carries `WowClient64.exe`.
+- The engine's patch folders are extracted by prefix (`patches-esteria`, `patches-wowdecomp`).
+
 ## 1.3.21
 
 - **Module list in tabs:** *Modules by AFK Realm*, *Recommended by AFK Realm* and *AzerothCore module catalog* are tabs over one list that takes the whole height; before, AFK Realm's own modules sat above the catalog in a box of up to 28 % of the window, and the catalog was left with a small strip. A search looks through all three and marks the entries that are not from the catalog. "Hide modules not changed for 2 years" applies to the catalog only.

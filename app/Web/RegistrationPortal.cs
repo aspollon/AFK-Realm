@@ -685,6 +685,13 @@ namespace CoAInstaller.Web
                         using (var writer = new StreamWriter(entry.Open(), new UTF8Encoding(false)))
                             writer.Write("set realmlist " + address + "\r\n");
                     }
+                    // EsteriaWoW: the client program built from wowdecomp, next to the game's own
+                    string exe = EsteriaServer.BuiltClientExe(inst);
+                    if (exe != null)
+                    {
+                        zip.GetEntry("WowClient64.exe")?.Delete();
+                        zip.CreateEntryFromFile(exe, "WowClient64.exe", CompressionLevel.Optimal);
+                    }
                     foreach (string file in PatchFiles())
                     {
                         string entry = "Data/" + Path.GetFileName(file);

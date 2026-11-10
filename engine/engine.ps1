@@ -140,6 +140,10 @@ $Paths = @{
     # The owner's own changes to the source code, as .patch files: Patches\core and Patches\mod-playerbots. They are put
     # into every build after the module patches, so a change made by hand survives updates and rebuilds.
     OwnPatches  = Join-Path $InstallRoot 'Patches'
+    # EsteriaWoW only: the game client (wowdecomp), its build folder and the programs built from it.
+    ClientSource = Join-Path $InstallRoot 'Dependencies\ClientSource'
+    ClientBuild  = Join-Path $InstallRoot 'Dependencies\ClientBuild'
+    ClientExe    = Join-Path $InstallRoot 'Dependencies\ClientExe'
 }
 # The kind of server, chosen when it was set up (Dependencies\server-kind.txt, written by AFK Realm before the first
 # run): 'coa' = Conquest of Azeroth (the default, also for every server set up before there was a choice),
@@ -167,7 +171,8 @@ if ($ServerKind -eq 'azerothcore') {
     # The repository is about 6 GB, most of it race material, design work and a copy of another core. Only what
     # the server is built and its database set up from is checked out (partial clone, sparse checkout); Eluna is
     # a submodule.
-    $Project.Core = @{ Repo = 'https://github.com/STRHercules/EsteriaWoW.git'; Branch = 'main'; Revision = ''; Moved = @()
+    # The AFKRealm branch: the state of EsteriaWoW its author keeps for AFK Realm.
+    $Project.Core = @{ Repo = 'https://github.com/STRHercules/EsteriaWoW.git'; Branch = 'AFKRealm'; Revision = ''; Moved = @()
                        Sparse = @('apps', 'conf', 'data/sql', 'deps', 'env/dist/etc', 'modules', 'src'); Submodules = @('src/server/game/LuaEngine')
                        # Module folders of the repository that are not built: mod-attunement-plus is the old standalone
                        # copy of what mod-custom-server does now ("superseded" in its docs/status/Modules.md); its stat
@@ -175,6 +180,10 @@ if ($ServerKind -eq 'azerothcore') {
                        NotBuilt = @('mod-attunement-plus') }
     $Project.Playerbots.Separate = $false
     $Project.DungeonClear.Separate = $false
+    # The game client the EsteriaWoW realm needs, rebuilt from source (wowdecomp, its AFKRealm branch) with every
+    # update and put into the owner's game by AFK Realm. Checked out with LF line ends: its CMake compares SHA-256
+    # sums of checked-in files (Repair-ClientGeneratedHashes).
+    $Project.Client = @{ Repo = 'https://github.com/STRHercules/wowdecomp.git'; Branch = 'AFKRealm'; Revision = ''; Moved = @(); Lf = $true }
 }
 $IsCoa = $ServerKind -eq 'coa'
 $Paths.Modules = Join-Path $Paths.Source 'modules'
@@ -186,6 +195,7 @@ function Get-ExtraParts {
     $list = @()
     if ($Project.Playerbots.Separate) { $list += @{ Name = 'Playerbots'; Key = 'playerbots'; Item = $Project.Playerbots; Folder = $Paths.Playerbots; MovesWithCore = $true } }
     if ($Project.DungeonClear.Separate) { $list += @{ Name = 'Dungeon Clear'; Key = 'dungeon'; Item = $Project.DungeonClear; Folder = $Paths.DungeonClear; MovesWithCore = $false } }
+    if ($ServerKind -eq 'esteria' -and $OnWindows) { $list += @{ Name = 'Esteria client'; Key = 'client'; Item = $Project.Client; Folder = $Paths.ClientSource; MovesWithCore = $true } }
     # unrolled: callers wrap the call in @() (an empty list gives nothing)
     return $list
 }
@@ -219,7 +229,7 @@ function Use-ShortDependencies {
         Write-Log "The short path for the build could not be made ($($_.Exception.Message)); building at $real." Yellow
         return
     }
-    foreach ($key in @('Deps', 'Downloads', 'Source', 'Build', 'Revisions', 'BuildMarker', 'ModuleList', 'ModuleTrash', 'ModuleSettings')) {
+    foreach ($key in @('Deps', 'Downloads', 'Source', 'Build', 'Revisions', 'BuildMarker', 'ModuleList', 'ModuleTrash', 'ModuleSettings', 'ClientSource', 'ClientBuild', 'ClientExe')) {
         $Paths[$key] = $short + $Paths[$key].Substring($real.Length)
     }
     $Paths.Modules = Join-Path $Paths.Source 'modules'
@@ -1263,9 +1273,12 @@ function Sync-Repository([string]$Git, [hashtable]$Item, [string]$Folder, [switc
             # Only the history, no files yet: the files come with the checkout, for the chosen folders only.
             [void](Invoke-Program $Git @('clone', '--filter=blob:none', '--no-checkout', '--branch', $Item.Branch, '--no-tags', $Item.Repo, $Folder))
         } else {
-            [void](Invoke-Program $Git @('clone', '--branch', $Item.Branch, '--no-tags', $Item.Repo, $Folder))
+            $clone = @('clone', '--branch', $Item.Branch, '--no-tags')
+            if ($Item.ContainsKey('Lf')) { $clone += @('--config', 'core.autocrlf=false') }
+            [void](Invoke-Program $Git ($clone + @($Item.Repo, $Folder)))
         }
     }
+    if ($Item.ContainsKey('Lf')) { [void](Invoke-Program $Git @('-C', $Folder, 'config', 'core.autocrlf', 'false')) }
     if ($sparse.Count -gt 0) { [void](Invoke-Program $Git (@('-C', $Folder, 'sparse-checkout', 'set', '--cone') + $sparse)) }
     [void](Invoke-Program $Git @('-C', $Folder, 'remote', 'set-url', 'origin', $Item.Repo))
     [void](Invoke-Program $Git @('-C', $Folder, 'fetch', '--no-tags', 'origin', $Item.Branch))
@@ -1317,6 +1330,8 @@ function Find-Updates([string]$Git) {
             if (-not $keep.Item.Revision -and (Test-Path (Join-Path $keep.Folder '.git'))) {
                 $keep.Item.Revision = Get-ProgramOutput $Git @('-C', $keep.Folder, 'rev-parse', 'HEAD')
             }
+            # The EsteriaWoW game client came after the server: the first time it is the newest.
+            if (-not $keep.Item.Revision -and $keep.ContainsKey('Key') -and $keep.Key -eq 'client') { $keep.Item.Revision = Get-RemoteHead $Git $keep.Item }
             if (-not $keep.Item.Revision) { throw (Tr 'The server has no source code yet; run a full update first.') }
         }
     } else {
@@ -2313,6 +2328,137 @@ function Get-PatchTarget([string]$Target) {
     }
 }
 
+# =============================================================================
+#  The EsteriaWoW game client (wowdecomp)
+# =============================================================================
+# EsteriaWoW's realm needs its own client program, WowClient64.exe, built from wowdecomp. With every update the
+# engine builds it next to the server (Dependencies\ClientSource -> Dependencies\ClientBuild) and leaves the result in
+# Dependencies\ClientExe; AFK Realm puts it into the owner's game and into the players' client pack. A client that
+# does not build never stops the server's update.
+function Get-ClientPatchFolder { return (Join-Path $PSScriptRoot 'patches-wowdecomp') }
+function Get-ClientStamp {
+    $parts = @([string]$Project.Client.Revision)
+    $folder = Get-ClientPatchFolder
+    if (Test-Path -LiteralPath $folder) {
+        foreach ($file in @(Get-ChildItem -LiteralPath $folder -Filter '*.patch' | Sort-Object Name)) {
+            $parts += '{0}:{1}' -f $file.Name, (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+        }
+    }
+    return ($parts -join '|')
+}
+function Test-ClientCurrent {
+    if ($ServerKind -ne 'esteria' -or -not $OnWindows) { return $true }
+    $stamp = Join-Path $Paths.Deps 'client-build.txt'
+    return (Test-Path (Join-Path $Paths.ClientExe 'WowClient64.exe')) -and (Test-Path $stamp) -and
+           ([IO.File]::ReadAllText($stamp).Trim() -eq (Get-ClientStamp))
+}
+
+# wowdecomp's CMake stops when a checked-in generated file does not carry the SHA-256 of its input ("M3 semantic
+# metadata is stale"). Its author computed some of those sums on files with CRLF line ends and some on LF, so no
+# checkout fits all of them. A sum that matches the input with the other line ends is set to the input as it is
+# here; one that matches neither is left alone (the input really changed, and the build says so).
+function Repair-ClientGeneratedHashes {
+    $root = Join-Path $Paths.ClientSource 'Extensions\ASECM3'
+    if (-not (Test-Path $root)) { return }
+    $latin = [Text.Encoding]::GetEncoding(28591)
+    $sha = [Security.Cryptography.SHA256]::Create()
+    $sum = { param([string]$t) -join ($sha.ComputeHash($latin.GetBytes($t)) | ForEach-Object { $_.ToString('x2') }) }
+    $checks = @(
+        @{ Generated = 'src\Semantics.generated.inc'; Prefix = '// Input SHA256: animation_data.csv '; Input = 'data\animation_data.csv' },
+        @{ Generated = 'src\Semantics.generated.inc'; Prefix = '// Input SHA256: animation_id_overrides.json '; Input = 'data\animation_id_overrides.json' },
+        @{ Generated = 'src\Semantics.generated.inc'; Prefix = '// Input SHA256: hots_animation_contexts.json '; Input = 'data\hots_animation_contexts.json' },
+        @{ Generated = 'src\Schema.generated.inc'; Prefix = '// Schema SHA256: '; Input = 'schema\structures.xml' },
+        @{ Generated = 'src\BufferInputs.generated.inc'; Prefix = '// Input SHA256: madd_shader_inputs.json '; Input = 'data\madd_shader_inputs.json' },
+        @{ Generated = 'client\SurfaceShaders.generated.inc'; Prefix = '// HLSL SHA256: '; Input = 'shaders\StandardSurface.hlsl' })
+    foreach ($c in $checks) {
+        $generated = Join-Path $root $c.Generated; $source = Join-Path $root $c.Input
+        if (-not (Test-Path $generated) -or -not (Test-Path $source)) { continue }
+        $text = $latin.GetString([IO.File]::ReadAllBytes($source))
+        $actual = & $sum $text
+        $lf = $text.Replace("`r`n", "`n")
+        $content = $latin.GetString([IO.File]::ReadAllBytes($generated))
+        $m = [regex]::Match($content, '(?m)^' + [regex]::Escape($c.Prefix) + '([0-9a-f]{64})')
+        if (-not $m.Success -or $m.Groups[1].Value -eq $actual) { continue }
+        if ($m.Groups[1].Value -eq (& $sum $lf) -or $m.Groups[1].Value -eq (& $sum $lf.Replace("`n", "`r`n"))) {
+            $content = $content.Remove($m.Groups[1].Index, 64).Insert($m.Groups[1].Index, $actual)
+            [IO.File]::WriteAllBytes($generated, $latin.GetBytes($content))
+            Write-Log "Client: the recorded sum of $($c.Input) in $($c.Generated) only differed by line ends; corrected."
+        } else {
+            Write-Log "Client: $($c.Generated) is older than $($c.Input); the client's build will say so." Yellow
+        }
+    }
+}
+
+function Invoke-ClientBuild([string]$Git, [string]$CMake, $VisualStudio) {
+    if ($ServerKind -ne 'esteria') { return }
+    if (-not $OnWindows) { Write-Log 'The EsteriaWoW game client is built on Windows only; skipped.'; return }
+    if (-not (Test-Path (Join-Path $Paths.ClientSource '.git'))) { Write-Log 'The EsteriaWoW game client has not been downloaded; skipped.' Yellow; return }
+    if (Test-ClientCurrent) { Write-Log 'The EsteriaWoW game client is up to date.'; return }
+    Enter-Phase 'client' 'Building the game client'
+    try {
+        # Back to the downloaded revision (the folder bin\ keeps the last programs, so only what changed is linked
+        # again), then AFK Realm's fixes for the client.
+        [void](Invoke-Program $Git @('-C', $Paths.ClientSource, 'reset', '--hard', '--quiet', 'HEAD'))
+        [void](Invoke-Program $Git @('-C', $Paths.ClientSource, 'clean', '-ffd', '--quiet', '-e', 'bin/'))
+        $folder = Get-ClientPatchFolder
+        foreach ($file in @(Get-ChildItem -LiteralPath $folder -Filter '*.patch' -ErrorAction SilentlyContinue | Sort-Object Name)) {
+            $text = [IO.File]::ReadAllText($file.FullName).Replace("`r`n", "`n")
+            $temp = Join-Path ([IO.Path]::GetTempPath()) ('afk-client-' + [guid]::NewGuid().ToString('N') + '.patch')
+            try {
+                [IO.File]::WriteAllText($temp, $text, (New-Object Text.UTF8Encoding($false)))
+                $apply = @('-C', $Paths.ClientSource, 'apply', '--ignore-whitespace', '--whitespace=nowarn')
+                if ((Invoke-Program $Git ($apply + @('--check', $temp)) -AllowFailure) -eq 0 -and (Invoke-Program $Git ($apply + @($temp)) -AllowFailure) -eq 0) {
+                    Write-Log "Client: $($file.Name) applied." Green
+                } elseif ((Invoke-Program $Git ($apply + @('--reverse', '--check', '--quiet', $temp)) -AllowFailure) -eq 0) {
+                    Write-Log "Client: $($file.Name) is part of wowdecomp now, not needed any more."
+                } elseif (Invoke-ThreeWayPatch $Git $Paths.ClientSource $apply $temp $text) {
+                    Write-Log "Client: $($file.Name) applied with a three-way merge." Green
+                } else {
+                    Write-Log "Client: $($file.Name) does not fit wowdecomp any more; the client is built without it." Yellow
+                    Send-Event 'NOTE' (Tr 'An AFK Realm fix for the EsteriaWoW game client ({0}) does not fit its current code any more; the client is built without it.' $file.Name)
+                }
+            } finally { Remove-Item $temp -Force -ErrorAction SilentlyContinue }
+        }
+        Repair-ClientGeneratedHashes
+
+        # The same Visual Studio as the server; a build folder of another instance or place starts afresh.
+        $cache = Join-Path $Paths.ClientBuild 'CMakeCache.txt'
+        $instance = $VisualStudio.Path.Replace('\', '/')
+        if (Test-Path $cache) {
+            $cacheText = [IO.File]::ReadAllText($cache)
+            $place = [regex]::Match($cacheText, '(?m)^CMAKE_CACHEFILE_DIR:INTERNAL=(.*?)\r?$')
+            $samePlace = -not $place.Success -or [string]::Equals($place.Groups[1].Value.Trim().Replace('\', '/').TrimEnd('/'), $Paths.ClientBuild.Replace('\', '/').TrimEnd('/'), [StringComparison]::OrdinalIgnoreCase)
+            $sameInstance = [regex]::IsMatch($cacheText, '(?m)^CMAKE_GENERATOR_INSTANCE:[A-Z]+=' + [regex]::Escape($instance) + '(,|\r?$)')
+            if (-not $samePlace -or -not $sameInstance) { Remove-Item $Paths.ClientBuild -Recurse -Force -ErrorAction SilentlyContinue }
+        }
+        New-Item -ItemType Directory -Force -Path $Paths.ClientBuild | Out-Null
+        if ($VisualStudio.Version) { $instance += ",version=$($VisualStudio.Version)" }
+        [void](Invoke-Program $CMake @('-S', $Paths.ClientSource, '-B', $Paths.ClientBuild, '-G', 'Visual Studio 17 2022', '-A', 'x64',
+            "-DCMAKE_GENERATOR_INSTANCE=$instance",
+            # the client loads the EsteriaWoW archives and interface files, which are not signed by Blizzard
+            '-DWOWDECOMP_DISABLE_SIGNATURE_CHECKS=ON',
+            # EsteriaWoW's races, mounts and housing come as Retail models
+            '-DWOWDECOMP_RETAIL_ASSETS=ON'))
+        $freeGB = [double](Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory / 1MB
+        $jobs = [int][math]::Max(1, [math]::Min(4, [math]::Floor($freeGB / 4)))
+        [void](Invoke-Program $CMake @('--build', $Paths.ClientBuild, '--config', 'RelWithDebInfo', '--target', 'WowClient', '--parallel', "$jobs"))
+
+        $bin = Join-Path $Paths.ClientSource 'bin\Win'
+        if (-not (Test-Path (Join-Path $bin 'WowClient64.exe'))) { throw (Tr 'The build finished, but {0} is missing.' (Join-Path $bin 'WowClient64.exe')) }
+        New-Item -ItemType Directory -Force -Path $Paths.ClientExe | Out-Null
+        foreach ($name in @('WowClient64.exe', 'WowClient64.pdb', 'XvidDecoder.dll')) {
+            $from = Join-Path $bin $name
+            if (Test-Path $from) { Copy-Item -LiteralPath $from (Join-Path $Paths.ClientExe $name) -Force }
+        }
+        [IO.File]::WriteAllText((Join-Path $Paths.Deps 'client-build.txt'), (Get-ClientStamp))
+        Write-Log "The EsteriaWoW game client was built: $(Join-Path $Paths.ClientExe 'WowClient64.exe')" Green
+        Send-Event 'NOTE' (Tr 'The EsteriaWoW game client (WowClient64.exe) was built anew. AFK Realm puts it into your game; give your players the new client pack.')
+    } catch {
+        Write-Log "The EsteriaWoW game client could not be built: $($_.Exception.Message)" Yellow
+        Send-Event 'NOTE' (Tr 'The EsteriaWoW game client could not be built; the server is not affected, and your game keeps its client. The first error is in logs\install.log. ({0})' (Plain $_.Exception.Message))
+    }
+}
+
 # Changes the owner made by hand in the source code (Dependencies\Source, mod-playerbots) would be lost by the next
 # build, which puts the source back to the downloaded version. After the patches went in, the state of the tracked
 # files is recorded (Dependencies\source-baseline.txt: target|tree|HEAD); before the source is reset, whatever differs
@@ -3066,19 +3212,27 @@ try {
     $git = Resolve-Git
     if ($action -eq 'Update') {
         $changes = Find-Updates $git
-        if ($changes.Count -eq 0 -and (Test-Path $Paths.BuildMarker) -and ([IO.File]::ReadAllText($Paths.BuildMarker).Trim() -eq (Get-BuildStamp))) {
+        if ($changes.Count -eq 0 -and (Test-Path $Paths.BuildMarker) -and ([IO.File]::ReadAllText($Paths.BuildMarker).Trim() -eq (Get-BuildStamp)) -and (Test-ClientCurrent)) {
             Write-Log 'Everything is up to date. Nothing was changed.' Green
             Send-Event 'DONE' 'uptodate'
             exit 0
         }
         if ($changes.Count -eq 0) {
-            $changes.Add($(if (Test-Path $Paths.BuildMarker) { Tr 'The AFK Realm core patches changed; the server is rebuilt.' } else { Tr 'The previous build did not finish; building again.' }))
+            $changes.Add($(if (-not (Test-Path $Paths.BuildMarker)) { Tr 'The previous build did not finish; building again.' }
+                           elseif ([IO.File]::ReadAllText($Paths.BuildMarker).Trim() -eq (Get-BuildStamp)) { Tr 'The EsteriaWoW game client is built.' }
+                           else { Tr 'The AFK Realm core patches changed; the server is rebuilt.' }))
         }
         foreach ($change in $changes) { Write-Log "  $change" Cyan; Send-Event 'CHANGE' $change }
     } elseif ($compile -and $action -ne 'Modules') {
-        # A rebuild compiles the versions the server has now (with the owner's own patches); it is no update.
-        $missing = @(@(Get-ExtraParts) | Where-Object { -not $_.Item.Revision })
-        if ($action -eq 'Rebuild' -and $Project.Core.Revision -and $missing.Count -eq 0) {
+        # A rebuild compiles the versions the server has now (with the owner's own patches); it is no update. A part
+        # without a recorded revision (a branch that changed, a part that is new) takes the one its folder has, and
+        # only a part that was never downloaded takes the newest.
+        if ($action -eq 'Rebuild') {
+            foreach ($part in @(@{ Item = $Project.Core; Folder = $Paths.Source }) + @(Get-ExtraParts)) {
+                if ($part.Item.Revision) { continue }
+                if (Test-Path (Join-Path $part.Folder '.git')) { $part.Item.Revision = Get-ProgramOutput $git @('-C', $part.Folder, 'rev-parse', 'HEAD') }
+                if (-not $part.Item.Revision) { $part.Item.Revision = Get-RemoteHead $git $part.Item }
+            }
             Write-Log ('Rebuild: the server is built again from the versions it has now ({0} {1}); nothing is updated.' -f $Project.Name, $Project.Core.Revision.Substring(0, 8)) Cyan
         } else {
             Resolve-LatestRevisions $git
@@ -3159,6 +3313,7 @@ try {
         }
         Copy-Runtime $openssl
         [IO.File]::WriteAllText($Paths.BuildMarker, (Get-BuildStamp))
+        if ($OnWindows) { Invoke-ClientBuild $git $cmake $vs }
     }
 
     # Without compiling (Setup, "Repair") the source is not downloaded again, but the patches still have to be in it:

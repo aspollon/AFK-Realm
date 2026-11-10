@@ -166,6 +166,12 @@ namespace CoAInstaller.Web
                         string cache = Os.Resolve(client, "Cache");
                         if (clear && Directory.Exists(cache)) { st(L.T("Clearing the game's cache …")); Directory.Delete(cache, true); result += "\n" + L.T("the client's cache cleared"); }
                     }
+                    // EsteriaWoW: the client program built with the last update
+                    if (inst.IsEsteria)
+                    {
+                        string exe = EsteriaServer.InstallClientExe(inst, client);
+                        if (exe.Length > 0) result = (result + "\n" + exe).Trim();
+                    }
                     ClientAddons.ClientFolder = client;
                     job.Message = L.T("Done:") + "\n\n" + result;
                 }, (job, error) => Manager.CheckClient(false)).Snapshot();

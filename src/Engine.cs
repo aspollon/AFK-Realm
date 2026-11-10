@@ -38,10 +38,14 @@ namespace CoAInstaller
         };
 
         /// <summary>A stock AzerothCore has no world package to import: dbimport builds its world database later.</summary>
-        static Phase[] ForKind(Phase[] phases, bool coa)
+        static Phase[] ForKind(Phase[] phases, bool coa, bool esteria)
         {
             if (coa) return phases;
-            return phases.Select(p => p.Id == "world" && p.Title == L.T("Import the CoA world data") ? new Phase("world", L.T("World data check"), 1) : p).ToArray();
+            var list = phases.Select(p => p.Id == "world" && p.Title == L.T("Import the CoA world data") ? new Phase("world", L.T("World data check"), 1) : p).ToList();
+            // EsteriaWoW: its game client (wowdecomp) is built after the server when it changed.
+            int compile = list.FindIndex(p => p.Id == "compile");
+            if (esteria && Os.Windows && compile >= 0 && list.All(p => p.Id != "modules")) list.Insert(compile + 1, new Phase("client", L.T("Build the game client"), 15));
+            return list.ToArray();
         }
 
         /// <summary>The steps shown for a mode. Updates back up the server right after the update check.</summary>
@@ -77,7 +81,7 @@ namespace CoAInstaller
         }
 
         public readonly Phase[] Phases;
-        public EngineRunner(string mode, bool coa = true) { Phases = ForKind(For(mode), coa); }
+        public EngineRunner(string mode, bool coa = true, bool esteria = false) { Phases = ForKind(For(mode), coa, esteria); }
 
         // Events are raised on the reader thread; the UI marshals them.
         public event Action<int> PhaseStarted;            // index into Phases
@@ -128,18 +132,23 @@ namespace CoAInstaller
             string patches = Path.Combine(dir, "patches");
             try { if (Directory.Exists(patches)) Directory.Delete(patches, true); } catch { }
             Directory.CreateDirectory(patches);
-            // The patches for another core (patches-esteria\) go into a folder of their own the same way.
-            string esteria = Path.Combine(dir, "patches-esteria");
-            try { if (Directory.Exists(esteria)) Directory.Delete(esteria, true); } catch { }
-            Directory.CreateDirectory(esteria);
+            // The patches for another core (patches-esteria\) and for the EsteriaWoW game client (patches-wowdecomp\) go
+            // into folders of their own the same way.
+            var folders = new Dictionary<string, string> { { "CoAInstaller.engine.patches.", patches } };
+            foreach (string other in new[] { "patches-esteria", "patches-wowdecomp" })
+            {
+                string folder = Path.Combine(dir, other);
+                try { if (Directory.Exists(folder)) Directory.Delete(folder, true); } catch { }
+                Directory.CreateDirectory(folder);
+                folders["CoAInstaller.engine." + other + "."] = folder;
+            }
             foreach (string name in Assembly.GetExecutingAssembly().GetManifestResourceNames())
             {
-                const string prefix = "CoAInstaller.engine.patches.", esteriaPrefix = "CoAInstaller.engine.patches-esteria.";
-                string folder = name.StartsWith(prefix, StringComparison.Ordinal) ? patches : name.StartsWith(esteriaPrefix, StringComparison.Ordinal) ? esteria : null;
-                if (folder == null) continue;
+                var hit = folders.FirstOrDefault(f => name.StartsWith(f.Key, StringComparison.Ordinal));
+                if (hit.Key == null) continue;
                 using (var s = Assembly.GetExecutingAssembly().GetManifestResourceStream(name))
                 using (var r = new StreamReader(s, Encoding.UTF8))
-                    File.WriteAllText(Path.Combine(folder, name.Substring(folder == patches ? prefix.Length : esteriaPrefix.Length)), r.ReadToEnd(), new UTF8Encoding(false));
+                    File.WriteAllText(Path.Combine(hit.Value, name.Substring(hit.Key.Length)), r.ReadToEnd(), new UTF8Encoding(false));
             }
             return path;
         }

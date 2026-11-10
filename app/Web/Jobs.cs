@@ -148,7 +148,7 @@ namespace CoAInstaller.Web
         {
             string title = mode == "Update" ? L.T("Updating") : mode == "Setup" ? L.T("Setting up") : mode == "Backup" ? L.T("Backing up")
                 : mode == "Restore" || mode == "RestoreParts" ? L.T("Restoring a backup") : mode == "Modules" ? L.T("Changing modules") : L.T("Installing");
-            var runner = new EngineRunner(mode, inst.IsCoa);
+            var runner = new EngineRunner(mode, inst.IsCoa, inst.IsEsteria);
             var job = Begin(new Job { Kind = "engine", Title = title, Mode = mode, Runner = runner, Then = "result", ServerRoot = inst.Root });
             runner.RealmName = realmName;
             runner.PhaseStarted += i => { job.Phase = i; job.Sub = -1; job.Changed(); };

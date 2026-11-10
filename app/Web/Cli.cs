@@ -129,7 +129,7 @@ namespace CoAInstaller.Web
         static int Engine(Install inst, string mode, string password, string realm)
         {
             if (!Os.Windows) EngineRunner.Shell = Pwsh.Ensure(t => Console.WriteLine(t));
-            var runner = new EngineRunner(mode, inst.IsCoa) { RealmName = realm };
+            var runner = new EngineRunner(mode, inst.IsCoa, inst.IsEsteria) { RealmName = realm };
             var done = new ManualResetEvent(false); bool ok = false; string text = null;
             runner.PhaseStarted += i => Console.WriteLine("== " + runner.Phases[i].Title);
             runner.LogLine += l => Console.WriteLine(l);
