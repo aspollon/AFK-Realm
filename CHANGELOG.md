@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.21
+
+- **Module list in tabs:** *Modules by AFK Realm*, *Recommended by AFK Realm* and *AzerothCore module catalog* are tabs over one list that takes the whole height; before, AFK Realm's own modules sat above the catalog in a box of up to 28 % of the window, and the catalog was left with a small strip. A search looks through all three and marks the entries that are not from the catalog. "Hide modules not changed for 2 years" applies to the catalog only.
+- **Recommended modules:** `ModuleEntry.Recommended` (from `ModuleCatalog.ExtraModules`, sent as `recommended`); a recommended module is shown in its own tab and no longer in the catalog's. Dev Menu by ilusixn is the first.
+
 ## 1.3.20
 
 - **Build again (Maintenance):** `-Mode Rebuild` keeps the revisions in `revisions.txt` instead of moving to the branch heads (`Resolve-LatestRevisions` only when a revision is missing), and builds incrementally; `-Clean` (the *Clean build* box) throws the build files away as before. The web page had no button for it.

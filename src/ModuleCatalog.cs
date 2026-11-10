@@ -24,6 +24,8 @@ namespace CoAInstaller
         /// <summary>Not shown in the module list: a part another feature installs by itself (mod-subclass comes with CoA
         /// Custom when its package needs it, and does nothing on its own).</summary>
         public bool Hidden;
+        /// <summary>A module by someone else that AFK Realm recommends (ExtraModules): its own tab in the module list.</summary>
+        public bool Recommended;
         public ModuleState State;
         public string Status = "", InstalledOn = "";                      // from modules.txt
         public string[] CreatedTables = new string[0], ManualTables = new string[0];
@@ -97,7 +99,7 @@ namespace CoAInstaller
             {
                 // The loader is Addmod_ilusixn_devmenuScripts: the engine puts the repository into modules\mod-ilusixn-devmenu
                 // (Get-ModuleLoaderName). Its client add-on (client\DevMenu) is handed out like every module add-on.
-                new ModuleEntry { Name = "ilusixn-dev-menu", FullName = "ilusixn/ilusixn-dev-menu", Branch = "main",
+                new ModuleEntry { Name = "ilusixn-dev-menu", FullName = "ilusixn/ilusixn-dev-menu", Branch = "main", Recommended = true,
                     Url = "https://github.com/ilusixn/ilusixn-dev-menu", CloneUrl = "https://github.com/ilusixn/ilusixn-dev-menu.git",
                     Description = L.N("Dev Menu by ilusixn: an in-game world editor for game masters (/dev) - spawn, move, dress and script NPCs, paths, shops, quests and objects; changes are saved to the world database and can be exported as SQL") },
             };
@@ -318,7 +320,12 @@ namespace CoAInstaller
                 else result.Insert(0, own);
             }
             foreach (var extra in ExtraModules())
-                if (!result.Any(e => e.FullName.Equals(extra.FullName, StringComparison.OrdinalIgnoreCase))) result.Add(extra);
+            {
+                var listed = result.FirstOrDefault(e => e.FullName.Equals(extra.FullName, StringComparison.OrdinalIgnoreCase));
+                if (listed == null) { result.Add(extra); continue; }
+                listed.Recommended = true;
+                listed.Description = extra.Description;
+            }
             var managed = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
             string listFile = Path.Combine(inst.Root, "Dependencies", "modules.txt");
             if (File.Exists(listFile))

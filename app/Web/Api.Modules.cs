@@ -31,7 +31,7 @@ namespace CoAInstaller.Web
                 stars = m.InCatalog ? m.Stars : 0, pushed = m.Pushed > DateTime.MinValue ? m.Pushed.ToLocalTime().ToString("yyyy-MM-dd") : "",
                 old = !(m.Pushed == DateTime.MinValue || m.Pushed > DateTime.UtcNow.AddYears(-2)),
                 own = m.Own, state = m.State.ToString(), status = m.Status, installedOn = m.InstalledOn, installed = m.Installed, playerbots = m.IsPlayerbots,
-                createdTables = m.CreatedTables, manualTables = m.ManualTables, inCatalog = m.InCatalog, hidden = m.Hidden
+                createdTables = m.CreatedTables, manualTables = m.ManualTables, inCatalog = m.InCatalog, hidden = m.Hidden, recommended = m.Recommended
             };
         }
 

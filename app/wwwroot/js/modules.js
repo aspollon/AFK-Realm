@@ -1,6 +1,6 @@
 // Module manager: the AzerothCore module catalog with the installed modules ticked; applying rebuilds the server.
 import { h, T, F, meta, post, get, replace, debounce, state } from './core.js';
-import { primary, secondary, dialog, alert, input, select, check, toast } from './ui.js';
+import { primary, secondary, dialog, alert, input, select, check, toast, segmented } from './ui.js';
 // The server is a Conquest of Azeroth one (not a stock AzerothCore).
 const coa = () => !state.status || state.status.kind !== 'azerothcore';
 
@@ -14,7 +14,11 @@ export async function modulesDialog() {
   const onlyInstalled = check(T('Installed only'), false, () => fill());
   const sort = select([[0, T('Recommended')], [1, T('Name A–Z')], [2, T('Name Z–A')], [3, T('Newest first')], [4, T('Oldest first')], [5, T('Most stars')]], 0, () => fill());
   const reload = secondary(T('Reload list'), () => load(true));
-  const own = h('div');
+  // Three tabs, each with the whole height: AFK Realm's modules, modules by others it recommends, the AzerothCore
+  // catalog. A search looks through all three.
+  const groupOf = m => m.own ? 'own' : m.recommended ? 'rec' : 'catalog';
+  let group = null;
+  const tabs = h('div');
   const listBox = h('div.list', { style: { flex: '1', minHeight: '0' } });
   const detail = h('div', { style: { width: '340px', flex: 'none', overflow: 'auto', padding: '2px 4px' } });
   const status = h('span.small.muted');
@@ -32,7 +36,8 @@ export async function modulesDialog() {
     token.value = data.token || '';
     status.textContent = data.status; status.className = 'small ' + (data.warn ? 'warn' : 'muted');
     current = null;
-    fillOwn(); fill(); showDetails();
+    if (!group || !all.some(m => groupOf(m) === group)) group = all.some(m => m.own) ? 'own' : all.some(m => m.recommended) ? 'rec' : 'catalog';
+    fillTabs(); fill(); showDetails();
   }
 
   function statusText(m) {
@@ -63,23 +68,18 @@ export async function modulesDialog() {
     return box;
   }
 
-  function fillOwn() {
-    const mine = all.filter(m => m.own).sort((a, b) => a.name.localeCompare(b.name));
-    if (!mine.length) return replace(own);
-    replace(own, h('h3', { style: { margin: '4px 0 6px', color: 'var(--accent-text)' } }, F('Modules by {0}', meta.product)),
-      h('div.list', { style: { maxHeight: '28vh', marginBottom: '10px' } }, h('table.grid', {}, h('tbody', {}, mine.map(m => {
-        const st = h('td.small.muted', {}, statusText(m));
-        const tr = h('tr.pick', { class: current === m ? 'sel' : '', onclick: () => pick(m) },
-          h('td', { style: { width: '24px' } }, tickBox(m, () => { st.textContent = statusText(m); pick(m); })),
-          h('td', {}, h('b', {}, m.name)), h('td', {}, m.description), st);
-        tr.mod = m;
-        return tr;
-      })))));
+  function fillTabs() {
+    const count = g => all.filter(m => groupOf(m) === g).length;
+    const options = [];
+    if (count('own')) options.push(['own', F('Modules by {0}', meta.product) + ' (' + count('own') + ')']);
+    if (count('rec')) options.push(['rec', F('Recommended by {0}', meta.product) + ' (' + count('rec') + ')']);
+    options.push(['catalog', T('AzerothCore module catalog') + ' (' + count('catalog') + ')']);
+    replace(tabs, segmented(options, group, v => { group = v; search.value = ''; fill(); }));
   }
 
   function fill() {
     const q = search.value.trim().toLowerCase();
-    let shown = all.filter(m => !m.own && (!hideOld.checked || m.installed || ticked.has(m.id) || !m.old) && (!onlyInstalled.checked || m.installed) &&
+    let shown = all.filter(m => (q || groupOf(m) === group) && (groupOf(m) !== 'catalog' || !hideOld.checked || m.installed || ticked.has(m.id) || !m.old) && (!onlyInstalled.checked || m.installed) &&
       (!q || m.name.toLowerCase().includes(q) || m.description.toLowerCase().includes(q) || (m.raw || '').toLowerCase().includes(q) || m.fullName.toLowerCase().includes(q)));
     const by = (f, d = 1) => (a, b) => (f(a) < f(b) ? -d : f(a) > f(b) ? d : 0);
     const name = m => m.name.toLowerCase();
@@ -96,7 +96,8 @@ export async function modulesDialog() {
       const st = h('td.small', {}, statusText(m));
       const tr = h('tr.pick', { class: current === m ? 'sel' : '', onclick: () => pick(m), style: { color: m.state === 'PartOfCoA' ? 'var(--muted)' : m.status === 'sql-failed' || m.status === 'missing' ? 'var(--bad)' : '' } },
         h('td', { style: { width: '24px' } }, tickBox(m, () => { st.textContent = statusText(m); })),
-        h('td', {}, h('b', {}, m.name)), h('td.small', {}, m.description), h('td.small', { style: { textAlign: 'right' } }, m.stars ? String(m.stars) : ''), h('td.small', {}, m.pushed), st);
+        h('td', {}, h('b', {}, m.name), q && groupOf(m) !== 'catalog' ? h('div.small.muted', {}, groupOf(m) === 'own' ? F('by {0}', meta.product) : F('recommended by {0}', meta.product)) : null),
+        h('td.small', {}, m.description), h('td.small', { style: { textAlign: 'right' } }, m.stars ? String(m.stars) : ''), h('td.small', {}, m.pushed), st);
       tr.mod = m;
       tbody.appendChild(tr);
     }
@@ -106,7 +107,7 @@ export async function modulesDialog() {
 
   function pick(m) {
     current = m;
-    [own, listBox].forEach(x => x.querySelectorAll('tr').forEach(tr => tr.classList.toggle('sel', tr.mod === m)));
+    listBox.querySelectorAll('tr').forEach(tr => tr.classList.toggle('sel', tr.mod === m));
     showDetails();
   }
 
@@ -181,7 +182,7 @@ export async function modulesDialog() {
     if (!known) { all.push(m); known = m; }
     customUrl.value = '';
     if (!known.installed && known.state !== 'PartOfCoA' && !clash(known)) ticked.add(known.id);
-    if (known.own) { search.value = ''; fillOwn(); } else search.value = known.name;
+    group = groupOf(known); search.value = ''; fillTabs();
     fill(); pick(known);
   }
 
@@ -204,10 +205,10 @@ export async function modulesDialog() {
 
   showDetails();
   const body = h('div', { style: { display: 'flex', flexDirection: 'column', height: '100%', minHeight: '0', gap: '8px' } },
-    h('p.small.muted', { style: { margin: 0 } }, F('Tick a module to install it, untick it to remove it, then choose "Apply changes". {0} backs up the server, downloads the modules and rebuilds the server. Database changes of modules installed here are recorded, so removing a module also undoes them. "Modules by {0}" are made for this server; the rest of the list comes from the AzerothCore module catalog, and not every module there works with CoA.', meta.product)),
+    h('p.small.muted', { style: { margin: 0 } }, F('Tick a module to install it, untick it to remove it, then choose "Apply changes". {0} backs up the server, downloads the modules and rebuilds the server. Database changes of modules installed here are recorded, so removing a module also undoes them. "Modules by {0}" are made for this server, "Recommended by {0}" are modules by others that work with it; the AzerothCore module catalog lists everything else, and not every module there works with CoA. The search looks through all three.', meta.product)),
     h('div.row', { style: { alignItems: 'center' } }, search, hideOld, onlyInstalled, h('span', {}, T('Sort by')), sort, reload),
     h('div', { style: { display: 'flex', gap: '14px', flex: '1', minHeight: '0' } },
-      h('div', { style: { display: 'flex', flexDirection: 'column', flex: '1', minWidth: '0', minHeight: '0' } }, own, h('h3', { style: { margin: '0 0 6px' } }, T('AzerothCore module catalog')), listBox),
+      h('div', { style: { display: 'flex', flexDirection: 'column', flex: '1', minWidth: '0', minHeight: '0', gap: '6px' } }, tabs, listBox),
       detail),
     h('div.row', { style: { alignItems: 'center' } }, h('span', {}, T('Not in the list? Git address:')), customUrl, secondary(T('Add'), () => addCustom()), status),
     h('div.row', { style: { alignItems: 'center' } }, h('span', {}, T('GitHub token (optional):')), token, h('span.small.muted', {}, T('GitHub allows 60 requests an hour without a token, 5000 with one.'))));

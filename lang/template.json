@@ -2609,6 +2609,10 @@
     "Your own patch {0} is already part of {1} now; you can delete it.": "",
     "Your own patch {0} does not fit the source code of {1} any more (the lines it changes have changed). Adapt it or move it out of the Patches folder, then build again. The server was not changed.": "",
     "Your changes to the source code of {0} were saved as {1}. They go into every build from now on; delete the file to take them out again.": "",
-    "Dev Menu by ilusixn: an in-game world editor for game masters (/dev) - spawn, move, dress and script NPCs, paths, shops, quests and objects; changes are saved to the world database and can be exported as SQL": ""
+    "Dev Menu by ilusixn: an in-game world editor for game masters (/dev) - spawn, move, dress and script NPCs, paths, shops, quests and objects; changes are saved to the world database and can be exported as SQL": "",
+    "Recommended by {0}": "",
+    "by {0}": "",
+    "recommended by {0}": "",
+    "Tick a module to install it, untick it to remove it, then choose \"Apply changes\". {0} backs up the server, downloads the modules and rebuilds the server. Database changes of modules installed here are recorded, so removing a module also undoes them. \"Modules by {0}\" are made for this server, \"Recommended by {0}\" are modules by others that work with it; the AzerothCore module catalog lists everything else, and not every module there works with CoA. The search looks through all three.": ""
   }
 }

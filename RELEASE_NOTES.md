@@ -1,3 +1,8 @@
+# AFK Realm 1.3.21
+
+- **The module list uses the whole window again.** *Modules by AFK Realm*, *Recommended by AFK Realm* and the *AzerothCore module catalog* are now tabs, each with the full height; the search looks through all of them.
+- **Recommended modules** have a tab of their own, starting with Dev Menu by ilusixn (an in-game world editor for game masters).
+
 # AFK Realm 1.3.20
 
 - **Build again without an update.** Under *Maintenance* there is now *Build again*: it builds the server from the versions it has, without updating anything.
