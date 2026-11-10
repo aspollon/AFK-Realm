@@ -453,6 +453,15 @@ function Use-Git([string]$Git) {
     $separator = [IO.Path]::PathSeparator
     if (-not (@($env:PATH -split [regex]::Escape([string]$separator)) -contains $folder)) { $env:PATH = "$folder$separator$env:PATH" }
     $script:GitExe = $Git
+    # Git refuses repositories it thinks belong to someone else ("detected dubious ownership", exit code 128): on a
+    # drive that records no owner (exFAT, FAT32, many USB and network drives) every folder looks like that, and so
+    # does a server folder made under another Windows account. The folders here are AFK Realm's own, so every one is
+    # trusted - for the git calls of this engine only (and CMake's, which inherit it), never in the user's settings.
+    $count = 0
+    if ($env:GIT_CONFIG_COUNT -match '^\d+$') { $count = [int]$env:GIT_CONFIG_COUNT }
+    Set-Item "env:GIT_CONFIG_KEY_$count" 'safe.directory'
+    Set-Item "env:GIT_CONFIG_VALUE_$count" '*'
+    $env:GIT_CONFIG_COUNT = [string]($count + 1)
     Write-Log "Git: $Git"
     return $Git
 }

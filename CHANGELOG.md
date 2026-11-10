@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.23
+
+- **Servers on drives without owners build again:** Git (2.35.2 and newer) refuses a repository whose folder belongs to someone else - and on exFAT/FAT32 and many USB or network drives every folder looks like that ("detected dubious ownership in repository", git.exe exit code 128, right at "Downloading the server source code"). `Use-Git` trusts every folder for the engine's own git calls through `GIT_CONFIG_COUNT`/`GIT_CONFIG_KEY_n`/`GIT_CONFIG_VALUE_n` (`safe.directory=*`, command scope: neither the user's nor the repository's settings are touched; CMake inherits it); the update check of the app passes `-c safe.directory=*`.
+
 ## 1.3.22
 
 - **EsteriaWoW from its AFKRealm branch:** `$Project.Core.Branch = 'AFKRealm'` (the state the EsteriaWoW author keeps for AFK Realm). A server built from `main` has no matching line in `revisions.txt`, so its next update moves it; the update banner asks the AFKRealm branch for EsteriaWoW lines and names the core "EsteriaWoW". A rebuild takes the revision a part's folder has when none is recorded, and the newest only for a part never downloaded.

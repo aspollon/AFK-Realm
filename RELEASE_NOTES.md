@@ -1,3 +1,7 @@
+# AFK Realm 1.3.23
+
+- **Fix: servers on some drives could not be updated or built.** On drives that do not record who owns a file (exFAT and FAT32, many USB and network drives) – or in a server folder made under another Windows account – Git stopped at "Downloading the server source code" with "detected dubious ownership" and exit code 128. AFK Realm now tells Git that its own folders are safe; nothing in your Git settings is changed.
+
 # AFK Realm 1.3.22
 
 - **EsteriaWoW uses its AFKRealm branch**, the state its author keeps for AFK Realm. Run an update once to move your server there.

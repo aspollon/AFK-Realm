@@ -255,7 +255,7 @@ namespace CoAInstaller
         {
             try
             {
-                var psi = new ProcessStartInfo(git, string.Join(" ", Array.ConvertAll(args, a => "\"" + a + "\""))) { UseShellExecute = false, CreateNoWindow = true,
+                var psi = new ProcessStartInfo(git, "-c safe.directory=* " + string.Join(" ", Array.ConvertAll(args, a => "\"" + a + "\""))) { UseShellExecute = false, CreateNoWindow = true,
                     RedirectStandardOutput = true, RedirectStandardError = true, WorkingDirectory = dir };
                 using (var p = Process.Start(psi))
                 {
@@ -302,7 +302,8 @@ namespace CoAInstaller
             if (git == null) return null;
             try
             {
-                var psi = new ProcessStartInfo(git, string.Join(" ", Array.ConvertAll(args, a => "\"" + a + "\"")))
+                // safe.directory: on a drive without owners (exFAT, FAT32) git refuses every folder ("dubious ownership").
+                var psi = new ProcessStartInfo(git, "-c safe.directory=* " + string.Join(" ", Array.ConvertAll(args, a => "\"" + a + "\"")))
                 {
                     UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true,
                     StandardOutputEncoding = Encoding.UTF8
