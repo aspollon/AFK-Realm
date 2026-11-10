@@ -177,7 +177,8 @@ namespace CoAInstaller.Web
             {
                 var inst = Inst;
                 string what = a.Str("what");
-                string path = what == "logs" ? inst.ServerDir : what == "install-log" ? inst.InstallLog : what == "lang" ? L.UserFolder : inst.Root;
+                string path = what == "logs" ? inst.ServerDir : what == "install-log" ? inst.InstallLog : what == "lang" ? L.UserFolder
+                    : what == "patches" ? OwnPatches.Prepare(inst.Root) : inst.Root;
                 bool opened = what == "install-log" ? Files.OpenFile(path) : Files.Reveal(path);
                 return new { ok = opened, path };
             });

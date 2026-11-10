@@ -1,3 +1,9 @@
+# AFK Realm 1.3.20
+
+- **Build again without an update.** Under *Maintenance* there is now *Build again*: it builds the server from the versions it has, without updating anything.
+- **Your own changes to the source code survive.** Put `.patch` files into the new `Patches` folder of the server (*Open the Patches folder*), and they go into every build. Changes you make by hand in `Dependencies\Source` are saved there as a patch automatically before the next build, instead of being overwritten. If an update no longer fits one of your patches, the build stops, tells you which one, and your server stays as it was.
+- **Dev Menu by ilusixn** is in the module list: an in-game world editor for game masters (`/dev`). Its add-on is handed out with the other add-ons.
+
 # AFK Realm 1.3.19
 
 - **EsteriaWoW:** the tables of EsteriaWoW's housing are set up. The module keeps its SQL where the server's updater does not look, so the worldserver stopped on startup when it looked for them.

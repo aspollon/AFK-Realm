@@ -459,6 +459,13 @@ AFK Realm also allows the servers through the Windows Firewall.
 
 Map data is not part of a backup; updates do not touch it.
 
+**Maintenance → Build again** builds the server from the versions it has now, without updating anything – for changes of your own to the source code. Every build first puts the source code (`Dependencies\Source`) back to the downloaded version and then puts the module patches in, so a file changed there by hand would be lost. Instead:
+
+- **Your own patches.** `.patch` (or `.diff`) files in the server folder's `Patches\core` (for the core) and `Patches\mod-playerbots` go into every build – Build again, updates, module changes – after the module patches, in name order. **Open the Patches folder** makes the folders and a short note. When an update changed the lines a patch changes, the build stops, the server stays as it was, and the message names the patch: adapt it or move it out and build again. A patch that is part of the core by now is skipped with a note.
+- **Changes made by hand.** Change files in `Dependencies\Source` (or in `modules\mod-playerbots` there) and choose *Build again*: before the source code is put back, AFK Realm saves what you changed as `Patches\<core or mod-playerbots>\<date>-hand-changes.patch`, which goes into every build from then on. Delete the file to take the change out again. This works for files the core already has, not for new files (put those in a patch), and only from the first build with AFK Realm 1.3.20 on.
+
+The build is incremental (only what changed is compiled again). *Clean build* compiles everything anew; that takes much longer and is only worth it when an incremental build misbehaves.
+
 **Maintenance → Repair setup** sets up the database and configuration again without rebuilding the server. Characters and accounts are kept. Use it when the server does not start after something was interrupted.
 
 ## 12. The random bots

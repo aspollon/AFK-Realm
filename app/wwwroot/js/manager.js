@@ -351,6 +351,18 @@ export function manager() {
       updateState);
   }
 
+  // Builds the versions the server has again, without an update: for the owner's own patches (Patches\core,
+  // Patches\mod-playerbots) and changes made by hand in the source code, which are saved as a patch first.
+  function rebuildCard() {
+    const clean = check(T('Clean build (compile everything anew; slow, only when an incremental build misbehaves)'), false);
+    return card(T('Build again'), T('Builds the server again from the versions it has now, without updating anything. Use it after you changed the source code: your own .patch files in the Patches folder go into every build, and changes you made by hand in Dependencies\\Source are saved there as a patch first, so they survive updates. The server is backed up first; a running server is stopped cleanly.'), 'maintenance',
+      h('div.row', {},
+        secondary(T('Build again'), () => engine('Rebuild', T('Build the server again from the versions it has now?\n\nNothing is updated. Your own patches and changes in the source code go in. The server is backed up first; a running server is stopped cleanly.') +
+          (clean.checked ? '\n\n' + T('Clean build: everything is compiled anew, which takes much longer.') : ''), { clean: clean.checked })),
+        meta.remote ? null : secondary(T('Open the Patches folder'), () => post('/api/open', { what: 'patches' }).then(r => { if (!r.ok) alert(r.path); }))),
+      clean);
+  }
+
   function maintenanceSection() {
     const out = [
       card(T('Backups'), F('Before every update and module change {0} saves the whole server: programs, settings, all databases. Restore one when something went wrong.', meta.product), 'database',
@@ -361,6 +373,7 @@ export function manager() {
           secondary(T('Update core only'), () => engine('Update', T('Update only the CoA core and Playerbots and build the server again?\n\nYour modules stay at the versions your server has now. The server is backed up first; a running server is stopped cleanly.') + '\n\n⚠ ' + T('A new core can change code your modules rely on; a module that does not fit it any more can make the build fail.') + ' ' + T('If the build fails, your server stays as it is (the new programs are only used after a successful build), and a full update usually fixes it.') + bleedingEdge(), { coreOnly: true })),
           secondary(T('Update modules only'), () => engine('Update', T('Update only the modules and build the server again?\n\nThe CoA core and Playerbots stay at the versions your server has now. Use this for a module fix when you do not want a new core yet. The server is backed up first; a running server is stopped cleanly.') + '\n\n⚠ ' + T('A newer module can need a newer core than yours; then the build can fail.') + ' ' + T('If the build fails, your server stays as it is (the new programs are only used after a successful build), and a full update usually fixes it.') + bleedingEdge(), { modulesOnly: true })))),
       updatePlanCard(),
+      rebuildCard(),
       card(T('Repair and reset'), T('"Repair setup" sets up the database and configuration again without recompiling; characters and accounts are kept. "Reset random bots" deletes every random bot and lets the server create new ones.'), 'maintenance',
         h('div.row', {},
           secondary(T('Repair setup'), () => engine('Setup', T('Set up the database and configuration again (without recompiling)?\n\nCharacters and accounts are kept.'))),

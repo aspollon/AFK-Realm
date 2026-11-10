@@ -2599,6 +2599,16 @@
     "Choose the folder of your 3.3.5a game client (the one with the \"Data\" folder). When the extraction finishes, the data is moved into the server automatically. Keep the game closed meanwhile.": "",
     "{0} is not the EsteriaWoW game client (it has no EsteriaWoW archives in Data). Choose the folder of the EsteriaWoW client.": "",
     "{0} is the EsteriaWoW game client. This server needs its own client.": "",
-    "{0} is a Conquest of Azeroth game client. An AzerothCore server needs a normal 3.3.5a client.": ""
+    "{0} is a Conquest of Azeroth game client. An AzerothCore server needs a normal 3.3.5a client.": "",
+    "Build again": "",
+    "Builds the server again from the versions it has now, without updating anything. Use it after you changed the source code: your own .patch files in the Patches folder go into every build, and changes you made by hand in Dependencies\\Source are saved there as a patch first, so they survive updates. The server is backed up first; a running server is stopped cleanly.": "",
+    "Build the server again from the versions it has now?\n\nNothing is updated. Your own patches and changes in the source code go in. The server is backed up first; a running server is stopped cleanly.": "",
+    "Clean build: everything is compiled anew, which takes much longer.": "",
+    "Open the Patches folder": "",
+    "Clean build (compile everything anew; slow, only when an incremental build misbehaves)": "",
+    "Your own patch {0} is already part of {1} now; you can delete it.": "",
+    "Your own patch {0} does not fit the source code of {1} any more (the lines it changes have changed). Adapt it or move it out of the Patches folder, then build again. The server was not changed.": "",
+    "Your changes to the source code of {0} were saved as {1}. They go into every build from now on; delete the file to take them out again.": "",
+    "Dev Menu by ilusixn: an in-game world editor for game masters (/dev) - spawn, move, dress and script NPCs, paths, shops, quests and objects; changes are saved to the world database and can be exported as SQL": ""
   }
 }

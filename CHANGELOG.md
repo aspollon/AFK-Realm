@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.3.20
+
+- **Build again (Maintenance):** `-Mode Rebuild` keeps the revisions in `revisions.txt` instead of moving to the branch heads (`Resolve-LatestRevisions` only when a revision is missing), and builds incrementally; `-Clean` (the *Clean build* box) throws the build files away as before. The web page had no button for it.
+- **Own patches:** `.patch`/`.diff` files in `Patches\core` and `Patches\mod-playerbots` of the server folder go into every build after the module patches (`Invoke-OwnPatches`: check, reverse check, three-way merge). One that does not fit stops the build with its name; the server is unchanged. They are part of the build stamp (`Get-PatchStamp`), so an update notices a new or changed one. *Open the Patches folder* makes the folders and a READ ME.
+- **Hand changes are kept:** after the patches went in, the tree of the tracked files is recorded (`Dependencies\source-baseline.txt`, via a copy of the repository's index and `git add -u` / `write-tree`). Before a build resets the source (`Sync-Sources`, `Reset-PatchedSources`), whatever differs from it at the same HEAD is saved as `Patches\<target>\<date>-hand-changes.patch`. New untracked files are not caught.
+- **Module folders named by their loader:** `Get-ModuleLoaderName` reads the module's `Addmod_<name>Scripts()`; when exactly one is found and it does not fit the repository name, the clone goes into `modules\<that name>` (ilusixn-dev-menu → mod-ilusixn-devmenu; before, the build failed at link time).
+- **Dev Menu by ilusixn** is in the module list (`ModuleCatalog.ExtraModules`) on every server kind; its add-on `client\DevMenu` is handed out like other module add-ons.
+- **Module check:** a README that says a module needs *no* core or client patch no longer gets the warning that it needs one.
+
 ## 1.3.19
 
 - **EsteriaWoW housing tables:** `Install-EsteriaHousingSql` (after the database updates) applies mod-esteria-housing's `sql\` files, which the updater never reads, in its README's order (world: housing_world, commerce, adventure, collections, household; characters: housing_characters) to a database that lacks `housing_decor_catalog` / `housing_house`. The realm's config has housing on, and the module reads the tables at startup (ERROR 1146, worldserver aborted).

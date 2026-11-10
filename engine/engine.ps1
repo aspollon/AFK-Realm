@@ -14,7 +14,7 @@
         Install   first installation (a clean rebuild if a server already exists)
         Update    fetch new commits of the core, Playerbots and custom modules;
                   rebuild incrementally only when something changed
-        Rebuild   clean rebuild of the current sources
+        Rebuild   build the current versions again (no update), with your own patches; -Clean for a clean build
         Setup     database, world data and configuration only, no compiling
         Backup    snapshot of the server: programs, configs, databases and versions
         Restore   roll the server back to a snapshot (-Snapshot <folder name>)
@@ -44,6 +44,8 @@ param(
     [switch]$ModulesOnly,
     # Update only: the CoA core and Playerbots move to their newest versions, the modules stay at theirs.
     [switch]$CoreOnly,
+    # Rebuild only: throw the build files away and compile everything (slow); without it the build is incremental.
+    [switch]$Clean,
     [switch]$NonInteractive
 )
 
@@ -135,6 +137,9 @@ $Paths = @{
     ModuleList  = Join-Path $InstallRoot 'Dependencies\modules.txt'
     ModuleTrash = Join-Path $InstallRoot 'Dependencies\ModulesRemoved'
     ModuleSettings = Join-Path $InstallRoot 'Dependencies\module-settings.txt'
+    # The owner's own changes to the source code, as .patch files: Patches\core and Patches\mod-playerbots. They are put
+    # into every build after the module patches, so a change made by hand survives updates and rebuilds.
+    OwnPatches  = Join-Path $InstallRoot 'Patches'
 }
 # The kind of server, chosen when it was set up (Dependencies\server-kind.txt, written by AFK Realm before the first
 # run): 'coa' = Conquest of Azeroth (the default, also for every server set up before there was a choice),
@@ -1218,12 +1223,27 @@ function Get-BuiltInPatchFolder {
 }
 function Get-PatchStamp {
     $folder = Get-BuiltInPatchFolder
-    if (-not (Test-Path -LiteralPath $folder)) { return '' }
-    $parts = foreach ($file in @(Get-ChildItem -LiteralPath $folder -Filter '*.patch' | Sort-Object Name)) {
-        $digest = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
-        '{0}:{1}' -f $file.Name, $digest
+    $parts = @()
+    if (Test-Path -LiteralPath $folder) {
+        $parts = @(foreach ($file in @(Get-ChildItem -LiteralPath $folder -Filter '*.patch' | Sort-Object Name)) {
+            $digest = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            '{0}:{1}' -f $file.Name, $digest
+        })
     }
-    return ($parts -join ';')
+    $own = @(Get-OwnPatches | ForEach-Object {
+        'own/{0}/{1}:{2}' -f $_.Target, $_.File.Name, (Get-FileHash -LiteralPath $_.File.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+    })
+    return ((@($parts) + $own) -join ';')
+}
+# The owner's own patches (Patches\core\*.patch, Patches\mod-playerbots\*.patch; .diff too), in name order.
+function Get-OwnPatches {
+    foreach ($target in @('core', 'mod-playerbots')) {
+        $folder = Join-Path $Paths.OwnPatches $target
+        if (-not (Test-Path -LiteralPath $folder)) { continue }
+        foreach ($file in @(Get-ChildItem -LiteralPath $folder -File | Where-Object { $_.Extension -eq '.patch' -or $_.Extension -eq '.diff' } | Sort-Object Name)) {
+            @{ Target = $target; File = $file }
+        }
+    }
 }
 function Get-BuildStamp {
     $parts = @($Project.Core.Revision) + @((Get-ExtraParts) | ForEach-Object { $_.Item.Revision }) + @(Get-PatchStamp)
@@ -2048,6 +2068,19 @@ function Get-ModuleName([string]$Url) {
     return $name
 }
 
+# AzerothCore calls a module's loader by its folder name: modules\mod-foo-bar must have Addmod_foo_barScripts(). Some
+# repositories are named differently from their loader (ilusixn-dev-menu has Addmod_ilusixn_devmenuScripts), and the
+# build then fails at link time. The folder name the loader asks for, or '' when it fits or cannot be told.
+function Get-ModuleLoaderName([string]$Folder, [string]$Name) {
+    $found = @{}
+    foreach ($file in @(Get-ChildItem $Folder -Recurse -File -Filter '*.cpp' -ErrorAction SilentlyContinue | Where-Object { $_.FullName -notmatch '[\\/]\.git[\\/]' })) {
+        foreach ($m in [regex]::Matches([IO.File]::ReadAllText($file.FullName), '\bvoid\s+Add(mod_\w+)Scripts\s*\(\s*\)\s*\{')) { $found[$m.Groups[1].Value] = $true }
+    }
+    $wanted = $Name.Replace('-', '_')
+    if ($found.Count -ne 1 -or $found.ContainsKey($wanted)) { return '' }
+    return (@($found.Keys)[0]).Replace('_', '-')
+}
+
 # Downloads new modules and sets removed ones aside. Returns what to undo if the build fails.
 function Edit-ModuleFolders([string]$Git, [string[]]$Add, [string[]]$Remove) {
     $state = @{ Added = New-Object Collections.Generic.List[string]; Removed = New-Object Collections.Generic.List[object]; Urls = @{} }
@@ -2076,6 +2109,22 @@ function Edit-ModuleFolders([string]$Git, [string[]]$Add, [string[]]$Remove) {
         } else {
             $state.Added.Add($folder)
             [void](Invoke-Program $Git @('clone', '--recurse-submodules', $url.Trim(), $folder))
+            $loaderName = Get-ModuleLoaderName $folder $name
+            if ($loaderName) {
+                $renamed = Join-Path $Paths.Modules $loaderName
+                $state.Added.Remove($folder) | Out-Null
+                if (Test-Path $renamed) {
+                    $origin = Get-ProgramOutput $Git @('-C', $renamed, 'remote', 'get-url', 'origin')
+                    Remove-Item $folder -Recurse -Force
+                    if (-not $origin -or ($origin.TrimEnd('/') -replace '\.git$', '') -ne ($url.Trim().TrimEnd('/') -replace '\.git$', '')) { throw (Tr 'A module named {0} is already installed.' $loaderName) }
+                    Write-Log "$($loaderName): already downloaded, using it."
+                } else {
+                    Move-Item $folder $renamed
+                    Write-Log "$($name): its loader needs the folder name $loaderName; the module is in modules\$loaderName." Cyan
+                }
+                $name = $loaderName; $folder = $renamed
+                $state.Added.Add($folder)
+            }
         }
         $hasCode = @(Get-ChildItem $folder -Recurse -File -Include '*.cpp', '*.h' -ErrorAction SilentlyContinue | Where-Object { $_.FullName -notmatch '[\\/]\.git[\\/]' }).Count -gt 0
         $hasSql = Test-Path ([IO.Path]::Combine($folder, 'data', 'sql'))
@@ -2264,9 +2313,75 @@ function Get-PatchTarget([string]$Target) {
     }
 }
 
+# Changes the owner made by hand in the source code (Dependencies\Source, mod-playerbots) would be lost by the next
+# build, which puts the source back to the downloaded version. After the patches went in, the state of the tracked
+# files is recorded (Dependencies\source-baseline.txt: target|tree|HEAD); before the source is reset, whatever differs
+# from it is saved as a patch of its own in Patches\<target>, which then goes into every build. New files are not
+# tracked by Git and are not saved this way.
+function Get-SourceTargets {
+    @(@{ Name = 'core'; Folder = $Paths.Source }, @{ Name = 'mod-playerbots'; Folder = $Paths.Playerbots }) |
+        Where-Object { Test-Path (Join-Path $_.Folder '.git') }
+}
+function Get-WorkingTree([string]$Git, [string]$Folder) {
+    $index = Join-Path ([IO.Path]::GetTempPath()) ('afk-index-' + [guid]::NewGuid().ToString('N'))
+    $previous = $env:GIT_INDEX_FILE
+    try {
+        # A copy of the repository's own index knows the files' times, so only changed files are read again.
+        $own = Join-Path $Folder '.git\index'
+        if (Test-Path -LiteralPath $own) { Copy-Item -LiteralPath $own $index -Force }
+        $env:GIT_INDEX_FILE = $index
+        if (-not (Test-Path -LiteralPath $index) -and (Invoke-Program $Git @('-C', $Folder, 'read-tree', 'HEAD') -AllowFailure) -ne 0) { return $null }
+        if ((Invoke-Program $Git @('-C', $Folder, 'add', '-u') -AllowFailure) -ne 0) { return $null }
+        return (Get-ProgramOutput $Git @('-C', $Folder, 'write-tree'))
+    } finally {
+        $env:GIT_INDEX_FILE = $previous
+        Remove-Item $index -Force -ErrorAction SilentlyContinue
+    }
+}
+function Save-SourceBaseline([string]$Git) {
+    $lines = @()
+    foreach ($t in @(Get-SourceTargets)) {
+        $tree = Get-WorkingTree $Git $t.Folder
+        $head = Get-ProgramOutput $Git @('-C', $t.Folder, 'rev-parse', 'HEAD')
+        if ($tree -and $head) { $lines += '{0}|{1}|{2}' -f $t.Name, ([string]$tree).Trim(), ([string]$head).Trim() }
+    }
+    try { [IO.File]::WriteAllLines((Join-Path $Paths.Deps 'source-baseline.txt'), [string[]]$lines) } catch { }
+}
+function Save-HandChanges([string]$Git) {
+    $file = Join-Path $Paths.Deps 'source-baseline.txt'
+    if (-not (Test-Path $file)) { return }
+    $baseline = @{}
+    foreach ($line in [IO.File]::ReadAllLines($file)) {
+        $f = $line.Split('|')
+        if ($f.Count -eq 3) { $baseline[$f[0]] = @{ Tree = $f[1]; Head = $f[2] } }
+    }
+    foreach ($t in @(Get-SourceTargets)) {
+        if (-not $baseline.ContainsKey($t.Name)) { continue }
+        $head = Get-ProgramOutput $Git @('-C', $t.Folder, 'rev-parse', 'HEAD')
+        if (-not $head -or ([string]$head).Trim() -ne $baseline[$t.Name].Head) { continue }
+        $tree = Get-WorkingTree $Git $t.Folder
+        if (-not $tree -or ([string]$tree).Trim() -eq $baseline[$t.Name].Tree) { continue }
+        $folder = Join-Path $Paths.OwnPatches $t.Name
+        [void](New-Item -ItemType Directory -Force -Path $folder)
+        $target = Join-Path $folder ('{0}-hand-changes.patch' -f (Get-Date -Format 'yyyy-MM-dd-HHmmss'))
+        if ((Invoke-Program $Git @('-C', $t.Folder, 'diff', '--binary', ('--output=' + $target), $baseline[$t.Name].Tree, ([string]$tree).Trim()) -AllowFailure) -eq 0 -and
+            (Test-Path $target) -and (Get-Item $target).Length -gt 0) {
+            $label = 'Patches\{0}\{1}' -f $t.Name, (Split-Path $target -Leaf)
+            Write-Log "Your changes to the source code of $($t.Name) were saved as $label; they go into every build from now on." Green
+            Send-Event 'NOTE' (Tr 'Your changes to the source code of {0} were saved as {1}. They go into every build from now on; delete the file to take them out again.' $t.Name $label)
+        } else {
+            Remove-Item $target -Force -ErrorAction SilentlyContinue
+        }
+    }
+    # The recorded state belongs to this source; after the reset it would make everything the patches change look like
+    # a hand change. It is recorded anew when the patches are in again.
+    Remove-Item $file -Force -ErrorAction SilentlyContinue
+}
+
 # Takes earlier patches out again: both trees go back to the revision they were downloaded at.
 # Module folders inside the core tree are not tracked by it and stay as they are.
 function Reset-PatchedSources([string]$Git) {
+    Save-HandChanges $Git
     foreach ($folder in @($Paths.Source, $Paths.Playerbots)) {
         if (-not (Test-Path (Join-Path $folder '.git'))) { continue }
         [void](Invoke-Program $Git @('-C', $folder, 'reset', '--hard', '--quiet', 'HEAD') -AllowFailure)
@@ -2477,7 +2592,43 @@ function Invoke-ModulePatches([string]$Git, [switch]$Quiet) {
             }
         }
     }
+    Invoke-OwnPatches $Git -Quiet:$Quiet
     Restore-PatchedTimes $Git
+    Save-SourceBaseline $Git
+}
+
+# The owner's own patches go in last. One that does not fit stops the build: the server stays as it is (the new
+# programs are only used after a successful build) instead of being built without a change its owner relies on.
+function Invoke-OwnPatches([string]$Git, [switch]$Quiet) {
+    foreach ($own in @(Get-OwnPatches)) {
+        $target = Get-PatchTarget $own.Target
+        $label = 'Patches\{0}\{1}' -f $own.Target, $own.File.Name
+        if (-not $target -or -not (Test-Path (Join-Path $target '.git'))) {
+            Write-Log "$label - $($own.Target) is not part of this server; ignored." Yellow; continue
+        }
+        $tempPatch = $null
+        try {
+            $text = [IO.File]::ReadAllText($own.File.FullName)
+            if ($text.Length -gt 0 -and [int]$text[0] -eq 0xFEFF) { $text = $text.Substring(1) }
+            $text = $text.Replace("`r`n", "`n").Replace("`r", "`n")
+            if (-not $text.Trim()) { Write-Log "$label - empty; ignored." Yellow; continue }
+            $tempPatch = Join-Path ([IO.Path]::GetTempPath()) ('afk-own-' + [guid]::NewGuid().ToString('N') + '.patch')
+            [IO.File]::WriteAllText($tempPatch, $text, (New-Object Text.UTF8Encoding($false)))
+            $apply = @('-C', $target, 'apply', '--ignore-whitespace', '--whitespace=nowarn')
+            if ((Invoke-Program $Git ($apply + @('--check', $tempPatch)) -AllowFailure) -eq 0 -and (Invoke-Program $Git ($apply + @($tempPatch)) -AllowFailure) -eq 0) {
+                Write-Log "$label - your own patch, applied to $($own.Target)." Green
+            } elseif ((Invoke-Program $Git ($apply + @('--reverse', '--check', '--quiet', $tempPatch)) -AllowFailure) -eq 0) {
+                Write-Log "$label - already part of $($own.Target), not needed any more."
+                if (-not $Quiet) { Send-Event 'NOTE' (Tr 'Your own patch {0} is already part of {1} now; you can delete it.' $label $own.Target) }
+            } elseif (Invoke-ThreeWayPatch $Git $target $apply $tempPatch $text) {
+                Write-Log "$label - your own patch, applied to $($own.Target) with a three-way merge." Green
+            } else {
+                throw (Tr 'Your own patch {0} does not fit the source code of {1} any more (the lines it changes have changed). Adapt it or move it out of the Patches folder, then build again. The server was not changed.' $label $own.Target)
+            }
+        } finally {
+            if ($tempPatch) { Remove-Item $tempPatch -Force -ErrorAction SilentlyContinue }
+        }
+    }
 }
 
 function Get-ConfigValue([string]$File, [string]$Key) {
@@ -2925,7 +3076,13 @@ try {
         }
         foreach ($change in $changes) { Write-Log "  $change" Cyan; Send-Event 'CHANGE' $change }
     } elseif ($compile -and $action -ne 'Modules') {
-        Resolve-LatestRevisions $git
+        # A rebuild compiles the versions the server has now (with the owner's own patches); it is no update.
+        $missing = @(@(Get-ExtraParts) | Where-Object { -not $_.Item.Revision })
+        if ($action -eq 'Rebuild' -and $Project.Core.Revision -and $missing.Count -eq 0) {
+            Write-Log ('Rebuild: the server is built again from the versions it has now ({0} {1}); nothing is updated.' -f $Project.Name, $Project.Core.Revision.Substring(0, 8)) Cyan
+        } else {
+            Resolve-LatestRevisions $git
+        }
     }
     $moduleAdd = @($AddModules.Split(';') | ForEach-Object { $_.Trim() } | Where-Object { $_ })
     $moduleRemove = @($RemoveModules.Split(';') | ForEach-Object { $_.Trim() } | Where-Object { $_ })
@@ -2966,6 +3123,7 @@ try {
         $moduleState = Edit-ModuleFolders $git $moduleAdd $moduleRemove
     } elseif ($compile) {
         Enter-Phase 'source' 'Downloading the server source code'
+        Save-HandChanges $git
         Sync-Sources $git
         if (-not $NonInteractive -and $action -ne 'Update') {
             Write-Host ''
@@ -2979,8 +3137,9 @@ try {
             Invoke-ModulePatches $git
             $failedAt = 'configure'
             Enter-Phase 'configure' 'Preparing the build (CMake)'
-            if ($OnWindows) { Invoke-Configure $cmake $vs $openssl $boost -Clean:($action -eq 'Rebuild') }
-            else { Invoke-ConfigureLinux $cmake $toolchain -Clean:($action -eq 'Rebuild') }
+            $cleanBuild = $action -eq 'Rebuild' -and $Clean
+            if ($OnWindows) { Invoke-Configure $cmake $vs $openssl $boost -Clean:$cleanBuild }
+            else { Invoke-ConfigureLinux $cmake $toolchain -Clean:$cleanBuild }
             Limit-ResourceCompilerIncludes
             $failedAt = 'compile'
             Enter-Phase 'compile' 'Compiling the server'

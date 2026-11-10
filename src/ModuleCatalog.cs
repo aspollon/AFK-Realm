@@ -89,6 +89,19 @@ namespace CoAInstaller
                     Description = L.N("Flying mounts in Eastern Kingdoms and Kalimdor - an optional, experimental setting for old Azeroth") },
             };
         }
+        /// <summary>Modules by others that work on every server kind and are worth offering, even when the AzerothCore catalog
+        /// does not list them (no "azerothcore-module" topic). They are listed like catalog entries, not as AFK Realm's own.</summary>
+        internal static ModuleEntry[] ExtraModules()
+        {
+            return new[]
+            {
+                // The loader is Addmod_ilusixn_devmenuScripts: the engine puts the repository into modules\mod-ilusixn-devmenu
+                // (Get-ModuleLoaderName). Its client add-on (client\DevMenu) is handed out like every module add-on.
+                new ModuleEntry { Name = "ilusixn-dev-menu", FullName = "ilusixn/ilusixn-dev-menu", Branch = "main",
+                    Url = "https://github.com/ilusixn/ilusixn-dev-menu", CloneUrl = "https://github.com/ilusixn/ilusixn-dev-menu.git",
+                    Description = L.N("Dev Menu by ilusixn: an in-game world editor for game masters (/dev) - spawn, move, dress and script NPCs, paths, shops, quests and objects; changes are saved to the world database and can be exported as SQL") },
+            };
+        }
         static readonly Dictionary<string, ModuleAnalysis> analyses = new Dictionary<string, ModuleAnalysis>(StringComparer.OrdinalIgnoreCase);
 
         static string CacheFile(Install inst) { return Path.Combine(inst.Root, "Dependencies", "Cache", "module-catalog.txt"); }
@@ -304,6 +317,8 @@ namespace CoAInstaller
                 if (listed != null) { listed.Own = true; listed.Hidden = own.Hidden; if (listed.Description.Length == 0) listed.Description = own.Description; }
                 else result.Insert(0, own);
             }
+            foreach (var extra in ExtraModules())
+                if (!result.Any(e => e.FullName.Equals(extra.FullName, StringComparison.OrdinalIgnoreCase))) result.Add(extra);
             var managed = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
             string listFile = Path.Combine(inst.Root, "Dependencies", "modules.txt");
             if (File.Exists(listFile))
@@ -434,6 +449,8 @@ namespace CoAInstaller
             var a = new ModuleAnalysis { ReadmeText = readme ?? "" };
             readme = a.ReadmeText;
 
+            // "No core patch, no SQL, no client patch" is no request for one (Dev Menu's README): denied mentions are left out.
+            readme = Regex.Replace(readme, @"(?i)\b(no|without|not|nor|never)\b[^.\n]{0,40}?\b(core|client|dbc)\s+patch(es)?\b", " ");
             bool code = paths.Any(p => Regex.IsMatch(p, @"\.(cpp|h|hpp)$", RegexOptions.IgnoreCase));
             var sqlFolders = paths.Select(p => Regex.Match(p, @"^data/sql/([^/]+)/.+\.sql$", RegexOptions.IgnoreCase)).Where(x => x.Success)
                 .Select(x => x.Groups[1].Value).Distinct(StringComparer.OrdinalIgnoreCase).ToList();

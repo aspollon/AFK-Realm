@@ -153,6 +153,8 @@ namespace CoAInstaller.Web
             if (mode == "Update" && a.Bool("modulesOnly")) return "-ModulesOnly";
             // only the CoA core and Playerbots brought up to date; the modules stay where they are
             if (mode == "Update" && a.Bool("coreOnly")) return "-CoreOnly";
+            // the versions the server has, built again (own patches, a hand-made change); clean = compile everything anew
+            if (mode == "Rebuild") return a.Bool("clean") ? "-Clean" : null;
             if (mode == "Restore")
             {
                 string name = a.Str("snapshot") ?? "";
