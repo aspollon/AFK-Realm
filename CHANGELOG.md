@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.33
+
+- **Server settings easier to read:** the dialog takes the whole window (up to 1800 px), the bar between the list and the description can be dragged (its place is kept), long values wrap inside their column (three lines at most in the list) instead of running off to the right, and long texts such as the Ollama prompts are edited in a box that wraps instead of a one-line field (Enter does not break the value into lines).
+
 ## 1.3.32
 
 - **New files of your own in the source are kept:** saving hand changes only looked at files the repository already knew (`git add -u`), so a file the user had added to the core or to Playerbots was not saved into the hand-changes patch and was then deleted by the clean-up before the build. New files go into the patch now (`git add -A`, the core's `modules` folder left out). A state recorded by an older version is still compared the old way, so files added by patches are not mistaken for changes of the user's.

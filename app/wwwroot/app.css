@@ -203,7 +203,7 @@ label.field > span:first-child { width: 190px; flex: none; }
 @keyframes fade { from { opacity: 0; } }
 .dialog { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 20px 60px rgba(0,0,0,.35); width: min(560px, 100%); max-height: calc(100vh - 32px); display: flex; flex-direction: column; }
 .dialog.wide { width: min(980px, 100%); }
-.dialog.full { width: min(1280px, 100%); height: calc(100vh - 32px); }
+.dialog.full { width: min(1800px, calc(100vw - 32px)); height: calc(100vh - 32px); }
 .dialog .dh { display: flex; align-items: center; gap: 12px; padding: 16px 20px 10px; }
 .dialog .dh .ic { width: 34px; height: 34px; border-radius: 9px; background: var(--accent-soft); color: var(--accent-ink); display: grid; place-items: center; flex: none; }
 .dialog .dh .ic svg { width: 18px; height: 18px; }
@@ -228,6 +228,14 @@ table.grid tr.group td { background: var(--canvas); font-weight: 700; color: var
 table.grid td.changed { background: var(--grid-changed); }
 table.grid tr.added td { background: var(--grid-added); }
 table.grid td.num { text-align: right; font-variant-numeric: tabular-nums; }
+table.grid.settings { table-layout: fixed; }
+table.grid.settings th:first-child { width: 44%; }
+table.grid.settings td { overflow-wrap: anywhere; }
+table.grid.settings .clamp { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
+.settings-split { gap: 0; }
+.split-bar { cursor: col-resize; position: relative; }
+.split-bar::after { content: ''; position: absolute; top: 0; bottom: 0; left: 3px; width: 2px; border-radius: 1px; background: var(--line); }
+.split-bar:hover::after { background: var(--accent); }
 
 .tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); margin: 0 0 12px; flex-wrap: wrap; }
 .tabs button { background: none; border: 0; padding: 9px 14px; border-bottom: 2px solid transparent; cursor: pointer; color: var(--muted); font-weight: 600; }

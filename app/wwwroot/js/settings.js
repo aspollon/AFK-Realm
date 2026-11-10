@@ -65,13 +65,13 @@ export async function settingsDialog(startFile) {
       if (g !== group) { group = g; tbody.appendChild(h('tr.group', {}, h('td', { colSpan: 2 }, g))); }
       const tr = h('tr.pick', { title: o.key, onclick: () => showOption(o, tr) },
         h('td', { style: { fontWeight: differs(o) || pending.has(id(o.file, o)) ? '700' : '', color: pending.has(id(o.file, o)) ? 'var(--accent-text)' : o.locked ? 'var(--muted)' : '' } }, popular && o.popularLabel ? o.popularLabel : o.key),
-        h('td', {}, display(o, edited(o))));
+        h('td', {}, h('div.clamp', {}, display(o, edited(o)))));
       tr.option = o;
       tbody.appendChild(tr);
       if (!first) first = tr;
       if (o === current) keep = tr;
     }
-    replace(listBox, h('table.grid', {}, h('thead', {}, h('tr', {}, h('th', {}, T('Setting')), h('th', {}, T('Value')))), tbody));
+    replace(listBox, h('table.grid.settings', {}, h('thead', {}, h('tr', {}, h('th', {}, T('Setting')), h('th', {}, T('Value')))), tbody));
     const sel = keep || first;
     if (sel) { sel.classList.add('sel'); showOption(sel.option, sel); sel.scrollIntoView({ block: 'nearest' }); }
     else showOption(null);
@@ -92,6 +92,12 @@ export async function settingsDialog(startFile) {
       const inp = input(value, { style: { width: '90px' }, title: T('Another value') });
       inp.addEventListener('input', () => edit(o, inp.value, msg));
       editor.append(sel, inp);
+    } else if (o.kind !== 'number' && (value.length > 60 || (o.defaultValue || '').length > 60)) {
+      // Long texts (prompts, line lists) wrap in a box that grows with them; the value itself stays one line.
+      editor = h('textarea', { style: { width: '100%', minHeight: '160px', height: Math.min(520, 60 + value.length / 2.2) + 'px' } });
+      editor.value = value;
+      editor.addEventListener('keydown', e => { if (e.key === 'Enter') e.preventDefault(); });
+      editor.addEventListener('input', () => { const one = editor.value.replace(/\r?\n/g, ' '); if (one !== editor.value) editor.value = one; edit(o, one, msg); });
     } else {
       editor = input(value, { style: { width: o.kind === 'number' ? '160px' : '100%' } });
       editor.addEventListener('input', () => edit(o, editor.value, msg));
@@ -101,8 +107,9 @@ export async function settingsDialog(startFile) {
       h('h2', { style: { margin: '0 0 2px', fontSize: '17px', wordBreak: 'break-word' } }, o.popularLabel && !fileBox.value && !search.value ? o.popularLabel : o.key),
       h('div.hint', {}, (o.popularLabel ? o.key + '   ·   ' : '') + o.file + '   ·   ' + o.section),
       h('div.pre.small', { style: { margin: '8px 0', lineHeight: '1.5' } }, o.description || T('No description in the template.')),
-      o.defaultValue != null ? h('div.hint', {}, T('Default:') + ' ' + display(o, o.defaultValue)) : null,
-      h('div.row', {}, editor, !o.locked && o.defaultValue != null ? secondary(T('Reset to default'), () => { edit(o, o.defaultValue, msg); showOption(o, tr); fill(); }) : null),
+      o.defaultValue != null ? h('div.hint', { style: { wordBreak: 'break-word' } }, T('Default:') + ' ' + display(o, o.defaultValue)) : null,
+      editor.tagName === 'TEXTAREA' ? editor : null,
+      h('div.row', {}, editor.tagName === 'TEXTAREA' ? null : editor, !o.locked && o.defaultValue != null ? secondary(T('Reset to default'), () => { edit(o, o.defaultValue, msg); showOption(o, tr); fill(); }) : null),
       o.locked ? h('div.warn.small', {}, F('{0} manages this setting itself, so it cannot be changed here.', meta.product)) : msg);
   }
 
@@ -117,7 +124,7 @@ export async function settingsDialog(startFile) {
     // the row in the list
     listBox.querySelectorAll('tr').forEach(tr => {
       if (tr.option !== o) return;
-      tr.cells[1].textContent = display(o, edited(o));
+      (tr.cells[1].firstChild || tr.cells[1]).textContent = display(o, edited(o));
       tr.cells[0].style.fontWeight = differs(o) || pending.has(k) ? '700' : '';
       tr.cells[0].style.color = pending.has(k) ? 'var(--accent-text)' : '';
     });
@@ -145,9 +152,23 @@ export async function settingsDialog(startFile) {
   }
 
   fill(); updatePending();
+  // The list and the description share the width; the bar between them moves, and its place is kept.
+  let share = 50;
+  try { share = Math.min(80, Math.max(25, Number(localStorage.getItem('afk.settings.split')) || 50)); } catch { }
+  const split = h('div.split.settings-split', { style: { flex: '1', minHeight: '0' } });
+  const bar = h('div.split-bar', { title: T('Drag to change the width') });
+  const place = () => { split.style.gridTemplateColumns = 'minmax(280px, ' + share + '%) 8px minmax(280px, 1fr)'; };
+  bar.addEventListener('pointerdown', e => {
+    e.preventDefault(); bar.setPointerCapture(e.pointerId);
+    const move = ev => { const r = split.getBoundingClientRect(); share = Math.min(80, Math.max(25, (ev.clientX - r.left) / r.width * 100)); place(); };
+    const up = () => { bar.removeEventListener('pointermove', move); bar.removeEventListener('pointerup', up); try { localStorage.setItem('afk.settings.split', String(Math.round(share))); } catch { } };
+    bar.addEventListener('pointermove', move); bar.addEventListener('pointerup', up);
+  });
+  place();
+  split.append(listBox, bar, detail);
   const body = h('div', { style: { display: 'flex', flexDirection: 'column', height: '100%', minHeight: '0' } },
     h('div.row', {}, h('span', {}, T('Show')), fileBox, search, changedOnly),
-    h('div.split', { style: { flex: '1', gridTemplateColumns: 'minmax(320px, 46%) 1fr', minHeight: '0' } }, listBox, detail));
+    split);
   await dialog({
     title: meta.product + ' – ' + T('Server settings'), icon: 'settings', full: true, body, enter: false,
     left: [pendingLabel],

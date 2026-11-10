@@ -1,3 +1,8 @@
+# AFK Realm 1.3.33
+
+- **Server settings:** the window is bigger, the divider between list and description can be dragged, and long values (like the Ollama prompts) are shown and edited in full, wrapped, instead of cut off.
+- **World Journey** (module update): the portals to the Blasted Lands in the capitals open at the level Outland starts on the journey instead of 58.
+
 # AFK Realm 1.3.32
 
 - **New files you added to the server's source code are kept** when the server is updated or built again: they go into your hand-changes patch with your other changes instead of being deleted.

@@ -2782,6 +2782,7 @@
     "Thoughts per hour": "Gedanken pro Stunde",
     "Reflections and goals of all bots together; each costs the model one or two requests in the background.": "Reflexionen und Ziele aller Bots zusammen; jede kostet das Modell ein bis zwei Anfragen im Hintergrund.",
     "Bots tell each other about you": "Bots erzählen einander von dir",
-    "Your reputation travels: a bot you never met may know what you did.": "Dein Ruf eilt dir voraus: Ein Bot, den du nie getroffen hast, weiß vielleicht, was du getan hast."
+    "Your reputation travels: a bot you never met may know what you did.": "Dein Ruf eilt dir voraus: Ein Bot, den du nie getroffen hast, weiß vielleicht, was du getan hast.",
+    "Drag to change the width": "Ziehen, um die Breite zu ändern"
   }
 }
