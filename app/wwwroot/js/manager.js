@@ -5,7 +5,11 @@ import { icon } from './icons.js';
 
 // Every server update builds the newest code of several projects that change independently (CoA, Playerbots, each
 // module): said once, short, before any update starts.
-const bleedingEdge = () => '\n\n⚠ ' + T('Bleeding edge: an update builds the newest code of CoA, Playerbots and every module straight from their sources. They change independently of each other, so after an update something may work differently, a module may not fit and be left out, or the build may fail.') +
+// What "the core" of an update is on this kind of server: CoA's core with Playerbots, AzerothCore with Playerbots,
+// or EsteriaWoW (Playerbots inside it) with its game client.
+const serverKind = () => (state.status && state.status.kind) || 'coa';
+const coreParts = () => serverKind() === 'esteria' ? T('EsteriaWoW and its game client') : serverKind() === 'azerothcore' ? T('AzerothCore and Playerbots') : T('CoA core and Playerbots');
+const bleedingEdge = () => '\n\n⚠ ' + F('Bleeding edge: an update builds the newest code of {0} and every module straight from their sources. They change independently of each other, so after an update something may work differently, a module may not fit and be left out, or the build may fail.', coreParts()) +
   '\n' + F('{0} backs the server up first: if something no longer works, Maintenance > Backups brings the previous state back.', meta.product);
 import { show, languageMenu, themeMenu } from './app.js';
 import { helpButton } from './help.js';
@@ -318,7 +322,7 @@ export function manager() {
     const mode = select([[0, T('Off')], [1, T('Every day')], [2, T('Once a week')]], up.mode, () => fields());
     const day = select(days, up.day);
     const time = input(up.time, { style: { width: '80px' } });
-    const core = check(T('CoA core and Playerbots'), up.core);
+    const core = check(coreParts(), up.core);
     const modules = check(T('Modules'), up.modules);
     const onFail = select([[1, T('restore the backup from before the update and start the server')], [0, T('only tell me (the log and the bar)')]], up.restore ? 1 : 0);
     const warn = input(String(up.warn), { style: { width: '60px' } });
@@ -367,11 +371,11 @@ export function manager() {
     const out = [
       card(T('Backups'), F('Before every update and module change {0} saves the whole server: programs, settings, all databases. Restore one when something went wrong.', meta.product), 'database',
         secondary(T('Backups …'), () => import('./backups.js').then(m => m.backups()))),
-      card(T('Updates'), T('Checks the CoA core, Playerbots and your modules for new versions; the server is backed up first and rebuilt only when something changed.'), 'maintenance',
+      card(T('Updates'), F('Checks {0} and your modules for new versions; the server is backed up first and rebuilt only when something changed.', coreParts()), 'maintenance',
         h('div.row', {},
-          primary(T('Check for updates and install'), () => engine('Update', T('Check for updates?\n\nIf there are new versions of CoA or Playerbots, the current server is backed up first and then recompiled, which can take a while. A running server is stopped cleanly first.') + bleedingEdge())),
-          secondary(T('Update core only'), () => engine('Update', T('Update only the CoA core and Playerbots and build the server again?\n\nYour modules stay at the versions your server has now. The server is backed up first; a running server is stopped cleanly.') + '\n\n⚠ ' + T('A new core can change code your modules rely on; a module that does not fit it any more can make the build fail.') + ' ' + T('If the build fails, your server stays as it is (the new programs are only used after a successful build), and a full update usually fixes it.') + bleedingEdge(), { coreOnly: true })),
-          secondary(T('Update modules only'), () => engine('Update', T('Update only the modules and build the server again?\n\nThe CoA core and Playerbots stay at the versions your server has now. Use this for a module fix when you do not want a new core yet. The server is backed up first; a running server is stopped cleanly.') + '\n\n⚠ ' + T('A newer module can need a newer core than yours; then the build can fail.') + ' ' + T('If the build fails, your server stays as it is (the new programs are only used after a successful build), and a full update usually fixes it.') + bleedingEdge(), { modulesOnly: true })))),
+          primary(T('Check for updates and install'), () => engine('Update', F('Check for updates?\n\nIf there are new versions of {0}, the current server is backed up first and then recompiled, which can take a while. A running server is stopped cleanly first.', coreParts()) + bleedingEdge())),
+          secondary(T('Update core only'), () => engine('Update', F('Update only {0} and build the server again?\n\nYour modules stay at the versions your server has now. The server is backed up first; a running server is stopped cleanly.', coreParts()) + '\n\n⚠ ' + T('A new core can change code your modules rely on; a module that does not fit it any more can make the build fail.') + ' ' + T('If the build fails, your server stays as it is (the new programs are only used after a successful build), and a full update usually fixes it.') + bleedingEdge(), { coreOnly: true })),
+          secondary(T('Update modules only'), () => engine('Update', F('Update only the modules and build the server again?\n\n{0} stay at the versions your server has now. Use this for a module fix when you do not want a new core yet. The server is backed up first; a running server is stopped cleanly.', coreParts()) + '\n\n⚠ ' + T('A newer module can need a newer core than yours; then the build can fail.') + ' ' + T('If the build fails, your server stays as it is (the new programs are only used after a successful build), and a full update usually fixes it.') + bleedingEdge(), { modulesOnly: true })))),
       updatePlanCard(),
       rebuildCard(),
       card(T('Repair and reset'), T('"Repair setup" sets up the database and configuration again without recompiling; characters and accounts are kept. "Reset random bots" deletes every random bot and lets the server create new ones.'), 'maintenance',
@@ -444,8 +448,8 @@ export function manager() {
     // a new core and new modules: everything, or only the modules for now
     if (b.modulesNew && b.baseNew) {
       const v = await dialog({ title: T('Server update'), icon: 'info', wide: true, body: h('div.pre', {}, q + '\n\n' +
-          T('"Only the modules" brings your modules up to date and keeps the CoA core and Playerbots as they are; the new core can follow later.') + '\n' +
-          T('"Only the core" brings the CoA core and Playerbots up to date and keeps your modules as they are.') + '\n\n⚠ ' +
+          F('"Only the modules" brings your modules up to date and keeps {0} as they are; the new core can follow later.', coreParts()) + '\n' +
+          F('"Only the core" brings {0} up to date and keeps your modules as they are.', coreParts()) + '\n\n⚠ ' +
           T('A new core can change code your modules rely on; a module that does not fit it any more can make the build fail.') + ' ' + T('A newer module can need a newer core than yours; then the build can fail.') + ' ' + T('If the build fails, your server stays as it is (the new programs are only used after a successful build), and a full update usually fixes it.')),
         buttons: [{ text: T('Cancel'), value: null }, { text: T('Only the modules'), value: 'modules' }, { text: T('Only the core'), value: 'core' },
           { text: T('Update everything'), kind: 'primary', value: 'all', default: true }] });

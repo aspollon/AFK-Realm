@@ -1,5 +1,5 @@
 // Backups: the server snapshots, keeping, restoring (whole or parts), deleting.
-import { h, T, F, meta, post, get, replace } from './core.js';
+import { h, T, F, meta, post, get, replace, state } from './core.js';
 import { primary, secondary, dialog, alert, confirm, table, check, choose, toast } from './ui.js';
 
 export async function backups() {
@@ -16,7 +16,7 @@ export async function backups() {
     if (selected && !data.list.some(b => b.name === selected.name)) selected = data.list[0] || null;
     replace(listBox, data.list.length === 0 ? h('div.list', { style: { padding: '14px' } }, h('span.muted', {}, T('No backups yet')))
       : table([
-        { title: T('Created'), key: 'created' }, { title: T('Made'), key: 'made' }, { title: T('CoA core'), key: 'core', cls: 'mono' },
+        { title: T('Created'), key: 'created' }, { title: T('Made'), key: 'made' }, { title: state.status && state.status.kind && state.status.kind !== 'coa' ? T('Core') : T('CoA core'), key: 'core', cls: 'mono' },
         { title: 'Playerbots', key: 'bots', cls: 'mono' }, { title: T('Size'), key: 'size' }
       ], data.list, { onpick: b => { selected = b; buttons(); }, ondouble: b => { selected = b; restore(); }, selected: b => selected && b.name === selected.name, height: '46vh' }));
     buttons();

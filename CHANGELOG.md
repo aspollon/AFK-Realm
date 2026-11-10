@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.24
+
+- **Update texts name the server's own core:** the Updates card, its three questions, the update dialog for core and modules, the bleeding-edge warning and the update plan's checkbox said "CoA core and Playerbots" on every kind. They now say *CoA core and Playerbots*, *AzerothCore and Playerbots* or *EsteriaWoW and its game client* (`coreParts()` in manager.js). The backups list's column is "Core" outside CoA.
+
 ## 1.3.23
 
 - **Servers on drives without owners build again:** Git (2.35.2 and newer) refuses a repository whose folder belongs to someone else - and on exFAT/FAT32 and many USB or network drives every folder looks like that ("detected dubious ownership in repository", git.exe exit code 128, right at "Downloading the server source code"). `Use-Git` trusts every folder for the engine's own git calls through `GIT_CONFIG_COUNT`/`GIT_CONFIG_KEY_n`/`GIT_CONFIG_VALUE_n` (`safe.directory=*`, command scope: neither the user's nor the repository's settings are touched; CMake inherits it); the update check of the app passes `-c safe.directory=*`.

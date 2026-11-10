@@ -2642,6 +2642,16 @@
     "The EsteriaWoW game client is built.": "Der EsteriaWoW-Spiel-Client wird gebaut.",
     "WowClient64.exe built from wowdecomp put into the game": "aus wowdecomp gebaute WowClient64.exe ins Spiel gelegt",
     "The game is running from this folder. Close it so that the new WowClient64.exe can be put in.": "Das Spiel läuft aus diesem Ordner. Schließe es, damit die neue WowClient64.exe hineingelegt werden kann.",
-    "EsteriaWoW game client": "EsteriaWoW-Spiel-Client"
+    "EsteriaWoW game client": "EsteriaWoW-Spiel-Client",
+    "EsteriaWoW and its game client": "EsteriaWoW und sein Spiel-Client",
+    "AzerothCore and Playerbots": "AzerothCore und Playerbots",
+    "Core": "Core",
+    "Bleeding edge: an update builds the newest code of {0} and every module straight from their sources. They change independently of each other, so after an update something may work differently, a module may not fit and be left out, or the build may fail.": "Bleeding Edge: Ein Update baut den neuesten Code von {0} und jedem Modul direkt aus den Quellen. Sie ändern sich unabhängig voneinander, daher kann nach einem Update etwas anders funktionieren, ein Modul nicht passen und weggelassen werden oder der Build fehlschlagen.",
+    "Checks {0} and your modules for new versions; the server is backed up first and rebuilt only when something changed.": "Prüft {0} und deine Module auf neue Versionen; der Server wird vorher gesichert und nur neu gebaut, wenn sich etwas geändert hat.",
+    "Check for updates?\n\nIf there are new versions of {0}, the current server is backed up first and then recompiled, which can take a while. A running server is stopped cleanly first.": "Nach Updates suchen?\n\nGibt es neue Versionen von {0}, wird der aktuelle Server zuerst gesichert und dann neu kompiliert, was eine Weile dauern kann. Ein laufender Server wird vorher sauber beendet.",
+    "Update only {0} and build the server again?\n\nYour modules stay at the versions your server has now. The server is backed up first; a running server is stopped cleanly.": "Nur {0} aktualisieren und den Server neu bauen?\n\nDeine Module bleiben auf den Versionen, die dein Server jetzt hat. Der Server wird vorher gesichert; ein laufender Server wird sauber beendet.",
+    "Update only the modules and build the server again?\n\n{0} stay at the versions your server has now. Use this for a module fix when you do not want a new core yet. The server is backed up first; a running server is stopped cleanly.": "Nur die Module aktualisieren und den Server neu bauen?\n\n{0} bleiben auf den Versionen, die dein Server jetzt hat. Nutze das für einen Modul-Fix, wenn du noch keinen neuen Core willst. Der Server wird vorher gesichert; ein laufender Server wird sauber beendet.",
+    "\"Only the modules\" brings your modules up to date and keeps {0} as they are; the new core can follow later.": "„Nur die Module“ bringt deine Module auf den neuesten Stand und lässt {0}, wie sie sind; der neue Core kann später folgen.",
+    "\"Only the core\" brings {0} up to date and keeps your modules as they are.": "„Nur den Core“ bringt {0} auf den neuesten Stand und lässt deine Module, wie sie sind."
   }
 }

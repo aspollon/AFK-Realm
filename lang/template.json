@@ -2623,6 +2623,16 @@
     "The EsteriaWoW game client is built.": "",
     "WowClient64.exe built from wowdecomp put into the game": "",
     "The game is running from this folder. Close it so that the new WowClient64.exe can be put in.": "",
-    "EsteriaWoW game client": ""
+    "EsteriaWoW game client": "",
+    "EsteriaWoW and its game client": "",
+    "AzerothCore and Playerbots": "",
+    "Core": "",
+    "Bleeding edge: an update builds the newest code of {0} and every module straight from their sources. They change independently of each other, so after an update something may work differently, a module may not fit and be left out, or the build may fail.": "",
+    "Checks {0} and your modules for new versions; the server is backed up first and rebuilt only when something changed.": "",
+    "Check for updates?\n\nIf there are new versions of {0}, the current server is backed up first and then recompiled, which can take a while. A running server is stopped cleanly first.": "",
+    "Update only {0} and build the server again?\n\nYour modules stay at the versions your server has now. The server is backed up first; a running server is stopped cleanly.": "",
+    "Update only the modules and build the server again?\n\n{0} stay at the versions your server has now. Use this for a module fix when you do not want a new core yet. The server is backed up first; a running server is stopped cleanly.": "",
+    "\"Only the modules\" brings your modules up to date and keeps {0} as they are; the new core can follow later.": "",
+    "\"Only the core\" brings {0} up to date and keeps your modules as they are.": ""
   }
 }
