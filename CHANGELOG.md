@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.26
+
+- **mod-ollama-chat-coa** among the modules by AFK Realm (CoA servers): mod-ollama-chat by Dustin Hendrickson made to build on the CoA core with Zyth45's Playerbots; its `afk-realm.json` switches off mod-playerbots' prewritten chatter. Experimental, needs a running Ollama (or an OpenAI/Anthropic-compatible service).
+
 ## 1.3.25
 
 - **Dubious ownership, second line of defence:** the portable MinGit AFK Realm sets up (in the server's `Dependencies\Git`) also gets `safe.directory = *` in its own system settings (`git config --system`), in case a Git does not take it from the environment (1.3.23). A Git the user installed is not changed.

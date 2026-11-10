@@ -1,3 +1,7 @@
+# AFK Realm 1.3.26
+
+- **New, experimental: mod-ollama-chat-coa** under *Modules by AFK Realm* - bots whose chat comes from a language model (Ollama on your PC): they answer you, chat with each other, remember and form opinions. It needs Ollama installed and running; see the module's README.
+
 # AFK Realm 1.3.25
 
 - **More robust fix for "detected dubious ownership"** (servers on exFAT/FAT32, USB or network drives): AFK Realm's own portable Git now also trusts the server folders in its own settings.

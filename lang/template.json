@@ -2633,6 +2633,7 @@
     "Update only {0} and build the server again?\n\nYour modules stay at the versions your server has now. The server is backed up first; a running server is stopped cleanly.": "",
     "Update only the modules and build the server again?\n\n{0} stay at the versions your server has now. Use this for a module fix when you do not want a new core yet. The server is backed up first; a running server is stopped cleanly.": "",
     "\"Only the modules\" brings your modules up to date and keeps {0} as they are; the new core can follow later.": "",
-    "\"Only the core\" brings {0} up to date and keeps your modules as they are.": ""
+    "\"Only the core\" brings {0} up to date and keeps your modules as they are.": "",
+    "Bots that really talk: their chat comes from a language model (Ollama on your PC, or an online service) - answers, chatter, memory and relationships. Experimental; needs Ollama running.": ""
   }
 }
