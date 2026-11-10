@@ -1,3 +1,7 @@
+# AFK Realm 1.3.27
+
+- **Immersion works without the extra click.** Its database tables used to be installed only by the button on its setup page; without them the module spawned no city, fishing, legendary or PvP bots. AFK Realm now puts them in by itself when the server starts.
+
 # AFK Realm 1.3.26
 
 - **New, experimental: mod-ollama-chat-coa** under *Modules by AFK Realm* - bots whose chat comes from a language model (Ollama on your PC): they answer you, chat with each other, remember and form opinions. It needs Ollama installed and running; see the module's README.

@@ -195,6 +195,7 @@ namespace CoAInstaller.Web
         {
             ctl.RestoreAfterBotReset(); ctl.StartDatabase(st);
             try { RegistrationPortal.EnsureRealmDefaults(inst); } catch { }
+            try { EnsureImmersionTables(inst, st); } catch { }
             ctl.StartAuth(st);
             if (ctl.World == null) { try { AdminLink.Prepare(inst); } catch { } }
             var world = ctl.StartWorld(st);

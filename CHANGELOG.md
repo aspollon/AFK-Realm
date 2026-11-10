@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.27
+
+- **Immersion's tables are put in by themselves:** they live in `data/sql/manual`, which the server's updater never reads, and only the button on the setup page installed them. A server where nobody pressed it had the module but no city, fishing, legendary or PvP bots (`Missing WORLD table city_life_hub`, `enable=0 database=0`). `Api.EnsureImmersionTables` runs the same SQL before the worldserver starts when `acore_world.city_life_hub` is missing.
+
 ## 1.3.26
 
 - **mod-ollama-chat-coa** among the modules by AFK Realm (CoA servers): mod-ollama-chat by Dustin Hendrickson made to build on the CoA core with Zyth45's Playerbots; its `afk-realm.json` switches off mod-playerbots' prewritten chatter. Experimental, needs a running Ollama (or an OpenAI/Anthropic-compatible service).

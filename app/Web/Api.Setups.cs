@@ -122,6 +122,21 @@ namespace CoAInstaller.Web
 
         static string T(string s) { return L.T(s); }
 
+        /// <summary>Immersion keeps its tables in SQL files the server's updater never reads (data/sql/manual), and they
+        /// used to be put in only by the button on its setup page: a server where nobody pressed it had the module, but
+        /// no city, fishing, legendary or PvP bots ("Missing WORLD table city_life_hub"). Before the worldserver starts,
+        /// missing tables are put in.</summary>
+        internal static void EnsureImmersionTables(Install inst, Action<string> st)
+        {
+            string folder = Path.Combine(ModuleCatalog.ModulesDir(inst), "mod-playerbots-immersion", "data", "sql", "manual");
+            if (!Directory.Exists(folder)) return;
+            DbLogin login = DbLogin.FromConfig(inst);
+            var rows = MySql.Query(inst, login, "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = 'acore_world' AND TABLE_NAME = 'city_life_hub';");
+            if (rows.Count > 0 && rows[0].Trim() != "0") return;
+            st(L.T("Setting up the database tables of Immersion …"));
+            ImmersionDatabase(inst);
+        }
+
         static void ImmersionDatabase(Install inst)
         {
             string folder = Path.Combine(ModuleCatalog.ModulesDir(inst), "mod-playerbots-immersion", "data", "sql", "manual");
