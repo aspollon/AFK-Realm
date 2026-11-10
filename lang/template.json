@@ -2749,6 +2749,9 @@
     "Auctions and Immersion speak through the model": "",
     "The trade whispers of Playerbots Auctions (items and prices stay exact) and the lines of the Immersion residents are said in the bot's own words.": "",
     "How a message sounds - friendly, romantic, hostile - moves the bond between the bot and the person.": "",
-    "Room for what a bot went through with the people it knows, besides what it remembers of conversations.": ""
+    "Room for what a bot went through with the people it knows, besides what it remembers of conversations.": "",
+    "Bots stay while you talk": "",
+    "A bot you are talking with stops its errands, turns to you and follows a few steps, until this long after the last line or until you say goodbye. Never in combat, dungeons, raids or battlegrounds.": "",
+    "off": ""
   }
 }

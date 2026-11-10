@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.30
+
+- **Ollama chat page:** *Bots stay while you talk* (`OllamaChat.Conversation.HoldSeconds`): a bot in a conversation stops its errands and stays with the person until the conversation goes quiet or ends with a goodbye.
+
 ## 1.3.29
 
 - **A module's new recommendations reach existing servers:** `Set-ModuleSettings` used to set a module's `afk-realm.json` setting once and then never look at it again, so a newer value in a module update reached only new installs. When the recommended value changes and the option still holds the value the module set before, the new one is written (a value the user chose stays). Logged and reported as a note.

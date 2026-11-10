@@ -1,3 +1,7 @@
+# AFK Realm 1.3.30
+
+- **Ollama chat:** a new setting for how long a bot stays with you while you talk to it, instead of walking off mid-sentence.
+
 # AFK Realm 1.3.29
 
 - **Module updates bring their new recommended settings along.** Until now a module's recommended setting was set once at install; a better value in a later version of the module only reached new servers. Now it is taken over too, unless you changed the option yourself.

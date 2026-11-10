@@ -401,6 +401,7 @@ export function ollamaSetup() {
       p.toggle(ev, O + 'EnableGuildRandomAmbientChatter', T('Guild members talk in the guild chat'));
       const you = p.card(T('When you talk to them'), T('The bot you name, target or are already talking with answers alone, without being named every time. A line to nobody in particular gets one answer.'), 'accounts');
       p.slider(you, O + 'SayDistance', T('Hearing distance'), 5, 100, 1, v => F('{0} yards', Math.trunc(v)));
+      p.slider(you, O + 'Conversation.HoldSeconds', T('Bots stay while you talk'), 0, 300, 10, v => v === 0 ? T('off') : sec(v), T('A bot you are talking with stops its errands, turns to you and follows a few steps, until this long after the last line or until you say goodbye. Never in combat, dungeons, raids or battlegrounds.'));
       p.toggle(you, O + 'EnableWhisperReplies', T('Bots answer whispers'));
       p.toggle(you, O + 'DisableRepliesInCombat', T('No chatting in combat'));
       p.toggle(you, O + 'EnableTypingSimulation', T('Bots take time to type'), T('A longer answer arrives a little later, as if it were typed.'));
