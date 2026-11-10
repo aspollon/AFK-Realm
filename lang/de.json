@@ -2771,6 +2771,17 @@
     "Room for what a bot went through with the people it knows, besides what it remembers of conversations.": "Platz für das, was ein Bot mit den Leuten erlebt hat, die er kennt – neben dem, was er aus Gesprächen behält.",
     "Bots stay while you talk": "Bots bleiben, während du redest",
     "A bot you are talking with stops its errands, turns to you and follows a few steps, until this long after the last line or until you say goodbye. Never in combat, dungeons, raids or battlegrounds.": "Ein Bot, mit dem du redest, lässt seine Erledigungen liegen, dreht sich zu dir und folgt dir ein paar Schritte – bis so lange nach der letzten Zeile oder bis du dich verabschiedest. Nie im Kampf, in Dungeons, Raids oder Schlachtfeldern.",
-    "off": "aus"
+    "off": "aus",
+    "Thinking and remembering": "Denken und Erinnern",
+    "After the research paper \"Generative Agents\": for every line a bot recalls what matters right now - recent, important, fitting the moment - and bots that have dealt with you think about it, draw their own conclusions, have goals of their own and tell each other about you.": "Nach dem Forschungspaper „Generative Agents“: Für jede Zeile erinnert sich ein Bot an das, was gerade zählt – frisch, wichtig, passend zum Moment. Bots, die mit dir zu tun hatten, denken darüber nach, ziehen eigene Schlüsse, haben eigene Ziele und erzählen einander von dir.",
+    "Model for remembering by meaning": "Modell für Erinnern nach Bedeutung",
+    "Optional. Empty: memories are matched by shared words. With an embedding model they are matched by meaning; install it once in a terminal with: ollama pull nomic-embed-text - then enter nomic-embed-text here.": "Optional. Leer: Erinnerungen werden über gemeinsame Wörter gefunden. Mit einem Embedding-Modell nach Bedeutung; einmal im Terminal installieren mit: ollama pull nomic-embed-text – dann hier nomic-embed-text eintragen.",
+    "Bots reflect on what they went through": "Bots denken über Erlebtes nach",
+    "Bots have goals of their own": "Bots haben eigene Ziele",
+    "Wishes and dreams that fit their people and temperament; what a bot actually does stays up to Playerbots.": "Wünsche und Träume passend zu Volk und Charakter; was ein Bot tatsächlich tut, entscheidet weiterhin Playerbots.",
+    "Thoughts per hour": "Gedanken pro Stunde",
+    "Reflections and goals of all bots together; each costs the model one or two requests in the background.": "Reflexionen und Ziele aller Bots zusammen; jede kostet das Modell ein bis zwei Anfragen im Hintergrund.",
+    "Bots tell each other about you": "Bots erzählen einander von dir",
+    "Your reputation travels: a bot you never met may know what you did.": "Dein Ruf eilt dir voraus: Ein Bot, den du nie getroffen hast, weiß vielleicht, was du getan hast."
   }
 }

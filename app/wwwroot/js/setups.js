@@ -424,6 +424,13 @@ export function ollamaSetup() {
       p.toggle(mem, O + 'Bond.Romance', T('Romance'), T('A friend you flirt with can become more - always tasteful, never explicit.'));
       p.toggle(mem, O + 'Voice.Enable', T('Auctions and Immersion speak through the model'), T('The trade whispers of Playerbots Auctions (items and prices stay exact) and the lines of the Immersion residents are said in the bot\'s own words.'));
       p.toggle(mem, O + 'EnableSentimentTracking', T('Mood towards each player'), T('Rates every message to a bot as friendly or not; costs one extra request per message.'));
+      const ga = p.card(T('Thinking and remembering'), T('After the research paper "Generative Agents": for every line a bot recalls what matters right now - recent, important, fitting the moment - and bots that have dealt with you think about it, draw their own conclusions, have goals of their own and tell each other about you.'), 'database');
+      p.text(ga, O + 'Recall.EmbedModel', T('Model for remembering by meaning'), T('Optional. Empty: memories are matched by shared words. With an embedding model they are matched by meaning; install it once in a terminal with: ollama pull nomic-embed-text - then enter nomic-embed-text here.'));
+      p.toggle(ga, O + 'Reflection.Enable', T('Bots reflect on what they went through'));
+      p.toggle(ga, O + 'Goals.Enable', T('Bots have goals of their own'), T('Wishes and dreams that fit their people and temperament; what a bot actually does stays up to Playerbots.'));
+      p.slider(ga, O + 'Reflection.MaxPerHour', T('Thoughts per hour'), 0, 60, 1, v => v === 0 ? T('no limit') : String(Math.trunc(v)), T('Reflections and goals of all bots together; each costs the model one or two requests in the background.'));
+      p.toggle(ga, O + 'Gossip.Enable', T('Bots tell each other about you'), T('Your reputation travels: a bot you never met may know what you did.'));
+      p.slider(ga, O + 'Gossip.Chance', T('Chance'), 0, 100, 1, pct);
       p.note(T('Changes take effect after .ollama reload in the game (GM account) or a restart of the server.'));
     }
   });

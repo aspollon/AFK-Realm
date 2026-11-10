@@ -1,3 +1,7 @@
+# AFK Realm 1.3.31
+
+- **Ollama chat:** settings for the new memory of the bots - they recall what matters, reflect on what they went through, have goals of their own and tell each other about you. Optional: an embedding model (nomic-embed-text) so they remember by meaning.
+
 # AFK Realm 1.3.30
 
 - **Ollama chat:** a new setting for how long a bot stays with you while you talk to it, instead of walking off mid-sentence.

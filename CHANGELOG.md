@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.31
+
+- **Ollama chat page:** card *Thinking and remembering* (after the paper "Generative Agents"): embedding model for recalling memories by meaning (`OllamaChat.Recall.EmbedModel`), reflection, goals, thoughts per hour, rumours between bots and their chance.
+
 ## 1.3.30
 
 - **Ollama chat page:** *Bots stay while you talk* (`OllamaChat.Conversation.HoldSeconds`): a bot in a conversation stops its errands and stays with the person until the conversation goes quiet or ends with a goodbye.

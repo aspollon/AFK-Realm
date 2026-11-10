@@ -2752,6 +2752,17 @@
     "Room for what a bot went through with the people it knows, besides what it remembers of conversations.": "",
     "Bots stay while you talk": "",
     "A bot you are talking with stops its errands, turns to you and follows a few steps, until this long after the last line or until you say goodbye. Never in combat, dungeons, raids or battlegrounds.": "",
-    "off": ""
+    "off": "",
+    "Thinking and remembering": "",
+    "After the research paper \"Generative Agents\": for every line a bot recalls what matters right now - recent, important, fitting the moment - and bots that have dealt with you think about it, draw their own conclusions, have goals of their own and tell each other about you.": "",
+    "Model for remembering by meaning": "",
+    "Optional. Empty: memories are matched by shared words. With an embedding model they are matched by meaning; install it once in a terminal with: ollama pull nomic-embed-text - then enter nomic-embed-text here.": "",
+    "Bots reflect on what they went through": "",
+    "Bots have goals of their own": "",
+    "Wishes and dreams that fit their people and temperament; what a bot actually does stays up to Playerbots.": "",
+    "Thoughts per hour": "",
+    "Reflections and goals of all bots together; each costs the model one or two requests in the background.": "",
+    "Bots tell each other about you": "",
+    "Your reputation travels: a bot you never met may know what you did.": ""
   }
 }
