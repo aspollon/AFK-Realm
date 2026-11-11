@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.38
+
+- **Voices page** (Game client > Voices …) for a CoA64 client that loads `Plugins\*.dll`: installs `Plugins\LivingVoices64.dll` (aspollon/coa-living-voices), Crono141's Companion Voice engine and voices, and optionally the Living Voices quest voice-over (about 3.6 GB), and writes the page's settings (party, whisper, say, yell, NPC say and yell, only the bots' language-model lines, quiet in combat, volume, speed) into the add-on as `AFKDefaults.lua`.
+- **The player ZIP, the client pack and the AFK Client manifest** carry the owner's CoA64.exe that loads plugins, the voice plugin and both voice add-ons. A CoA Custom install keeps that exe.
+- On the server, mod-ollama-chat-coa labels the bots' language-model lines (`OllamaChat.VoiceLabels`), so only those are spoken and their status text stays quiet.
+
 ## 1.3.37
 
 - **Linux: AFK Realm vanished into the background** when its window was closed while the registration page or remote access was on, with no tray icon to show it or end it (GNOME has none). A desktop notification now says it keeps running; the application menu entry has a "Quit" action (right-click), which runs `AFK-Realm --quit`; and a power button at the bottom left of the window ends AFK Realm on every system. The game server keeps running either way.

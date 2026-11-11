@@ -1,3 +1,9 @@
+# AFK Realm 1.3.38
+
+- **Voices for CoA64** (Game client > Voices …): quest givers speak their quest texts (Living Voices), and party chat, whispers, say and yell of players, bots and NPCs are read aloud in a voice that fits each race (Companion Voice), both by Crono141. Needs a CoA64.exe that loads plugins (your own build). Volume, speed and channels are set on the page.
+- **Players get it too:** the player ZIP and the AFK Client launcher carry your CoA64.exe, the voice plugin and the voices from your game folder.
+- A CoA Custom install keeps your own CoA64.exe instead of putting the official one back.
+
 # AFK Realm 1.3.37
 
 - **Linux:** when you close the window, AFK Realm can keep running in the background (registration page, remote access). A desktop notification now says so. To end it: right-click AFK Realm in the application menu and choose "Quit AFK Realm", or use the new power button at the bottom left of the window.
