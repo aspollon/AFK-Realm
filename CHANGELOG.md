@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.35
+
+- **Linux: g++ before clang.** On a fresh Ubuntu 26.04 clang still reached the build and stopped at "-lstdc++ not found" (it takes the newest GCC folder, which can lack its C++ library). g++ always brings the library of its own version, so it is tried first now; clang is the fallback.
+- **The menu entry started an old AFK Realm** (Linux; the desktop shortcut on Windows the same way): it starts the copy in the server folder (Builder), which a newer download did not replace, so a fix in the new version never reached the server. A newer AFK Realm now puts itself there when it opens the server.
+
 ## 1.3.34
 
 - **Linux: build stopped at "-lstdc++ not found"** (fresh Ubuntu 26.04): clang takes the newest GCC folder on the system, and there that folder can lack its C++ standard library. AFK Realm now builds a small test program with each compiler and uses the first that links (clang, else g++); when none does, it names the one `apt` command that installs the library. A build folder made with the other compiler starts afresh.

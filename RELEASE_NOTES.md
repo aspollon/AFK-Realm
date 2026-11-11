@@ -1,3 +1,8 @@
+# AFK Realm 1.3.35
+
+- **Linux fix:** the build uses g++ first, so a fresh Ubuntu no longer stops at "-lstdc++ not found".
+- **Fix:** the menu entry (desktop shortcut on Windows) kept starting the old AFK Realm after you downloaded a new one. A newer version now replaces it by itself.
+
 # AFK Realm 1.3.34
 
 - **Linux fix:** on a fresh Ubuntu the build could stop with "-lstdc++ not found". AFK Realm now checks which compiler really works and uses it, or tells you the one command that fixes it.

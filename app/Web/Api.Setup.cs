@@ -211,6 +211,24 @@ namespace CoAInstaller.Web
         /// A copy of AFK Realm goes into the server folder (Builder) and serves as the management tool later on, with a
         /// shortcut on the desktop (Windows) or in the application menu (Linux).
         /// </summary>
+        /// <summary>
+        /// A newer AFK Realm started from somewhere else (a fresh download) replaces the copy in the server folder, which
+        /// the desktop shortcut and the application menu start. Without this the menu kept starting the old copy, and a
+        /// fix in the new download (its engine) never reached the server.
+        /// </summary>
+        public static void RefreshSelf(Install inst)
+        {
+            try
+            {
+                string self = Paths.ExePath;
+                string target = Path.Combine(inst.Root, "Builder", Path.GetFileName(self));
+                if (!File.Exists(target) || string.Equals(Path.GetFullPath(self), Path.GetFullPath(target), Os.Windows ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal)) return;
+                if (File.GetLastWriteTimeUtc(self) <= File.GetLastWriteTimeUtc(target)) return;
+                CopySelf(inst, false);
+            }
+            catch { }
+        }
+
         static void CopySelf(Install inst, bool shortcut)
         {
             string dir = Path.Combine(inst.Root, "Builder");

@@ -64,6 +64,7 @@ namespace CoAInstaller.Web
             lock (gate)
             {
                 Inst = inst;
+                Api.RefreshSelf(inst);
                 ClientAddons.ServerKind = inst.Kind;
                 Ctl = new ServerControl(inst);
                 Plan = RestartPlan.Load(inst);
