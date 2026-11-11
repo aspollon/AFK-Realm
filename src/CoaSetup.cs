@@ -307,7 +307,7 @@ namespace CoAInstaller
             // 225,579 spell rows (including the 140xxxx racials), the package's file only
             // 209,708. The server reads the same spell ids as the client, so the installed
             // client's table is the right one and follows every CoA update.
-            CopyFiles(Path.Combine(files, "dbc"), Path.Combine(inst.DataDir, "dbc"), "*.dbc", o.NoBackup, ref copied, ref skipped, "Spell.dbc");
+            MergeServerDbcs(o, Path.Combine(files, "dbc"), Path.Combine(inst.DataDir, "dbc"), ref copied, ref skipped);
             CopyClientSpellDbc(o.Client, Path.Combine(inst.DataDir, "dbc"), o.NoBackup, ref copied);
             try { copied += ServerSpellDbc.Install(inst); }
             catch (Exception ex) { Console.WriteLine(L.T("The complete server Spell.dbc could not be installed; the client's table stays:") + " " + ex.Message); }
@@ -349,7 +349,6 @@ namespace CoAInstaller
             // do not compare it with the package's official size afterwards.
             VerifyTree(clientRoot, o.Client, nativeSupported ? "CoA64.exe" : null);
             if (Directory.Exists(addons)) VerifyTree(addons, Path.Combine(o.Client, "Interface", "AddOns"));
-            VerifyCopied(Path.Combine(files, "dbc"), Path.Combine(inst.DataDir, "dbc"), "*.dbc", "Spell.dbc");
             if (File.Exists(clientDbc)) VerifyFile(clientDbc, Path.Combine(inst.DataDir, "dbc_clientset", "CreatureDisplayInfo.dbc"));
             if (File.Exists(moduleConf)) VerifyFile(moduleConf, Path.Combine(inst.ConfigDir, "modules", "coa_custom_races.conf.dist"));
             if (Directory.Exists(sqlSource)) VerifyCopied(sqlSource, Path.Combine(inst.Root, "CoA-Custom", "sql"), "*.sql");
@@ -1079,6 +1078,38 @@ namespace CoAInstaller
         {
             try { return Directory.Exists(folder) ? Directory.GetFiles(folder, pattern).Length : 0; }
             catch { return 0; }
+        }
+
+        /// <summary>
+        /// The package's server tables go on top of the game client's own (DbcMerge): the client's rows stay, rows only
+        /// the package has are added. Copying them whole put tables over CoA's that the package carries in an older state.
+        /// Spell.dbc has its own path (CopyClientSpellDbc).
+        /// </summary>
+        static void MergeServerDbcs(Options o, string source, string target, ref int copied, ref int skipped)
+        {
+            if (!Directory.Exists(source)) return;
+            Directory.CreateDirectory(target);
+            foreach (string file in Directory.GetFiles(source).Where(f => f.EndsWith(".dbc", StringComparison.OrdinalIgnoreCase)).OrderBy(f => f))
+            {
+                string name = Path.GetFileName(file);
+                if (name.Equals("Spell.dbc", StringComparison.OrdinalIgnoreCase)) continue;
+                string from;
+                byte[] client = null;
+                try { client = ClientPatch.FromClient(o.Client, "DBFilesClient\\" + name, out from); } catch { }
+                var merged = DbcMerge.Merge(name, client, File.ReadAllBytes(file));
+                string dest = Path.Combine(target, name);
+                if (File.Exists(dest) && File.ReadAllBytes(dest).SequenceEqual(merged.Bytes)) { skipped++; continue; }
+                CoaUninstall.Capture(dest);
+                if (File.Exists(dest) && !o.NoBackup)
+                {
+                    string backup = dest + ".coa-patcher-backup";
+                    if (!File.Exists(backup)) File.Copy(dest, backup, false);
+                }
+                try { File.WriteAllBytes(dest, merged.Bytes); }
+                catch (Exception ex) { throw new InvalidOperationException(L.F("The CoA file could not be copied to {0}. Close the game, the launcher and the server, then run the setup again. ({1})", dest, ex.Message), ex); }
+                copied++;
+                Console.WriteLine("  " + dest + "  (" + merged.How + ")");
+            }
         }
 
         static void CopyFiles(string source, string target, string pattern, bool noBackup, ref int copied, ref int skipped, params string[] skip)
