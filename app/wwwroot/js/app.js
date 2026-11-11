@@ -1,5 +1,5 @@
 // AFK Realm: which page is shown, the language and the look.
-import { meta, get, post, connect, on, state, h, T, replace } from './core.js';
+import { meta, get, post, connect, on, state, h, T, F, replace } from './core.js';
 import { welcome } from './welcome.js';
 import { progress } from './progress.js';
 import { manager } from './manager.js';
@@ -43,6 +43,15 @@ export function route() {
 }
 
 // ---- the language and the look, from every page ----
+
+/** Ends AFK Realm itself (the game server goes on running). */
+export async function quitApp() {
+  const { confirm } = await import('./ui.js');
+  if (!await confirm(F('Quit {0}? The game server keeps running; planned restarts, updates and the registration page stop until you start {0} again.', meta.product))) return;
+  try { await post('/api/quit', {}); } catch (e) { return alert(e.message); }
+  replace(root, h('div.boot', {}, F('{0} has ended. You can close this window.', meta.product)));
+  setTimeout(() => { try { window.close(); } catch { } }, 800);
+}
 
 export function languageMenu(at) {
   const items = [{ text: T('Automatic (as the system)'), check: meta.languageChoice === 'auto', onclick: () => setLanguage('auto') }, 'sep'];

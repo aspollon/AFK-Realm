@@ -2783,6 +2783,11 @@
     "Reflections and goals of all bots together; each costs the model one or two requests in the background.": "Reflexionen und Ziele aller Bots zusammen; jede kostet das Modell ein bis zwei Anfragen im Hintergrund.",
     "Bots tell each other about you": "Bots erzählen einander von dir",
     "Your reputation travels: a bot you never met may know what you did.": "Dein Ruf eilt dir voraus: Ein Bot, den du nie getroffen hast, weiß vielleicht, was du getan hast.",
-    "Drag to change the width": "Ziehen, um die Breite zu ändern"
+    "Drag to change the width": "Ziehen, um die Breite zu ändern",
+    "{0} is not running.": "{0} läuft nicht.",
+    "{0} has ended.": "{0} wurde beendet.",
+    "{0} keeps running in the background (registration page, remote access or a task). Open it again from the application menu; to end it, right-click its icon there and choose \"Quit\", or use the power button in its window.": "{0} läuft im Hintergrund weiter (Registrierungsseite, Fernzugriff oder eine Aufgabe). Wieder öffnen: im Anwendungsmenü starten. Beenden: dort Rechtsklick auf das Symbol und „{0} beenden“, oder der Ein/Aus-Knopf im Fenster.",
+    "Quit {0}? The game server keeps running; planned restarts, updates and the registration page stop until you start {0} again.": "{0} beenden? Der Spielserver läuft weiter; geplante Neustarts, Updates und die Registrierungsseite ruhen, bis du {0} wieder startest.",
+    "{0} has ended. You can close this window.": "{0} wurde beendet. Du kannst dieses Fenster schließen."
   }
 }

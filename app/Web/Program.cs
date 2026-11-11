@@ -153,6 +153,7 @@ namespace CoAInstaller.Web
 
             // One AFK Realm at a time: a second start shows the window of the first.
             var running = Instance.Running();
+            if (args.Contains("--quit")) return QuitRunning(running);
             if (running != null && !Opts.Restarted)
             {
                 StartLog("already running (process " + running.Pid + ", port " + running.Port + "): showing its window");
@@ -170,6 +171,30 @@ namespace CoAInstaller.Web
             int code = WebHost.Run();
             StartLog("ended (" + code + ")");
             return code;
+        }
+
+        /// <summary>--quit (the menu entry's "Quit" on Linux): ends the AFK Realm that runs, not the game server.</summary>
+        static int QuitRunning(Instance running)
+        {
+            if (running == null) { Console.WriteLine(L.F("{0} is not running.", Product.Name)); return 0; }
+            try
+            {
+                using (var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(10) })
+                using (var req = new System.Net.Http.HttpRequestMessage(System.Net.Http.HttpMethod.Post, running.Url + "api/quit"))
+                {
+                    req.Headers.Add("Cookie", "afk=" + running.Token);
+                    req.Headers.Add("X-AFK", "1");
+                    req.Content = new System.Net.Http.StringContent("{}", System.Text.Encoding.UTF8, "application/json");
+                    using (var resp = http.Send(req))
+                    {
+                        string body = resp.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                        if (body.Contains("\"error\"")) { Console.WriteLine(body); LinuxNotify.Send(Product.Name, L.T("A task is still running.")); return 1; }
+                    }
+                }
+                Console.WriteLine(L.F("{0} has ended.", Product.Name));
+                return 0;
+            }
+            catch (Exception ex) { Console.WriteLine(ex.Message); return 1; }
         }
 
         public static bool IsAdministrator()

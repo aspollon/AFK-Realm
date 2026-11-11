@@ -11,7 +11,7 @@ const serverKind = () => (state.status && state.status.kind) || 'coa';
 const coreParts = () => serverKind() === 'esteria' ? T('EsteriaWoW and its game client') : serverKind() === 'azerothcore' ? T('AzerothCore and Playerbots') : T('CoA core and Playerbots');
 const bleedingEdge = () => '\n\n⚠ ' + F('Bleeding edge: an update builds the newest code of {0} and every module straight from their sources. They change independently of each other, so after an update something may work differently, a module may not fit and be left out, or the build may fail.', coreParts()) +
   '\n' + F('{0} backs the server up first: if something no longer works, Maintenance > Backups brings the previous state back.', meta.product);
-import { show, languageMenu, themeMenu } from './app.js';
+import { show, languageMenu, themeMenu, quitApp } from './app.js';
 import { helpButton } from './help.js';
 
 const sections = [
@@ -37,8 +37,9 @@ export function manager() {
   const picker = h('button.picker', { type: 'button', onclick: () => serverMenu(picker) }, h('div.name', {}, pickerName, icon('chevron')), pickerPath);
   const lang = h('button', { type: 'button', onclick: () => languageMenu(lang) }, icon('language'), (meta.languages.find(l => l.code === meta.language) || { name: 'English' }).name);
   const theme = h('button', { type: 'button', title: T('Theme'), onclick: () => themeMenu(theme) }, icon('sun'));
+  const quit = h('button', { type: 'button', title: F('Quit {0}', meta.product), onclick: () => quitApp() }, icon('power'));
   const sidebar = h('aside.sidebar', {}, picker, nav,
-    h('div.sidefoot', {}, helpButton(), h('div.tools', {}, lang, theme), h('div', {}, meta.product + ' ' + meta.version)));
+    h('div.sidefoot', {}, helpButton(), h('div.tools', {}, lang, theme, quit), h('div', {}, meta.product + ' ' + meta.version)));
 
   // the bar at the top
   const pills = { db: pill(T('Database')), auth: pill(T('Login (authserver)')), world: pill(T('Game world (worldserver)')) };

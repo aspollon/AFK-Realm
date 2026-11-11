@@ -155,10 +155,23 @@ namespace CoAInstaller.Web
             // Windows: an icon in the tray; closing the window then leaves AFK Realm running there
             if (tracked && localUrl != null && Os.Windows) Tray.Start(() => Reopen(localUrl), Shutdown);
             DateTime started = DateTime.UtcNow;
+            bool pageSeen = false, toldHidden = false;
             while (!Stopping.IsCancellationRequested)
             {
                 Stopping.Token.WaitHandle.WaitOne(2000);
                 if (Stopping.IsCancellationRequested) break;
+                // Linux has no tray: when the window closes and something keeps AFK Realm running, a desktop note says so
+                if (!Os.Windows && tracked && localUrl != null)
+                {
+                    if (Events.Count > 0) { pageSeen = true; toldHidden = false; }
+                    var aw = AppWindow.Current;
+                    bool keeps = RemoteAccess.Running || RegistrationPortal.Running || Jobs.Busy || Manager.AutoRestarting || AutoUpdate.Running;
+                    if (pageSeen && !toldHidden && keeps && Events.Count == 0 && (aw == null || aw.HasExited) && (DateTime.UtcNow - Events.LastSeen).TotalSeconds > 8)
+                    {
+                        toldHidden = true;
+                        LinuxNotify.Send(Product.Name, L.F("{0} keeps running in the background (registration page, remote access or a task). Open it again from the application menu; to end it, right-click its icon there and choose \"Quit\", or use the power button in its window.", Product.Name));
+                    }
+                }
                 if (remote || Program.Opts.NoWindow || RemoteAccess.Running) continue;     // others may still come
                 if (RegistrationPortal.Running) continue;                                  // players may still register
                 if (Jobs.Busy || Manager.AutoRestarting || AutoUpdate.Running) continue;
