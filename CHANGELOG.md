@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.39
+
+- **The client pack and the AFK Client manifest left out CoA Custom.** They carried the module add-ons, the AFK client patch and the realm list, but none of the CoA Custom package's client files, so a player updated by the AFK Client had the plain CoA glue: no custom races, and a Lua error in character creation ("CharCreateRaceButton12" nil). On a CoA server the pack now adds the package chosen on the CoA Custom page: its client MPQs, dinput8.dll, client_root (CoA64.exe by the install's rules), the x64 DXVK files and its add-ons. The player ZIP uses the same code.
+
 ## 1.3.38
 
 - **Voices page** (Game client > Voices …) for a CoA64 client that loads `Plugins\*.dll`: installs `Plugins\LivingVoices64.dll` (aspollon/coa-living-voices), Crono141's Companion Voice engine and voices, and optionally the Living Voices quest voice-over (about 3.6 GB), and writes the page's settings (party, whisper, say, yell, NPC say and yell, only the bots' language-model lines, quiet in combat, volume, speed) into the add-on as `AFKDefaults.lua`.

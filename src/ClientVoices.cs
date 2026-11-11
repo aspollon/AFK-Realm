@@ -280,7 +280,7 @@ namespace CoAInstaller
         }
 
         /// <summary>Adds PlayerFiles to a ZIP being written. Returns the exe's name (or null when the game has none).</summary>
-        public static string AddToZip(ZipArchive zip, string client, Action<string, int, int> progress)
+        public static string AddToZip(ZipArchive zip, string client, Action<string, int, int> progress, ISet<string> taken = null)
         {
             var files = PlayerFiles(client);
             if (files.Count == 0) return null;
@@ -288,38 +288,45 @@ namespace CoAInstaller
             foreach (var f in files)
             {
                 if (progress != null) progress(L.F("Packing the voices ({0}/{1}) ...", done + 1, files.Count), done, files.Count);
+                done++;
+                if (taken != null && !taken.Add(f.Key)) continue;
                 bool packed = f.Key.EndsWith(".MPQ", StringComparison.OrdinalIgnoreCase) || f.Key.EndsWith(".mp3", StringComparison.OrdinalIgnoreCase);
                 zip.CreateEntryFromFile(f.Value, f.Key, packed ? CompressionLevel.NoCompression : CompressionLevel.Optimal);
-                done++;
             }
             return files[0].Key;
         }
 
-        /// <summary>Rewrites a finished ZIP with PlayerFiles added (its own copy of the exe is replaced). Streams, so a
-        /// ZIP of several GB never sits in memory as ZipArchiveMode.Update would.</summary>
-        public static bool AppendToZipFile(string zipFile, string client, Action<string, int, int> progress)
+        /// <summary>
+        /// Rewrites a finished client pack into a complete one: its own entries first (module add-ons and the AFK client
+        /// patch win), then the voices with the owner's CoA64.exe, then the CoA Custom package's client part when a
+        /// package folder is given. Streams, so a ZIP of several GB never sits in memory as ZipArchiveMode.Update would.
+        /// Returns false (and leaves the ZIP alone) when there is nothing to add.
+        /// </summary>
+        public static bool AppendToZipFile(string zipFile, string client, Action<string, int, int> progress, string package = null)
         {
-            var files = PlayerFiles(client);
-            if (files.Count == 0) return false;
-            var replaced = new HashSet<string>(files.Select(f => f.Key), StringComparer.OrdinalIgnoreCase);
-            string temp = zipFile + ".voices";
+            bool voices = PlayerFiles(client).Count > 0;
+            if (!voices && package == null) return false;
+            string temp = zipFile + ".full";
             if (File.Exists(temp)) File.Delete(temp);
             try
             {
                 using (var source = ZipFile.OpenRead(zipFile))
                 using (var target = ZipFile.Open(temp, ZipArchiveMode.Create))
                 {
+                    var taken = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                     foreach (var e in source.Entries)
                     {
-                        if (replaced.Contains(e.FullName.Replace('\\', '/'))) continue;
-                        bool stored = e.FullName.EndsWith(".MPQ", StringComparison.OrdinalIgnoreCase) || e.FullName.EndsWith(".exe", StringComparison.OrdinalIgnoreCase);
-                        var copy = target.CreateEntry(e.FullName, stored ? CompressionLevel.NoCompression : CompressionLevel.Optimal);
+                        string name = e.FullName.Replace('\\', '/');
+                        if (name.EndsWith("/") || !taken.Add(name)) continue;
+                        bool stored = name.EndsWith(".MPQ", StringComparison.OrdinalIgnoreCase) || name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase);
+                        var copy = target.CreateEntry(name, stored ? CompressionLevel.NoCompression : CompressionLevel.Optimal);
                         copy.LastWriteTime = e.LastWriteTime;
                         using (var from = e.Open())
                         using (var to = copy.Open())
                             from.CopyTo(to);
                     }
-                    AddToZip(target, client, progress);
+                    if (voices) AddToZip(target, client, progress, taken);
+                    if (package != null) CoaSetup.AddPackageClientToZip(target, package, client, taken, progress);
                 }
                 File.Delete(zipFile);
                 File.Move(temp, zipFile);

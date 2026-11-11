@@ -1,3 +1,7 @@
+# AFK Realm 1.3.39
+
+- **Fix: the AFK Client launcher now brings CoA Custom.** "Build client launcher and manifest" (and the client pack on the registration page) left out the client files of the CoA Custom package: players got the module add-ons and the AFK patch, but not the CoA Custom MPQs, so the game showed no custom races. On a CoA server the pack now carries the package's client MPQs, root files, DXVK and add-ons, the same as the player ZIP.
+
 # AFK Realm 1.3.38
 
 - **Voices for CoA64** (Game client > Voices …): quest givers speak their quest texts (Living Voices), and party chat, whispers, say and yell of players, bots and NPCs are read aloud in a voice that fits each race (Companion Voice), both by Crono141. Needs a CoA64.exe that loads plugins (your own build). Volume, speed and channels are set on the page.

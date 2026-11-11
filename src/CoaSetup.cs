@@ -115,6 +115,52 @@ namespace CoAInstaller
         public static string ExportClientZip(string file, string package, Install inst, string client, Action<string, int, int> progress)
         {
             if (string.IsNullOrEmpty(file)) throw new ArgumentException("file");
+            if (inst == null || !inst.IsInstalled) throw new InvalidOperationException(L.T("No complete AFK Realm server was chosen."));
+            if (string.IsNullOrEmpty(client) || !Directory.Exists(client))
+                throw new InvalidOperationException(L.T("No game client was chosen."));
+            if (File.Exists(file)) File.Delete(file);
+            if (progress == null) progress = (t, a, b) => { };
+            bool ownExe = ClientVoices.PluginHost(client) != null;
+            using (var zip = ZipFile.Open(file, ZipArchiveMode.Create))
+            {
+                var taken = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                bool nativeSupported = AddPackageClientToZip(zip, package, client, taken, progress);
+                // Add-ons from installed modules belong in the same ZIP as the CoA package.
+                var moduleAddonFiles = ClientAddons.Find(inst, client)
+                    .SelectMany(a => Directory.GetFiles(a.Source, "*", SearchOption.AllDirectories).Select(path => new { Addon = a, Path = path }))
+                    .ToList();
+                int done = 0;
+                foreach (var addonFile in moduleAddonFiles.OrderBy(x => x.Addon.Name).ThenBy(x => x.Path))
+                {
+                    progress(L.F("Packing module add-ons ({0}/{1}) ...", done + 1, moduleAddonFiles.Count), done++, moduleAddonFiles.Count);
+                    string prefix = Path.GetFullPath(addonFile.Addon.Source).TrimEnd('\\', '/') + Path.DirectorySeparatorChar;
+                    string rel = "Interface/AddOns/" + addonFile.Addon.Name + "/" + addonFile.Path.Substring(prefix.Length).Replace('\\', '/');
+                    if (taken.Add(rel)) zip.CreateEntryFromFile(addonFile.Path, rel, CompressionLevel.Optimal);
+                }
+                // The AFK client patch is generated from the chosen server and the installed client.
+                var plan = ClientPatch.Collect(inst);
+                if (plan != null && !plan.Empty)
+                {
+                    progress(L.T("Adding the AFK client patch ..."), 0, 0);
+                    ClientPatch.AddPatchToZip(zip, inst, client, plan, progress);
+                }
+                if (ownExe) ClientVoices.AddToZip(zip, client, progress, taken);
+                string realm = GameLaunch.AddToZip(zip, inst);
+                var entry = zip.CreateEntry("READ ME FIRST.txt");
+                using (var writer = new StreamWriter(entry.Open(), new System.Text.UTF8Encoding(false)))
+                    writer.Write(ClientZipReadMe(nativeSupported, ownExe) + (realm != null ? Environment.NewLine + realm + Environment.NewLine : ""));
+            }
+            return file;
+        }
+
+        /// <summary>
+        /// The client part of the CoA Custom package, for the player ZIP and the AFK Client pack: the client MPQs, the
+        /// client_root files (CoA64.exe by the install's rules: the owner's own exe that loads plugins wins, else the
+        /// native HD build, else the package's exe made to load HD without DXVK), the x64 DXVK files and the package's
+        /// add-ons. Paths already in taken are left out; added ones go into it. Returns whether the native HD exe went in.
+        /// </summary>
+        public static bool AddPackageClientToZip(ZipArchive zip, string package, string client, ISet<string> taken, Action<string, int, int> progress)
+        {
             string packRoot = PackageRoot(package);
             if (packRoot == null) throw new InvalidOperationException(L.T("No CoA-Custom\\files tree found in the package."));
             string files = Path.Combine(packRoot, "files");
@@ -122,95 +168,70 @@ namespace CoAInstaller
             string clientRoot = Path.Combine(files, "client_root");
             if (!Directory.Exists(clientSource) || !Directory.Exists(clientRoot))
                 throw new InvalidOperationException(L.T("The package has no files\\client or files\\client_root."));
-            if (inst == null || !inst.IsInstalled) throw new InvalidOperationException(L.T("No complete AFK Realm server was chosen."));
-            if (string.IsNullOrEmpty(client) || !Directory.Exists(client))
-                throw new InvalidOperationException(L.T("No game client was chosen."));
-            if (File.Exists(file)) File.Delete(file);
             if (progress == null) progress = (t, a, b) => { };
             var rootFiles = Directory.GetFiles(clientRoot, "*", SearchOption.AllDirectories);
-            var addonFiles = Directory.Exists(Path.Combine(files, "addons")) ? Directory.GetFiles(Path.Combine(files, "addons"), "*", SearchOption.AllDirectories) : new string[0];
-            var mpqs = Directory.GetFiles(clientSource, "*.MPQ", SearchOption.TopDirectoryOnly);
-            // Add-ons from installed modules belong in the same ZIP as the CoA package.
-            var moduleAddons = ClientAddons.Find(inst, client);
-            var moduleAddonFiles = moduleAddons
-                .SelectMany(a => Directory.GetFiles(a.Source, "*", SearchOption.AllDirectories)
-                    .Select(path => new { Addon = a, Path = path }))
-                .ToList();
-            // the owner's own CoA64.exe that loads plugins (voices) goes to the players instead of the package's
-            bool ownExe = ClientVoices.PluginHost(client) != null;
+            string addonDir = Path.Combine(files, "addons");
+            var addonFiles = Directory.Exists(addonDir) ? Directory.GetFiles(addonDir, "*", SearchOption.AllDirectories) : new string[0];
+            var mpqs = Directory.GetFiles(clientSource).Where(f => f.EndsWith(".MPQ", StringComparison.OrdinalIgnoreCase)).ToArray();
+            bool ownExe = client != null && ClientVoices.PluginHost(client) != null;
             bool nativeSupported = !ownExe && NativeHd.SupportsPackage(clientRoot);
-            int total = rootFiles.Length + addonFiles.Length + moduleAddonFiles.Count + mpqs.Length + (nativeSupported ? NativeHd.Count : 0) + Dxvk.Count;
+            int total = rootFiles.Length + addonFiles.Length + mpqs.Length + (nativeSupported ? NativeHd.Count : 0) + Dxvk.Count;
             int done = 0;
-            using (var zip = ZipFile.Open(file, ZipArchiveMode.Create))
+            Action<string, string, CompressionLevel> add = (path, rel, level) =>
             {
-                foreach (string path in mpqs.OrderBy(x => x))
+                progress(L.F("Packing CoA client files ({0}/{1}) ...", done + 1, total), done, total);
+                if (taken.Add(rel)) zip.CreateEntryFromFile(path, rel, level);
+                done++;
+            };
+            foreach (string path in mpqs.OrderBy(x => x)) add(path, "Data/" + Path.GetFileName(path), CompressionLevel.NoCompression);
+            string dinput = Path.Combine(clientSource, "dinput8.dll");
+            if (File.Exists(dinput) && taken.Add("dinput8.dll")) zip.CreateEntryFromFile(dinput, "dinput8.dll", CompressionLevel.Optimal);
+            string rootPrefix = Path.GetFullPath(clientRoot).TrimEnd('\\', '/') + Path.DirectorySeparatorChar;
+            foreach (string path in rootFiles.OrderBy(x => x))
+            {
+                string rel = path.Substring(rootPrefix.Length).Replace('\\', '/');
+                bool exe = string.Equals(Path.GetFileName(path), "CoA64.exe", StringComparison.OrdinalIgnoreCase);
+                // The package's CoA64.exe gives way to the owner's own build or the native HD build.
+                if (exe && (nativeSupported || ownExe || taken.Contains(rel))) { done++; continue; }
+                if (exe)
                 {
-                    progress(L.F("Packing CoA client files ({0}/{1}) ...", done + 1, total), done, total);
-                    zip.CreateEntryFromFile(path, "Data/" + Path.GetFileName(path), CompressionLevel.NoCompression);
-                    done++;
+                    // Any other CoA64 build: HD without DXVK, patched by its code (Coa64HdPatch).
+                    progress(L.F("Packing CoA client files ({0}/{1}) ...", done + 1, total), done++, total);
+                    byte[] bytes = File.ReadAllBytes(path);
+                    Coa64HdPatch.Apply(bytes);
+                    taken.Add(rel);
+                    ZipArchiveEntry exeEntry = zip.CreateEntry(rel, CompressionLevel.NoCompression);
+                    using (Stream output = exeEntry.Open()) output.Write(bytes, 0, bytes.Length);
                 }
-                string rootPrefix = Path.GetFullPath(clientRoot).TrimEnd('\\', '/') + Path.DirectorySeparatorChar;
-                foreach (string path in rootFiles.OrderBy(x => x))
-                {
-                    // The package's CoA64.exe is replaced by the native HD build below,
-                    // but only for a CoA package version this native build supports.
-                    if ((nativeSupported || ownExe) && string.Equals(Path.GetFileName(path), "CoA64.exe", StringComparison.OrdinalIgnoreCase)) continue;
-                    progress(L.F("Packing CoA client files ({0}/{1}) ...", done + 1, total), done, total);
-                    string rel = path.Substring(rootPrefix.Length).Replace('\\', '/');
-                    if (string.Equals(Path.GetFileName(path), "CoA64.exe", StringComparison.OrdinalIgnoreCase))
-                    {
-                        // Any other CoA64 build: HD without DXVK, patched by its code (Coa64HdPatch).
-                        byte[] exe = File.ReadAllBytes(path);
-                        Coa64HdPatch.Apply(exe);
-                        ZipArchiveEntry exeEntry = zip.CreateEntry(rel, CompressionLevel.NoCompression);
-                        using (Stream output = exeEntry.Open()) output.Write(exe, 0, exe.Length);
-                    }
-                    else zip.CreateEntryFromFile(path, rel, CompressionLevel.NoCompression);
-                    done++;
-                }
-                if (nativeSupported)
-                {
-                    progress(L.T("Adding the native HD CoA64 ..."), done, total);
-                    NativeHd.AddToZip(zip);
-                    done += NativeHd.Count;
-                }
-                // The x64 DXVK files: the official CoA64 uses them when they load; HD no longer depends on them.
+                else add(path, rel, CompressionLevel.NoCompression);
+            }
+            if (nativeSupported && taken.Add("CoA64.exe"))
+            {
+                progress(L.T("Adding the native HD CoA64 ..."), done, total);
+                NativeHd.AddToZip(zip);
+                done += NativeHd.Count;
+            }
+            // The x64 DXVK files: the official CoA64 uses them when they load; HD no longer depends on them.
+            if (!taken.Any(t => t.StartsWith("x64/", StringComparison.OrdinalIgnoreCase)))
+            {
                 progress(L.T("Adding the x64 DXVK files ..."), done, total);
                 Dxvk.AddToZip(zip);
-                done += Dxvk.Count;
-                if (addonFiles.Length > 0)
-                {
-                    string addonPrefix = Path.GetFullPath(Path.Combine(files, "addons")).TrimEnd('\\', '/') + Path.DirectorySeparatorChar;
-                    foreach (string path in addonFiles.OrderBy(x => x))
-                    {
-                        progress(L.F("Packing CoA client files ({0}/{1}) ...", done + 1, total), done, total);
-                        string rel = path.Substring(addonPrefix.Length).Replace('\\', '/');
-                        zip.CreateEntryFromFile(path, "Interface/AddOns/" + rel, CompressionLevel.NoCompression);
-                        done++;
-                    }
-                }
-                foreach (var addonFile in moduleAddonFiles.OrderBy(x => x.Addon.Name).ThenBy(x => x.Path))
-                {
-                    progress(L.F("Packing module add-ons ({0}/{1}) ...", done + 1, total), done, total);
-                    string prefix = Path.GetFullPath(addonFile.Addon.Source).TrimEnd('\\', '/') + Path.DirectorySeparatorChar;
-                    string rel = addonFile.Path.Substring(prefix.Length).Replace('\\', '/');
-                    zip.CreateEntryFromFile(addonFile.Path, "Interface/AddOns/" + addonFile.Addon.Name + "/" + rel, CompressionLevel.Optimal);
-                    done++;
-                }
-                // The AFK client patch is generated from the chosen server and the installed client.
-                var plan = ClientPatch.Collect(inst);
-                if (plan != null && !plan.Empty)
-                {
-                    progress(L.T("Adding the AFK client patch ..."), done, total);
-                    ClientPatch.AddPatchToZip(zip, inst, client, plan, progress);
-                }
-                if (ownExe) ClientVoices.AddToZip(zip, client, progress);
-                string realm = GameLaunch.AddToZip(zip, inst);
-                var entry = zip.CreateEntry("READ ME FIRST.txt");
-                using (var writer = new StreamWriter(entry.Open(), new System.Text.UTF8Encoding(false)))
-                    writer.Write(ClientZipReadMe(nativeSupported, ownExe) + (realm != null ? Environment.NewLine + realm + Environment.NewLine : ""));
+                taken.Add("x64/");
             }
-            return file;
+            done += Dxvk.Count;
+            string addonPrefix = Path.GetFullPath(addonDir).TrimEnd('\\', '/') + Path.DirectorySeparatorChar;
+            foreach (string path in addonFiles.OrderBy(x => x))
+                add(path, "Interface/AddOns/" + path.Substring(addonPrefix.Length).Replace('\\', '/'), CompressionLevel.NoCompression);
+            return nativeSupported;
+        }
+
+        /// <summary>The package folder for the client pack: the one chosen on the CoA Custom page, if it is complete.</summary>
+        public static string PackageForPlayers()
+        {
+            string p = (Settings.CoaPackage ?? "").Trim();
+            if (p.Length == 0 || !Directory.Exists(p)) return null;
+            string root = PackageRoot(p);
+            return root != null && Directory.Exists(Path.Combine(root, "files", "client")) ? root : null;
         }
 
         static string ClientZipReadMe(bool nativeHd, bool ownExe)
