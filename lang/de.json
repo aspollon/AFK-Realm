@@ -2832,6 +2832,23 @@
     "CoA64.exe: your own build (it loads the voice plugin) is kept.": "CoA64.exe: dein eigener Build (er lädt das Stimmen-Plugin) bleibt erhalten.",
     "CoA64.exe that loads plugins (yours is kept as CoA64.exe.afk-backup)": "CoA64.exe, die Plugins lädt (deine bleibt als CoA64.exe.afk-backup erhalten)",
     "Note: this CoA64.exe was built for CoA Custom {0}, your package is {1}. If the game misbehaves, put CoA64.exe.afk-backup back and wait for a matching voices release.": "Hinweis: Diese CoA64.exe wurde für CoA Custom {0} gebaut, dein Paket ist {1}. Spinnt das Spiel, CoA64.exe.afk-backup zurückkopieren und auf ein passendes Stimmen-Release warten.",
-    "Your CoA64.exe cannot load plugins yet: \"Install\" brings the one built for that (yours is kept as a backup).": "Deine CoA64.exe kann noch keine Plugins laden: „Installieren“ bringt die passende mit (deine bleibt als Sicherung erhalten)."
+    "Your CoA64.exe cannot load plugins yet: \"Install\" brings the one built for that (yours is kept as a backup).": "Deine CoA64.exe kann noch keine Plugins laden: „Installieren“ bringt die passende mit (deine bleibt als Sicherung erhalten).",
+    "Processor cores for the model": "Prozessorkerne für das Modell",
+    "Without a graphics card the model shares the processor with the worldserver. Leave two cores free (for example 4 of 6), or the game lags while a bot writes.": "Ohne Grafikkarte teilt sich das Modell den Prozessor mit dem Worldserver. Lass zwei Kerne frei (zum Beispiel 4 von 6), sonst ruckelt das Spiel, während ein Bot schreibt.",
+    "Which bots use the model": "Welche Bots das Modell nutzen",
+    "Every line a bot writes costs the model time. On a slow PC, let only your own group talk.": "Jede Zeile eines Bots kostet das Modell Zeit. Auf einem langsamen PC lass nur deine eigene Gruppe sprechen.",
+    "Only bots in a group with a real player": "Nur Bots in einer Gruppe mit einem echten Spieler",
+    "All other bots stay normal playerbots: no answers, no chatter, no comments. Takes a lot of load off a PC without a graphics card.": "Alle anderen Bots bleiben normale Playerbots: keine Antworten, kein Plaudern, keine Kommentare. Nimmt einem PC ohne Grafikkarte viel Last ab.",
+    "Roleplay sheets": "Rollenspielbögen",
+    "The AFK Roleplay add-on shows a sheet for every character (/rp, or the RP button on the target frame). Players write their own; the model writes the bots' and bots read both when they talk.": "Das Add-on AFK Roleplay zeigt für jeden Charakter einen Bogen (/rp oder der RP-Knopf am Zielfenster). Spieler schreiben ihren eigenen, das Modell schreibt den der Bots, und Bots lesen beide, wenn sie sprechen.",
+    "Bots get a sheet": "Bots bekommen einen Bogen",
+    "Written once, the first time someone opens it; it takes a moment.": "Einmal geschrieben, wenn ihn jemand zum ersten Mal öffnet; das dauert einen Moment.",
+    "Bots read the sheets when they talk": "Bots lesen die Bögen, wenn sie sprechen",
+    "Write sheets ahead": "Bögen vorab schreiben",
+    "While the model has nothing to do, it writes sheets for the bots in your group and near you. Only with a graphics card: without one, it keeps the processor busy and the game lags.": "Wenn das Modell nichts zu tun hat, schreibt es Bögen für die Bots in deiner Gruppe und in deiner Nähe. Nur mit Grafikkarte: ohne hält es den Prozessor beschäftigt, und das Spiel ruckelt.",
+    "Language of the sheets": "Sprache der Bögen",
+    "For example German. Empty: English.": "Zum Beispiel German. Leer: Englisch.",
+    "Bot lines for Companion Voice": "Bot-Zeilen für Companion Voice",
+    "Marks the lines the model wrote, so the Companion Voice add-on reads them aloud and keeps the bots' status messages quiet.": "Markiert die Zeilen, die das Modell geschrieben hat, damit das Add-on Companion Voice sie vorliest und die Statusmeldungen der Bots still bleiben."
   }
 }

@@ -1,3 +1,7 @@
+# AFK Realm 1.3.41
+
+- **Ollama chat page:** new switches for the newest options of mod-ollama-chat-coa: "Only bots in a group with a real player", the processor cores the model may use, and the roleplay sheets (on, read in chat, write ahead, language) plus the Companion Voice labels. No more editing the config by hand.
+
 # AFK Realm 1.3.40
 
 - **Voices for everyone:** the Voices page now brings the CoA64.exe that loads plugins itself (your own exe is kept as a backup). Anyone with AFK Realm and CoA Custom gets quest voice-over and chat read aloud with one click: Game client > Voices … > Install.

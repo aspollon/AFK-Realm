@@ -384,6 +384,9 @@ export function ollamaSetup() {
       p.choice(con, O + 'ThinkMode', T('Thinking'), ['off', 'auto', 'on'], [T('Off'), T('Automatic'), T('On')], T('Models like qwen3 can think before they answer. Off answers in seconds; on is slower and rarely better for chat.'));
       p.choice(con, O + 'NumCtx', T('Prompt length'), ['4096', '8192', '16384'], [T('Short'), T('Normal'), T('Long')], T('How much the model reads at once: voice, knowledge, memory and the conversation. Shorter needs less graphics memory, but a prompt that does not fit loses its instructions.'));
       p.slider(con, O + 'MaxConcurrentQueries', T('Answers at once'), 0, 8, 1, v => v === 0 ? T('automatic') : String(Math.trunc(v)), T('How many lines the model writes at the same time. More needs more graphics memory.'));
+      p.slider(con, O + 'NumThreads', T('Processor cores for the model'), 0, 16, 1, v => v === 0 ? T('automatic') : String(Math.trunc(v)), T('Without a graphics card the model shares the processor with the worldserver. Leave two cores free (for example 4 of 6), or the game lags while a bot writes.'));
+      const who = p.card(T('Which bots use the model'), T('Every line a bot writes costs the model time. On a slow PC, let only your own group talk.'), 'accounts');
+      p.toggle(who, O + 'OnlyPartyBots', T('Only bots in a group with a real player'), T('All other bots stay normal playerbots: no answers, no chatter, no comments. Takes a lot of load off a PC without a graphics card.'));
 
       p.tab(T('Talking'));
       const own = p.card(T('Bots talking on their own'), T('Bots near a real player say something from time to time, ask questions and answer each other. Without a real player nearby they stay quiet, so the language model is not busy for nothing.'), 'accounts');
@@ -413,6 +416,12 @@ export function ollamaSetup() {
       p.toggle(rp, O + 'EnableRPPersonalities', T('A temperament for every bot'));
       p.toggle(rp, O + 'Roleplay.CrossFactionGibberish', T('No answers across the factions'), T('The game shows the other faction\'s speech as gibberish, so an answer would only be noise.'));
       p.toggle(rp, O + 'EnableBotEmotes', T('Bots use emotes that fit what they say'));
+      const sheets = p.card(T('Roleplay sheets'), T('The AFK Roleplay add-on shows a sheet for every character (/rp, or the RP button on the target frame). Players write their own; the model writes the bots\' and bots read both when they talk.'), 'races');
+      p.toggle(sheets, O + 'RP.Enable', T('Bots get a sheet'), T('Written once, the first time someone opens it; it takes a moment.'));
+      p.toggle(sheets, O + 'RP.UseSheetsInChat', T('Bots read the sheets when they talk'));
+      p.toggle(sheets, O + 'RP.Pregenerate', T('Write sheets ahead'), T('While the model has nothing to do, it writes sheets for the bots in your group and near you. Only with a graphics card: without one, it keeps the processor busy and the game lags.'));
+      p.text(sheets, O + 'RP.Language', T('Language of the sheets'), T('For example German. Empty: English.'));
+      p.toggle(sheets, O + 'VoiceLabels', T('Bot lines for Companion Voice'), T('Marks the lines the model wrote, so the Companion Voice add-on reads them aloud and keeps the bots\' status messages quiet.'));
       p.toggle(rp, O + 'Lore.Enable', T('Bots know the world'), T('The story of their people, the tradition of their class, the place they stand in, and the persons, peoples and events you name - Arthas, Gilneas, the Scourge. Built into the module.'));
       p.slider(rp, O + 'Lore.MaxTopics', T('Things recalled at once'), 0, 4, 1, v => String(Math.trunc(v)), T('How many things named in your message a bot recalls.'));
       const mem = p.card(T('Memory and relationships'), T('Bots remember what they talked about with whom, and form an opinion of the people they talk to often - players and other bots.'), 'database');

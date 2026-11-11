@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.41
+
+- **Ollama chat page**: `OllamaChat.OnlyPartyBots`, `OllamaChat.NumThreads`, `OllamaChat.RP.*` (Enable, UseSheetsInChat, Pregenerate, Language) and `OllamaChat.VoiceLabels` have switches now.
+
 ## 1.3.40
 
 - **The Voices page installs the CoA64.exe that loads plugins** when the game folder's exe cannot: the voices release (aspollon/coa-living-voices 0.2.0 and later) carries it in `CoA64\`, built for the CoA Custom version named in `COA-CUSTOM-VERSION.txt`. The old exe stays as `CoA64.exe.afk-backup`, and a note says when the build is for another CoA Custom version than the chosen package.
