@@ -7,7 +7,7 @@
 name: build
 on:
   push:
-    branches: [main, voices]
+    branches: [main, afk-test, voices]
     tags: ['v*']
   pull_request:
   workflow_dispatch:

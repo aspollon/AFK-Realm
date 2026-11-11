@@ -195,6 +195,82 @@ namespace CoAInstaller
             return null;
         }
 
+        /// <summary>Every file of the server pack with rows of racial spells (files\sql: the esteria_racials files and the
+        /// later ones such as 21_elune_veil_spell.sql and 23_racials_round2_v12.sql of 1.9.9), oldest first, so a newer
+        /// file's row wins. Empty when there is none.</summary>
+        public static List<string> PackRowFiles(string coaCustomFolder)
+        {
+            var result = new List<string>();
+            string newest = PackRows(coaCustomFolder);
+            if (newest == null) return result;
+            foreach (string f in Directory.GetFiles(Path.GetDirectoryName(newest), "*.sql").OrderBy(f => SqlOrder(Path.GetFileName(f))).ThenBy(f => f, StringComparer.OrdinalIgnoreCase))
+            {
+                string name = Path.GetFileName(f).ToLowerInvariant();
+                if (name.Contains("racial") || name.EndsWith("_spell.sql"))
+                {
+                    try { if (File.ReadAllText(f).IndexOf("spell_dbc", StringComparison.OrdinalIgnoreCase) >= 0) result.Add(f); }
+                    catch { }
+                }
+            }
+            return result;
+        }
+
+        static int SqlOrder(string name)
+        {
+            int n = 0, i = 0;
+            while (i < name.Length && char.IsDigit(name[i])) n = n * 10 + (name[i++] - '0');
+            return i == 0 ? int.MaxValue : n;
+        }
+
+        /// <summary>CoA Custom numbers the racials of its races 14000000 + race * 10 + n (1.x) and 15000000 + race * 10 + n
+        /// (AllRaces v12, 1.9.9), with "Racial" as the rank. A race whose set is found this way gets it - the newer
+        /// 15000000 set before the older one - so the races of a new package bring their racials without an AFK Realm
+        /// that knows them by name. A set needs three spells at least; the rows come from the client and the pack.</summary>
+        public static void UseIdConvention(string client)
+        {
+            var found = new Dictionary<uint, bool>();   // spell -> is a racial (rank "Racial")
+            foreach (var pair in coaSpellRows)
+                if (pair.Key >= 14000000 && pair.Key < 16000000)
+                    found[pair.Key] = pair.Value.IndexOf(",'Racial',", StringComparison.OrdinalIgnoreCase) >= 0;
+            if (!string.IsNullOrEmpty(client))
+                try
+                {
+                    string source;
+                    byte[] bytes = ClientPatch.FromClient(client, "DBFilesClient\\Spell.dbc", out source);
+                    if (bytes != null)
+                    {
+                        var table = DbcTable.Parse(bytes, "Spell.dbc");
+                        if (table.Fields == RaceImport.SpellFields)
+                            foreach (var record in table.Records)
+                            {
+                                uint id = table.Field(record, 0);
+                                if (id < 14000000 || id >= 16000000) continue;
+                                found[id] = Text(table, table.Field(record, 153)).Trim().Equals("Racial", StringComparison.OrdinalIgnoreCase);
+                            }
+                    }
+                }
+                catch { }
+            var sets = new Dictionary<int, SortedDictionary<uint, List<uint>>>();  // race -> base -> spells
+            foreach (var pair in found)
+            {
+                if (!pair.Value) continue;
+                uint baseId = pair.Key >= 15000000 ? 15000000u : 14000000u;
+                uint rest = pair.Key - baseId, n = rest % 10;
+                int race = (int)(rest / 10);
+                if (n == 0 || race <= 0 || race > 255) continue;
+                SortedDictionary<uint, List<uint>> byBase;
+                if (!sets.TryGetValue(race, out byBase)) sets[race] = byBase = new SortedDictionary<uint, List<uint>>();
+                List<uint> list;
+                if (!byBase.TryGetValue(baseId, out list)) byBase[baseId] = list = new List<uint>();
+                list.Add(pair.Key);
+            }
+            foreach (var pair in sets)
+            {
+                var newest = pair.Value.Last().Value;
+                if (newest.Count >= 3) coaRacials[pair.Key] = newest.OrderBy(x => x).ToArray();
+            }
+        }
+
         /// <summary>Reads CoA Custom's rows of its racials from a file of its own (its server pack's, or the copy of
         /// mod-custom-races): spell_dbc, spell_script_names and spell_proc, by spell. With add, the rows go on top of
         /// those read before: the server pack of an older CoA Custom (1.8: 10_esteria_racials_1.8.sql) has no rows of
@@ -218,7 +294,10 @@ namespace CoAInstaller
                 {
                     var m = System.Text.RegularExpressions.Regex.Match(line, @"^INSERT INTO\s+`?(\w+)`?");
                     table = m.Success ? m.Groups[1].Value.ToLowerInvariant() : null;
-                    continue;
+                    // a single row on the same line: INSERT INTO t (cols) VALUES (...);
+                    int values = line.IndexOf("VALUES", StringComparison.OrdinalIgnoreCase);
+                    if (values < 0 || line.IndexOf('(', values) < 0) continue;
+                    line = line.Substring(line.IndexOf('(', values)).Trim();
                 }
                 if (!line.StartsWith("(")) { table = null; continue; }
                 if (table == null) continue;
@@ -252,6 +331,9 @@ namespace CoAInstaller
             if (coaRace > 0 && coaRacials.TryGetValue(coaRace, out coa)) return coa.ToArray();
             return new uint[0];
         }
+
+        /// <summary>True when the package brings a spell_dbc row for this spell.</summary>
+        public static bool HasRow(uint spell) { return coaSpellRows.ContainsKey(spell); }
 
         /// <summary>The racials of a race that do nothing without code of CoA Custom's server (not ported to the module).</summary>
         public static uint[] NeedCode(IEnumerable<uint> spells)
