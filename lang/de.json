@@ -2849,6 +2849,8 @@
     "Language of the sheets": "Sprache der Bögen",
     "For example German. Empty: English.": "Zum Beispiel German. Leer: Englisch.",
     "Bot lines for Companion Voice": "Bot-Zeilen für Companion Voice",
-    "Marks the lines the model wrote, so the Companion Voice add-on reads them aloud and keeps the bots' status messages quiet.": "Markiert die Zeilen, die das Modell geschrieben hat, damit das Add-on Companion Voice sie vorliest und die Statusmeldungen der Bots still bleiben."
+    "Marks the lines the model wrote, so the Companion Voice add-on reads them aloud and keeps the bots' status messages quiet.": "Markiert die Zeilen, die das Modell geschrieben hat, damit das Add-on Companion Voice sie vorliest und die Statusmeldungen der Bots still bleiben.",
+    "Waiting lines at most": "Wartende Zeilen höchstens",
+    "Lines that wait for the model beyond this are dropped instead of piling up. Without a graphics card keep it small (about 4): each line takes half a minute, and a long queue only brings stale answers and lag.": "Was darüber hinaus auf das Modell wartet, wird verworfen statt aufgestaut. Ohne Grafikkarte klein halten (etwa 4): jede Zeile dauert eine halbe Minute, und eine lange Schlange bringt nur veraltete Antworten und Ruckeln."
   }
 }

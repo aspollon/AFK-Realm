@@ -2,7 +2,7 @@
 
 ## 1.3.41
 
-- **Ollama chat page**: `OllamaChat.OnlyPartyBots`, `OllamaChat.NumThreads`, `OllamaChat.RP.*` (Enable, UseSheetsInChat, Pregenerate, Language) and `OllamaChat.VoiceLabels` have switches now.
+- **Ollama chat page**: `OllamaChat.OnlyPartyBots`, `OllamaChat.NumThreads`, `OllamaChat.RP.*` (Enable, UseSheetsInChat, Pregenerate, Language) and `OllamaChat.VoiceLabels` and `OllamaChat.MaxQueueDepth` have switches now.
 
 ## 1.3.40
 

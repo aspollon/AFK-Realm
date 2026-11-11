@@ -385,6 +385,7 @@ export function ollamaSetup() {
       p.choice(con, O + 'NumCtx', T('Prompt length'), ['4096', '8192', '16384'], [T('Short'), T('Normal'), T('Long')], T('How much the model reads at once: voice, knowledge, memory and the conversation. Shorter needs less graphics memory, but a prompt that does not fit loses its instructions.'));
       p.slider(con, O + 'MaxConcurrentQueries', T('Answers at once'), 0, 8, 1, v => v === 0 ? T('automatic') : String(Math.trunc(v)), T('How many lines the model writes at the same time. More needs more graphics memory.'));
       p.slider(con, O + 'NumThreads', T('Processor cores for the model'), 0, 16, 1, v => v === 0 ? T('automatic') : String(Math.trunc(v)), T('Without a graphics card the model shares the processor with the worldserver. Leave two cores free (for example 4 of 6), or the game lags while a bot writes.'));
+      p.slider(con, O + 'MaxQueueDepth', T('Waiting lines at most'), 1, 64, 1, v => String(Math.trunc(v)), T('Lines that wait for the model beyond this are dropped instead of piling up. Without a graphics card keep it small (about 4): each line takes half a minute, and a long queue only brings stale answers and lag.'));
       const who = p.card(T('Which bots use the model'), T('Every line a bot writes costs the model time. On a slow PC, let only your own group talk.'), 'accounts');
       p.toggle(who, O + 'OnlyPartyBots', T('Only bots in a group with a real player'), T('All other bots stay normal playerbots: no answers, no chatter, no comments. Takes a lot of load off a PC without a graphics card.'));
 
