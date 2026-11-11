@@ -1,3 +1,7 @@
+# AFK Realm 1.3.36
+
+- **Linux fix:** replacing the copy of AFK Realm in the server folder (which the menu entry starts) no longer breaks one that is still running.
+
 # AFK Realm 1.3.35
 
 - **Linux fix:** the build uses g++ first, so a fresh Ubuntu no longer stops at "-lstdc++ not found".

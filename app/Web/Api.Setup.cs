@@ -239,8 +239,12 @@ namespace CoAInstaller.Web
             {
                 if (!string.Equals(Path.GetFullPath(self), Path.GetFullPath(target), Os.Windows ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
                 {
-                    File.Copy(self, target, true);
-                    if (!Os.Windows) File.SetUnixFileMode(target, File.GetUnixFileMode(self));
+                    // Into a new file first, then moved over: overwriting the file in place would cut short a copy that
+                    // is running from it (Linux reads the program's parts from its file while it runs).
+                    string temp = target + ".new";
+                    File.Copy(self, temp, true);
+                    if (!Os.Windows) File.SetUnixFileMode(temp, File.GetUnixFileMode(self));
+                    File.Move(temp, target, true);
                 }
             }
             catch { return; }

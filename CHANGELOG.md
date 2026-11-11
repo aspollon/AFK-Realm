@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.36
+
+- **A running AFK Realm on Linux could break when a newer one replaced its copy** in the server folder ("Could not load file or assembly ..."): the copy was overwritten in place, and Linux reads a program's parts from its file while it runs. The new version is now written to a new file that is then moved over the old one.
+
 ## 1.3.35
 
 - **Linux: g++ before clang.** On a fresh Ubuntu 26.04 clang still reached the build and stopped at "-lstdc++ not found" (it takes the newest GCC folder, which can lack its C++ library). g++ always brings the library of its own version, so it is tried first now; clang is the fallback.
