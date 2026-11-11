@@ -79,8 +79,6 @@ namespace CoAInstaller
             catch { }
             if (r.Server.Count > 0)
                 try { CheckPatches(inst, git, r); } catch { }
-            // a test build (AFK_TEST_BRANCH) never offers a release over itself
-            if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("AFK_TEST_BRANCH"))) return r;
             try
             {
                 string json = Get("https://api.github.com/repos/" + Product.GitHubRepo + "/releases?per_page=10");

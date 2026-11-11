@@ -146,8 +146,8 @@ namespace CoAInstaller.Web
                     // picked up from it instead of waiting for a new races.json in the module.
                     ServerRacials.UseCoreHeader(inst.SourceDir);
                     string coaFolder = Raw("CustomRaces.ClientRootFolder", "");
-                    foreach (string packRows in ServerRacials.PackRowFiles(coaFolder)) ServerRacials.UseCoaRows(packRows, true);
-                    ServerRacials.UseIdConvention(ClientAddons.ClientFolder);
+                    string packRows = ServerRacials.PackRows(coaFolder);
+                    if (packRows != null) ServerRacials.UseCoaRows(packRows, true);
                 }
             }
             catch (Exception ex) { knownError = L.F("What mod-custom-races knows of the races could not be read ({0}): {1}", file, ex.Message); }

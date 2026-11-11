@@ -1412,7 +1412,6 @@ function Find-Updates([string]$Git) {
     if ($CoreOnly) { Write-Log 'Core only: the modules stay at the versions the server has.' Cyan; return ,$changes }
     foreach ($dir in @(Get-ChildItem $modules -Directory -ErrorAction SilentlyContinue)) {
         if ($dir.FullName -eq $Paths.Playerbots -or $dir.FullName -eq $Paths.DungeonClear -or -not (Test-Path (Join-Path $dir.FullName '.git'))) { continue }
-        Use-TestBranch $Git $dir.FullName
         $upstream = Get-ProgramOutput $Git @('-C', $dir.FullName, 'rev-parse', '--abbrev-ref', '@{u}')
         if (-not $upstream) { Write-Log "$($dir.Name): no tracking branch, skipped." Yellow; continue }
         if ($null -eq (Get-ProgramOutput $Git @('-C', $dir.FullName, 'fetch', '--quiet'))) { Write-Log "$($dir.Name): could not fetch, skipped." Yellow; continue }
@@ -2156,22 +2155,6 @@ function Get-ModuleLoaderName([string]$Folder, [string]$Name) {
 }
 
 # Downloads new modules and sets removed ones aside. Returns what to undo if the build fails.
-# Test channel: with AFK_TEST_BRANCH set (e.g. afk-test), a module of AFK Realm's own (github.com/aspollon) that has
-# such a branch is used from it instead of its default branch, so changes can be tried on a server before they are
-# released. Without the variable, or for any other module, nothing changes.
-function Use-TestBranch([string]$Git, [string]$Folder) {
-    $branch = $env:AFK_TEST_BRANCH
-    if (-not $branch -or -not (Test-Path (Join-Path $Folder '.git'))) { return }
-    $origin = Get-ProgramOutput $Git @('-C', $Folder, 'remote', 'get-url', 'origin')
-    if ($origin -notmatch 'github\.com[/:]aspollon/') { return }
-    if (-not (Get-ProgramOutput $Git @('-C', $Folder, 'ls-remote', '--heads', 'origin', $branch))) { return }
-    if (Get-ProgramOutput $Git @('-C', $Folder, 'status', '--porcelain', '--untracked-files=no')) { Write-Log "$(Split-Path $Folder -Leaf): local changes, the test branch $branch is not used." Yellow; return }
-    [void](Invoke-Program $Git @('-C', $Folder, 'fetch', '--no-tags', 'origin', "+refs/heads/$($branch):refs/remotes/origin/$branch"))
-    [void](Invoke-Program $Git @('-C', $Folder, 'checkout', '-B', $branch, "origin/$branch"))
-    [void](Invoke-Program $Git @('-C', $Folder, 'branch', '--set-upstream-to', "origin/$branch") -AllowFailure)
-    Write-Log "$(Split-Path $Folder -Leaf): test branch $branch." Cyan
-}
-
 function Edit-ModuleFolders([string]$Git, [string[]]$Add, [string[]]$Remove) {
     $state = @{ Added = New-Object Collections.Generic.List[string]; Removed = New-Object Collections.Generic.List[object]; Urls = @{} }
     New-Item -ItemType Directory -Force -Path $Paths.Modules | Out-Null
@@ -2199,7 +2182,6 @@ function Edit-ModuleFolders([string]$Git, [string[]]$Add, [string[]]$Remove) {
         } else {
             $state.Added.Add($folder)
             [void](Invoke-Program $Git @('clone', '--recurse-submodules', $url.Trim(), $folder))
-            Use-TestBranch $Git $folder
             $loaderName = Get-ModuleLoaderName $folder $name
             if ($loaderName) {
                 $renamed = Join-Path $Paths.Modules $loaderName
