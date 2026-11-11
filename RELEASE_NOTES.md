@@ -1,3 +1,9 @@
+# AFK Realm 1.3.34
+
+- **Linux fix:** on a fresh Ubuntu the build could stop with "-lstdc++ not found". AFK Realm now checks which compiler really works and uses it, or tells you the one command that fixes it.
+- **Fix:** a fresh server build could stop at the racial patch with the current CoA core.
+- **CoA Custom 1.9.9:** the Titan's Aegis of the Keepers and the Qiraji's Swarm Flight work.
+
 # AFK Realm 1.3.33
 
 - **Server settings:** the window is bigger, the divider between list and description can be dragged, and long values (like the Ollama prompts) are shown and edited in full, wrapped, instead of cut off.

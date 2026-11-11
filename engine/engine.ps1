@@ -671,11 +671,39 @@ function Find-Header([string]$Relative) {
     return $null
 }
 
+# True when the compiler can compile and link a small C++ program.
+function Test-CxxLinks([string]$Compiler) {
+    $dir = Join-Path ([IO.Path]::GetTempPath()) ('afk-cxx-' + [guid]::NewGuid().ToString('N'))
+    try {
+        New-Item -ItemType Directory -Force -Path $dir | Out-Null
+        $src = Join-Path $dir 'test.cpp'
+        [IO.File]::WriteAllText($src, "#include <string>`n#include <iostream>`nint main() { std::string s = `"ok`"; std::cout << s << std::endl; return 0; }`n")
+        $psi = New-Object Diagnostics.ProcessStartInfo $Compiler
+        foreach ($a in @('-std=c++17', $src, '-o', (Join-Path $dir 'test'))) { [void]$psi.ArgumentList.Add($a) }
+        $psi.RedirectStandardOutput = $true; $psi.RedirectStandardError = $true; $psi.UseShellExecute = $false
+        $proc = [Diagnostics.Process]::Start($psi)
+        $err = $proc.StandardError.ReadToEnd(); [void]$proc.StandardOutput.ReadToEnd()
+        $proc.WaitForExit()
+        if ($proc.ExitCode -ne 0) { Write-Log "$Compiler cannot build a test program: $(($err -split "`n" | Where-Object { $_ -match 'error' } | Select-Object -First 2) -join ' ')" Yellow; return $false }
+        return $true
+    } catch { return $false }
+    finally { Remove-Item $dir -Recurse -Force -ErrorAction SilentlyContinue }
+}
+
 # Everything the Linux build needs, or one error naming what is missing and how to get it.
 function Resolve-LinuxToolchain {
     $missing = New-Object Collections.Generic.List[string]
+    # A compiler counts only if it can link a C++ program: clang uses the newest GCC folder it finds, and on a fresh
+    # Ubuntu that folder can lack its libstdc++ ("-lstdc++ not found") while g++ links fine.
     $cxx = $null
-    foreach ($candidate in 'clang++', 'g++') { $cxx = Find-Program $candidate; if ($cxx) { break } }
+    $found = @('clang++', 'g++' | ForEach-Object { Find-Program $_ } | Where-Object { $_ })
+    foreach ($candidate in $found) { if (Test-CxxLinks $candidate) { $cxx = $candidate; break } }
+    if (-not $cxx -and $found.Count -gt 0) {
+        $gccDir = @(Get-ChildItem '/usr/lib/gcc/x86_64-linux-gnu', '/usr/lib/gcc/aarch64-linux-gnu' -Directory -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -match '^\d+$' } | Sort-Object { [int]$_.Name } | Select-Object -Last 1)
+        $fix = if ($gccDir.Count -gt 0 -and (Get-LinuxPackageManager) -eq 'apt') { "sudo apt install libstdc++-$($gccDir[0].Name)-dev g++" } else { Get-LinuxPackageCommand }
+        throw (Tr 'The C++ compiler cannot build a program: the C++ standard library (libstdc++) is missing. Install it once with: {0}' $fix)
+    }
     if (-not $cxx) { $missing.Add('C++ compiler (g++ or clang)') }
     $generator = if (Find-Program 'ninja') { 'Ninja' } elseif (Find-Program 'make') { 'Unix Makefiles' } else { $missing.Add('ninja or make'); '' }
     foreach ($h in @(@{ File = 'boost/version.hpp'; Name = 'Boost' }, @{ File = 'openssl/ssl.h'; Name = 'OpenSSL' },
@@ -1450,6 +1478,9 @@ function Invoke-ConfigureLinux([string]$CMake, $Toolchain, [switch]$Clean) {
         }
         $g = [regex]::Match($text, '(?m)^CMAKE_GENERATOR:INTERNAL=(.*?)\r?$')
         if ($g.Success -and $g.Groups[1].Value.Trim() -ne $Toolchain.Generator) { $samePlace = $false }
+        # a cache made with another compiler (clang before, g++ now) cannot be switched
+        $c = [regex]::Match($text, '(?m)^CMAKE_CXX_COMPILER:\w+=(.*?)\r?$')
+        if ($c.Success -and $c.Groups[1].Value.Trim() -ne $Toolchain.Compiler) { $samePlace = $false }
     }
     if ($Clean -or -not $samePlace) { Remove-Item $Paths.Build -Recurse -Force -ErrorAction SilentlyContinue }
     New-Item -ItemType Directory -Force -Path $Paths.Build, $Paths.Server | Out-Null

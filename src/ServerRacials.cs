@@ -65,6 +65,7 @@ namespace CoAInstaller
             { 111209, "spell_venthyr_racial" },
             { 111210, "spell_venthyr_bat_form" },
             { 14001032, "spell_gen_cannibalize" }, // Grummle Trail Snack, same corpse script as Cannibalize
+            { 15000914, "spell_titan_aegis" },     // 1.9.9 Titan: Aegis of the Keepers
         };
 
         /// <summary>The racials of CoA Custom's races (race number -> spells), those that need code of its server (none

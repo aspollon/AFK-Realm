@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.34
+
+- **Linux: build stopped at "-lstdc++ not found"** (fresh Ubuntu 26.04): clang takes the newest GCC folder on the system, and there that folder can lack its C++ standard library. AFK Realm now builds a small test program with each compiler and uses the first that links (clang, else g++); when none does, it names the one `apt` command that installs the library. A build folder made with the other compiler starts afresh.
+- **Racial patch fits the current CoA core again** (a new script line in CoAScriptLoader.cpp moved its context, so a fresh build could stop at the racial patch). It also brings the CoA Custom 1.9.9 Titan's Aegis of the Keepers (a shield of the caster's maximum health) and lets the 1.9.9 Qiraji use the Kyrian hover for Swarm Flight.
+
 ## 1.3.33
 
 - **Server settings easier to read:** the dialog takes the whole window (up to 1800 px), the bar between the list and the description can be dragged (its place is kept), long values wrap inside their column (three lines at most in the list) instead of running off to the right, and long texts such as the Ollama prompts are edited in a box that wraps instead of a one-line field (Enter does not break the value into lines).

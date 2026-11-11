@@ -1,33 +1,37 @@
 diff --git a/src/server/coa/CoAScriptLoader.cpp b/src/server/coa/CoAScriptLoader.cpp
-index ad916ff404..d893ef9d09 100644
+index a372ef74..6cc66159 100644
 --- a/src/server/coa/CoAScriptLoader.cpp
 +++ b/src/server/coa/CoAScriptLoader.cpp
-@@ -61,6 +61,9 @@ void AddSC_CoALfgStartPoint();
+@@ -65,6 +65,10 @@ void AddSC_CoALfgStartPoint();
  void AddSC_CoAStatisticQuery();
  void AddSC_CoABossProbe();
  void AddSC_CoADungeonSpellDamage();
 +void AddSC_kyrian_hover();
 +void AddSC_kyrian_racials();
 +void AddSC_venthyr_racials();
++void AddSC_titan_racials();
  void AddSC_CoAGameObjectScale();
+ void AddSC_CoABossLeash();
  void AddSC_CoACreatureScaling();
- void AddSC_CoADungeonBossKit();
-@@ -837,6 +840,9 @@ void AddCoAScripts()
+@@ -872,6 +876,10 @@ void AddCoAScripts()
      AddSC_CoAStatisticQuery();
      AddSC_CoABossProbe();
      AddSC_CoADungeonSpellDamage();
 +    AddSC_kyrian_hover();
 +    AddSC_kyrian_racials();
 +    AddSC_venthyr_racials();
++    AddSC_titan_racials();
      AddSC_CoAGameObjectScale();
+     AddSC_CoABossLeash();
      AddSC_CoACreatureScaling();
-     AddSC_CoADungeonBossKit();
 diff --git a/src/server/coa/EsteriaRacials/kyrian_hover.cpp b/src/server/coa/EsteriaRacials/kyrian_hover.cpp
 new file mode 100644
-index 0000000000..56ae0582da
+index 00000000..ffd4308d
 --- /dev/null
 +++ b/src/server/coa/EsteriaRacials/kyrian_hover.cpp
-@@ -0,0 +1,256 @@
+@@ -0,0 +1,268 @@
++#include "DBCStores.h"
++#include <string_view>
 +#include "DataMap.h"
 +#include "KyrianHover.h"
 +#include "Player.h"
@@ -41,6 +45,16 @@ index 0000000000..56ae0582da
 +namespace
 +{
 +    using namespace KyrianHover;
++
++    // Kyrian, and the races that borrow its hover (CoA Custom 1.9.9 Qiraji: Swarm Flight), found by their client name.
++    bool Hovers(Player const* player)
++    {
++        uint8 const race = player->getRace(true);
++        if (race == Race)
++            return true;
++        ChrRacesEntry const* entry = sChrRacesStore.LookupEntry(race);
++        return entry && entry->name[0] && std::string_view(entry->name[0]).find("Qiraji") != std::string_view::npos;
++    }
 +
 +    struct HoverData final : DataMap::Base
 +    {
@@ -62,7 +76,7 @@ index 0000000000..56ae0582da
 +
 +    bool CanHover(Player const* player)
 +    {
-+        return player->getRace(true) == Race && player->IsAlive() && !player->IsMounted()
++        return Hovers(player) && player->IsAlive() && !player->IsMounted()
 +            && !player->IsInFlight() && !player->GetVehicle() && !player->GetTransport()
 +            // Warrior stances are shapeshift records, but keep the native Kyrian body.
 +            && !player->IsInWater() && !player->IsInDisallowedMountForm()
@@ -126,7 +140,7 @@ index 0000000000..56ae0582da
 +
 +    void OnPlayerLogin(Player* player) override
 +    {
-+        if (player->getRace(true) != Race)
++        if (!Hovers(player))
 +            return;
 +
 +        player->learnSpell(Ability);
@@ -193,7 +207,7 @@ index 0000000000..56ae0582da
 +    SpellCastResult Check()
 +    {
 +        Player* player = GetCaster()->ToPlayer();
-+        if (!player || player->getRace(true) != Race)
++        if (!player || !Hovers(player))
 +            return SPELL_FAILED_SPELL_UNAVAILABLE;
 +
 +        HoverData* data = GetHover(player);
@@ -286,7 +300,7 @@ index 0000000000..56ae0582da
 +}
 diff --git a/src/server/coa/EsteriaRacials/kyrian_racials.cpp b/src/server/coa/EsteriaRacials/kyrian_racials.cpp
 new file mode 100644
-index 0000000000..7b609fce1d
+index 00000000..7b609fce
 --- /dev/null
 +++ b/src/server/coa/EsteriaRacials/kyrian_racials.cpp
 @@ -0,0 +1,245 @@
@@ -535,9 +549,42 @@ index 0000000000..7b609fce1d
 +    new kyrian_racial_players();
 +    RegisterSpellScript(spell_kyrian_ascendant_charge);
 +}
+diff --git a/src/server/coa/EsteriaRacials/titan_racials.cpp b/src/server/coa/EsteriaRacials/titan_racials.cpp
+new file mode 100644
+index 00000000..70db3cb4
+--- /dev/null
++++ b/src/server/coa/EsteriaRacials/titan_racials.cpp
+@@ -0,0 +1,27 @@
++#include "Player.h"
++#include "ScriptMgr.h"
++#include "SpellAuraEffects.h"
++#include "SpellScript.h"
++
++// CoA Custom 1.9.9 Titan: Aegis of the Keepers (15000914) absorbs damage up to the caster's maximum health.
++class spell_titan_aegis : public AuraScript
++{
++    PrepareAuraScript(spell_titan_aegis);
++
++    void CalculateAmount(AuraEffect const* /*aurEff*/, int32& amount, bool& canBeRecalculated)
++    {
++        canBeRecalculated = false;
++        if (Unit* caster = GetCaster())
++            amount = int32(caster->GetMaxHealth());
++    }
++
++    void Register() override
++    {
++        DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_titan_aegis::CalculateAmount, EFFECT_0, SPELL_AURA_SCHOOL_ABSORB);
++    }
++};
++
++void AddSC_titan_racials()
++{
++    RegisterSpellScript(spell_titan_aegis);
++}
 diff --git a/src/server/coa/EsteriaRacials/venthyr_racials.cpp b/src/server/coa/EsteriaRacials/venthyr_racials.cpp
 new file mode 100644
-index 0000000000..1a7b28a62d
+index 00000000..1a7b28a6
 --- /dev/null
 +++ b/src/server/coa/EsteriaRacials/venthyr_racials.cpp
 @@ -0,0 +1,333 @@
@@ -876,7 +923,7 @@ index 0000000000..1a7b28a62d
 +}
 diff --git a/src/server/shared/KyrianHover.h b/src/server/shared/KyrianHover.h
 new file mode 100644
-index 0000000000..5fe34585b5
+index 00000000..5fe34585
 --- /dev/null
 +++ b/src/server/shared/KyrianHover.h
 @@ -0,0 +1,72 @@
@@ -954,7 +1001,7 @@ index 0000000000..5fe34585b5
 +#endif
 diff --git a/src/server/shared/KyrianRacials.h b/src/server/shared/KyrianRacials.h
 new file mode 100644
-index 0000000000..61940b8c7b
+index 00000000..61940b8c
 --- /dev/null
 +++ b/src/server/shared/KyrianRacials.h
 @@ -0,0 +1,27 @@
@@ -987,7 +1034,7 @@ index 0000000000..61940b8c7b
 +#endif
 diff --git a/src/server/shared/VenthyrRacials.h b/src/server/shared/VenthyrRacials.h
 new file mode 100644
-index 0000000000..5f3f4aa48a
+index 00000000..5f3f4aa4
 --- /dev/null
 +++ b/src/server/shared/VenthyrRacials.h
 @@ -0,0 +1,53 @@
