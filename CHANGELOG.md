@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.40
+
+- **The Voices page installs the CoA64.exe that loads plugins** when the game folder's exe cannot: the voices release (aspollon/coa-living-voices 0.2.0 and later) carries it in `CoA64\`, built for the CoA Custom version named in `COA-CUSTOM-VERSION.txt`. The old exe stays as `CoA64.exe.afk-backup`, and a note says when the build is for another CoA Custom version than the chosen package.
+
 ## 1.3.39
 
 - **The client pack and the AFK Client manifest left out CoA Custom.** They carried the module add-ons, the AFK client patch and the realm list, but none of the CoA Custom package's client files, so a player updated by the AFK Client had the plain CoA glue: no custom races, and a Lua error in character creation ("CharCreateRaceButton12" nil). On a CoA server the pack now adds the package chosen on the CoA Custom page: its client MPQs, dinput8.dll, client_root (CoA64.exe by the install's rules), the x64 DXVK files and its add-ons. The player ZIP uses the same code.

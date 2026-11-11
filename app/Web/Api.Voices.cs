@@ -13,12 +13,12 @@ namespace CoAInstaller.Web
             var s = ClientVoices.Look(client);
             string state;
             if (client == null) state = L.T("Choose your game folder in the game client window first.");
-            else if (s.Host == null) state = L.T("This game folder has no CoA64 client that loads plugins (Plugins\\*.dll). Voices need that CoA64 build.");
+            else if (s.Host == null) state = L.T("Your CoA64.exe cannot load plugins yet: \"Install\" brings the one built for that (yours is kept as a backup).");
             else state = L.F("Plugin: {0} · Companion Voice: {1} · Living Voices: {2}",
                 s.Plugin ?? L.T("not installed"), s.Companion ?? L.T("not installed"), s.Quest ?? L.T("not installed"));
             return new
             {
-                client, host = s.Host == null ? null : System.IO.Path.GetFileName(s.Host), state, ready = client != null && s.Host != null,
+                client, host = s.Host == null ? null : System.IO.Path.GetFileName(s.Host), state, ready = client != null,
                 questInstalled = s.Quest != null,
                 o.Quest, o.Companion, o.Party, o.Whisper, o.Say, o.Yell, o.NpcSay, o.NpcYell, o.CompanionsOnly, o.QuietInCombat, o.Volume, o.Speed
             };

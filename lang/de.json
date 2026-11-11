@@ -2829,6 +2829,9 @@
     "Save settings": "Einstellungen speichern",
     "Packing the voices ({0}/{1}) ...": "Packe die Stimmen ({0}/{1}) ...",
     "CoA64.exe in this ZIP is this server's own build. It loads the voice plugin (Plugins\\LivingVoices64.dll): quest voice-over and chat read aloud, settings in game with /lv and /cvoice.": "CoA64.exe in diesem ZIP ist der eigene Build dieses Servers. Er lädt das Stimmen-Plugin (Plugins\\LivingVoices64.dll): Quest-Vertonung und vorgelesener Chat, Einstellungen im Spiel mit /lv und /cvoice.",
-    "CoA64.exe: your own build (it loads the voice plugin) is kept.": "CoA64.exe: dein eigener Build (er lädt das Stimmen-Plugin) bleibt erhalten."
+    "CoA64.exe: your own build (it loads the voice plugin) is kept.": "CoA64.exe: dein eigener Build (er lädt das Stimmen-Plugin) bleibt erhalten.",
+    "CoA64.exe that loads plugins (yours is kept as CoA64.exe.afk-backup)": "CoA64.exe, die Plugins lädt (deine bleibt als CoA64.exe.afk-backup erhalten)",
+    "Note: this CoA64.exe was built for CoA Custom {0}, your package is {1}. If the game misbehaves, put CoA64.exe.afk-backup back and wait for a matching voices release.": "Hinweis: Diese CoA64.exe wurde für CoA Custom {0} gebaut, dein Paket ist {1}. Spinnt das Spiel, CoA64.exe.afk-backup zurückkopieren und auf ein passendes Stimmen-Release warten.",
+    "Your CoA64.exe cannot load plugins yet: \"Install\" brings the one built for that (yours is kept as a backup).": "Deine CoA64.exe kann noch keine Plugins laden: „Installieren“ bringt die passende mit (deine bleibt als Sicherung erhalten)."
   }
 }
