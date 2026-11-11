@@ -332,6 +332,9 @@ namespace CoAInstaller
             return new uint[0];
         }
 
+        /// <summary>True when the package brings a spell_dbc row for this spell.</summary>
+        public static bool HasRow(uint spell) { return coaSpellRows.ContainsKey(spell); }
+
         /// <summary>The racials of a race that do nothing without code of CoA Custom's server (not ported to the module).</summary>
         public static uint[] NeedCode(IEnumerable<uint> spells)
         {

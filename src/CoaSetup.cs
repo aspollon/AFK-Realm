@@ -369,6 +369,17 @@ namespace CoAInstaller
                         string.Join(", ", restored.Select(r => r.Value + " (" + r.Key + ")"))));
             }
             catch (Exception ex) { Console.WriteLine(L.T("The race settings could not be checked:") + " " + ex.Message); }
+            // the races that crash a client on a bot stay away from the random bots, then the check of every race
+            var botsOff = new List<KeyValuePair<int, string>>();
+            try
+            {
+                botsOff = CoaCheck.WriteBotExclusions(inst, Path.GetDirectoryName(files.TrimEnd('\\', '/')));
+                Console.WriteLine(L.F("Random bots leave out {0} race(s) that crash the client or have no model: {1}", botsOff.Count,
+                    string.Join(", ", botsOff.Select(r => (r.Value.Length > 0 ? r.Value + " " : "") + "(" + r.Key + ")"))));
+            }
+            catch (Exception ex) { Console.WriteLine(L.T("The bot race list could not be written:") + " " + ex.Message); }
+            try { foreach (string line in CoaCheck.Report(inst, o.Client, botsOff)) Console.WriteLine(line); }
+            catch (Exception ex) { Console.WriteLine(L.T("The race check could not run:") + " " + ex.Message); }
             EnsureHardwareCursor(o.Client);
 
             // The module add-ons are part of the client build too. Installing them here means
