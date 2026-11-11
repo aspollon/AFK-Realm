@@ -253,6 +253,85 @@ namespace CoAInstaller
 
         static void TryDelete(string f) { try { File.Delete(f); } catch { } }
 
+        // ------------------------------------------------------------------------------------ for the players
+
+        /// <summary>The files players get from the owner's game: the CoA64.exe that loads plugins, the voice plugin and
+        /// both voice add-ons as installed (with the owner's AFKDefaults.lua). Paths relative to the game folder.</summary>
+        public static List<KeyValuePair<string, string>> PlayerFiles(string client)
+        {
+            var list = new List<KeyValuePair<string, string>>();
+            string host = PluginHost(client);
+            if (host == null) return list;
+            list.Add(new KeyValuePair<string, string>(Path.GetFileName(host), host));
+            string plugin = PluginFile(client);
+            if (File.Exists(plugin)) list.Add(new KeyValuePair<string, string>("Plugins/LivingVoices64.dll", plugin));
+            foreach (string name in new[] { "CompanionVoice", "LivingVoices" })
+            {
+                string dir = AddOn(client, name);
+                if (!Directory.Exists(dir)) continue;
+                string prefix = Path.GetFullPath(dir).TrimEnd('\\', '/') + Path.DirectorySeparatorChar;
+                foreach (string f in Directory.GetFiles(dir, "*", SearchOption.AllDirectories))
+                {
+                    if (Path.GetFileName(f).Equals(Marker, StringComparison.OrdinalIgnoreCase)) continue;
+                    list.Add(new KeyValuePair<string, string>("Interface/AddOns/" + name + "/" + Path.GetFullPath(f).Substring(prefix.Length).Replace('\\', '/'), f));
+                }
+            }
+            return list;
+        }
+
+        /// <summary>Adds PlayerFiles to a ZIP being written. Returns the exe's name (or null when the game has none).</summary>
+        public static string AddToZip(ZipArchive zip, string client, Action<string, int, int> progress)
+        {
+            var files = PlayerFiles(client);
+            if (files.Count == 0) return null;
+            int done = 0;
+            foreach (var f in files)
+            {
+                if (progress != null) progress(L.F("Packing the voices ({0}/{1}) ...", done + 1, files.Count), done, files.Count);
+                bool packed = f.Key.EndsWith(".MPQ", StringComparison.OrdinalIgnoreCase) || f.Key.EndsWith(".mp3", StringComparison.OrdinalIgnoreCase);
+                zip.CreateEntryFromFile(f.Value, f.Key, packed ? CompressionLevel.NoCompression : CompressionLevel.Optimal);
+                done++;
+            }
+            return files[0].Key;
+        }
+
+        /// <summary>Rewrites a finished ZIP with PlayerFiles added (its own copy of the exe is replaced). Streams, so a
+        /// ZIP of several GB never sits in memory as ZipArchiveMode.Update would.</summary>
+        public static bool AppendToZipFile(string zipFile, string client, Action<string, int, int> progress)
+        {
+            var files = PlayerFiles(client);
+            if (files.Count == 0) return false;
+            var replaced = new HashSet<string>(files.Select(f => f.Key), StringComparer.OrdinalIgnoreCase);
+            string temp = zipFile + ".voices";
+            if (File.Exists(temp)) File.Delete(temp);
+            try
+            {
+                using (var source = ZipFile.OpenRead(zipFile))
+                using (var target = ZipFile.Open(temp, ZipArchiveMode.Create))
+                {
+                    foreach (var e in source.Entries)
+                    {
+                        if (replaced.Contains(e.FullName.Replace('\\', '/'))) continue;
+                        bool stored = e.FullName.EndsWith(".MPQ", StringComparison.OrdinalIgnoreCase) || e.FullName.EndsWith(".exe", StringComparison.OrdinalIgnoreCase);
+                        var copy = target.CreateEntry(e.FullName, stored ? CompressionLevel.NoCompression : CompressionLevel.Optimal);
+                        copy.LastWriteTime = e.LastWriteTime;
+                        using (var from = e.Open())
+                        using (var to = copy.Open())
+                            from.CopyTo(to);
+                    }
+                    AddToZip(target, client, progress);
+                }
+                File.Delete(zipFile);
+                File.Move(temp, zipFile);
+            }
+            catch
+            {
+                try { if (File.Exists(temp)) File.Delete(temp); } catch { }
+                throw;
+            }
+            return true;
+        }
+
         // ------------------------------------------------------------------------------------ GitHub releases
 
         sealed class Asset { public string Name, Url; public long Size; }

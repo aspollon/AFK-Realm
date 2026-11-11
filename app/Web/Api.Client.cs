@@ -188,6 +188,7 @@ namespace CoAInstaller.Web
                 return Jobs.Run(L.T("Making the ZIP for the other players …"), (job, st) =>
                 {
                     ClientAddons.Export(file, look.Addons, inst, look.Client, look.Patch, (t, x, y) => { job.Status = t; job.Sub = y > 0 ? (double)x / y : -1; job.Changed(false); });
+                    if (look.Client != null) ClientVoices.AppendToZipFile(file, look.Client, (t, x, y) => { job.Status = t; job.Sub = y > 0 ? (double)x / y : -1; job.Changed(false); });
                     job.Payload = new { url = Files.Offer(file, name, true), name };
                     job.Message = L.T("Give it to the other players: they unpack it into their game folder (it says how inside).");
                 }).Snapshot();
