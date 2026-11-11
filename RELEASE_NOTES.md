@@ -1,3 +1,7 @@
+# AFK Realm 1.3.37
+
+- **Linux:** when you close the window, AFK Realm can keep running in the background (registration page, remote access). A desktop notification now says so. To end it: right-click AFK Realm in the application menu and choose "Quit AFK Realm", or use the new power button at the bottom left of the window.
+
 # AFK Realm 1.3.36
 
 - **Linux fix:** replacing the copy of AFK Realm in the server folder (which the menu entry starts) no longer breaks one that is still running.

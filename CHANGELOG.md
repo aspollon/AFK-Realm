@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.37
+
+- **Linux: AFK Realm vanished into the background** when its window was closed while the registration page or remote access was on, with no tray icon to show it or end it (GNOME has none). A desktop notification now says it keeps running; the application menu entry has a "Quit" action (right-click), which runs `AFK-Realm --quit`; and a power button at the bottom left of the window ends AFK Realm on every system. The game server keeps running either way.
+
 ## 1.3.36
 
 - **A running AFK Realm on Linux could break when a newer one replaced its copy** in the server folder ("Could not load file or assembly ..."): the copy was overwritten in place, and Linux reads a program's parts from its file while it runs. The new version is now written to a new file that is then moved over the old one.

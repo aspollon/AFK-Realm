@@ -222,11 +222,29 @@ namespace CoAInstaller.Web
             {
                 string self = Paths.ExePath;
                 string target = Path.Combine(inst.Root, "Builder", Path.GetFileName(self));
+                // an older menu entry without "Quit"
+                if (!Os.Windows && File.Exists(target) && File.Exists(DesktopFile) && !File.ReadAllText(DesktopFile).Contains("--quit"))
+                    try { WriteDesktopEntry(target, Path.GetDirectoryName(target)); } catch { }
                 if (!File.Exists(target) || string.Equals(Path.GetFullPath(self), Path.GetFullPath(target), Os.Windows ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal)) return;
                 if (File.GetLastWriteTimeUtc(self) <= File.GetLastWriteTimeUtc(target)) return;
                 CopySelf(inst, false);
             }
             catch { }
+        }
+
+        static string DesktopFile { get { return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".local", "share", "applications", "afk-realm.desktop"); } }
+
+        /// <summary>Linux menu entry; its right-click "Quit" ends AFK Realm, which has no tray icon there.</summary>
+        static void WriteDesktopEntry(string target, string dir)
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(DesktopFile));
+            string icon = Path.Combine(dir, "afk-realm.png");
+            using (var s = System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream("web/icon.png"))
+                if (s != null) using (var f = File.Create(icon)) s.CopyTo(f);
+            File.WriteAllText(DesktopFile,
+                "[Desktop Entry]\nType=Application\nName=" + Product.ShortName + "\nComment=" + L.T("Manage the CoA server") +
+                "\nExec=\"" + target + "\"\nIcon=" + icon + "\nTerminal=false\nCategories=Game;\nActions=quit;\n\n" +
+                "[Desktop Action quit]\nName=" + L.F("Quit {0}", Product.ShortName) + "\nExec=\"" + target + "\" --quit\n");
         }
 
         static void CopySelf(Install inst, bool shortcut)
@@ -265,14 +283,7 @@ namespace CoAInstaller.Web
                 }
                 else
                 {
-                    string apps = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".local", "share", "applications");
-                    Directory.CreateDirectory(apps);
-                    string icon = Path.Combine(dir, "afk-realm.png");
-                    using (var s = System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream("web/icon.png"))
-                        if (s != null) using (var f = File.Create(icon)) s.CopyTo(f);
-                    File.WriteAllText(Path.Combine(apps, "afk-realm.desktop"),
-                        "[Desktop Entry]\nType=Application\nName=" + Product.ShortName + "\nComment=" + L.T("Manage the CoA server") +
-                        "\nExec=\"" + target + "\"\nIcon=" + icon + "\nTerminal=false\nCategories=Game;\n");
+                    WriteDesktopEntry(target, dir);
                 }
             }
             catch { }
