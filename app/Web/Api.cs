@@ -91,6 +91,7 @@ namespace CoAInstaller.Web
             MapModules(app);
             MapPresets(app);
             MapClient(app);
+            MapVoices(app);
             MapCoa(app);
             MapRaces(app);
             MapSetups(app);

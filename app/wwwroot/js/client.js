@@ -11,6 +11,7 @@ export async function clientDialog(reason) {
   const exportBtn = secondary(T('Export AFK-only ZIP …'), () => exportZip());
   const downloadBtn = secondary(T('Download / update client …'), () => downloadClient());
   const sharedBtn = secondary(T('Add-ons for your players …'), () => sharedAddons());
+  const voicesBtn = secondary(T('Voices …'), () => import('./voices.js').then(x => x.voicesDialog(folder.value.trim())));
   let look = null, checked = null;
 
   async function refresh(value) {
@@ -110,7 +111,7 @@ export async function clientDialog(reason) {
   refresh();
   await dialog({
     title: meta.product + ' – ' + T('Game client'), icon: 'client', wide: true, body,
-    left: [installBtn, exportBtn, sharedBtn],
+    left: [installBtn, exportBtn, sharedBtn, voicesBtn],
     buttons: [{ text: T('Close'), value: null }]
   });
 }

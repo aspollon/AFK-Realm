@@ -699,6 +699,8 @@ namespace CoAInstaller.Web
                             zip.CreateEntryFromFile(file, entry, CompressionLevel.Optimal);
                     }
                 }
+                // the voices and the CoA64.exe that loads them, from the owner's game
+                ClientVoices.AppendToZipFile(temp, client, progress);
                 File.Move(temp, target, true);
             }
             catch

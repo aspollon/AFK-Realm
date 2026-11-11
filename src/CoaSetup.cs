@@ -136,7 +136,9 @@ namespace CoAInstaller
                 .SelectMany(a => Directory.GetFiles(a.Source, "*", SearchOption.AllDirectories)
                     .Select(path => new { Addon = a, Path = path }))
                 .ToList();
-            bool nativeSupported = NativeHd.SupportsPackage(clientRoot);
+            // the owner's own CoA64.exe that loads plugins (voices) goes to the players instead of the package's
+            bool ownExe = ClientVoices.PluginHost(client) != null;
+            bool nativeSupported = !ownExe && NativeHd.SupportsPackage(clientRoot);
             int total = rootFiles.Length + addonFiles.Length + moduleAddonFiles.Count + mpqs.Length + (nativeSupported ? NativeHd.Count : 0) + Dxvk.Count;
             int done = 0;
             using (var zip = ZipFile.Open(file, ZipArchiveMode.Create))
@@ -152,7 +154,7 @@ namespace CoAInstaller
                 {
                     // The package's CoA64.exe is replaced by the native HD build below,
                     // but only for a CoA package version this native build supports.
-                    if (nativeSupported && string.Equals(Path.GetFileName(path), "CoA64.exe", StringComparison.OrdinalIgnoreCase)) continue;
+                    if ((nativeSupported || ownExe) && string.Equals(Path.GetFileName(path), "CoA64.exe", StringComparison.OrdinalIgnoreCase)) continue;
                     progress(L.F("Packing CoA client files ({0}/{1}) ...", done + 1, total), done, total);
                     string rel = path.Substring(rootPrefix.Length).Replace('\\', '/');
                     if (string.Equals(Path.GetFileName(path), "CoA64.exe", StringComparison.OrdinalIgnoreCase))
@@ -202,15 +204,16 @@ namespace CoAInstaller
                     progress(L.T("Adding the AFK client patch ..."), done, total);
                     ClientPatch.AddPatchToZip(zip, inst, client, plan, progress);
                 }
+                if (ownExe) ClientVoices.AddToZip(zip, client, progress);
                 string realm = GameLaunch.AddToZip(zip, inst);
                 var entry = zip.CreateEntry("READ ME FIRST.txt");
                 using (var writer = new StreamWriter(entry.Open(), new System.Text.UTF8Encoding(false)))
-                    writer.Write(ClientZipReadMe(nativeSupported) + (realm != null ? Environment.NewLine + realm + Environment.NewLine : ""));
+                    writer.Write(ClientZipReadMe(nativeSupported, ownExe) + (realm != null ? Environment.NewLine + realm + Environment.NewLine : ""));
             }
             return file;
         }
 
-        static string ClientZipReadMe(bool nativeHd)
+        static string ClientZipReadMe(bool nativeHd, bool ownExe)
         {
             var text = new System.Text.StringBuilder();
             text.AppendLine(L.T("CoA Custom client files for AFK Realm"));
@@ -221,7 +224,9 @@ namespace CoAInstaller
             text.AppendLine(L.T("4. Delete the folder \"Cache\" in your game folder if the game still shows old races or classes."));
             text.AppendLine();
             text.AppendLine(L.T("The ZIP contains the CoA Custom client files, its add-ons, the AFK Realm client patch and the add-ons of the installed modules."));
-            if (nativeHd)
+            if (ownExe)
+                text.AppendLine(L.T("CoA64.exe in this ZIP is this server's own build. It loads the voice plugin (Plugins\\LivingVoices64.dll): quest voice-over and chat read aloud, settings in game with /lv and /cvoice."));
+            else if (nativeHd)
             {
                 text.AppendLine(L.T("CoA64.exe in this ZIP is the native HD 1.9.6 build. It uses the normal Direct3D9 renderer and does not need the x64 DXVK folder; an existing x64 folder is ignored."));
                 text.AppendLine(L.T("Keep the full HD archive set enabled: patch-Z.MPQ, patch-4.MPQ, patch-5.MPQ and patch-ZZZZS/T/W.MPQ. The native build has room for all of them."));
@@ -251,13 +256,17 @@ namespace CoAInstaller
             }
 
             Console.WriteLine(L.T("Copying client_root (CoA64, Xvid, Esteria, Retail) ..."));
+            // the owner's own CoA64.exe that loads plugins (voices) stays; the package must not replace it
+            bool ownExe = ClientVoices.PluginHost(o.Client) != null;
             bool nativeSupported = NativeHd.SupportsPackage(clientRoot);
             // Keep an already installed native CoA64.exe only when this native build
             // belongs to the package's official CoA64. A new CoA Custom package must
             // not run an old native exe against new race data.
-            CopyTree(clientRoot, o.Client, o.NoBackup, ref copied, ref skipped, nativeSupported ? "CoA64.exe" : null);
+            CopyTree(clientRoot, o.Client, o.NoBackup, ref copied, ref skipped, nativeSupported || ownExe ? "CoA64.exe" : null);
 
-            if (nativeSupported)
+            if (ownExe)
+                Console.WriteLine(L.T("CoA64.exe: your own build (it loads the voice plugin) is kept."));
+            else if (nativeSupported)
             {
                 Console.WriteLine(L.T("Installing native HD CoA64 (no x64 DXVK needed) ..."));
                 int nativeHd = NativeHd.Install(o.Client);
@@ -347,7 +356,7 @@ namespace CoAInstaller
                 VerifyFile(Path.Combine(clientSource, "dinput8.dll"), Path.Combine(o.Client, "dinput8.dll"));
             // CoA64.exe is deliberately replaced by the native build for a supported package;
             // do not compare it with the package's official size afterwards.
-            VerifyTree(clientRoot, o.Client, nativeSupported ? "CoA64.exe" : null);
+            VerifyTree(clientRoot, o.Client, nativeSupported || ownExe ? "CoA64.exe" : null);
             if (Directory.Exists(addons)) VerifyTree(addons, Path.Combine(o.Client, "Interface", "AddOns"));
             VerifyCopied(Path.Combine(files, "dbc"), Path.Combine(inst.DataDir, "dbc"), "*.dbc", "Spell.dbc");
             if (File.Exists(clientDbc)) VerifyFile(clientDbc, Path.Combine(inst.DataDir, "dbc_clientset", "CreatureDisplayInfo.dbc"));
