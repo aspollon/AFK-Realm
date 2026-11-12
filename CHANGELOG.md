@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.42
+
+- **Voices: the CoA64.exe of voices 0.2.0 is replaced.** Built from the public 1.9.9 source, it did not know the twelve AllRaces v12 races (Sureki, Dreadlord, Titan, Wretched, Fungarian, Sporeling, Stormforged, Mo'arg, Nerubian, Lich, Mogu, Lost One), so their bodies had no textures. Voices 0.3.0 carries an exe with them; "Install" puts it in place when the game's exe cannot load plugins or lacks these races.
+
 ## 1.3.41
 
 - **Ollama chat page**: `OllamaChat.OnlyPartyBots`, `OllamaChat.NumThreads`, `OllamaChat.RP.*` (Enable, UseSheetsInChat, Pregenerate, Language) and `OllamaChat.VoiceLabels` and `OllamaChat.MaxQueueDepth` have switches now.

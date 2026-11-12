@@ -133,7 +133,9 @@ namespace CoAInstaller
                 var plugin = LatestRelease(PluginRepo, n => n.StartsWith("CoA64-Voices-", StringComparison.OrdinalIgnoreCase) && n.EndsWith(".zip", StringComparison.OrdinalIgnoreCase));
                 string pluginZip = Fetch(plugin, plugin.Assets[0], downloads, report);
                 // the game's CoA64.exe cannot load plugins: the one built for that comes with the release
-                if (PluginHost(client) == null) done.Add(InstallExe(client, pluginZip));
+                // also replaces the CoA64.exe of voices 0.2.0, which lacks the Esteria races of CoA Custom 1.9.9 (Titan, Lich ...)
+                string host = PluginHost(client);
+                if (host == null || !HasAllRaces(host)) done.Add(InstallExe(client, pluginZip));
 
                 if (o.Companion)
                 {
@@ -195,6 +197,12 @@ namespace CoAInstaller
                 try { if (!Directory.EnumerateFileSystemEntries(downloads).Any()) Directory.Delete(downloads); } catch { }
             }
             return string.Join("\n", done);
+        }
+
+        static bool HasAllRaces(string exe)
+        {
+            try { return IndexOf(File.ReadAllBytes(exe), Encoding.Unicode.GetBytes("EsteriaTitanTextures.bin")) >= 0; }
+            catch { return true; }
         }
 
         /// <summary>CoA64.exe (and XvidDecoder.dll) from the release's CoA64 folder; the game's own exe stays as .afk-backup.</summary>
