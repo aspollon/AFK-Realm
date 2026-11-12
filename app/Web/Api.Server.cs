@@ -190,6 +190,19 @@ namespace CoAInstaller.Web
             return Jobs.Run(L.T("Start server"), (job, st) => StartWork(inst, ctl, st));
         }
 
+        /// <summary>--start: the page's "Start server" right after launch; a missing piece is printed, not asked.</summary>
+        public static void StartOnLaunch()
+        {
+            try
+            {
+                if (Manager.Inst == null) { Console.WriteLine("--start: " + L.T("No finished server was found in this folder.")); return; }
+                if (Manager.Ctl != null && Manager.Ctl.World != null) { Console.WriteLine("--start: " + L.T("running")); return; }
+                StartServer(false);
+                Console.WriteLine(L.T("Start server") + ": " + Manager.Inst.Root);
+            }
+            catch (Exception ex) { Console.WriteLine("--start: " + ex.Message); Program.StartLog("--start: " + ex.Message); }
+        }
+
         /// <summary>Database, authserver, worldserver; then the loading of the world is watched in the background.</summary>
         static void StartWork(Install inst, ServerControl ctl, Action<string> st)
         {

@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.47
+
+- **`AFK-Realm --no-window cli start` runs the command**: the command line was only recognised when `cli` came first, so window switches before it started the web server alone and ignored the command. `cli` now also follows `--no-window`/`--headless`.
+- **`--start`**: AFK Realm with its web page (e.g. `--no-window --listen 0.0.0.0 --password <pw> --start`) also starts the game server, as the page's "Start server" does; the page shows the start and the loading. Missing map data or DBC tables are printed instead of asked. A server already running is left alone; a self-update restart does not start it again.
+
 ## 1.3.46
 
 - **clang works again on Ubuntu 26.04**: Ubuntu brings a newer GCC folder without its C++ library, which clang picks, so it could not link ("-lstdc++ not found") and every build fell back to the slower g++. AFK now points clang at the newest GCC folder that has the library (`--gcc-install-dir`), so clang builds again without installing anything.

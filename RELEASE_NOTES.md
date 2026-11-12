@@ -1,3 +1,8 @@
+# AFK Realm 1.3.47
+
+- **Command line:** `AFK-Realm --no-window cli start` now starts the server. Before, a switch in front of `cli` opened only the web page in the background. (`AFK-Realm cli start` always worked.)
+- **Start the server together with the web page:** `AFK-Realm --no-window --listen 0.0.0.0 --password <password> --start` runs the web interface for other computers and starts the game server right away, for example from Windows' task scheduler or a Linux service.
+
 # AFK Realm 1.3.46
 
 - **Linux: clang really used again.** On Ubuntu 26.04 clang could not link (it looked in a GCC folder without the C++ library), so every build quietly used the slower g++. AFK now shows clang the right folder. The next build starts once from scratch, after that it is fast.

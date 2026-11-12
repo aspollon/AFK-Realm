@@ -17,6 +17,7 @@ namespace CoAInstaller.Web
     ///   AFK-Realm --no-window            only the web server; prints the address
     ///   AFK-Realm --listen 0.0.0.0 --password &lt;pw&gt;   reachable from other computers (a server without a screen)
     ///   AFK-Realm --port 47800           a port of its own choice
+    ///   AFK-Realm ... --start            the game server is started as well (the page's "Start server")
     ///   AFK-Realm cli ...                the command line (see Cli)
     /// </summary>
     static class Program
@@ -30,6 +31,7 @@ namespace CoAInstaller.Web
             public string Password;                // for --listen
             public bool NoWindow;
             public string Server;                  // a server folder to open
+            public bool Start;                     // --start: start the game server once the web server runs
             public bool Restarted;                 // started by a restart of its own (language change, update)
             public string WebRoot;                 // development: serve the page from this folder instead of the exe
         }
@@ -45,10 +47,18 @@ namespace CoAInstaller.Web
         static void ConsoleIfNeeded(string[] args)
         {
             if (!Os.Windows) return;
-            bool cli = args.Length > 0 && args[0] == "cli";
+            bool cli = CliArgs(args) != null;
             bool prints = cli || args.Any(a => a == "--help" || a == "-h" || a == "--no-window" || a == "--headless" || a == "--listen");
             if (!prints) return;
             try { if (!AttachConsole(-1) && cli) AllocConsole(); } catch { }
+        }
+
+        /// <summary>The command line's own arguments: "cli" may follow the window switches ("--no-window cli start").</summary>
+        static string[] CliArgs(string[] args)
+        {
+            int i = 0;
+            while (i < args.Length && (args[i] == "--no-window" || args[i] == "--headless")) i++;
+            return i < args.Length && args[i] == "cli" ? args.Skip(i + 1).ToArray() : null;
         }
 
         [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern int MessageBoxW(IntPtr owner, string text, string caption, uint type);
@@ -110,7 +120,8 @@ namespace CoAInstaller.Web
             // The release file this build updates itself from.
             UpdateCheck.ToolAsset = Os.Windows ? "AFK-Realm.exe"
                 : System.Runtime.InteropServices.RuntimeInformation.OSArchitecture == System.Runtime.InteropServices.Architecture.Arm64 ? "AFK-Realm-linux-arm64" : "AFK-Realm-linux-x64";
-            if (args.Length > 0 && args[0] == "cli") { L.Init(); return Cli.Run(args.Skip(1).ToArray()); }
+            var cliArgs = CliArgs(args);
+            if (cliArgs != null) { L.Init(); return Cli.Run(cliArgs); }
             for (int i = 0; i < args.Length; i++)
             {
                 string a = args[i];
@@ -120,6 +131,7 @@ namespace CoAInstaller.Web
                 else if (a == "--password") Opts.Password = next();
                 else if (a == "--no-window" || a == "--headless") Opts.NoWindow = true;
                 else if (a == "--server") Opts.Server = next();
+                else if (a == "--start") Opts.Start = true;
                 else if (a == "--restart" || a == "--updated" || a == "--after-update") { Opts.Restarted = true; if (a != "--restart") SelfUpdateWeb.JustUpdated = true; }
                 else if (a == "--web-root") Opts.WebRoot = next();
                 else if (a == "--help" || a == "-h") { PrintHelp(); return 0; }
@@ -213,6 +225,7 @@ namespace CoAInstaller.Web
             Console.WriteLine("  AFK-Realm --listen 0.0.0.0 --password <pw> [--port 47800]");
             Console.WriteLine("                                    reachable from other computers (log in with the password)");
             Console.WriteLine("  AFK-Realm --server <folder>       open this server");
+            Console.WriteLine("  AFK-Realm ... --start             also start the game server (e.g. --no-window --listen ... --start)");
             Console.WriteLine("  AFK-Realm cli help                the command line: install, start, stop, backup ...");
         }
     }

@@ -62,6 +62,7 @@ namespace CoAInstaller.Web
                 if (!string.IsNullOrEmpty(root) && new Install(root).IsInstalled) Manager.Open(new Install(root));
             }
             catch { }
+            if (Program.Opts.Start) Api.StartOnLaunch();
 
             string localUrl = "http://127.0.0.1:" + Port + "/login?t=" + Token;
             if (remote)
