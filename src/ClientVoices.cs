@@ -394,7 +394,8 @@ namespace CoAInstaller
         public static bool AppendToZipFile(string zipFile, string client, Action<string, int, int> progress, string package = null)
         {
             bool voices = PlayerFiles(client).Count > 0;
-            if (!voices && package == null) return false;
+            var hd = ClientHd.PlayerFiles(client);
+            if (!voices && package == null && hd.Count == 0) return false;
             string temp = zipFile + ".full";
             if (File.Exists(temp)) File.Delete(temp);
             try
@@ -415,6 +416,15 @@ namespace CoAInstaller
                             from.CopyTo(to);
                     }
                     if (voices) AddToZip(target, client, progress, taken);
+                    // the HD pack and LuxVelum: the players' launcher fetches them only when a player switches them on
+                    int n = 0;
+                    foreach (var f in hd)
+                    {
+                        if (progress != null) progress(L.F("Packing the HD pack ({0}/{1}) ...", ++n, hd.Count), n, hd.Count);
+                        if (!taken.Add(f.Key)) continue;
+                        bool stored = f.Key.EndsWith(".MPQ", StringComparison.OrdinalIgnoreCase) || f.Key.EndsWith(".mp3", StringComparison.OrdinalIgnoreCase);
+                        target.CreateEntryFromFile(f.Value, f.Key, stored ? CompressionLevel.NoCompression : CompressionLevel.Optimal);
+                    }
                     if (package != null) CoaSetup.AddPackageClientToZip(target, package, client, taken, progress);
                 }
                 File.Delete(zipFile);

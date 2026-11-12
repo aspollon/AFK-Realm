@@ -130,6 +130,10 @@ internal sealed class MainForm : Form
             case "play":
                 await Play();
                 return;
+            case "hd":
+            case "lux":
+                Switch(action, data.TryGetProperty("on", out var on) && on.ValueKind == JsonValueKind.True);
+                return;
             case "portal":
                 Game.OpenUrl(_config?.PortalUrl);
                 return;
@@ -216,9 +220,9 @@ internal sealed class MainForm : Form
             if (_manifest == null) await LoadManifestAsync();
             if (_manifest == null) throw new InvalidOperationException("The server manifest could not be loaded.");
             var result = await Updater.ApplyAsync(_state.GameFolder, _config, _manifest, _state.ManagedFiles, repair,
-                new InlineProgress(ShowProgress), CancellationToken.None);
+                new InlineProgress(ShowProgress), CancellationToken.None, _state);
             _state.LastManifest = _manifest.Version;
-            _state.ManagedFiles = _manifest.Files.Select(f => f.Path).ToList();
+            _state.ManagedFiles = _manifest.Files.Concat(_manifest.Optional).Select(f => f.Path).ToList();
             _state.Save();
             _progress = 100;
             SetStatus(result.Downloaded == 0
@@ -259,9 +263,9 @@ internal sealed class MainForm : Form
             if (_manifest == null) await LoadManifestAsync();
             if (_manifest == null) throw new InvalidOperationException("The server manifest could not be loaded.");
             var result = await Updater.ApplyAsync(_state.GameFolder, _config, _manifest, _state.ManagedFiles, false,
-                new InlineProgress(ShowProgress), CancellationToken.None);
+                new InlineProgress(ShowProgress), CancellationToken.None, _state);
             _state.LastManifest = _manifest.Version;
-            _state.ManagedFiles = _manifest.Files.Select(f => f.Path).ToList();
+            _state.ManagedFiles = _manifest.Files.Concat(_manifest.Optional).Select(f => f.Path).ToList();
             _state.Save();
             _progress = 100;
             SetStatus("Starting the game ...", "ok");
@@ -278,6 +282,26 @@ internal sealed class MainForm : Form
             _busy = false;
             SendState();
         }
+    }
+
+    /// <summary>The HD and LuxVelum switches: saved, and applied to the game folder at once when it is not running.</summary>
+    void Switch(string what, bool on)
+    {
+        if (what == "hd") _state.HdOn = on; else _state.LuxOn = on;
+        _state.Save();
+        if (Game.IsClientFolder(_state.GameFolder) && !Game.IsRunning(_state.GameFolder))
+        {
+            try
+            {
+                HdSwitches.Apply(_state.GameFolder, _state);
+                SetStatus(what == "hd"
+                    ? (on ? "HD pack on. Press Play: its files (about 8.8 GB) are downloaded first." : "HD pack off. Its files are kept aside and no longer downloaded.")
+                    : (on ? "LuxVelum on. Press Play: it is downloaded first (Ctrl+F7 in game for its settings)." : "LuxVelum off from the next game start."), "ok");
+            }
+            catch (Exception ex) { SetStatus(ex.Message, "bad"); }
+        }
+        else SetStatus("Saved. It applies the next time you press Play with the game closed.", "ok");
+        SendState();
     }
 
     async Task AccountAsync(bool register, JsonElement data)
@@ -343,7 +367,9 @@ internal sealed class MainForm : Form
                 detail = _detail,
                 version = _manifest?.Version ?? _config?.Version ?? "",
                 portalUrl = _config?.PortalUrl ?? "",
-                manifestUrl = _config?.ManifestUrl ?? ""
+                manifestUrl = _config?.ManifestUrl ?? "",
+                hdOn = _state.HdOn,
+                luxOn = _state.LuxOn
             });
         }
         catch { }

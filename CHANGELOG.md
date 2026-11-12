@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.44
+
+- **HD pack for the players' launcher**: the player client pack (and so the AFK Client manifest) now carries the owner's HD pack and LuxVelum. They are listed apart (`optional` in the manifest): AFK Client 1.3.44 shows two switches in its settings, "HD pack" and "LuxVelum", both off until a player turns them on, and downloads those files only then. Switching off parks the files as `.off` (no new download when switched on again). Older launchers do not know the list and never fetch the gigabytes.
+- **AFK Client**: files already checked are not hashed again on every start (size and write time remembered), so the 8.8 GB of the HD pack do not slow down "Play".
+
 ## 1.3.43
 
 - **HD pack page** (Game client > HD pack …): installs fueryin's Ultra-HD pack into a CoA Custom game under archive names that do not clash with CoA Custom (its `patch-ZZU` would replace CoA Custom's race tables), without the pack's own CoA64.exe, d3d9.dll and Config.wtf. Every part (HD world, upright orcs, shaders, effects, sounds, blood, cursor, LuxVelum, add-ons) can be switched off again. The pack's dance music add-on gets a fixed Lua: the song is chosen when dancing, CoA Custom races get their donor race's song. See docs/2026-11-12-hd-pack.md.

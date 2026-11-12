@@ -21,6 +21,7 @@ internal static class ManifestClient
         var manifest = JsonSerializer.Deserialize<Manifest>(json, Json.Options)
             ?? throw new InvalidOperationException("The server sent an empty manifest.");
         manifest.Files ??= new List<ManifestFile>();
+        manifest.Optional ??= new List<ManifestFile>();
         return manifest;
     }
 }
@@ -33,20 +34,34 @@ internal static class Updater
     static readonly Regex ConfigName = new(@"^\s*SET\s+realmName\s", RegexOptions.IgnoreCase);
 
     public static async Task<UpdateResult> ApplyAsync(string gameFolder, LauncherConfig config, Manifest manifest,
-        IReadOnlyCollection<string> previousManaged, bool force, IProgress<UpdateProgress> progress, CancellationToken cancel)
+        IReadOnlyCollection<string> previousManaged, bool force, IProgress<UpdateProgress> progress, CancellationToken cancel,
+        LocalState state = null)
     {
         if (string.IsNullOrWhiteSpace(gameFolder) || !Game.IsClientFolder(gameFolder))
             throw new InvalidOperationException("Choose the Conquest of Azeroth game folder (the one with the Data folder).");
         Directory.CreateDirectory(gameFolder);
         string root = Path.GetFullPath(gameFolder).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
         var result = new UpdateResult();
-        int done = 0, total = manifest.Files.Count;
-        foreach (var file in manifest.Files)
+        var all = manifest.Files.Concat(manifest.Optional ?? new List<ManifestFile>()).ToList();
+        int done = 0, total = all.Count;
+        foreach (var file in all)
         {
             cancel.ThrowIfCancellationRequested();
             string target = SafeTarget(root, file.Path);
+            if (HdSwitches.Optional(file.Path))
+            {
+                if (state == null || !HdSwitches.Wanted(file.Path, state))
+                {
+                    // switched off: not downloaded, and an installed copy stays parked aside
+                    if (File.Exists(target)) File.Move(target, target + HdSwitches.Off, true);
+                    result.Skipped++;
+                    progress.Report(new UpdateProgress("Checking the game files ...", Percent(done++, total), file.Path));
+                    continue;
+                }
+                if (!File.Exists(target) && File.Exists(target + HdSwitches.Off)) File.Move(target + HdSwitches.Off, target);
+            }
             bool current = !force && File.Exists(target) && new FileInfo(target).Length == file.Size &&
-                string.Equals(await HashAsync(target, cancel), file.Sha256, StringComparison.OrdinalIgnoreCase);
+                string.Equals(await CachedHashAsync(target, state, cancel), file.Sha256, StringComparison.OrdinalIgnoreCase);
             if (current)
             {
                 result.Skipped++;
@@ -69,6 +84,7 @@ internal static class Updater
                     try { File.Copy(target, target + ".afk-backup", true); } catch { }
                 }
                 File.Move(temp, target, true);
+                Remember(state, target, file.Sha256);
                 result.Downloaded++;
                 result.Bytes += new FileInfo(target).Length;
                 result.Changed = true;
@@ -80,7 +96,7 @@ internal static class Updater
             }
         }
 
-        var newFiles = new HashSet<string>(manifest.Files.Select(f => f.Path), StringComparer.OrdinalIgnoreCase);
+        var newFiles = new HashSet<string>(all.Select(f => f.Path), StringComparer.OrdinalIgnoreCase);
         foreach (string old in (previousManaged ?? Array.Empty<string>()).Distinct(StringComparer.OrdinalIgnoreCase))
         {
             cancel.ThrowIfCancellationRequested();
@@ -102,6 +118,7 @@ internal static class Updater
             catch { }
         }
 
+        if (state != null) HdSwitches.Apply(gameFolder, state);
         progress.Report(new UpdateProgress("Writing the realm address ...", 100, ""));
         WriteRealm(gameFolder, manifest.RealmAddress, manifest.Realm);
         return result;
@@ -144,6 +161,29 @@ internal static class Updater
         await using var input = await response.Content.ReadAsStreamAsync(cancel);
         await using var output = new FileStream(target, FileMode.Create, FileAccess.Write, FileShare.None, 131072, true);
         await input.CopyToAsync(output, 131072, cancel);
+    }
+
+    static string Stamp(string path)
+    {
+        var info = new FileInfo(path);
+        return info.Length + "|" + info.LastWriteTimeUtc.Ticks;
+    }
+
+    /// <summary>The file's SHA-256, from the state's record when size and write time are unchanged.</summary>
+    static async Task<string> CachedHashAsync(string path, LocalState state, CancellationToken cancel)
+    {
+        string stamp = Stamp(path);
+        if (state != null && state.Checked.TryGetValue(path, out var known) && known.StartsWith(stamp + "|", StringComparison.Ordinal))
+            return known.Substring(stamp.Length + 1);
+        string hash = await HashAsync(path, cancel);
+        Remember(state, path, hash);
+        return hash;
+    }
+
+    static void Remember(LocalState state, string path, string hash)
+    {
+        if (state == null) return;
+        try { state.Checked[path] = Stamp(path) + "|" + hash; } catch { }
     }
 
     static async Task<string> HashAsync(string path, CancellationToken cancel)
@@ -229,5 +269,43 @@ internal static class Updater
             if (!hasName) lines.Add(name);
         }
         File.WriteAllText(file, string.Join("\r\n", lines) + "\r\n", new UTF8Encoding(false));
+    }
+}
+
+/// <summary>
+/// The optional parts the server may ship (AFK Realm's HD pack page): the HD pack's archives and LuxVelum. Each player
+/// opts in; until then they are not downloaded, and switching one off parks its files as ".off". Both need a restart.
+/// </summary>
+internal static class HdSwitches
+{
+    public const string Off = ".off";
+    static readonly Regex HdArchive = new(@"^Data/patch-(ZX[A-Z0-9-]*|AAP|AAS)\.MPQ$", RegexOptions.IgnoreCase);
+    static readonly string[] LuxFiles = { "LuxVelum64.dll", "LuxVelum.ini", "fogdata.bin", "waterdata.bin" };
+
+    static string Norm(string path) => (path ?? "").Replace('\\', '/');
+    static bool IsHd(string path) => HdArchive.IsMatch(Norm(path));
+    static bool IsLux(string path) => LuxFiles.Any(f => string.Equals(Norm(path), f, StringComparison.OrdinalIgnoreCase));
+
+    public static bool Optional(string path) => IsHd(path) || IsLux(path);
+    public static bool Wanted(string path, LocalState state) => IsHd(path) ? state.HdOn : state.LuxOn;
+
+    /// <summary>Parks or restores the files of both switches in the game folder.</summary>
+    public static void Apply(string gameFolder, LocalState state)
+    {
+        var files = new List<string>();
+        string data = Path.Combine(gameFolder, "Data");
+        if (Directory.Exists(data)) files.AddRange(Directory.GetFiles(data, "patch-*.MPQ*").Select(f => "Data/" + Path.GetFileName(f)));
+        files.AddRange(LuxFiles.SelectMany(f => new[] { f, f + Off }).Where(f => File.Exists(Path.Combine(gameFolder, f))));
+        foreach (string rel in files.Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            bool parked = rel.EndsWith(Off, StringComparison.OrdinalIgnoreCase);
+            string active = parked ? rel.Substring(0, rel.Length - Off.Length) : rel;
+            if (!Optional(active)) continue;
+            string full = Path.Combine(gameFolder, rel.Replace('/', Path.DirectorySeparatorChar));
+            string activeFull = Path.Combine(gameFolder, active.Replace('/', Path.DirectorySeparatorChar));
+            bool wanted = Wanted(active, state);
+            if (!wanted && !parked) File.Move(full, full + Off, true);
+            else if (wanted && parked && !File.Exists(activeFull)) File.Move(full, activeFull);
+        }
     }
 }

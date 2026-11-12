@@ -45,6 +45,9 @@ namespace CoAInstaller.Web
             public string Version { get; set; } = "";
             public string BuiltAt { get; set; } = "";
             public List<FileEntry> Files { get; set; } = new List<FileEntry>();
+            // The HD pack and LuxVelum: AFK Client 1.3.44+ fetches them for players who switch them on; older
+            // launchers know only Files and so never download these gigabytes unasked.
+            public List<FileEntry> Optional { get; set; } = new List<FileEntry>();
         }
 
         public sealed class LauncherConfig
@@ -150,7 +153,8 @@ namespace CoAInstaller.Web
                     using (var stream = entry.Open())
                     using (var sha = SHA256.Create())
                         hash = Convert.ToHexString(sha.ComputeHash(stream));
-                    manifest.Files.Add(new FileEntry { Path = target, Entry = entry.FullName, Size = entry.Length, Sha256 = hash });
+                    var item = new FileEntry { Path = target, Entry = entry.FullName, Size = entry.Length, Sha256 = hash };
+                    (IsOptional(target) ? manifest.Optional : manifest.Files).Add(item);
                     hashes.Append(target).Append('|').Append(hash).Append('\n');
                 }
             }
@@ -194,6 +198,16 @@ namespace CoAInstaller.Web
             if (name.EndsWith("/")) return true;
             return name.Equals("READ ME FIRST.txt", StringComparison.OrdinalIgnoreCase) ||
                 name.Equals("Data/enUS/realmlist.wtf", StringComparison.OrdinalIgnoreCase);
+        }
+
+        static readonly System.Text.RegularExpressions.Regex OptionalArchive =
+            new System.Text.RegularExpressions.Regex(@"^Data/patch-(ZX[A-Z0-9-]*|AAP|AAS)\.MPQ$", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        static readonly string[] OptionalRoot = { "LuxVelum64.dll", "LuxVelum.ini", "fogdata.bin", "waterdata.bin" };
+
+        /// <summary>The HD pack's archives and LuxVelum (AFK Client's opt-in switches, client/Updater.cs HdSwitches).</summary>
+        static bool IsOptional(string path)
+        {
+            return OptionalArchive.IsMatch(path) || OptionalRoot.Any(f => string.Equals(path, f, StringComparison.OrdinalIgnoreCase));
         }
 
         static bool SafePath(string path)
@@ -294,17 +308,17 @@ namespace CoAInstaller.Web
                 realmAddress = m.RealmAddress,
                 version = m.Version,
                 builtAt = m.BuiltAt,
-                files = m.Files.Select(f => new
-                {
-                    path = f.Path,
-                    size = f.Size,
-                    sha256 = f.Sha256,
-                    url = "/download/launcher-file?path=" + Uri.EscapeDataString(f.Path)
-                }).ToArray()
+                files = m.Files.Select(Public).ToArray(),
+                optional = (m.Optional ?? new List<FileEntry>()).Select(Public).ToArray()
             };
             ctx.Response.ContentType = "application/json; charset=utf-8";
             ctx.Response.Headers["Cache-Control"] = "no-store";
             await ctx.Response.WriteAsync(JsonSerializer.Serialize(publicManifest, Json));
+        }
+
+        static object Public(FileEntry f)
+        {
+            return new { path = f.Path, size = f.Size, sha256 = f.Sha256, url = "/download/launcher-file?path=" + Uri.EscapeDataString(f.Path) };
         }
 
         public static async Task Config(HttpContext ctx, Install inst)
@@ -320,7 +334,7 @@ namespace CoAInstaller.Web
         {
             string path = (ctx.Request.Query["path"].ToString() ?? "").Replace('\\', '/').TrimStart('/');
             var m = Read(inst);
-            var entry = m?.Files.FirstOrDefault(f => f.Path.Equals(path, StringComparison.OrdinalIgnoreCase));
+            var entry = m?.Files.Concat(m.Optional ?? new List<FileEntry>()).FirstOrDefault(f => f.Path.Equals(path, StringComparison.OrdinalIgnoreCase));
             if (entry == null) { ctx.Response.StatusCode = 404; return; }
             string pack = RegistrationPortal.ClientPackFile(inst);
             if (!File.Exists(pack)) { ctx.Response.StatusCode = 404; return; }

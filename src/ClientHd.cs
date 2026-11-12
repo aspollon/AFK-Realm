@@ -297,6 +297,36 @@ namespace CoAInstaller
             return string.Join("\n", done);
         }
 
+        /// <summary>
+        /// The pack as installed in the owner's game, for the players' client pack and launcher (switched-off parts
+        /// included under their active names). The launcher downloads the archives and LuxVelum only for players who
+        /// switch them on. Paths relative to the game folder.
+        /// </summary>
+        public static List<KeyValuePair<string, string>> PlayerFiles(string client)
+        {
+            var list = new List<KeyValuePair<string, string>>();
+            if (client == null || !Directory.Exists(client)) return list;
+            foreach (var a in Archives)
+            {
+                string f = Find(Data(client), a[1]) ?? Find(Data(client), a[1] + Off);
+                if (f != null) list.Add(new KeyValuePair<string, string>("Data/" + a[1], f));
+            }
+            foreach (string n in LuxFiles.Concat(new[] { "LuxVelum.ini" }))
+            {
+                string f = Path.Combine(client, n);
+                if (File.Exists(f)) list.Add(new KeyValuePair<string, string>(n, f));
+            }
+            foreach (string name in PackAddons)
+            {
+                string dir = AddOn(client, name);
+                if (!Directory.Exists(dir)) continue;
+                string prefix = Path.GetFullPath(dir).TrimEnd('\\', '/') + Path.DirectorySeparatorChar;
+                foreach (string f in Directory.GetFiles(dir, "*", SearchOption.AllDirectories))
+                    list.Add(new KeyValuePair<string, string>("Interface/AddOns/" + name + "/" + Path.GetFullPath(f).Substring(prefix.Length).Replace('\\', '/'), f));
+            }
+            return list;
+        }
+
         static void Copy(string source, string target, Action<string, long, long> report)
         {
             string tmp = target + ".part";

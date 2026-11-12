@@ -54,6 +54,8 @@ internal sealed class Manifest
     public string Version { get; set; } = "";
     public string BuiltAt { get; set; } = "";
     public List<ManifestFile> Files { get; set; } = new();
+    // The HD pack and LuxVelum: downloaded only for the player's switches (HdSwitches).
+    public List<ManifestFile> Optional { get; set; } = new();
 
     public long TotalBytes => Files.Sum(f => Math.Max(0, f.Size));
 }
@@ -72,6 +74,11 @@ internal sealed class LocalState
     public string AccountName { get; set; } = "";
     public string LastManifest { get; set; } = "";
     public List<string> ManagedFiles { get; set; } = new();
+    // Opt-in switches for the HD pack the server ships: its archives and LuxVelum (off until the player wants them).
+    public bool HdOn { get; set; }
+    public bool LuxOn { get; set; }
+    // Size, write time and SHA-256 of files already checked, so a start does not hash gigabytes again.
+    public Dictionary<string, string> Checked { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
     static string FilePath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "AFK Client", "state.json");
 

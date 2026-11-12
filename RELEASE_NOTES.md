@@ -1,3 +1,7 @@
+# AFK Realm 1.3.44
+
+- **HD pack for your players, by choice:** after "HD pack …" in your own game, build the client launcher again. Your players then find "HD pack" and "LuxVelum" in the AFK Client's settings, both off. Whoever wants them switches them on and the launcher downloads them; nobody gets the 8.8 GB unasked. Players need the new AFK Client from your server page for the switches.
+
 # AFK Realm 1.3.43
 
 - **HD pack:** Game client > HD pack … puts fueryin's Ultra-HD graphics pack into your CoA Custom game without breaking the custom races, and lets you switch every part off again (HD world, LuxVelum fog/light/water, effects, sounds, add-ons), for example on a weak laptop. Download and unpack the pack first; the page finds it in Downloads.

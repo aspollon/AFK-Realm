@@ -320,6 +320,8 @@ body::after {
 .settings-pop.open { display: block; }
 .settings-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 7px 0; }
 .settings-row > div { min-width: 0; }
+.settings-switch { cursor: pointer; }
+.settings-switch input { width: 18px; height: 18px; accent-color: var(--accent, #c9a45c); flex: none; }
 .settings-label { display: block; color: var(--muted); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; }
 .settings-value { display: block; max-width: 210px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); font-size: 13px; }
 .settings-sep { height: 1px; background: var(--border); margin: 8px 0; }
