@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.43
+
+- **HD pack page** (Game client > HD pack …): installs fueryin's Ultra-HD pack into a CoA Custom game under archive names that do not clash with CoA Custom (its `patch-ZZU` would replace CoA Custom's race tables), without the pack's own CoA64.exe, d3d9.dll and Config.wtf. Every part (HD world, upright orcs, shaders, effects, sounds, blood, cursor, LuxVelum, add-ons) can be switched off again. The pack's dance music add-on gets a fixed Lua: the song is chosen when dancing, CoA Custom races get their donor race's song. See docs/2026-11-12-hd-pack.md.
+- **One CoA64.exe everywhere**: the Voices page, the HD pack page (with LuxVelum on) and the CoA Custom setup put the newest CoA64.exe of the voices release in place whenever the game runs another one (yours stays as `.afk-backup`). That exe carries the CoA Custom races, the plugin loader, HD on any renderer and the LuxVelum host; whatever a player does not use stays idle. Offline, the setup keeps the package's exe.
+
 ## 1.3.42
 
 - **Voices: the CoA64.exe of voices 0.2.0 is replaced.** Built from the public 1.9.9 source, it did not know the twelve AllRaces v12 races (Sureki, Dreadlord, Titan, Wretched, Fungarian, Sporeling, Stormforged, Mo'arg, Nerubian, Lich, Mogu, Lost One), so their bodies had no textures. Voices 0.3.0 carries an exe with them; "Install" puts it in place when the game's exe cannot load plugins or lacks these races.

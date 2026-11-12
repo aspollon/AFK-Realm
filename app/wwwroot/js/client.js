@@ -12,6 +12,7 @@ export async function clientDialog(reason) {
   const downloadBtn = secondary(T('Download / update client …'), () => downloadClient());
   const sharedBtn = secondary(T('Add-ons for your players …'), () => sharedAddons());
   const voicesBtn = secondary(T('Voices …'), () => import('./voices.js').then(x => x.voicesDialog(folder.value.trim())));
+  const hdBtn = secondary(T('HD pack …'), () => import('./hd.js').then(x => x.hdDialog(folder.value.trim())));
   let look = null, checked = null;
 
   async function refresh(value) {
@@ -111,7 +112,7 @@ export async function clientDialog(reason) {
   refresh();
   await dialog({
     title: meta.product + ' – ' + T('Game client'), icon: 'client', wide: true, body,
-    left: [installBtn, exportBtn, sharedBtn, voicesBtn],
+    left: [installBtn, exportBtn, sharedBtn, voicesBtn, hdBtn],
     buttons: [{ text: T('Close'), value: null }]
   });
 }

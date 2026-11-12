@@ -1,3 +1,9 @@
+# AFK Realm 1.3.43
+
+- **HD pack:** Game client > HD pack … puts fueryin's Ultra-HD graphics pack into your CoA Custom game without breaking the custom races, and lets you switch every part off again (HD world, LuxVelum fog/light/water, effects, sounds, add-ons), for example on a weak laptop. Download and unpack the pack first; the page finds it in Downloads.
+- **Always the newest game exe:** Voices, HD pack and the CoA Custom setup all install the same, newest CoA64.exe. It runs fine whether you use voices, LuxVelum or the HD pack or not.
+- **Dance music for every race:** the pack's dance music add-on now plays for CoA Custom races too (the song of the race they come from).
+
 # AFK Realm 1.3.42
 
 - **Voices: the right CoA64.exe.** The CoA64.exe that came with the voices until now lacked twelve races of CoA Custom 1.9.9 (Titan, Lich, Mogu, Dreadlord ...: no textures). "Install" on the Voices page now puts the corrected one in place, also over the old one.

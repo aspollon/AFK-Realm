@@ -285,6 +285,18 @@ namespace CoAInstaller
             // not run an old native exe against new race data.
             CopyTree(clientRoot, o.Client, o.NoBackup, ref copied, ref skipped, nativeSupported || ownExe ? "CoA64.exe" : null);
 
+            // AFK's own CoA64 build (voices release): races, plugins, HD on any renderer, LuxVelum host; idle parts cost nothing
+            if (!ownExe)
+            {
+                try
+                {
+                    string newest = ClientVoices.EnsureNewestExe(o.Client, (t, x, y) => { });
+                    ownExe = ClientVoices.PluginHost(o.Client) != null;
+                    if (newest != null) { Console.WriteLine(newest); copied++; }
+                }
+                catch (Exception e) { Console.WriteLine(L.F("AFK's CoA64.exe could not be fetched ({0}); the package's exe is used.", e.Message)); }
+            }
+
             if (ownExe)
                 Console.WriteLine(L.T("CoA64.exe: your own build (it loads the voice plugin) is kept."));
             else if (nativeSupported)

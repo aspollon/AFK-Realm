@@ -135,7 +135,8 @@ namespace CoAInstaller
                 // the game's CoA64.exe cannot load plugins: the one built for that comes with the release
                 // also replaces the CoA64.exe of voices 0.2.0, which lacks the Esteria races of CoA Custom 1.9.9 (Titan, Lich ...)
                 string host = PluginHost(client);
-                if (host == null || !HasAllRaces(host)) done.Add(InstallExe(client, pluginZip));
+                // the game always runs the newest release exe (races, plugins, LuxVelum host); every part of it stays idle when unused
+                if (host == null || !SameExe(client, pluginZip)) done.Add(InstallExe(client, pluginZip));
 
                 if (o.Companion)
                 {
@@ -199,10 +200,58 @@ namespace CoAInstaller
             return string.Join("\n", done);
         }
 
-        static bool HasAllRaces(string exe)
+        /// <summary>The game's CoA64.exe is byte for byte the one in the release.</summary>
+        static bool SameExe(string client, string pluginZip)
         {
-            try { return IndexOf(File.ReadAllBytes(exe), Encoding.Unicode.GetBytes("EsteriaTitanTextures.bin")) >= 0; }
+            try
+            {
+                string game = Path.Combine(client, "CoA64.exe");
+                if (!File.Exists(game)) return false;
+                using (var zip = ZipFile.OpenRead(pluginZip))
+                {
+                    var exe = zip.Entries.FirstOrDefault(e => e.FullName.Replace('\\', '/').Equals("CoA64/CoA64.exe", StringComparison.OrdinalIgnoreCase));
+                    if (exe == null) return true;
+                    if (exe.Length != new FileInfo(game).Length) return false;
+                    using (var a = exe.Open())
+                    using (var b = File.OpenRead(game))
+                    {
+                        var x = new byte[1 << 16]; var y = new byte[1 << 16];
+                        while (true)
+                        {
+                            int n = ReadFull(a, x), m = ReadFull(b, y);
+                            if (n != m) return false;
+                            if (n == 0) return true;
+                            for (int k = 0; k < n; k++) if (x[k] != y[k]) return false;
+                        }
+                    }
+                }
+            }
             catch { return true; }
+        }
+
+        static int ReadFull(Stream s, byte[] buffer)
+        {
+            int n = 0, got;
+            while (n < buffer.Length && (got = s.Read(buffer, n, buffer.Length - n)) > 0) n += got;
+            return n;
+        }
+
+        /// <summary>Puts the newest release's CoA64.exe in place when the game runs another one (HD pack page, no voices needed).</summary>
+        public static string EnsureNewestExe(string client, Action<string, long, long> report)
+        {
+            string downloads = Path.Combine(client, ".afk-voices-downloads");
+            Directory.CreateDirectory(downloads);
+            try
+            {
+                var plugin = LatestRelease(PluginRepo, n => n.StartsWith("CoA64-Voices-", StringComparison.OrdinalIgnoreCase) && n.EndsWith(".zip", StringComparison.OrdinalIgnoreCase));
+                string pluginZip = Fetch(plugin, plugin.Assets[0], downloads, report);
+                try { return SameExe(client, pluginZip) ? null : InstallExe(client, pluginZip); }
+                finally { TryDelete(pluginZip); }
+            }
+            finally
+            {
+                try { if (!Directory.EnumerateFileSystemEntries(downloads).Any()) Directory.Delete(downloads); } catch { }
+            }
         }
 
         /// <summary>CoA64.exe (and XvidDecoder.dll) from the release's CoA64 folder; the game's own exe stays as .afk-backup.</summary>
