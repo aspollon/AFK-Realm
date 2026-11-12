@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.48
+
+- **Voices, HD pack and CoA64.exe fetch again with an outdated GitHub token**: the release downloads sent the token of the modules page and gave up on GitHub's 401 ("The newest CoA64.exe could not be fetched (401) Unauthorized; LuxVelum waits for it"). They now ask once more without it, as the update check and the module catalog already did, and leave the token out for the rest of the session.
+
 ## 1.3.47
 
 - **`AFK-Realm --no-window cli start` runs the command**: the command line was only recognised when `cli` came first, so window switches before it started the web server alone and ignored the command. `cli` now also follows `--no-window`/`--headless`.

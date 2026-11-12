@@ -448,19 +448,32 @@ namespace CoAInstaller
             try { ServicePointManager.SecurityProtocol |= (SecurityProtocolType)3072; } catch { }
             var req = (HttpWebRequest)WebRequest.Create(url);
             req.UserAgent = Product.FileStem;
-            string token = Settings.GitHubToken;
+            string token = Settings.GitHubTokenActive;
             if (!string.IsNullOrEmpty(token) && url.StartsWith("https://api.github.com/", StringComparison.Ordinal)) req.Headers["Authorization"] = "token " + token;
             req.Timeout = timeout;
             req.ReadWriteTimeout = Math.Max(timeout, 60000);
             return req;
         }
 
+        static string ReadText(string url)
+        {
+            using (var resp = (HttpWebResponse)Request(url, 30000).GetResponse())
+            using (var reader = new StreamReader(resp.GetResponseStream(), Encoding.UTF8))
+                return reader.ReadToEnd();
+        }
+
         static Release LatestRelease(string repo, Func<string, bool> wanted)
         {
             string json;
-            using (var resp = (HttpWebResponse)Request("https://api.github.com/repos/" + repo + "/releases/latest", 30000).GetResponse())
-            using (var reader = new StreamReader(resp.GetResponseStream(), Encoding.UTF8))
-                json = reader.ReadToEnd();
+            string url = "https://api.github.com/repos/" + repo + "/releases/latest";
+            try { json = ReadText(url); }
+            catch (WebException ex) when (Settings.GitHubTokenActive != null && ex.Response is HttpWebResponse r &&
+                (r.StatusCode == HttpStatusCode.Unauthorized || r.StatusCode == HttpStatusCode.Forbidden || r.StatusCode == HttpStatusCode.BadRequest))
+            {
+                // an outdated or mistyped GitHub token (the modules page): the release is public, so once more without it
+                Settings.RefuseGitHubToken(Settings.GitHubTokenActive);
+                json = ReadText(url);
+            }
             var rel = new JavaScriptSerializer { MaxJsonLength = int.MaxValue }.DeserializeObject(json) as Dictionary<string, object>;
             object v;
             var found = new Release { Tag = rel != null && rel.TryGetValue("tag_name", out v) ? Convert.ToString(v) : "" };

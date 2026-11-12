@@ -1,3 +1,7 @@
+# AFK Realm 1.3.48
+
+- **"401 Unauthorized" on the HD pack or Voices page fixed:** an old or mistyped GitHub token on the modules page stopped AFK from fetching the newest CoA64.exe. AFK now simply fetches without it. (To clear the old token: Modules > GitHub token, empty it.)
+
 # AFK Realm 1.3.47
 
 - **Command line:** `AFK-Realm --no-window cli start` now starts the server. Before, a switch in front of `cli` opened only the web page in the background. (`AFK-Realm cli start` always worked.)
