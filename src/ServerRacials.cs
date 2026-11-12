@@ -43,6 +43,7 @@ namespace CoAInstaller
         {
             { 111100, new[] { 111101u, 111103u, 111109u, 111111u, 111112u, 111113u } }, // Kyrian Hover / Charge
             { 111200, new[] { 111205u, 111207u, 111210u, 111211u, 111212u } },           // Venthyr Feast / Hover / Bat
+            { 15000934, new[] { 15000935u } },                                           // Fungarian Sporebloom: its pulse
         };
 
         /// <summary>Rows of Qiraji's login appearance; they travel with its racial file, but are not learned
@@ -66,6 +67,7 @@ namespace CoAInstaller
             { 111210, "spell_venthyr_bat_form" },
             { 14001032, "spell_gen_cannibalize" }, // Grummle Trail Snack, same corpse script as Cannibalize
             { 15000914, "spell_titan_aegis" },     // 1.9.9 Titan: Aegis of the Keepers
+            { 15000935, "spell_fungarian_sporebloom_pulse" },
         };
 
         /// <summary>The racials of CoA Custom's races (race number -> spells), those that need code of its server (none
@@ -111,6 +113,37 @@ namespace CoAInstaller
             }
             catch { }
             return result;
+        }
+
+        /// <summary>Races the table does not know yet get the racials CoA Custom numbers after them: since its 1.9.9
+        /// (AllRaces v12, round 2) a new race N has the spells 15000000 + N * 10 + 1..9 with the rank "Racial" in the
+        /// client's Spell.dbc. So a newer CoA Custom brings the racials of its new races without a new races.json.</summary>
+        public static void UseClientIdConvention(string client, IEnumerable<int> races)
+        {
+            var missing = races.Where(r => r > 0 && r < 1000 && !coaRacials.ContainsKey(r)).Distinct().ToList();
+            if (string.IsNullOrEmpty(client) || missing.Count == 0) return;
+            try
+            {
+                string source;
+                byte[] bytes = ClientPatch.FromClient(client, "DBFilesClient\\Spell.dbc", out source);
+                if (bytes == null) return;
+                var table = DbcTable.Parse(bytes, "Spell.dbc");
+                if (table.Fields != RaceImport.SpellFields) return;
+                var found = new Dictionary<int, List<uint>>();
+                foreach (var record in table.Records)
+                {
+                    uint id = table.Field(record, 0);
+                    if (id < 15000000 || id >= 15010000) continue;
+                    int race = (int)((id - 15000000) / 10), n = (int)(id % 10);
+                    if (n == 0 || !missing.Contains(race)) continue;
+                    if (!Text(table, table.Field(record, 153)).Trim().Equals("Racial", StringComparison.OrdinalIgnoreCase)) continue;
+                    List<uint> list;
+                    if (!found.TryGetValue(race, out list)) found[race] = list = new List<uint>();
+                    list.Add(id);
+                }
+                foreach (var pair in found) SetRacials(pair.Key, pair.Value);
+            }
+            catch { }
         }
 
         /// <summary>Sets the racial spells of one race from an already discovered client rank.</summary>

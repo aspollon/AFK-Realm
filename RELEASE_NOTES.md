@@ -1,3 +1,8 @@
+# AFK Realm 1.3.49
+
+- **New CoA Custom races get their racials:** the races added in CoA Custom 1.9.9 (Dreadlord, Titan, Sureki, Wretched, Fungarian, Sporeling, Stormforged, Mo'arg, Nerubian, Lich, Mogu, Lost One, Thin Human, Two-Headed Ogre) had none. Update the modules as well (mod-custom-races brings the spells), then rebuild.
+- **Racials of the base race stay on the action bars:** with mod-custom-races updated, a custom race no longer loses and relearns its base race's racials (War Stomp on a Highmountain Tauren, for example) at every login.
+
 # AFK Realm 1.3.48
 
 - **"401 Unauthorized" on the HD pack or Voices page fixed:** an old or mistyped GitHub token on the modules page stopped AFK from fetching the newest CoA64.exe. AFK now simply fetches without it. (To clear the old token: Modules > GitHub token, empty it.)

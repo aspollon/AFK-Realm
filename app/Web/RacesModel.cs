@@ -187,6 +187,7 @@ namespace CoAInstaller.Web
         /// update with a new racial set from silently falling back to the old races.json table.</summary>
         void AutoDetectClientRacials()
         {
+            ServerRacials.UseClientIdConvention(ClientAddons.ClientFolder, races.Select(r => { int id = CoaRaceOf(r); return id > 0 ? id : r.Source; }));
             var groups = ServerRacials.ClientRankGroups(ClientAddons.ClientFolder,
                 name => name.IndexOf("Descent", StringComparison.OrdinalIgnoreCase) >= 0);
             if (groups.Count == 0) return;

@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.49
+
+- **Racials of CoA Custom's newest races**: a race the racial table of mod-custom-races does not know yet gets the spells CoA Custom numbers after it (since 1.9.9: 15000000 + race * 10 + 1..9 with the rank "Racial" in the client's Spell.dbc), so a newer CoA Custom brings the racials of its new races by itself. The Fungarian Sporebloom brings its pulse row and script binding. (The table for the fourteen 1.9.9 races, their rows and the two scripts come with mod-custom-races.)
+
 ## 1.3.48
 
 - **Voices, HD pack and CoA64.exe fetch again with an outdated GitHub token**: the release downloads sent the token of the modules page and gave up on GitHub's 401 ("The newest CoA64.exe could not be fetched (401) Unauthorized; LuxVelum waits for it"). They now ask once more without it, as the update check and the module catalog already did, and leave the token out for the rest of the session.
