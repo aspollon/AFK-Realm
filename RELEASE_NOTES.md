@@ -1,3 +1,7 @@
+# AFK Realm 1.3.46
+
+- **Linux: clang really used again.** On Ubuntu 26.04 clang could not link (it looked in a GCC folder without the C++ library), so every build quietly used the slower g++. AFK now shows clang the right folder. The next build starts once from scratch, after that it is fast.
+
 # AFK Realm 1.3.45
 
 - **Faster builds on Linux again:** since 1.3.35 the server was compiled with g++ instead of the much faster clang. clang is used again wherever it works. The next update builds once from scratch, after that it is quick again.

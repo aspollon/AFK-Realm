@@ -672,14 +672,14 @@ function Find-Header([string]$Relative) {
 }
 
 # True when the compiler can compile and link a small C++ program.
-function Test-CxxLinks([string]$Compiler) {
+function Test-CxxLinks([string]$Compiler, [string[]]$Extra = @()) {
     $dir = Join-Path ([IO.Path]::GetTempPath()) ('afk-cxx-' + [guid]::NewGuid().ToString('N'))
     try {
         New-Item -ItemType Directory -Force -Path $dir | Out-Null
         $src = Join-Path $dir 'test.cpp'
         [IO.File]::WriteAllText($src, "#include <string>`n#include <iostream>`nint main() { std::string s = `"ok`"; std::cout << s << std::endl; return 0; }`n")
         $psi = New-Object Diagnostics.ProcessStartInfo $Compiler
-        foreach ($a in @('-std=c++17', $src, '-o', (Join-Path $dir 'test'))) { [void]$psi.ArgumentList.Add($a) }
+        foreach ($a in @($Extra) + @('-std=c++17', $src, '-o', (Join-Path $dir 'test'))) { [void]$psi.ArgumentList.Add($a) }
         $psi.RedirectStandardOutput = $true; $psi.RedirectStandardError = $true; $psi.UseShellExecute = $false
         $proc = [Diagnostics.Process]::Start($psi)
         $err = $proc.StandardError.ReadToEnd(); [void]$proc.StandardOutput.ReadToEnd()
@@ -699,7 +699,25 @@ function Resolve-LinuxToolchain {
     # clang first: it builds the core much faster than g++. Test-CxxLinks drops it where its GCC folder lacks libstdc++
     # (fresh Ubuntu), and g++ takes over there. 1.3.35-1.3.44 put g++ first and made every clang build slow.
     $found = @('clang++', 'g++' | ForEach-Object { Find-Program $_ } | Where-Object { $_ })
-    foreach ($candidate in $found) { if (Test-CxxLinks $candidate) { $cxx = $candidate; break } }
+    $gccInstallDir = $null
+    foreach ($candidate in $found) {
+        if (Test-CxxLinks $candidate) { $cxx = $candidate; break }
+        if ($candidate -like '*clang++') {
+            # Ubuntu 26.04 brings a newer GCC folder (runtime only, no libstdc++ to link) that clang picks; pointed at
+            # the newest GCC folder that has libstdc++, clang links again.
+            $withLib = @(Get-ChildItem '/usr/lib/gcc/x86_64-linux-gnu', '/usr/lib/gcc/aarch64-linux-gnu' -Directory -ErrorAction SilentlyContinue |
+                Where-Object { $_.Name -match '^\d+$' -and ((Test-Path (Join-Path $_.FullName 'libstdc++.so')) -or (Test-Path (Join-Path $_.FullName 'libstdc++.a'))) } |
+                Sort-Object { [int]$_.Name } -Descending)
+            foreach ($g in $withLib) {
+                if (Test-CxxLinks $candidate @("--gcc-install-dir=$($g.FullName)")) {
+                    $cxx = $candidate; $gccInstallDir = $g.FullName
+                    Write-Log "clang uses the libstdc++ of GCC $($g.Name) ($($g.FullName)); the newest GCC folder has none."
+                    break
+                }
+            }
+            if ($cxx) { break }
+        }
+    }
     if (-not $cxx -and $found.Count -gt 0) {
         $gccDir = @(Get-ChildItem '/usr/lib/gcc/x86_64-linux-gnu', '/usr/lib/gcc/aarch64-linux-gnu' -Directory -ErrorAction SilentlyContinue |
             Where-Object { $_.Name -match '^\d+$' } | Sort-Object { [int]$_.Name } | Select-Object -Last 1)
@@ -722,7 +740,7 @@ function Resolve-LinuxToolchain {
     $jemalloc = [bool](Find-Header 'jemalloc/jemalloc.h')
     if (-not $jemalloc) { Write-Log 'jemalloc is not installed; the server is built with the normal memory allocator.' Yellow }
     Write-Log "C++ compiler: $cxx; build tool: $generator"
-    return [pscustomobject]@{ Compiler = $cxx; Generator = $generator; Jemalloc = $jemalloc }
+    return [pscustomobject]@{ Compiler = $cxx; Generator = $generator; Jemalloc = $jemalloc; GccInstallDir = $gccInstallDir }
 }
 
 # =============================================================================
@@ -1499,6 +1517,9 @@ function Invoke-ConfigureLinux([string]$CMake, $Toolchain, [switch]$Clean) {
         '-DTOOLS_BUILD=all', '-DSCRIPTS=static', '-DMODULES=static',
         "-DGIT_EXECUTABLE=$script:GitExe") + @(Get-ModuleLinkageArgs)
     if (-not $Toolchain.Jemalloc) { $arguments += '-DNOJEM=1' }
+    # clang's GCC folder (Resolve-LinuxToolchain); empty again when it is no longer needed
+    $gccFlag = if ($Toolchain.GccInstallDir) { "--gcc-install-dir=$($Toolchain.GccInstallDir)" } else { '' }
+    $arguments += @("-DCMAKE_C_FLAGS=$gccFlag", "-DCMAKE_CXX_FLAGS=$gccFlag")
     $mysql = Resolve-LinuxMySqlClient
     if ($mysql) {
         $arguments += @('-U', 'MYSQL_*', "-DMYSQL_INCLUDE_DIR=$($mysql.Include)", "-DMYSQL_LIBRARY=$($mysql.Library)",

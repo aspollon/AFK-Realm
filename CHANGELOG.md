@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.46
+
+- **clang works again on Ubuntu 26.04**: Ubuntu brings a newer GCC folder without its C++ library, which clang picks, so it could not link ("-lstdc++ not found") and every build fell back to the slower g++. AFK now points clang at the newest GCC folder that has the library (`--gcc-install-dir`), so clang builds again without installing anything.
+
 ## 1.3.45
 
 - **Linux build fast again**: 1.3.35 made the build prefer g++ over clang, which builds the core much slower; servers that built with clang were also rebuilt from scratch with g++. clang is preferred again when it can link a program; where it cannot (fresh Ubuntu without its libstdc++), g++ is used as before. A server switching back to clang builds once from scratch.
