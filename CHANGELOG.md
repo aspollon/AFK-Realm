@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.45
+
+- **Linux build fast again**: 1.3.35 made the build prefer g++ over clang, which builds the core much slower; servers that built with clang were also rebuilt from scratch with g++. clang is preferred again when it can link a program; where it cannot (fresh Ubuntu without its libstdc++), g++ is used as before. A server switching back to clang builds once from scratch.
+
 ## 1.3.44
 
 - **HD pack for the players' launcher**: the player client pack (and so the AFK Client manifest) now carries the owner's HD pack and LuxVelum. They are listed apart (`optional` in the manifest): AFK Client 1.3.44 shows two switches in its settings, "HD pack" and "LuxVelum", both off until a player turns them on, and downloads those files only then. Switching off parks the files as `.off` (no new download when switched on again). Older launchers do not know the list and never fetch the gigabytes.

@@ -1,3 +1,7 @@
+# AFK Realm 1.3.45
+
+- **Faster builds on Linux again:** since 1.3.35 the server was compiled with g++ instead of the much faster clang. clang is used again wherever it works. The next update builds once from scratch, after that it is quick again.
+
 # AFK Realm 1.3.44
 
 - **HD pack for your players, by choice:** after "HD pack …" in your own game, build the client launcher again. Your players then find "HD pack" and "LuxVelum" in the AFK Client's settings, both off. Whoever wants them switches them on and the launcher downloads them; nobody gets the 8.8 GB unasked. Players need the new AFK Client from your server page for the switches.

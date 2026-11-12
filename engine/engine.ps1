@@ -696,8 +696,9 @@ function Resolve-LinuxToolchain {
     # A compiler counts only if it can link a C++ program: clang uses the newest GCC folder it finds, and on a fresh
     # Ubuntu that folder can lack its libstdc++ ("-lstdc++ not found") while g++ links fine.
     $cxx = $null
-    # g++ first: it always brings the libstdc++ of its own version; clang depends on whichever GCC folder it picks.
-    $found = @('g++', 'clang++' | ForEach-Object { Find-Program $_ } | Where-Object { $_ })
+    # clang first: it builds the core much faster than g++. Test-CxxLinks drops it where its GCC folder lacks libstdc++
+    # (fresh Ubuntu), and g++ takes over there. 1.3.35-1.3.44 put g++ first and made every clang build slow.
+    $found = @('clang++', 'g++' | ForEach-Object { Find-Program $_ } | Where-Object { $_ })
     foreach ($candidate in $found) { if (Test-CxxLinks $candidate) { $cxx = $candidate; break } }
     if (-not $cxx -and $found.Count -gt 0) {
         $gccDir = @(Get-ChildItem '/usr/lib/gcc/x86_64-linux-gnu', '/usr/lib/gcc/aarch64-linux-gnu' -Directory -ErrorAction SilentlyContinue |
