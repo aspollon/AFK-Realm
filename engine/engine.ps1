@@ -1527,6 +1527,9 @@ function Invoke-ConfigureLinux([string]$CMake, $Toolchain, [switch]$Clean) {
         '-DTOOLS_BUILD=all', '-DSCRIPTS=static', '-DMODULES=static',
         "-DGIT_EXECUTABLE=$script:GitExe") + @(Get-ModuleLinkageArgs)
     if (-not $Toolchain.Jemalloc) { $arguments += '-DNOJEM=1' }
+    # clang refuses a PCH built against an older /usr/include (a system update changes the header mtimes), and Ninja
+    # does not track that. Disable precompiled headers on Linux; the build is a little slower but never stops there.
+    $arguments += '-DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON'
     # clang's GCC folder (Resolve-LinuxToolchain); empty again when it is no longer needed
     $gccFlag = if ($Toolchain.GccInstallDir) { "--gcc-install-dir=$($Toolchain.GccInstallDir)" } else { '' }
     $arguments += @("-DCMAKE_C_FLAGS=$gccFlag", "-DCMAKE_CXX_FLAGS=$gccFlag")
@@ -1653,9 +1656,11 @@ function Invoke-Compile([string]$CMake) {
     # mtimes ("has been modified since the precompiled header ... was built"). Ninja does not track that, so drop
     # the stale PCH and build again instead of failing the install.
     if ($tail -match 'has been modified since the precompiled header') {
-        $stale = @(Get-ChildItem -LiteralPath $Paths.Build -Recurse -Filter 'cmake_pch*.pch' -File -ErrorAction SilentlyContinue)
+        $stale = @(Get-ChildItem -LiteralPath $Paths.Build -Recurse -Filter 'cmake_pch*' -File -ErrorAction SilentlyContinue)
         foreach ($p in $stale) { try { Remove-Item -LiteralPath $p.FullName -Force } catch { } }
-        Write-Log ("The precompiled header is older than the system headers (a system update touched them); {0} stale file(s) removed, compiling again." -f $stale.Count) Yellow
+        Write-Log ("The precompiled header is older than the system headers (a system update touched them); {0} stale file(s) removed, compiling again without PCH." -f $stale.Count) Yellow
+        # Also turn PCH off in the existing cache: deleting the file alone can leave Ninja's deps believing it is current.
+        [void](Invoke-Program $CMake @('-S', $Paths.Source, '-B', $Paths.Build, '-DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON'))
         [void](Invoke-Program $CMake ($arguments + "$jobs"))
         return
     }
