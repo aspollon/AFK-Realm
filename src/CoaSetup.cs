@@ -615,6 +615,14 @@ namespace CoAInstaller
         // 32 (Forgotten) and 40 (Forest Troll, Alliance) are the old base-client rows; they are not CoA Custom races.
         static readonly HashSet<int> HiddenCoaRaces = new HashSet<int> { 19, 27, 32, 40, 65, 72, 77, 80, 81 };
 
+        // The Goblin (9) is a stock race the CoA client offers, but the core has no start data for it: it must be on like
+        // the package's races, or every Goblin gets "invalid race/class pair". The other stock races stay the core's.
+        static bool IsPackageRace(int id, uint flags)
+        {
+            if (id == 9) return true;
+            return id > 11 && id <= 127 && (flags & 0xC) == 0xC && !HiddenCoaRaces.Contains(id);
+        }
+
         // The base race CoA Custom gives its races: its RACIAL table for the first 31 races and a
         // same-faction stock race for the Esteria races above them.
         static readonly Dictionary<int, string> CoaBaseByRace = new Dictionary<int, string>
@@ -797,7 +805,7 @@ namespace CoAInstaller
             {
                 int id = (int)table.Field(row, 0);
                 uint flags = table.Field(row, 1);
-                if (id <= 11 || id > 127 || (flags & 0xC) != 0xC || HiddenCoaRaces.Contains(id)) continue;
+                if (!IsPackageRace(id, flags)) continue;
                 string name = ClientRaces.Str(table, row, 14);
                 if (name.Length == 0) name = ClientRaces.Str(table, row, 11);
                 list.Add(new KeyValuePair<int, string>(id, name));
@@ -923,7 +931,7 @@ namespace CoAInstaller
             {
                 int id = (int)table.Field(row, 0);
                 uint flags = table.Field(row, 1);
-                if (id <= 11 || id > 127 || (flags & 0xC) != 0xC || HiddenCoaRaces.Contains(id)) continue;
+                if (!IsPackageRace(id, flags)) continue;
                 if (only != null && !only.Contains(id)) continue;
                 string file = ClientRaces.Str(table, row, 11);
                 string name = ClientRaces.Str(table, row, 14);

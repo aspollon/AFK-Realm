@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.56
+
+- **Horde Goblin (race 9)**: the CoA client offers it, but `CoaSetup` counted only races 12 to 127 as the package's, so `CustomRaces.Races` never had the Goblin and the core refused it ("invalid race/class pair (9/..)"). `IsPackageRace` now takes race 9 too; the race list is written again at the next server start, so the Goblin starts from the Orc's data.
+
 ## 1.3.55
 
 - **CoA Custom 2.0 setup and XvidDecoder.dll**: `ClientVoices.InstallExe` overwrote the package's 11,776-byte `XvidDecoder.dll` with the 456,192-byte copy from the voices release, and `CoaSetup.VerifyTree` then failed with "The CoA package file is incomplete after the copy". An existing `XvidDecoder.dll` is kept now, and `VerifyTree` skips it when `AFK64.exe` is present. No package download is needed; update AFK Realm and run the setup again.

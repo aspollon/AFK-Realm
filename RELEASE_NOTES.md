@@ -1,3 +1,7 @@
+# AFK Realm 1.3.56
+
+- **The Horde Goblin can be created:** the game offered it, but the server had no start data for it and answered "Error creating character" for every class. AFK Realm now switches it on like every CoA Custom race. Update AFK Realm and restart the server; no reinstall needed.
+
 # AFK Realm 1.3.55
 
 - **CoA Custom 2.0 setup no longer fails on XvidDecoder.dll:** the AFK64 step replaced the package's small XvidDecoder.dll with the voices release's larger copy, and the setup's final size check then stopped with "The CoA package file is incomplete after the copy: ...\XvidDecoder.dll". An existing XvidDecoder.dll is now kept, and a game folder that already has AFK64.exe is no longer checked against the package's copy. The 2.0 package is fine — update to 1.3.55 and run **Install / update** again; no new download is needed.
