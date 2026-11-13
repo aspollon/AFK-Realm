@@ -1,3 +1,8 @@
+# AFK Realm 1.3.50
+
+- **Windows build with many modules fixed:** "modules.lib: fatal error LNK1248: image size exceeds maximum allowable size" no longer stops the build. AFK Realm splits the modules into several libraries. The first build after the update compiles the modules again.
+- **CoA Custom needs no GitHub key any more:** the CoA Custom repository is public now, so the download works for everyone.
+
 # AFK Realm 1.3.49
 
 - **New CoA Custom races get their racials:** the races added in CoA Custom 1.9.9 (Dreadlord, Titan, Sureki, Wretched, Fungarian, Sporeling, Stormforged, Mo'arg, Nerubian, Lich, Mogu, Lost One, Thin Human, Two-Headed Ogre) had none. Update the modules as well (mod-custom-races brings the spells), then rebuild.

@@ -6,30 +6,6 @@ import { dialog, alert, confirm, choose, input, primary, secondary, toggle, runP
 export async function coaDialog() {
   let state;
   try { state = await post('/api/coa/state'); } catch (e) { return alert(e.message); }
-  async function askToken(first) {
-    const key = input('', { type: 'password', style: { width: '100%' }, autocomplete: 'off' });
-    const answer = await dialog({
-      title: T('CoA Custom GitHub key'), icon: 'modules',
-      body: h('div', {},
-        h('p', {}, T('The CoA Custom 64 download is in a private repository. Enter the key for it. This key is stored separately from your module-catalog token.')),
-        h('div.row.nowrap', {}, h('span', { style: { width: '90px' } }, T('GitHub key')), key),
-        h('p.small.muted', {}, T('Fine-grained token: repository ilusixn/CustomRacesCoa, permission Contents: Read-only. Do not enter your GitHub password.'))),
-      buttons: first
-        ? [{ text: T('Cancel'), value: null }, { text: T('Save key'), kind: 'primary', value: 'save' }]
-        : [{ text: T('Cancel'), value: null }, { text: T('Save key'), kind: 'primary', value: 'save' }]
-    });
-    if (answer !== 'save') return false;
-    const value = key.value.trim();
-    if (!value) { await alert(T('Please enter the GitHub key.')); return false; }
-    try {
-      const r = await post('/api/coa/token', { token: value });
-      state.tokenSet = !!r.tokenSet;
-      return state.tokenSet;
-    } catch (e) { await alert(e.message); return false; }
-  }
-
-  if (!state.tokenSet && !await askToken(true)) return;
-
   const packagePath = input(state.package || '', { style: { flex: '1', minWidth: '240px' } });
   const serverPath = input(state.server || '', { style: { flex: '1', minWidth: '240px' } });
   const clientPath = input(state.client || '', { style: { flex: '1', minWidth: '240px' } });
@@ -133,8 +109,7 @@ export async function coaDialog() {
     (state.missingModules || []).length ? h('div.row', { style: { alignItems: 'center' } },
       h('span.warn', { style: { flex: '1' } }, T('CoA Custom\'s races need the module mod-custom-races on the server (it brings mod-classic-classes along). Without it nobody can create them.')),
       primary(T('Install it ...'), () => import('./modules.js').then(x => x.installModules(state.missingModules, T('CoA Custom needs these modules on the server.'))))) : null,
-    h('p.small.muted', {}, T('A newer CoA package replaces changed files and copies new MPQs, client_root files and add-ons. The module add-ons and the AFK client patch are installed in the same step. The player ZIP is the only ZIP you need to give to players; the same ZIP can also be created from Modules > Game client with "Create player ZIP".')),
-    h('div.row', {}, secondary(T('Change CoA GitHub key ...'), async () => { await askToken(false); })));
+    h('p.small.muted', {}, T('A newer CoA package replaces changed files and copies new MPQs, client_root files and add-ons. The module add-ons and the AFK client patch are installed in the same step. The player ZIP is the only ZIP you need to give to players; the same ZIP can also be created from Modules > Game client with "Create player ZIP".')),);
 
   return dialog({
     title: T('CoA Custom'), icon: 'modules',

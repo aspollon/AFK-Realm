@@ -41,8 +41,7 @@ namespace CoAInstaller
             try { ServicePointManager.SecurityProtocol |= (SecurityProtocolType)3072; } catch { }
             var req = (HttpWebRequest)WebRequest.Create(url);
             req.UserAgent = Product.FileStem;
-            string token = Settings.CoaGitHubToken;
-            if (!string.IsNullOrEmpty(token)) req.Headers["Authorization"] = "token " + token;
+            // ilusixn/CustomRacesCoa is public since 2026-11-13: no key is sent any more (an old one may be revoked).
             req.Timeout = timeout;
             req.ReadWriteTimeout = timeout;
             using (var resp = (HttpWebResponse)req.GetResponse())
@@ -67,11 +66,9 @@ namespace CoAInstaller
             {
                 if (!refresh && cached != null && DateTime.UtcNow - cachedAt < TimeSpan.FromHours(1)) return cached;
             }
-            if (string.IsNullOrEmpty(Settings.CoaGitHubToken))
-                throw new InvalidOperationException(L.T("A GitHub key for CoA Custom is required before downloading."));
             Release found = ParseRelease(Get("https://api.github.com/repos/" + Repo + "/releases?per_page=20"));
             if (found == null)
-                throw new InvalidOperationException(L.T("No downloadable CoA Custom release was found in the private repository."));
+                throw new InvalidOperationException(L.T("No downloadable CoA Custom release was found."));
             lock (cacheLock) { cached = found; cachedAt = DateTime.UtcNow; }
             return found;
         }
@@ -101,10 +98,9 @@ namespace CoAInstaller
                         if (!name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)) continue;
                         long size;
                         if (!asset.TryGetValue("size", out v) || !long.TryParse(Convert.ToString(v), out size)) continue;
-                        // Use the API asset URL: the browser download URL of a private
-                        // release returns 404 even with a token.
-                        string url = asset.TryGetValue("url", out v) ? Convert.ToString(v) : "";
-                        if (string.IsNullOrEmpty(url)) url = asset.TryGetValue("browser_download_url", out v) ? Convert.ToString(v) : "";
+                        // The browser download URL: no API rate limit for the many parts of a public release.
+                        string url = asset.TryGetValue("browser_download_url", out v) ? Convert.ToString(v) : "";
+                        if (string.IsNullOrEmpty(url)) url = asset.TryGetValue("url", out v) ? Convert.ToString(v) : "";
                         string digest = asset.TryGetValue("digest", out v) ? Convert.ToString(v) : "";
                         if (digest.StartsWith("sha256:", StringComparison.OrdinalIgnoreCase)) digest = digest.Substring(7);
                         release.Assets.Add(new Asset { Name = name, Url = url, Size = size, Sha256 = digest });
@@ -215,8 +211,6 @@ namespace CoAInstaller
                     try { ServicePointManager.SecurityProtocol |= (SecurityProtocolType)3072; } catch { }
                     var req = (HttpWebRequest)WebRequest.Create(asset.Url);
                     req.UserAgent = Product.FileStem;
-                    string downloadToken = Settings.CoaGitHubToken;
-                    if (!string.IsNullOrEmpty(downloadToken)) req.Headers["Authorization"] = "token " + downloadToken;
                     req.Accept = "application/octet-stream";
                     req.Timeout = 30000;
                     req.ReadWriteTimeout = 60000;

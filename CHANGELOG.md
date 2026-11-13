@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.50
+
+- **Windows: many modules no longer stop the build with LNK1248** ("modules.lib: image size exceeds maximum allowable size"): Visual Studio's librarian writes 4 GB at most, and the modules of a CoA server with many extra modules came past it. `engine/patches/core-modules-split.patch` spreads the module sources over `modules` and `modules_part1-3` with MSVC, as `esteria-modules-split.patch` has done for EsteriaWoW since 1.3.9. Other compilers keep one library. The next build compiles the modules once more.
+- **CoA Custom downloads without a key**: ilusixn/CustomRacesCoa is public now. AFK Realm no longer asks for the CoA GitHub key and sends none (a revoked one would be refused); the parts are fetched from the release's download links, which have no API rate limit.
+
 ## 1.3.49
 
 - **Racials of CoA Custom's newest races**: a race the racial table of mod-custom-races does not know yet gets the spells CoA Custom numbers after it (since 1.9.9: 15000000 + race * 10 + 1..9 with the rank "Racial" in the client's Spell.dbc), so a newer CoA Custom brings the racials of its new races by itself. The Fungarian Sporebloom brings its pulse row and script binding. (The table for the fourteen 1.9.9 races, their rows and the two scripts come with mod-custom-races.)

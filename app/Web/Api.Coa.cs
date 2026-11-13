@@ -252,8 +252,6 @@ namespace CoAInstaller.Web
 
             Post(app, "/api/coa/download", a =>
             {
-                if (string.IsNullOrEmpty(Settings.CoaGitHubToken))
-                    throw new UserError(L.T("A GitHub key for CoA Custom is required before downloading."));
                 string target = (a.Str("target") ?? "").Trim();
                 if (target.Length == 0) target = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", "CoA-Custom");
                 return Jobs.Run(L.T("Downloading CoA Custom ..."), (job, st) =>
