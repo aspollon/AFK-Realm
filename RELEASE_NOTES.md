@@ -1,3 +1,7 @@
+# AFK Realm 1.3.55
+
+- **CoA Custom 2.0 setup no longer fails on XvidDecoder.dll:** the AFK64 step replaced the package's small XvidDecoder.dll with the voices release's larger copy, and the setup's final size check then stopped with "The CoA package file is incomplete after the copy: ...\XvidDecoder.dll". An existing XvidDecoder.dll is now kept, and a game folder that already has AFK64.exe is no longer checked against the package's copy. The 2.0 package is fine — update to 1.3.55 and run **Install / update** again; no new download is needed.
+
 # AFK Realm 1.3.54
 
 - **Lumenveil's in-game keys stay on:** CoA Custom 2.0's client files bring a CoAVolFog.ini with Overlay=0, and the CoA setup copied it over your settings. That switches the settings window and all its keys off: Ctrl+F7 (settings), Ctrl+F12 (on/off), Ctrl+F3/F4/F5/F6 and the other Lumenveil shortcuts. The setup now keeps an existing CoAVolFog.ini; a fresh folder gets the package file with Overlay=1; an older install that still has the package's own file gets its overlay switched back on. The AFK Client repairs it after an update and whenever Lumenveil is chosen, and player packs carry the owner's CoAVolFog.ini.

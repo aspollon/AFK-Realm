@@ -287,6 +287,10 @@ namespace CoAInstaller
                     if (e == null) continue;
                     string name = e == exe ? targetName : e.Name;
                     string target = Path.Combine(client, name);
+                    // CoA Custom's client_root has its own XvidDecoder.dll (a small proxy); keep it. The release's
+                    // larger copy is only for a game folder that has none, and overwriting it made the CoA setup's
+                    // final size check fail ("CoA package file is incomplete ... XvidDecoder.dll").
+                    if (e != exe && File.Exists(target)) continue;
                     string backup = target + ".afk-backup";
                     try { if (File.Exists(target) && !File.Exists(backup)) File.Copy(target, backup); } catch { }
                     try { CoaUninstall.Capture(target); } catch { }

@@ -1206,6 +1206,10 @@ namespace CoAInstaller
                 string rel = file.Substring(root.Length);
                 string dest = Path.Combine(target, rel);
                 if (PreservedClientFile(file) && File.Exists(dest)) continue;
+                // AFK may have put its own XvidDecoder.dll beside AFK64.exe; an older AFK install also did so before
+                // the installer learned to keep the package's file. Do not fail the whole CoA setup over the codec.
+                if (string.Equals(Path.GetFileName(file), "XvidDecoder.dll", StringComparison.OrdinalIgnoreCase) &&
+                    File.Exists(Path.Combine(target, CoaClientExe.Afk))) continue;
                 VerifyFile(file, dest);
             }
         }

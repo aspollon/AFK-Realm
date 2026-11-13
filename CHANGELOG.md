@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.55
+
+- **CoA Custom 2.0 setup and XvidDecoder.dll**: `ClientVoices.InstallExe` overwrote the package's 11,776-byte `XvidDecoder.dll` with the 456,192-byte copy from the voices release, and `CoaSetup.VerifyTree` then failed with "The CoA package file is incomplete after the copy". An existing `XvidDecoder.dll` is kept now, and `VerifyTree` skips it when `AFK64.exe` is present. No package download is needed; update AFK Realm and run the setup again.
+
 ## 1.3.54
 
 - **Lumenveil's keys stay on**: CoA Custom 2.0's `client_root` carries a `CoAVolFog.ini` with `Overlay=0`; `CoaSetup` copied it over the player's settings, so the settings window (Ctrl+F7) and the other Lumenveil shortcuts did nothing. The setup keeps an existing `CoAVolFog.ini`, gives a fresh folder the package file with `Overlay=1`, and repairs an older install that still has the package's own file. The AFK Client does the same after an update and when Lumenveil is chosen; player packs carry the owner's `CoAVolFog.ini` (the launcher treats it as the player's own).
