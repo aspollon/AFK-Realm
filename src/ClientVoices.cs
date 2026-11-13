@@ -201,11 +201,11 @@ namespace CoAInstaller
         }
 
         /// <summary>The game's CoA64.exe is byte for byte the one in the release.</summary>
-        static bool SameExe(string client, string pluginZip)
+        static bool SameExe(string client, string pluginZip, string targetName = "CoA64.exe")
         {
             try
             {
-                string game = Path.Combine(client, "CoA64.exe");
+                string game = Path.Combine(client, targetName);
                 if (!File.Exists(game)) return false;
                 using (var zip = ZipFile.OpenRead(pluginZip))
                 {
@@ -237,7 +237,7 @@ namespace CoAInstaller
         }
 
         /// <summary>Puts the newest release's CoA64.exe in place when the game runs another one (HD pack page, no voices needed).</summary>
-        public static string EnsureNewestExe(string client, Action<string, long, long> report)
+        public static string EnsureNewestExe(string client, Action<string, long, long> report, string targetName = "CoA64.exe")
         {
             string downloads = Path.Combine(client, ".afk-voices-downloads");
             Directory.CreateDirectory(downloads);
@@ -245,7 +245,7 @@ namespace CoAInstaller
             {
                 var plugin = LatestRelease(PluginRepo, n => n.StartsWith("CoA64-Voices-", StringComparison.OrdinalIgnoreCase) && n.EndsWith(".zip", StringComparison.OrdinalIgnoreCase));
                 string pluginZip = Fetch(plugin, plugin.Assets[0], downloads, report);
-                try { return SameExe(client, pluginZip) ? null : InstallExe(client, pluginZip); }
+                try { return SameExe(client, pluginZip, targetName) ? null : InstallExe(client, pluginZip, targetName); }
                 finally { TryDelete(pluginZip); }
             }
             finally
@@ -254,8 +254,9 @@ namespace CoAInstaller
             }
         }
 
-        /// <summary>CoA64.exe (and XvidDecoder.dll) from the release's CoA64 folder; the game's own exe stays as .afk-backup.</summary>
-        static string InstallExe(string client, string pluginZip)
+        /// <summary>CoA64.exe (and XvidDecoder.dll) from the release's CoA64 folder; the game's own exe stays as .afk-backup.
+        /// CoA Custom 2.0 names its client CoACustomRace.exe, so the same build is written under that name.</summary>
+        static string InstallExe(string client, string pluginZip, string targetName = "CoA64.exe")
         {
             using (var zip = ZipFile.OpenRead(pluginZip))
             {
@@ -268,7 +269,8 @@ namespace CoAInstaller
                 foreach (var e in new[] { exe, zip.Entries.FirstOrDefault(x => x.FullName.Replace('\\', '/').Equals("CoA64/XvidDecoder.dll", StringComparison.OrdinalIgnoreCase)) })
                 {
                     if (e == null) continue;
-                    string target = Path.Combine(client, e.Name);
+                    string name = e == exe ? targetName : e.Name;
+                    string target = Path.Combine(client, name);
                     string backup = target + ".afk-backup";
                     try { if (File.Exists(target) && !File.Exists(backup)) File.Copy(target, backup); } catch { }
                     try { CoaUninstall.Capture(target); } catch { }
@@ -277,7 +279,7 @@ namespace CoAInstaller
                     if (File.Exists(target)) File.Delete(target);
                     File.Move(tmp, target);
                 }
-                string line = L.T("CoA64.exe that loads plugins (yours is kept as CoA64.exe.afk-backup)");
+                string line = L.F("{0} that loads plugins (yours is kept as {0}.afk-backup)", targetName);
                 string have = null;
                 try { string pkg = Settings.CoaPackage; if (!string.IsNullOrEmpty(pkg)) have = CoaSetup.ReadVersion(Path.Combine(CoaSetup.PackageForPlayers() ?? pkg, "manifest.json")); } catch { }
                 if (!string.IsNullOrEmpty(built) && !string.IsNullOrEmpty(have) && built != have)
@@ -535,3 +537,4 @@ namespace CoAInstaller
         }
     }
 }
+

@@ -701,22 +701,32 @@ function Resolve-LinuxToolchain {
     $found = @('clang++', 'g++' | ForEach-Object { Find-Program $_ } | Where-Object { $_ })
     $gccInstallDir = $null
     foreach ($candidate in $found) {
-        if (Test-CxxLinks $candidate) { $cxx = $candidate; break }
-        if ($candidate -like '*clang++') {
-            # Ubuntu 26.04 brings a newer GCC folder (runtime only, no libstdc++ to link) that clang picks; pointed at
-            # the newest GCC folder that has libstdc++, clang links again.
-            $withLib = @(Get-ChildItem '/usr/lib/gcc/x86_64-linux-gnu', '/usr/lib/gcc/aarch64-linux-gnu' -Directory -ErrorAction SilentlyContinue |
-                Where-Object { $_.Name -match '^\d+$' -and ((Test-Path (Join-Path $_.FullName 'libstdc++.so')) -or (Test-Path (Join-Path $_.FullName 'libstdc++.a'))) } |
-                Sort-Object { [int]$_.Name } -Descending)
-            foreach ($g in $withLib) {
-                if (Test-CxxLinks $candidate @("--gcc-install-dir=$($g.FullName)")) {
-                    $cxx = $candidate; $gccInstallDir = $g.FullName
-                    Write-Log "clang uses the libstdc++ of GCC $($g.Name) ($($g.FullName)); the newest GCC folder has none."
-                    break
-                }
-            }
-            if ($cxx) { break }
+        # /usr/lib/ccache/clang++ is a wrapper. Where the wrapper cannot link (its ccache loses the compiler's C++
+        # headers: "'string' file not found"), the compiler behind it can, so try that one too.
+        $variants = @($candidate)
+        if ($candidate -match '[\\/]ccache[\\/]') {
+            $plain = Join-Path '/usr/bin' (Split-Path $candidate -Leaf)
+            if (Test-Path $plain) { $variants += $plain }
         }
+        foreach ($variant in $variants) {
+            if (Test-CxxLinks $variant) { $cxx = $variant; break }
+            if ($variant -like '*clang++') {
+                # Ubuntu 26.04 brings a newer GCC folder (runtime only, no libstdc++ to link) that clang picks; pointed at
+                # the newest GCC folder that has libstdc++, clang links again.
+                $withLib = @(Get-ChildItem '/usr/lib/gcc/x86_64-linux-gnu', '/usr/lib/gcc/aarch64-linux-gnu' -Directory -ErrorAction SilentlyContinue |
+                    Where-Object { $_.Name -match '^\d+$' -and ((Test-Path (Join-Path $_.FullName 'libstdc++.so')) -or (Test-Path (Join-Path $_.FullName 'libstdc++.a'))) } |
+                    Sort-Object { [int]$_.Name } -Descending)
+                foreach ($g in $withLib) {
+                    if (Test-CxxLinks $variant @("--gcc-install-dir=$($g.FullName)")) {
+                        $cxx = $variant; $gccInstallDir = $g.FullName
+                        Write-Log "clang uses the libstdc++ of GCC $($g.Name) ($($g.FullName)); the newest GCC folder has none."
+                        break
+                    }
+                }
+                if ($cxx) { break }
+            }
+        }
+        if ($cxx) { break }
     }
     if (-not $cxx -and $found.Count -gt 0) {
         $gccDir = @(Get-ChildItem '/usr/lib/gcc/x86_64-linux-gnu', '/usr/lib/gcc/aarch64-linux-gnu' -Directory -ErrorAction SilentlyContinue |
@@ -1639,6 +1649,16 @@ function Invoke-Compile([string]$CMake) {
     $code = Invoke-Program $CMake ($arguments + "$jobs") -AllowFailure
     if ($code -eq 0) { return }
     $tail = (Get-Content $Paths.Log -Tail 3000 -ErrorAction SilentlyContinue) -join "`n"
+    # A system update rewrites /usr/include/*.h; clang then refuses the precompiled header built against the old
+    # mtimes ("has been modified since the precompiled header ... was built"). Ninja does not track that, so drop
+    # the stale PCH and build again instead of failing the install.
+    if ($tail -match 'has been modified since the precompiled header') {
+        $stale = @(Get-ChildItem -LiteralPath $Paths.Build -Recurse -Filter 'cmake_pch*.pch' -File -ErrorAction SilentlyContinue)
+        foreach ($p in $stale) { try { Remove-Item -LiteralPath $p.FullName -Force } catch { } }
+        Write-Log ("The precompiled header is older than the system headers (a system update touched them); {0} stale file(s) removed, compiling again." -f $stale.Count) Yellow
+        [void](Invoke-Program $CMake ($arguments + "$jobs"))
+        return
+    }
     if ($jobs -gt 1 -and $tail -match 'C1076|C3859|C1060|C1002|out of heap|heap limit|Heapgrenze|virtuellen Speichers|virtual memory exhausted|Killed signal terminated|cannot allocate memory|out of memory') {
         Write-Log 'The compiler ran out of memory. Retrying one project at a time (finished parts are kept). Closing games and browsers helps.' Yellow
         [void](Invoke-Program $CMake ($arguments + '1'))

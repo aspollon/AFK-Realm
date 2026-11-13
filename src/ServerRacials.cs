@@ -211,6 +211,27 @@ namespace CoAInstaller
             catch { }
         }
 
+        /// <summary>The files of CoA Custom's racial rows in its server pack, oldest first: the Esteria rows, the
+        /// AllRaces v12 round (23_racials_round2_v12.sql) and the Gilgoblin racials (40_gilgoblin_racials.sql).
+        /// Starting with 2.0 the rows are split over several files; 1.9 had one.</summary>
+        public static System.Collections.Generic.List<string> PackRowFiles(string coaCustomFolder)
+        {
+            var result = new System.Collections.Generic.List<string>();
+            if (string.IsNullOrEmpty(coaCustomFolder)) return result;
+            string root = ClientPatch.ClientRootOf(coaCustomFolder);
+            string files = root != null ? Path.GetDirectoryName(root.TrimEnd('\\', '/')) : null;
+            foreach (var dir in new[] { files == null ? null : Os.Resolve(files, "sql"), Os.Resolve(coaCustomFolder, "files/sql"), Os.Resolve(coaCustomFolder, "sql") })
+            {
+                if (dir == null || !Directory.Exists(dir)) continue;
+                result.AddRange(Directory.GetFiles(dir)
+                    .Where(f => f.EndsWith(".sql", StringComparison.OrdinalIgnoreCase) &&
+                                Path.GetFileName(f).IndexOf("racials", StringComparison.OrdinalIgnoreCase) >= 0)
+                    .OrderBy(f => f, StringComparer.OrdinalIgnoreCase));
+                if (result.Count > 0) break;
+            }
+            return result;
+        }
+
         /// <summary>The file of CoA Custom's rows of its racials in its server pack (files\sql\10_esteria_racials_*.sql, the
         /// newest), from the CoA Custom folder chosen on the races page (the pack, its files folder or files\client_root);
         /// null when there is none.</summary>

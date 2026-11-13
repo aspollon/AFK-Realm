@@ -290,7 +290,7 @@ namespace CoAInstaller
             {
                 try
                 {
-                    string newest = ClientVoices.EnsureNewestExe(o.Client, (t, x, y) => { });
+                    string newest = ClientVoices.EnsureNewestExe(o.Client, (t, x, y) => { }, CoaClientExe.Afk);
                     ownExe = ClientVoices.PluginHost(o.Client) != null;
                     if (newest != null) { Console.WriteLine(newest); copied++; }
                 }
@@ -309,10 +309,11 @@ namespace CoAInstaller
             {
                 // A CoA64 build the native HD exe was not made for: its own exe, changed so that HD no
                 // longer depends on DXVK (Coa64HdPatch finds the two checks by their code).
-                var patched = Coa64HdPatch.ApplyToFile(Path.Combine(o.Client, "CoA64.exe"));
+                string clientExe = CoaClientExe.Full(o.Client);
+                var patched = Coa64HdPatch.ApplyToFile(clientExe);
                 Console.WriteLine(patched == Coa64HdPatch.Result.NotFound
-                    ? L.T("CoA64.exe: the HD check was not found in this build; HD needs the x64 DXVK folder to load.")
-                    : L.T("CoA64.exe: HD no longer depends on DXVK."));
+                    ? L.F("{0}: the HD check was not found in this build; HD needs the x64 DXVK folder to load.", Path.GetFileName(clientExe))
+                    : L.F("{0}: HD no longer depends on DXVK.", Path.GetFileName(clientExe)));
                 if (patched == Coa64HdPatch.Result.Patched) copied++;
             }
 
@@ -371,7 +372,7 @@ namespace CoAInstaller
                 string sqlTarget = Path.Combine(inst.Root, "CoA-Custom", "sql");
                 Console.WriteLine(L.F("Copying SQL to {0} ...", sqlTarget));
                 CopyFiles(sqlSource, sqlTarget, "*.sql", o.NoBackup, ref copied, ref skipped);
-                Console.WriteLine(L.T("SQL files copied. Automatic execution is disabled; the included module data is used."));
+                Console.WriteLine(L.T("SQL files copied; the package's base dumps and AFK's module data are never run."));
                 // The core's custom-race display code asks for acore_world.custom_race_display at every start.
                 // CoA Custom ships it in race_looks.sql, but the SQL is otherwise not run automatically; without
                 // this table the worldserver aborts on startup. It only creates/fills the table, so it is safe to
@@ -382,6 +383,16 @@ namespace CoAInstaller
                     Console.WriteLine(L.T("The custom race looks table is ready."));
                 }
                 catch (Exception ex) { Console.WriteLine(L.T("The custom race looks table could not be prepared:") + " " + ex.Message); }
+
+                // 2.0's world content that only exists as SQL (Fading Island, retail mounts and pets, the Forsaken
+                // slime, the spell fixes). Races/racials stay with the module; the repack's own dumps are never run.
+                Console.WriteLine(L.T("Applying CoA Custom 2.0's world content ..."));
+                try
+                {
+                    int ran = CoaSql.Apply(inst);
+                    Console.WriteLine(L.F("{0} content file(s) applied.", ran));
+                }
+                catch (Exception ex) { Console.WriteLine(L.T("The package's world content could not be applied completely:") + " " + ex.Message); }
             }
 
             VerifyCopied(clientSource, Path.Combine(o.Client, "Data"), "*.MPQ");
@@ -1403,3 +1414,8 @@ namespace CoAInstaller
         }
     }
 }
+
+
+
+
+

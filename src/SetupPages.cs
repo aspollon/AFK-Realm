@@ -936,8 +936,10 @@ namespace CoAInstaller
                     // CoA Custom brings its changed rows along by itself
                     string coaFolder = Raw("CustomRaces.ClientRootFolder", "");
                     if (ConfigOption.IsQuoted(coaFolder)) coaFolder = ConfigOption.Unquote(coaFolder);
-                    string packRows = ServerRacials.PackRows(coaFolder);
-                    if (packRows != null) ServerRacials.UseCoaRows(packRows, true);
+                    // 2.0 splits its racial rows over several files (Esteria, AllRaces v12 round, Gilgoblin); read them
+                    // all, oldest first, so a newer pack's races get their racials without a new races.json.
+                    foreach (string packFile in ServerRacials.PackRowFiles(coaFolder))
+                        ServerRacials.UseCoaRows(packFile, true);
                 }
             }
             catch (Exception ex) { Shown += (s, e) => Ui.Error(this, L.F("What mod-custom-races knows of the races could not be read ({0}): {1}", file, ex.Message)); }
