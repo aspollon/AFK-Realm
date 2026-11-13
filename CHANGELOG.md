@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.3.53
+
+- **Graphics effect choice**: AFK64.exe loads only what `Visuals.txt` names (0 none, 1 Lumenveil, 2 LuxVelum), but the LuxVelum switches on the HD page and in the AFK Client only set `LuxVelum.ini` and parked its files, so LuxVelum never loaded. Both now offer Off / Lumenveil / LuxVelum and write `Visuals.txt` (`src/ClientVisuals.cs`, `client/Visuals.cs`); the AFK Client fetches LuxVelum's files only while it is chosen. An HD install with LuxVelum switched off moves a choice of 2 back to Lumenveil.
+- **Gilgoblin racials**: the client-number rule now also takes rank "Racial Passive", so race 105 gets 15001051-15001054 besides Brineborn Cascade. mod-custom-races brings `spell_gilgoblin_current_rider`, `spell_gilgoblin_brine_mending` and `spell_gilgoblin_brineborn_cascade`, and race 105 in its table.
+- **Fading Island graveyard**: map 907 has no AreaTable rows, so the core skipped its graveyard and used the default one. mod-custom-races picks the nearest graveyard on the same map where zone and area are 0.
+- **Content SQL journal**: `CoaSql` keeps each file's SHA-256 in `acore_world.afk_content_sql` and skips unchanged files; `24_manastorm_cache_brackets_fix.sql` is left out (a copy of the core's `zzzz_rev_20261025_100` update).
+- **Racial row files in number order** (7_ before 40_), the same order as the content SQL.
+- `dist/win-x64` build files are no longer tracked.
+
+## 1.3.52
+
+- **AFK64.exe first everywhere**: `CoaClientExe` names AFK64.exe, CoACustomRace.exe and CoA64.exe; the launcher, the game start and the client builder prefer AFK64.exe. Every install path (CoA Custom setup, HD page, Voices, client builder) calls `EnsureNewestExe` for AFK64.exe. The AFK Client and `ClientPatch` never overwrite an existing Visuals.txt or AFK64.exe.
+
+## 1.3.51
+
+- **Lumenveil standard**: the voices release carries AFK64.exe, Lumenveil64.dll and Visuals.txt; `ClientVoices.InstallExe` writes all three and keeps an existing Visuals.txt.
+- **Linux without precompiled headers** (`-DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON`), and the stale-PCH retry also updates the existing cache.
+
 ## 1.3.50
 
 - **Windows: many modules no longer stop the build with LNK1248** ("modules.lib: image size exceeds maximum allowable size"): Visual Studio's librarian writes 4 GB at most, and the modules of a CoA server with many extra modules came past it. `engine/patches/core-modules-split.patch` spreads the module sources over `modules` and `modules_part1-3` with MSVC, as `esteria-modules-split.patch` has done for EsteriaWoW since 1.3.9. Other compilers keep one library. The next build compiles the modules once more.

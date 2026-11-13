@@ -1,3 +1,10 @@
+# AFK Realm 1.3.53
+
+- **Choose the graphics effect:** the HD pack page and the AFK Client launcher now have a choice "Off / Lumenveil / LuxVelum" instead of the LuxVelum switch. Before, switching LuxVelum on did nothing, because the game only loads what Visuals.txt says. "Off" is the plain game, for weak computers.
+- **Gilgoblins get all their racials:** they only got Brineborn Cascade, and Current Rider, Brine Mending and Brineborn Cascade did nothing without CoA Custom's own server. Update the modules (mod-custom-races brings the three scripts), then rebuild.
+- **Fading Island: dying there sends you to the island's spirit healer** instead of a capital (with the updated mod-custom-races).
+- **CoA Custom's world content runs once:** a reinstall no longer imports the large mount and pet files again; a changed file in a new package runs again. The manastorm cache file is left out, because the CoA core already has it and the copy could undo newer values.
+
 # AFK Realm 1.3.52
 
 - **The AFK Client launcher starts AFK64.exe:** it looked only for CoA64.exe, so even a freshly installed AFK client started the old package exe. AFK64.exe now wins, then CoACustomRace.exe (CoA Custom 2.0), then CoA64.exe and the plain clients. "The game is already running" recognises AFK64 too.
@@ -9,6 +16,7 @@
 
 - **Lumenveil is the standard client effect:** the voices release now carries AFK64.exe for CoA Custom 2.0, Lumenveil64.dll and a commented Visuals.txt (0 = default graphics, 1 = Lumenveil, 2 = LuxVelum). Every AFK install (client download, HD page and Voices) puts the AFK exe, the engine DLL and the choice in place; an existing player choice is kept.
 - **Linux builds survive system header updates:** clang no longer stops at "stdint.h has been modified since the precompiled header was built". Linux configures without precompiled headers, and the stale-PCH retry also updates the existing cache.
+
 # AFK Realm 1.3.50
 
 - **Windows build with many modules fixed:** "modules.lib: fatal error LNK1248: image size exceeds maximum allowable size" no longer stops the build. AFK Realm splits the modules into several libraries. The first build after the update compiles the modules again.

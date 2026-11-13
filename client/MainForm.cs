@@ -131,8 +131,10 @@ internal sealed class MainForm : Form
                 await Play();
                 return;
             case "hd":
-            case "lux":
                 Switch(action, data.TryGetProperty("on", out var on) && on.ValueKind == JsonValueKind.True);
+                return;
+            case "visuals":
+                ChooseVisuals(data.TryGetProperty("value", out var v) && v.ValueKind == JsonValueKind.Number && v.TryGetInt32(out int n) ? n : Visuals.Lumenveil);
                 return;
             case "portal":
                 Game.OpenUrl(_config?.PortalUrl);
@@ -284,23 +286,44 @@ internal sealed class MainForm : Form
         }
     }
 
-    /// <summary>The HD and LuxVelum switches: saved, and applied to the game folder at once when it is not running.</summary>
+    /// <summary>The HD switch: saved, and applied to the game folder at once when it is not running.</summary>
     void Switch(string what, bool on)
     {
-        if (what == "hd") _state.HdOn = on; else _state.LuxOn = on;
+        _state.HdOn = on;
         _state.Save();
         if (Game.IsClientFolder(_state.GameFolder) && !Game.IsRunning(_state.GameFolder))
         {
             try
             {
                 HdSwitches.Apply(_state.GameFolder, _state);
-                SetStatus(what == "hd"
-                    ? (on ? "HD pack on. Press Play: its files (about 8.8 GB) are downloaded first." : "HD pack off. Its files are kept aside and no longer downloaded.")
-                    : (on ? "LuxVelum on. Press Play: it is downloaded first (Ctrl+F7 in game for its settings)." : "LuxVelum off from the next game start."), "ok");
+                SetStatus(on ? "HD pack on. Press Play: its files (about 8.8 GB) are downloaded first." : "HD pack off. Its files are kept aside and no longer downloaded.", "ok");
             }
             catch (Exception ex) { SetStatus(ex.Message, "bad"); }
         }
         else SetStatus("Saved. It applies the next time you press Play with the game closed.", "ok");
+        SendState();
+    }
+
+    /// <summary>The graphics effect: written to Visuals.txt; LuxVelum's files are fetched only while it is chosen.</summary>
+    void ChooseVisuals(int choice)
+    {
+        if (choice < Visuals.Stock || choice > Visuals.LuxVelum) choice = Visuals.Lumenveil;
+        _state.LuxOn = choice == Visuals.LuxVelum;
+        _state.Save();
+        string name = choice == Visuals.Stock ? "No graphics effect" : choice == Visuals.LuxVelum ? "LuxVelum" : "Lumenveil";
+        if (Game.IsClientFolder(_state.GameFolder))
+        {
+            try
+            {
+                Visuals.Write(_state.GameFolder, choice);
+                if (!Game.IsRunning(_state.GameFolder)) HdSwitches.Apply(_state.GameFolder, _state);
+                SetStatus(choice == Visuals.LuxVelum
+                    ? "LuxVelum chosen. Press Play: it is downloaded first (Ctrl+F7 in game for its settings)."
+                    : name + " from the next game start.", "ok");
+            }
+            catch (Exception ex) { SetStatus(ex.Message, "bad"); }
+        }
+        else SetStatus("Saved. Choose your game folder, then press Play.", "ok");
         SendState();
     }
 
@@ -369,7 +392,7 @@ internal sealed class MainForm : Form
                 portalUrl = _config?.PortalUrl ?? "",
                 manifestUrl = _config?.ManifestUrl ?? "",
                 hdOn = _state.HdOn,
-                luxOn = _state.LuxOn
+                visuals = Game.IsClientFolder(_state.GameFolder) ? Visuals.Read(_state.GameFolder) : (_state.LuxOn ? Visuals.LuxVelum : Visuals.Lumenveil)
             });
         }
         catch { }

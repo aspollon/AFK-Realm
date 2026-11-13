@@ -322,6 +322,16 @@ body::after {
 .settings-row > div { min-width: 0; }
 .settings-switch { cursor: pointer; }
 .settings-switch input { width: 18px; height: 18px; accent-color: var(--accent, #c9a45c); flex: none; }
+.settings-row select {
+  flex: none;
+  padding: 5px 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: #1c1729;
+  color: var(--text);
+  font: 13px "Segoe UI", sans-serif;
+}
+.settings-row select:disabled { opacity: .45; }
 .settings-label { display: block; color: var(--muted); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; }
 .settings-value { display: block; max-width: 210px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); font-size: 13px; }
 .settings-sep { height: 1px; background: var(--border); margin: 8px 0; }

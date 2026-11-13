@@ -16,7 +16,7 @@ namespace CoAInstaller.Web
             string state;
             if (client == null) state = L.T("Choose your game folder in the game client window first.");
             else if (!s.Installed) state = L.T("The HD pack is not in your game yet.");
-            else state = L.F("HD archives: {0} on, {1} off · LuxVelum: {2}", s.Active, s.Disabled,
+            else state = L.F("HD archives: {0} on, {1} off · graphics effect: {2} · LuxVelum: {3}", s.Active, s.Disabled, ClientVisuals.Name(ClientVisuals.Read(client)),
                 !s.LuxFiles ? L.T("not installed") : s.LuxHost ? L.T("ready") : L.T("your CoA64.exe cannot load it yet"));
             var warnings = new System.Collections.Generic.List<string>();
             if (client != null && !s.LuxHost) warnings.Add(L.T("Your CoA64.exe cannot host LuxVelum yet; \"Install / apply\" brings the newest one when it is released."));
@@ -24,7 +24,8 @@ namespace CoAInstaller.Web
             {
                 client, ready = client != null, state, warnings, page = ClientHd.PackPage,
                 pack = found ?? o.Pack ?? "", packFound = found != null, installed = s.Installed,
-                o.World, o.Orcs, o.Shaders, o.Cursor, o.Blood, o.Effects, o.Sounds, o.Lux, o.Addons
+                o.World, o.Orcs, o.Shaders, o.Cursor, o.Blood, o.Effects, o.Sounds, o.Lux, o.Addons,
+                visuals = client != null ? ClientVisuals.Read(client) : ClientVisuals.Lumenveil
             };
         }
 
@@ -35,6 +36,9 @@ namespace CoAInstaller.Web
             o.Cursor = a.Bool("cursor", o.Cursor); o.Blood = a.Bool("blood", o.Blood); o.Effects = a.Bool("effects", o.Effects);
             o.Sounds = a.Bool("sounds", o.Sounds); o.Lux = a.Bool("lux", o.Lux); o.Addons = a.Bool("addons", o.Addons);
             o.Pack = (a.Str("pack") ?? o.Pack ?? "").Trim();
+            o.Visuals = a.Int("visuals", -1);
+            if (o.Visuals >= ClientVisuals.Stock && o.Visuals <= ClientVisuals.LuxVelum) o.Lux = o.Visuals == ClientVisuals.LuxVelum;
+            else o.Visuals = -1;
             return o;
         }
 

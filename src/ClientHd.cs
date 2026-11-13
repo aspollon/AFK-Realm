@@ -24,6 +24,8 @@ namespace CoAInstaller
             public bool World = true, Orcs = false, Shaders = true, Cursor = false, Blood = false, Effects = true, Sounds = true;
             public bool Lux = true, Addons = true;
             public string Pack = "";
+            // Visuals.txt: -1 = follow the LuxVelum switch, else 0 none, 1 Lumenveil, 2 LuxVelum.
+            public int Visuals = -1;
         }
 
         /// <summary>
@@ -193,6 +195,10 @@ namespace CoAInstaller
             try { string exe = ClientVoices.EnsureNewestExe(client, report, CoaClientExe.Afk); if (exe != null) done.Add(exe); }
             catch (Exception e) { if (o.Lux) done.Add(L.F("The newest AFK64.exe could not be fetched ({0}); LuxVelum waits for it.", e.Message)); }
             done.AddRange(InstallLux(client, pack, o, report));
+            int visuals = o.Visuals >= ClientVisuals.Stock ? o.Visuals
+                : o.Lux ? ClientVisuals.LuxVelum
+                : ClientVisuals.Read(client) == ClientVisuals.LuxVelum ? ClientVisuals.Lumenveil : -1;
+            if (ClientVisuals.Write(client, visuals)) done.Add(L.F("Graphics effect: {0}", ClientVisuals.Name(visuals)));
             done.AddRange(InstallAddons(client, pack, o));
             return string.Join("\n", done);
         }

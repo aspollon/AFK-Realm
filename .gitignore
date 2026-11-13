@@ -2,6 +2,7 @@
 AFK-Realm.exe
 out/
 out-client/
+dist/
 tools/__pycache__/
 
 # the player client

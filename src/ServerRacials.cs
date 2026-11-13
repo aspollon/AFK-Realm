@@ -136,7 +136,9 @@ namespace CoAInstaller
                     if (id < 15000000 || id >= 15010000) continue;
                     int race = (int)((id - 15000000) / 10), n = (int)(id % 10);
                     if (n == 0 || !missing.Contains(race)) continue;
-                    if (!Text(table, table.Field(record, 153)).Trim().Equals("Racial", StringComparison.OrdinalIgnoreCase)) continue;
+                    // Passives carry "Racial Passive" (V2 Gilgoblin), actives "Racial"; helper rows have no rank.
+                    string rank = Text(table, table.Field(record, 153)).Trim();
+                    if (!rank.Equals("Racial", StringComparison.OrdinalIgnoreCase) && !rank.Equals("Racial Passive", StringComparison.OrdinalIgnoreCase)) continue;
                     List<uint> list;
                     if (!found.TryGetValue(race, out list)) found[race] = list = new List<uint>();
                     list.Add(id);
@@ -226,10 +228,19 @@ namespace CoAInstaller
                 result.AddRange(Directory.GetFiles(dir)
                     .Where(f => f.EndsWith(".sql", StringComparison.OrdinalIgnoreCase) &&
                                 Path.GetFileName(f).IndexOf("racials", StringComparison.OrdinalIgnoreCase) >= 0)
-                    .OrderBy(f => f, StringComparer.OrdinalIgnoreCase));
+                    .OrderBy(f => SqlOrder(f)).ThenBy(f => f, StringComparer.OrdinalIgnoreCase));
                 if (result.Count > 0) break;
             }
             return result;
+        }
+
+        /// <summary>The number a package SQL file starts with, so 7_ comes before 40_; files without one go last.</summary>
+        public static long SqlOrder(string path)
+        {
+            string name = Path.GetFileName(path);
+            int end = 0;
+            while (end < name.Length && char.IsDigit(name[end])) end++;
+            return end > 0 && long.TryParse(name.Substring(0, end), out long n) ? n : long.MaxValue;
         }
 
         /// <summary>The file of CoA Custom's rows of its racials in its server pack (files\sql\10_esteria_racials_*.sql, the

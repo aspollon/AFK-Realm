@@ -2891,6 +2891,13 @@
     "Upright orcs (male orc model)": "Aufrechte Orcs (männliches Orc-Modell)",
     "Your CoA64.exe cannot host LuxVelum yet; \"Install / apply\" brings the newest one when it is released.": "Deine CoA64.exe kann LuxVelum noch nicht laden; „Installieren / übernehmen“ holt die neueste, sobald sie erschienen ist.",
     "AFK's CoA64.exe could not be fetched ({0}); the package's exe is used.": "Die CoA64.exe von AFK ließ sich nicht laden ({0}); die exe des Pakets wird verwendet.",
-    "AFK64.exe could not be fetched ({0}); the exe already in the game folder is used.": "AFK64.exe ließ sich nicht laden ({0}); die bereits im Spielordner liegende exe wird verwendet."
+    "AFK64.exe could not be fetched ({0}); the exe already in the game folder is used.": "AFK64.exe ließ sich nicht laden ({0}); die bereits im Spielordner liegende exe wird verwendet.",
+    "Graphics effect: {0}": "Grafik-Effekt: {0}",
+    "no graphics effect": "kein Grafik-Effekt",
+    "HD archives: {0} on, {1} off · graphics effect: {2} · LuxVelum: {3}": "HD-Archive: {0} an, {1} aus · Grafik-Effekt: {2} · LuxVelum: {3}",
+    "No graphics effect (best for weak computers)": "Kein Grafik-Effekt (am besten für schwache Rechner)",
+    "Lumenveil (standard)": "Lumenveil (Standard)",
+    "LuxVelum: fog, light and water (Ctrl+F7 in game for its settings)": "LuxVelum: Nebel, Licht und Wasser (Strg+F7 im Spiel für seine Einstellungen)",
+    "Graphics effect": "Grafik-Effekt"
   }
 }

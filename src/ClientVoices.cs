@@ -23,8 +23,8 @@ namespace CoAInstaller
         public const string QuestRepo = "Crono141/LivingVoices";
         const string Marker = ".afk-voices-version";
         const string LumenveilDll = "Lumenveil64.dll";
-        const string VisualsFile = "Visuals.txt";
-        const string VisualsDefault = "; 0 = default graphics, 1 = Lumenveil, 2 = LuxVelum\r\n1\r\n";
+        const string VisualsFile = ClientVisuals.File;
+        const string VisualsDefault = ClientVisuals.Default;
 
         public sealed class Options
         {

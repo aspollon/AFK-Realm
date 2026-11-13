@@ -1,6 +1,6 @@
 // fueryin's Ultra-HD pack and LuxVelum in a CoA Custom game: install and switch the parts on or off.
 import { h, T, F, meta, post, replace } from './core.js';
-import { primary, secondary, dialog, alert, confirm, toggle, input, choose, runProgress } from './ui.js';
+import { primary, secondary, dialog, alert, confirm, toggle, input, choose, select, runProgress } from './ui.js';
 
 export async function hdDialog(folder) {
   let v;
@@ -15,7 +15,13 @@ export async function hdDialog(folder) {
   const sounds = toggle(T('Better sounds and music'), v.sounds);
   const blood = toggle(T('More blood when hitting'), v.blood);
   const cursor = toggle(T('Retail mouse cursors'), v.cursor);
-  const lux = toggle(T('LuxVelum: fog, light and water (costs graphics power; Ctrl+F7 in game for its settings)'), v.lux);
+  const visuals = select([
+    [0, T('No graphics effect (best for weak computers)')],
+    [1, T('Lumenveil (standard)')],
+    [2, T('LuxVelum: fog, light and water (Ctrl+F7 in game for its settings)')]
+  ], v.visuals ?? 1);
+  const visualsRow = h('div', { style: { display: 'flex', gap: '6px', alignItems: 'center', margin: '6px 0' } },
+    h('span.small', {}, T('Graphics effect')), visuals);
   const addons = toggle(T('The pack\'s add-ons: dance music, Bloody Screen, CoA Tooltip, battleground scoreboard, Leatrix Plus'), v.addons);
 
   function show(x) {
@@ -28,7 +34,7 @@ export async function hdDialog(folder) {
   const values = () => ({
     folder, pack: pack.value.trim(), world: world.checked, orcs: orcs.checked, shaders: shaders.checked,
     effects: effects.checked, sounds: sounds.checked, blood: blood.checked, cursor: cursor.checked,
-    lux: lux.checked, addons: addons.checked
+    visuals: Number(visuals.value), addons: addons.checked
   });
 
   async function refresh() {
@@ -58,7 +64,7 @@ export async function hdDialog(folder) {
     h('p', {}, h('a', { href: v.page, target: '_blank', rel: 'noopener' }, T('Open the download page of the HD pack'))),
     h('div', { style: { display: 'flex', gap: '6px', alignItems: 'center', margin: '6px 0' } },
       h('span.small', {}, T('Pack folder')), pack, meta.remote ? null : secondary(T('Browse …'), browse)),
-    world, orcs, shaders, effects, sounds, blood, cursor, h('div', { style: { height: '8px' } }), lux, addons,
+    world, orcs, shaders, effects, sounds, blood, cursor, h('div', { style: { height: '8px' } }), visualsRow, addons,
     h('p.small.muted', {}, T('ReShade (the pack\'s screen filter) is optional and not installed here. Races without their own dance song get the song of the race they come from; /dancemusic test plays yours.')),
     warnings, state);
   const installBtn = primary(T('Install / apply'), install);

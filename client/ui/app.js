@@ -45,8 +45,8 @@ function render(next) {
   for (const id of ["play", "update", "repair", "choose", "accountButton", "client", "portal", "profile", "setupPrimary", "setupSecondary"])
     $(id).disabled = disabled;
   $("hd").checked = !!state.hdOn;
-  $("lux").checked = !!state.luxOn;
-  $("hd").disabled = $("lux").disabled = disabled;
+  $("visuals").value = String(state.visuals ?? 1);
+  $("hd").disabled = $("visuals").disabled = disabled;
   renderAccount();
   renderSetup();
   if (state.missing) $("missingModal").classList.add("open");
@@ -250,7 +250,7 @@ $("repair").addEventListener("click", () => { closeSettings(); send("repair"); }
 $("settings").addEventListener("click", toggleSettings);
 $("choose").addEventListener("click", () => send("choose"));
 $("hd").addEventListener("change", e => send("hd", { on: e.target.checked }));
-$("lux").addEventListener("change", e => send("lux", { on: e.target.checked }));
+$("visuals").addEventListener("change", e => send("visuals", { value: Number(e.target.value) }));
 $("profile").addEventListener("click", () => openAccount(state.account ? "login" : "register"));
 $("accountButton").addEventListener("click", () => openAccount(state.account ? "login" : "register"));
 $("client").addEventListener("click", () => send("client"));

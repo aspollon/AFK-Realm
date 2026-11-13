@@ -84,13 +84,17 @@
           </div>
           <input type="checkbox" id="hd">
         </label>
-        <label class="settings-row settings-switch">
+        <div class="settings-row">
           <div>
-            <span class="settings-label">LuxVelum</span>
-            <span class="settings-value">Fog, light and water (Ctrl+F7 in game)</span>
+            <span class="settings-label">Graphics effect</span>
+            <span class="settings-value">Off for weak computers</span>
           </div>
-          <input type="checkbox" id="lux">
-        </label>
+          <select id="visuals">
+            <option value="0">Off</option>
+            <option value="1">Lumenveil</option>
+            <option value="2">LuxVelum</option>
+          </select>
+        </div>
         <div class="settings-sep"></div>
         <div class="settings-links">
           <button id="client">Full game client</button>
