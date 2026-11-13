@@ -207,6 +207,8 @@ namespace CoAInstaller
             {
                 string game = Path.Combine(client, targetName);
                 if (!File.Exists(game)) return false;
+                if (!File.Exists(Path.Combine(client, "Lumenveil64.dll"))) return false;
+                if (!File.Exists(Path.Combine(client, "Visuals.txt"))) return false;
                 using (var zip = ZipFile.OpenRead(pluginZip))
                 {
                     var exe = zip.Entries.FirstOrDefault(e => e.FullName.Replace('\\', '/').Equals("CoA64/CoA64.exe", StringComparison.OrdinalIgnoreCase));
@@ -279,6 +281,27 @@ namespace CoAInstaller
                     if (File.Exists(target)) File.Delete(target);
                     File.Move(tmp, target);
                 }
+
+                // Lumenveil's engine and the standard choice travel with the AFK exe. Visuals.txt keeps a choice the
+                // player already made; a fresh install gets Lumenveil (1).
+                foreach (string extra in new[] { "Lumenveil64.dll", "Visuals.txt" })
+                {
+                    var e = zip.Entries.FirstOrDefault(x => x.FullName.Replace('\\', '/').Equals("CoA64/" + extra, StringComparison.OrdinalIgnoreCase));
+                    if (e == null) continue;
+                    string target = Path.Combine(client, extra);
+                    if (extra == "Visuals.txt" && File.Exists(target)) continue;
+                    string backup = target + ".afk-backup";
+                    try { if (File.Exists(target) && !File.Exists(backup)) File.Copy(target, backup); } catch { }
+                    try { CoaUninstall.Capture(target); } catch { }
+                    string tmp = target + ".new";
+                    e.ExtractToFile(tmp, true);
+                    if (File.Exists(target)) File.Delete(target);
+                    File.Move(tmp, target);
+                }
+
+                string visuals = Path.Combine(client, "Visuals.txt");
+                if (!File.Exists(visuals))
+                    File.WriteAllText(visuals, "; 0 = default graphics, 1 = Lumenveil, 2 = LuxVelum\r\n1\r\n");
                 string line = L.F("{0} that loads plugins (yours is kept as {0}.afk-backup)", targetName);
                 string have = null;
                 try { string pkg = Settings.CoaPackage; if (!string.IsNullOrEmpty(pkg)) have = CoaSetup.ReadVersion(Path.Combine(CoaSetup.PackageForPlayers() ?? pkg, "manifest.json")); } catch { }
