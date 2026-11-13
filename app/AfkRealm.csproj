@@ -11,7 +11,7 @@
     <OutputType>WinExe</OutputType>
     <AssemblyName>AFK-Realm</AssemblyName>
     <Product>AFK Realm</Product>
-    <Version>1.3.56</Version>
+    <Version>1.3.57</Version>
     <!-- The web SDK turns on the server garbage collector: one heap per CPU core that keeps what it once held.
          After a map extraction or a client patch AFK Realm then sat at 8-10 GB doing nothing. The workstation
          collector with DATAS gives memory back. -->

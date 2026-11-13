@@ -1,3 +1,8 @@
+# AFK Realm 1.3.57
+
+- **The Forgotten of CoA Custom 2.0 can be created:** like the Goblin in 1.3.56, the server had no start data for it. Update AFK Realm and restart the server.
+- **Murloc Alliance can be created again** on servers where an old race entry from an earlier client took its number (the server log said "Id is 30, which another race has"). Update the modules (mod-custom-races) and restart.
+
 # AFK Realm 1.3.56
 
 - **The Horde Goblin can be created:** the game offered it, but the server had no start data for it and answered "Error creating character" for every class. AFK Realm now switches it on like every CoA Custom race. Update AFK Realm and restart the server; no reinstall needed.

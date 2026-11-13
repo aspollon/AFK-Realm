@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.57
+
+- **Forgotten (race 32)**: CoA Custom 2.0 turned the old ThinHuman NPC row into the playable Forgotten (flags 0xC, its own model 977461), but 32 was on the hidden list. It counts as a package race when the row has exactly those flags and a 2.0 model; older packages keep it off. Bots still leave it out (`AiPlayerbot.CrashingBotRaces`).
+- **Murloc Alliance (30) and an old copy section**: mod-custom-races gave race numbers in key order, so a leftover `CustomRaces.Troglodyte` (a copy from an older client, not in the list) took number 30 and the Murloc Alliance stayed off. The module now numbers the races of `CustomRaces.Races` first (needs the module update).
+
 ## 1.3.56
 
 - **Horde Goblin (race 9)**: the CoA client offers it, but `CoaSetup` counted only races 12 to 127 as the package's, so `CustomRaces.Races` never had the Goblin and the core refused it ("invalid race/class pair (9/..)"). `IsPackageRace` now takes race 9 too; the race list is written again at the next server start, so the Goblin starts from the Orc's data.

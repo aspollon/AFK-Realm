@@ -617,9 +617,11 @@ namespace CoAInstaller
 
         // The Goblin (9) is a stock race the CoA client offers, but the core has no start data for it: it must be on like
         // the package's races, or every Goblin gets "invalid race/class pair". The other stock races stay the core's.
-        static bool IsPackageRace(int id, uint flags)
+        // 32 was an NPC row (ThinHuman) before CoA Custom 2.0, which made it the playable Forgotten with its own model.
+        static bool IsPackageRace(int id, uint flags, uint maleDisplay)
         {
             if (id == 9) return true;
+            if (id == 32) return flags == 0xC && maleDisplay >= 900000;
             return id > 11 && id <= 127 && (flags & 0xC) == 0xC && !HiddenCoaRaces.Contains(id);
         }
 
@@ -805,7 +807,7 @@ namespace CoAInstaller
             {
                 int id = (int)table.Field(row, 0);
                 uint flags = table.Field(row, 1);
-                if (!IsPackageRace(id, flags)) continue;
+                if (!IsPackageRace(id, flags, table.Field(row, 4))) continue;
                 string name = ClientRaces.Str(table, row, 14);
                 if (name.Length == 0) name = ClientRaces.Str(table, row, 11);
                 list.Add(new KeyValuePair<int, string>(id, name));
@@ -931,7 +933,7 @@ namespace CoAInstaller
             {
                 int id = (int)table.Field(row, 0);
                 uint flags = table.Field(row, 1);
-                if (!IsPackageRace(id, flags)) continue;
+                if (!IsPackageRace(id, flags, table.Field(row, 4))) continue;
                 if (only != null && !only.Contains(id)) continue;
                 string file = ClientRaces.Str(table, row, 11);
                 string name = ClientRaces.Str(table, row, 14);
