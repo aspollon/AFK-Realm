@@ -1,3 +1,10 @@
+# AFK Realm 1.3.52
+
+- **The AFK Client launcher starts AFK64.exe:** it looked only for CoA64.exe, so even a freshly installed AFK client started the old package exe. AFK64.exe now wins, then CoACustomRace.exe (CoA Custom 2.0), then CoA64.exe and the plain clients. "The game is already running" recognises AFK64 too.
+- **Client build carries the AFK client, Lumenveil and Visuals.txt:** both the player ZIP and the AFK Client manifest now include AFK64.exe, Lumenveil64.dll and Visuals.txt. The client build fetches the newest voices release when the owner's game folder does not have them yet; an offline build keeps what is already there.
+- **The choice survives launcher updates:** the AFK Client never replaces an existing Visuals.txt, exactly like the installer. A fresh install gets Lumenveil (1); 0 stays the plain game and 2 stays LuxVelum.
+- **Every install path installs AFK64.exe:** CoA Custom setup, the HD pack page and Voices now put AFK64.exe next to an existing CoA64.exe instead of keeping only the old exe. Lumenveil64.dll and Visuals.txt travel with it.
+
 # AFK Realm 1.3.51
 
 - **Lumenveil is the standard client effect:** the voices release now carries AFK64.exe for CoA Custom 2.0, Lumenveil64.dll and a commented Visuals.txt (0 = default graphics, 1 = Lumenveil, 2 = LuxVelum). Every AFK install (client download, HD page and Voices) puts the AFK exe, the engine DLL and the choice in place; an existing player choice is kept.

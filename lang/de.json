@@ -2890,6 +2890,7 @@
     "HD world: buildings, objects and terrain (about 8.5 GB)": "HD-Welt: Gebäude, Objekte und Gelände (etwa 8,5 GB)",
     "Upright orcs (male orc model)": "Aufrechte Orcs (männliches Orc-Modell)",
     "Your CoA64.exe cannot host LuxVelum yet; \"Install / apply\" brings the newest one when it is released.": "Deine CoA64.exe kann LuxVelum noch nicht laden; „Installieren / übernehmen“ holt die neueste, sobald sie erschienen ist.",
-    "AFK's CoA64.exe could not be fetched ({0}); the package's exe is used.": "Die CoA64.exe von AFK ließ sich nicht laden ({0}); die exe des Pakets wird verwendet."
+    "AFK's CoA64.exe could not be fetched ({0}); the package's exe is used.": "Die CoA64.exe von AFK ließ sich nicht laden ({0}); die exe des Pakets wird verwendet.",
+    "AFK64.exe could not be fetched ({0}); the exe already in the game folder is used.": "AFK64.exe ließ sich nicht laden ({0}); die bereits im Spielordner liegende exe wird verwendet."
   }
 }

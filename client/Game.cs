@@ -4,7 +4,8 @@ namespace AfkClient;
 
 internal static class Game
 {
-    static readonly string[] ExeNames = { "CoA64.exe", "Ascension.exe", "Ascension-b.exe", "Wow.exe" };
+    // AFK64.exe is the client AFK installs; the others keep older or plain clients working.
+    static readonly string[] ExeNames = { "AFK64.exe", "CoACustomRace.exe", "CoA64.exe", "Ascension.exe", "Ascension-b.exe", "Wow.exe" };
 
     public static bool IsClientFolder(string folder)
     {
@@ -53,7 +54,7 @@ internal static class Game
     public static void Launch(string folder)
     {
         string exe = FindExe(folder);
-        if (exe == null) throw new InvalidOperationException("The game folder has no CoA64.exe, Ascension.exe or Wow.exe.");
+        if (exe == null) throw new InvalidOperationException("The game folder has no AFK64.exe, CoACustomRace.exe, CoA64.exe, Ascension.exe or Wow.exe.");
         if (IsRunning(folder)) throw new InvalidOperationException("The game is already running.");
         Process.Start(new ProcessStartInfo(exe) { WorkingDirectory = folder, UseShellExecute = true });
     }

@@ -661,6 +661,17 @@ namespace CoAInstaller.Web
                 throw new InvalidOperationException(L.T("Choose your game folder under Client build first. The client pack is built from your own client."));
             if (ClientAddons.ClientRunning(client))
                 throw new InvalidOperationException(L.T("The game or its launcher is running from this folder. Close it before building the player client pack."));
+            // The pack always carries AFK64.exe, Lumenveil64.dll and Visuals.txt. They come with the voices release; an
+            // offline build keeps whatever the owner's game folder already has instead of failing.
+            try
+            {
+                string newest = ClientVoices.EnsureNewestExe(client, (text, done, total) => progress(text, 0, 0), CoaClientExe.Afk);
+                if (newest != null) progress(newest, 0, 0);
+            }
+            catch (Exception e)
+            {
+                progress(L.F("AFK64.exe could not be fetched ({0}); the exe already in the game folder is used.", e.Message), 0, 0);
+            }
             var addons = ClientAddons.Find(inst, client);
             // the add-ons of his own game the owner hands out (Game client > Add-ons for your players)
             addons.AddRange(ClientAddons.Shared(inst, client, addons));

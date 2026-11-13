@@ -187,6 +187,17 @@ namespace CoAInstaller.Web
                 string name = "Game client files for " + Product.Name + " server.zip";
                 return Jobs.Run(L.T("Making the ZIP for the other players …"), (job, st) =>
                 {
+                    // The ZIP carries the AFK client, Lumenveil's engine and the Visuals choice; fetch them when the
+                    // owner's game folder does not have them yet.
+                    if (look.Client != null)
+                    {
+                        try
+                        {
+                            string newest = ClientVoices.EnsureNewestExe(look.Client, (t, x, y) => { job.Status = t; job.Sub = y > 0 ? (double)x / y : -1; job.Changed(false); }, CoaClientExe.Afk);
+                            if (newest != null) job.Status = newest;
+                        }
+                        catch (Exception ex) { job.Status = L.F("AFK64.exe could not be fetched ({0}); the exe already in the game folder is used.", ex.Message); }
+                    }
                     ClientAddons.Export(file, look.Addons, inst, look.Client, look.Patch, (t, x, y) => { job.Status = t; job.Sub = y > 0 ? (double)x / y : -1; job.Changed(false); });
                     if (look.Client != null) ClientVoices.AppendToZipFile(file, look.Client, (t, x, y) => { job.Status = t; job.Sub = y > 0 ? (double)x / y : -1; job.Changed(false); });
                     job.Payload = new { url = Files.Offer(file, name, true), name };

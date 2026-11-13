@@ -48,6 +48,14 @@ internal static class Updater
         {
             cancel.ThrowIfCancellationRequested();
             string target = SafeTarget(root, file.Path);
+            // Visuals.txt selects the effect (0 stock, 1 Lumenveil, 2 LuxVelum). A player's choice is kept; the standard
+            // file is only written when it is missing, exactly like the installer's AFK64.exe step does.
+            if (file.Path.Replace('\\', '/').Equals("Visuals.txt", StringComparison.OrdinalIgnoreCase) && File.Exists(target))
+            {
+                result.Skipped++;
+                progress.Report(new UpdateProgress("Checking the game files ...", Percent(done++, total), file.Path));
+                continue;
+            }
             if (HdSwitches.Optional(file.Path))
             {
                 if (state == null || !HdSwitches.Wanted(file.Path, state))

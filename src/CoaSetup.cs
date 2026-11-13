@@ -285,17 +285,16 @@ namespace CoAInstaller
             // not run an old native exe against new race data.
             CopyTree(clientRoot, o.Client, o.NoBackup, ref copied, ref skipped, nativeSupported || ownExe ? "CoA64.exe" : null);
 
-            // AFK's own CoA64 build (voices release): races, plugins, HD on any renderer, LuxVelum host; idle parts cost nothing
-            if (!ownExe)
+            // AFK's own AFK64 build (voices release): races, plugins, HD on any renderer, Lumenveil host; idle parts cost
+            // nothing. It is installed next to an owner's own plugin-capable exe as well: the launcher starts AFK64.exe
+            // whenever it is there, and Lumenveil64.dll/Visuals.txt have to arrive with it.
+            try
             {
-                try
-                {
-                    string newest = ClientVoices.EnsureNewestExe(o.Client, (t, x, y) => { }, CoaClientExe.Afk);
-                    ownExe = ClientVoices.PluginHost(o.Client) != null;
-                    if (newest != null) { Console.WriteLine(newest); copied++; }
-                }
-                catch (Exception e) { Console.WriteLine(L.F("AFK's CoA64.exe could not be fetched ({0}); the package's exe is used.", e.Message)); }
+                string newest = ClientVoices.EnsureNewestExe(o.Client, (t, x, y) => { }, CoaClientExe.Afk);
+                ownExe = ClientVoices.PluginHost(o.Client) != null;
+                if (newest != null) { Console.WriteLine(newest); copied++; }
             }
+            catch (Exception e) { Console.WriteLine(L.F("AFK's CoA64.exe could not be fetched ({0}); the package's exe is used.", e.Message)); }
 
             if (ownExe)
                 Console.WriteLine(L.T("CoA64.exe: your own build (it loads the voice plugin) is kept."));

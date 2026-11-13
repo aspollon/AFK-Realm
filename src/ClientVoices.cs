@@ -22,6 +22,9 @@ namespace CoAInstaller
         public const string CompanionRepo = "Crono141/CompanionVoice";
         public const string QuestRepo = "Crono141/LivingVoices";
         const string Marker = ".afk-voices-version";
+        const string LumenveilDll = "Lumenveil64.dll";
+        const string VisualsFile = "Visuals.txt";
+        const string VisualsDefault = "; 0 = default graphics, 1 = Lumenveil, 2 = LuxVelum\r\n1\r\n";
 
         public sealed class Options
         {
@@ -54,21 +57,30 @@ namespace CoAInstaller
         static string AddOn(string client, string name) { return Path.Combine(client, "Interface", "AddOns", name); }
         static string PluginFile(string client) { return Path.Combine(client, "Plugins", "LivingVoices64.dll"); }
 
-        /// <summary>The client's exe that loads Plugins\*.dll (CoA64 with the plugin loader), or null.</summary>
+        /// <summary>The client's exe that loads Plugins\*.dll (the plugin loader), or null. AFK64.exe wins when it is
+        /// there, so the launcher and the player pack use the client AFK ships even when an older CoA64.exe sits next to it.</summary>
         public static string PluginHost(string client)
         {
             if (client == null || !Directory.Exists(client)) return null;
             byte[] needle = Encoding.ASCII.GetBytes("CoaPlugin_OpenLua");
+            string afk = Path.Combine(client, CoaClientExe.Afk);
+            if (File.Exists(afk) && HasPluginLoader(afk, needle)) return afk;
             foreach (string exe in Directory.GetFiles(client, "*.exe"))
             {
-                try
-                {
-                    if (new FileInfo(exe).Length < 1024 * 1024) continue;
-                    if (IndexOf(File.ReadAllBytes(exe), needle) >= 0) return exe;
-                }
-                catch { }
+                if (string.Equals(exe, afk, StringComparison.OrdinalIgnoreCase)) continue;
+                if (HasPluginLoader(exe, needle)) return exe;
             }
             return null;
+        }
+
+        static bool HasPluginLoader(string exe, byte[] needle)
+        {
+            try
+            {
+                if (new FileInfo(exe).Length < 1024 * 1024) return false;
+                return IndexOf(File.ReadAllBytes(exe), needle) >= 0;
+            }
+            catch { return false; }
         }
 
         static int IndexOf(byte[] hay, byte[] needle)
@@ -132,11 +144,11 @@ namespace CoAInstaller
                 // the engine plugin and the add-on fork: always, small
                 var plugin = LatestRelease(PluginRepo, n => n.StartsWith("CoA64-Voices-", StringComparison.OrdinalIgnoreCase) && n.EndsWith(".zip", StringComparison.OrdinalIgnoreCase));
                 string pluginZip = Fetch(plugin, plugin.Assets[0], downloads, report);
-                // the game's CoA64.exe cannot load plugins: the one built for that comes with the release
-                // also replaces the CoA64.exe of voices 0.2.0, which lacks the Esteria races of CoA Custom 1.9.9 (Titan, Lich ...)
+                // The game always runs the newest release exe (races, plugins, HD on any renderer, Lumenveil host);
+                // every part of it stays idle when unused. Install it as AFK64.exe also next to an older CoA64.exe:
+                // the launcher starts AFK64.exe whenever it is there. A player's Visuals.txt choice is kept.
                 string host = PluginHost(client);
-                // the game always runs the newest release exe (races, plugins, LuxVelum host); every part of it stays idle when unused
-                if (host == null || !SameExe(client, pluginZip)) done.Add(InstallExe(client, pluginZip));
+                if (host == null || !SameExe(client, pluginZip, CoaClientExe.Afk)) done.Add(InstallExe(client, pluginZip, CoaClientExe.Afk));
 
                 if (o.Companion)
                 {
@@ -200,15 +212,15 @@ namespace CoAInstaller
             return string.Join("\n", done);
         }
 
-        /// <summary>The game's CoA64.exe is byte for byte the one in the release.</summary>
-        static bool SameExe(string client, string pluginZip, string targetName = "CoA64.exe")
+        /// <summary>The game's AFK64.exe is byte for byte the release's client, and Lumenveil's engine and choice are in place.</summary>
+        static bool SameExe(string client, string pluginZip, string targetName = CoaClientExe.Afk)
         {
             try
             {
                 string game = Path.Combine(client, targetName);
                 if (!File.Exists(game)) return false;
-                if (!File.Exists(Path.Combine(client, "Lumenveil64.dll"))) return false;
-                if (!File.Exists(Path.Combine(client, "Visuals.txt"))) return false;
+                if (!File.Exists(Path.Combine(client, LumenveilDll))) return false;
+                if (!File.Exists(Path.Combine(client, VisualsFile))) return false;
                 using (var zip = ZipFile.OpenRead(pluginZip))
                 {
                     var exe = zip.Entries.FirstOrDefault(e => e.FullName.Replace('\\', '/').Equals("CoA64/CoA64.exe", StringComparison.OrdinalIgnoreCase));
@@ -238,8 +250,9 @@ namespace CoAInstaller
             return n;
         }
 
-        /// <summary>Puts the newest release's CoA64.exe in place when the game runs another one (HD pack page, no voices needed).</summary>
-        public static string EnsureNewestExe(string client, Action<string, long, long> report, string targetName = "CoA64.exe")
+        /// <summary>Puts the newest release's AFK64.exe, Lumenveil64.dll and Visuals.txt in place when any of them is missing
+        /// or the exe is another one (CoA setup, HD pack page, no voices needed).</summary>
+        public static string EnsureNewestExe(string client, Action<string, long, long> report, string targetName = CoaClientExe.Afk)
         {
             string downloads = Path.Combine(client, ".afk-voices-downloads");
             Directory.CreateDirectory(downloads);
@@ -256,9 +269,10 @@ namespace CoAInstaller
             }
         }
 
-        /// <summary>CoA64.exe (and XvidDecoder.dll) from the release's CoA64 folder; the game's own exe stays as .afk-backup.
-        /// CoA Custom 2.0 names its client CoACustomRace.exe, so the same build is written under that name.</summary>
-        static string InstallExe(string client, string pluginZip, string targetName = "CoA64.exe")
+        /// <summary>The release's AFK64.exe, XvidDecoder.dll, Lumenveil64.dll and Visuals.txt. An exe of the same name stays
+        /// as .afk-backup; Visuals.txt keeps a choice the player already made. CoA Custom 2.0 names its own client
+        /// CoACustomRace.exe, so the same build can also be written under that name.</summary>
+        static string InstallExe(string client, string pluginZip, string targetName = CoaClientExe.Afk)
         {
             using (var zip = ZipFile.OpenRead(pluginZip))
             {
@@ -284,12 +298,12 @@ namespace CoAInstaller
 
                 // Lumenveil's engine and the standard choice travel with the AFK exe. Visuals.txt keeps a choice the
                 // player already made; a fresh install gets Lumenveil (1).
-                foreach (string extra in new[] { "Lumenveil64.dll", "Visuals.txt" })
+                foreach (string extra in new[] { LumenveilDll, VisualsFile })
                 {
                     var e = zip.Entries.FirstOrDefault(x => x.FullName.Replace('\\', '/').Equals("CoA64/" + extra, StringComparison.OrdinalIgnoreCase));
                     if (e == null) continue;
                     string target = Path.Combine(client, extra);
-                    if (extra == "Visuals.txt" && File.Exists(target)) continue;
+                    if (extra == VisualsFile && File.Exists(target)) continue;
                     string backup = target + ".afk-backup";
                     try { if (File.Exists(target) && !File.Exists(backup)) File.Copy(target, backup); } catch { }
                     try { CoaUninstall.Capture(target); } catch { }
@@ -299,14 +313,13 @@ namespace CoAInstaller
                     File.Move(tmp, target);
                 }
 
-                string visuals = Path.Combine(client, "Visuals.txt");
-                if (!File.Exists(visuals))
-                    File.WriteAllText(visuals, "; 0 = default graphics, 1 = Lumenveil, 2 = LuxVelum\r\n1\r\n");
+                string visuals = Path.Combine(client, VisualsFile);
+                if (!File.Exists(visuals)) File.WriteAllText(visuals, VisualsDefault);
                 string line = L.F("{0} that loads plugins (yours is kept as {0}.afk-backup)", targetName);
                 string have = null;
                 try { string pkg = Settings.CoaPackage; if (!string.IsNullOrEmpty(pkg)) have = CoaSetup.ReadVersion(Path.Combine(CoaSetup.PackageForPlayers() ?? pkg, "manifest.json")); } catch { }
                 if (!string.IsNullOrEmpty(built) && !string.IsNullOrEmpty(have) && built != have)
-                    line += "\n" + L.F("Note: this CoA64.exe was built for CoA Custom {0}, your package is {1}. If the game misbehaves, put CoA64.exe.afk-backup back and wait for a matching voices release.", built, have);
+                    line += "\n" + L.F("Note: this CoA64.exe was built for CoA Custom {0}, your package is {1}. If the game misbehaves, put {2}.afk-backup back and wait for a matching voices release.", built, have, targetName);
                 return line;
             }
         }
@@ -369,14 +382,22 @@ namespace CoAInstaller
 
         // ------------------------------------------------------------------------------------ for the players
 
-        /// <summary>The files players get from the owner's game: the CoA64.exe that loads plugins, the voice plugin and
-        /// both voice add-ons as installed (with the owner's AFKDefaults.lua). Paths relative to the game folder.</summary>
+        /// <summary>The files players get from the owner's game: AFK64.exe (or the plugin-capable exe when it is not
+        /// installed yet), Lumenveil64.dll, Visuals.txt, the voice plugin and both voice add-ons as installed (with the
+        /// owner's AFKDefaults.lua). Paths relative to the game folder.</summary>
         public static List<KeyValuePair<string, string>> PlayerFiles(string client)
         {
             var list = new List<KeyValuePair<string, string>>();
-            string host = PluginHost(client);
+            if (string.IsNullOrEmpty(client) || !Directory.Exists(client)) return list;
+            string afk = Path.Combine(client, CoaClientExe.Afk);
+            string host = File.Exists(afk) ? afk : PluginHost(client);
             if (host == null) return list;
             list.Add(new KeyValuePair<string, string>(Path.GetFileName(host), host));
+            foreach (string extra in new[] { LumenveilDll, VisualsFile })
+            {
+                string file = Path.Combine(client, extra);
+                if (File.Exists(file)) list.Add(new KeyValuePair<string, string>(extra, file));
+            }
             string plugin = PluginFile(client);
             if (File.Exists(plugin)) list.Add(new KeyValuePair<string, string>("Plugins/LivingVoices64.dll", plugin));
             foreach (string name in new[] { "CompanionVoice", "LivingVoices" })
