@@ -127,6 +127,9 @@ internal static class Updater
         }
 
         if (state != null) HdSwitches.Apply(gameFolder, state);
+        // The CoA package's CoAVolFog.ini has Overlay=0; on a Lumenveil client that switches the in-game settings
+        // window and Ctrl+F7 (and the other keys) off. Keep the choice's keys working after an update.
+        if (Visuals.Read(gameFolder) == Visuals.Lumenveil) Visuals.EnableOverlay(gameFolder);
         progress.Report(new UpdateProgress("Writing the realm address ...", 100, ""));
         WriteRealm(gameFolder, manifest.RealmAddress, manifest.Realm);
         return result;

@@ -199,6 +199,7 @@ namespace CoAInstaller
                 : o.Lux ? ClientVisuals.LuxVelum
                 : ClientVisuals.Read(client) == ClientVisuals.LuxVelum ? ClientVisuals.Lumenveil : -1;
             if (ClientVisuals.Write(client, visuals)) done.Add(L.F("Graphics effect: {0}", ClientVisuals.Name(visuals)));
+            if (ClientVisuals.Read(client) == ClientVisuals.Lumenveil) ClientVisuals.EnableOverlay(client);
             done.AddRange(InstallAddons(client, pack, o));
             return string.Join("\n", done);
         }

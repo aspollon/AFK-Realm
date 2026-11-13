@@ -190,6 +190,8 @@ namespace CoAInstaller
             foreach (string path in rootFiles.OrderBy(x => x))
             {
                 string rel = path.Substring(rootPrefix.Length).Replace('\\', '/');
+                // The package's CoAVolFog.ini has Overlay=0; a player's own Lumenveil settings (and keys) stay.
+                if (PreservedClientFile(path)) { done++; continue; }
                 bool exe = string.Equals(Path.GetFileName(path), "CoA64.exe", StringComparison.OrdinalIgnoreCase);
                 // The package's CoA64.exe gives way to the owner's own build or the native HD build.
                 if (exe && (nativeSupported || ownExe || taken.Contains(rel))) { done++; continue; }
@@ -280,10 +282,15 @@ namespace CoAInstaller
             // the owner's own CoA64.exe that loads plugins (voices) stays; the package must not replace it
             bool ownExe = ClientVoices.PluginHost(o.Client) != null;
             bool nativeSupported = NativeHd.SupportsPackage(clientRoot);
+            // The package's CoAVolFog.ini is not copied (see PreservedClientFile). When an older install already
+            // has exactly that file, its Overlay=0 switched Lumenveil's settings window and keys off; put them back.
+            string packageIni = Path.Combine(clientRoot, ClientVisuals.LumenveilIni);
+            string clientIni = Path.Combine(o.Client, ClientVisuals.LumenveilIni);
             // Keep an already installed native CoA64.exe only when this native build
             // belongs to the package's official CoA64. A new CoA Custom package must
             // not run an old native exe against new race data.
             CopyTree(clientRoot, o.Client, o.NoBackup, ref copied, ref skipped, nativeSupported || ownExe ? "CoA64.exe" : null);
+            bool packageIniDefault = File.Exists(packageIni) && File.Exists(clientIni) && SameFile(packageIni, clientIni);
 
             // AFK's own AFK64 build (voices release): races, plugins, HD on any renderer, Lumenveil host; idle parts cost
             // nothing. It is installed next to an owner's own plugin-capable exe as well: the launcher starts AFK64.exe
@@ -295,6 +302,9 @@ namespace CoAInstaller
                 if (newest != null) { Console.WriteLine(newest); copied++; }
             }
             catch (Exception e) { Console.WriteLine(L.F("AFK's CoA64.exe could not be fetched ({0}); the package's exe is used.", e.Message)); }
+
+            if (packageIniDefault && ClientVisuals.Read(o.Client) == ClientVisuals.Lumenveil)
+                ClientVisuals.EnableOverlay(o.Client);
 
             if (ownExe)
                 Console.WriteLine(L.T("CoA64.exe: your own build (it loads the voice plugin) is kept."));
@@ -1159,10 +1169,21 @@ namespace CoAInstaller
                 if (skipFile != null && string.Equals(Path.GetFileName(file), skipFile, StringComparison.OrdinalIgnoreCase)) continue;
                 string rel = file.Substring(root.Length);
                 string dest = Path.Combine(target, rel);
+                // A live Lumenveil setting stays; only a fresh folder gets the package's tuned defaults.
+                if (PreservedClientFile(file) && File.Exists(dest)) continue;
                 if (CopyFile(file, dest, noBackup)) copied++;
                 else skipped++;
             }
         }
+
+        /// <summary>Lumenveil's live settings stay the player's: the CoA Custom package's own CoAVolFog.ini has
+        /// Overlay=0 and would switch the in-game settings window and all its keys off on every install.</summary>
+        static bool PreservedClientFile(string path)
+        {
+            return string.Equals(Path.GetFileName(path), ClientVisuals.LumenveilIni, StringComparison.OrdinalIgnoreCase);
+        }
+
+
 
         /// <summary>Checks after a copy that every package file is present and complete.</summary>
         static void VerifyCopied(string source, string target, string pattern, params string[] skip)
@@ -1183,7 +1204,9 @@ namespace CoAInstaller
             {
                 if (skipFile != null && string.Equals(Path.GetFileName(file), skipFile, StringComparison.OrdinalIgnoreCase)) continue;
                 string rel = file.Substring(root.Length);
-                VerifyFile(file, Path.Combine(target, rel));
+                string dest = Path.Combine(target, rel);
+                if (PreservedClientFile(file) && File.Exists(dest)) continue;
+                VerifyFile(file, dest);
             }
         }
 

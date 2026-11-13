@@ -315,6 +315,8 @@ namespace CoAInstaller
 
                 string visuals = Path.Combine(client, VisualsFile);
                 if (!File.Exists(visuals)) File.WriteAllText(visuals, VisualsDefault);
+                // The CoA Custom package's CoAVolFog.ini has Overlay=0; keep Ctrl+F7 and the other keys working.
+                if (ClientVisuals.Read(client) == ClientVisuals.Lumenveil) ClientVisuals.EnableOverlay(client);
                 string line = L.F("{0} that loads plugins (yours is kept as {0}.afk-backup)", targetName);
                 string have = null;
                 try { string pkg = Settings.CoaPackage; if (!string.IsNullOrEmpty(pkg)) have = CoaSetup.ReadVersion(Path.Combine(CoaSetup.PackageForPlayers() ?? pkg, "manifest.json")); } catch { }
@@ -393,7 +395,7 @@ namespace CoAInstaller
             string host = File.Exists(afk) ? afk : PluginHost(client);
             if (host == null) return list;
             list.Add(new KeyValuePair<string, string>(Path.GetFileName(host), host));
-            foreach (string extra in new[] { LumenveilDll, VisualsFile })
+            foreach (string extra in new[] { LumenveilDll, VisualsFile, ClientVisuals.LumenveilIni })
             {
                 string file = Path.Combine(client, extra);
                 if (File.Exists(file)) list.Add(new KeyValuePair<string, string>(extra, file));

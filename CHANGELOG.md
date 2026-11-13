@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.54
+
+- **Lumenveil's keys stay on**: CoA Custom 2.0's `client_root` carries a `CoAVolFog.ini` with `Overlay=0`; `CoaSetup` copied it over the player's settings, so the settings window (Ctrl+F7) and the other Lumenveil shortcuts did nothing. The setup keeps an existing `CoAVolFog.ini`, gives a fresh folder the package file with `Overlay=1`, and repairs an older install that still has the package's own file. The AFK Client does the same after an update and when Lumenveil is chosen; player packs carry the owner's `CoAVolFog.ini` (the launcher treats it as the player's own).
+
 ## 1.3.53
 
 - **Graphics effect choice**: AFK64.exe loads only what `Visuals.txt` names (0 none, 1 Lumenveil, 2 LuxVelum), but the LuxVelum switches on the HD page and in the AFK Client only set `LuxVelum.ini` and parked its files, so LuxVelum never loaded. Both now offer Off / Lumenveil / LuxVelum and write `Visuals.txt` (`src/ClientVisuals.cs`, `client/Visuals.cs`); the AFK Client fetches LuxVelum's files only while it is chosen. An HD install with LuxVelum switched off moves a choice of 2 back to Lumenveil.
