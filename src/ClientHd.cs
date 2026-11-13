@@ -191,8 +191,8 @@ namespace CoAInstaller
             // LuxVelum needs the newest CoA64.exe (its host); a failed download only leaves a note
             if (o.Lux)
             {
-                try { string exe = ClientVoices.EnsureNewestExe(client, report); if (exe != null) done.Add(exe); }
-                catch (Exception e) { done.Add(L.F("The newest CoA64.exe could not be fetched ({0}); LuxVelum waits for it.", e.Message)); }
+                try { string exe = ClientVoices.EnsureNewestExe(client, report, CoaClientExe.Afk); if (exe != null) done.Add(exe); }
+                catch (Exception e) { done.Add(L.F("The newest AFK64.exe could not be fetched ({0}); LuxVelum waits for it.", e.Message)); }
             }
             done.AddRange(InstallLux(client, pack, o, report));
             done.AddRange(InstallAddons(client, pack, o));
@@ -361,3 +361,4 @@ namespace CoAInstaller
         }
     }
 }
+

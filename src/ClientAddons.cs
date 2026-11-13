@@ -63,10 +63,10 @@ namespace CoAInstaller
             catch { return false; }
         }
 
-        /// <summary>A Conquest of Azeroth client: CoA64.exe or Ascension.exe in the game folder.</summary>
+                /// <summary>A Conquest of Azeroth client: AFK64.exe, CoACustomRace.exe (2.0), CoA64.exe (1.9.x) or Ascension.exe.</summary>
         public static bool IsCoaClient(string client)
         {
-            try { return File.Exists(Os.Resolve(client ?? "", "CoA64.exe")) || File.Exists(Os.Resolve(client ?? "", "Ascension.exe")); }
+            try { return new[] { CoaClientExe.Afk, CoaClientExe.V2, CoaClientExe.Legacy, "Ascension.exe" }.Any(n => File.Exists(Os.Resolve(client ?? "", n))); }
             catch { return false; }
         }
 
@@ -826,3 +826,4 @@ namespace CoAInstaller
     }
 #endif
 }
+
