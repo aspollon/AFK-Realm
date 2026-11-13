@@ -1,3 +1,7 @@
+# AFK Realm 1.3.51
+
+- **Lumenveil is the standard client effect:** the voices release now carries AFK64.exe for CoA Custom 2.0, Lumenveil64.dll and a commented Visuals.txt (0 = default graphics, 1 = Lumenveil, 2 = LuxVelum). Every AFK install (client download, HD page and Voices) puts the AFK exe, the engine DLL and the choice in place; an existing player choice is kept.
+- **Linux builds survive system header updates:** clang no longer stops at "stdint.h has been modified since the precompiled header was built". Linux configures without precompiled headers, and the stale-PCH retry also updates the existing cache.
 # AFK Realm 1.3.50
 
 - **Windows build with many modules fixed:** "modules.lib: fatal error LNK1248: image size exceeds maximum allowable size" no longer stops the build. AFK Realm splits the modules into several libraries. The first build after the update compiles the modules again.
