@@ -1699,10 +1699,11 @@ function Set-ConfigValue([string]$File, [string]$Key, [string]$Value) {
 
 # Activates every *.conf.dist that has no .conf yet and appends options that newer
 # templates introduced, with their default values. Existing values are never changed.
+$script:FreshConfigs = @{}
 function Update-ConfigFiles {
     foreach ($template in @(Get-ChildItem $Paths.Configs -Recurse -Filter '*.conf.dist')) {
         $config = $template.FullName.Substring(0, $template.FullName.Length - 5)
-        if (-not (Test-Path $config)) { Copy-Item $template.FullName $config; Write-Log "Created $(Split-Path $config -Leaf)"; continue }
+        if (-not (Test-Path $config)) { Copy-Item $template.FullName $config; Write-Log "Created $(Split-Path $config -Leaf)"; $script:FreshConfigs[$config] = $true; continue }
         $text = [IO.File]::ReadAllText($config)
         $known = @{}
         foreach ($m in [regex]::Matches($text, '(?m)^[ \t]*([A-Za-z][\w.]*)[ \t]*=')) { $known[$m.Groups[1].Value] = $true }
@@ -2894,6 +2895,16 @@ function Get-ConfigValue([string]$File, [string]$Key) {
     return $null
 }
 
+# The value the option has in the template, before anyone changed it. A config that
+# still carries this value has no user choice worth keeping.
+function Get-ConfigDefault([string]$File, [string]$Key) {
+    $template = $File + '.dist'
+    if (-not (Test-Path $template)) { return $null }
+    $m = [regex]::Match([IO.File]::ReadAllText($template), '(?m)^[ \t]*' + [regex]::Escape($Key) + '[ \t]*=[ \t]*(.*?)[ \t]*\r?$')
+    if ($m.Success) { return $m.Groups[1].Value }
+    return $null
+}
+
 # Settings a module asks for in other config files are written once, when the module is
 # new, and remembered with the value that was there before. Changing them later is up to
 # the user; when the module is gone, a value that is still the module's goes back.
@@ -2927,12 +2938,18 @@ function Set-ModuleSettings {
             if ($earlier) {
                 # A newer version of the module recommends another value. It replaces the old one only
                 # where the option still has the value the module set: a value the user chose stays.
-                if ($earlier.Value -ne $value) {
-                    $config = & $find $name
-                    if ($config -and (Get-ConfigValue $config.FullName $key) -eq $earlier.Value) {
+                # A config file that was just created from the template has no user choice, so the
+                # module's recommendation goes back in even when the ledger already knows the key.
+                $config = & $find $name
+                if ($config) {
+                    $current = Get-ConfigValue $config.FullName $key
+                    $fresh = $script:FreshConfigs -and $script:FreshConfigs.ContainsKey($config.FullName)
+                    $default = Get-ConfigDefault $config.FullName $key
+                    $untouched = ($null -ne $default -and $current -eq $default)
+                    if ($current -ne $value -and ($fresh -or $untouched -or $current -eq $earlier.Value)) {
                         Set-ConfigValue $config.FullName $key $value
-                        Write-Log "$($manifest.Name): $key in $name set to $value (the module's new recommendation)." Green
-                        Send-Event 'NOTE' (Tr '{0} set {1} to {2} in {3} (the module recommends a new value).' $manifest.Name $key $value $name)
+                        Write-Log "$($manifest.Name): $key in $name set to $value (was $current)." Green
+                        Send-Event 'NOTE' $(if ($why) { Tr '{0} set {1} to {2} in {3} (was {4}). {5}' $manifest.Name $key $value $name $current (Tr $why) } else { Tr '{0} set {1} to {2} in {3} (was {4}).' $manifest.Name $key $value $name $current })
                         $earlier.Value = $value
                     }
                 }

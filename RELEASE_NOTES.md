@@ -1,3 +1,8 @@
+# AFK Realm 1.3.59
+
+- **A recreated Ollama config gets the module's values back:** after an install or update recreated `mod_ollama_chat.conf`, the page's settings were gone and the module ran with several answers at once. AFK Realm now applies a module's recommended values when a config file is newly created, and whenever an option still has the template's default. For Ollama chat that means one answer at a time and the longer timeout, so a slow 2B model no longer loses questions in a queue.
+- **Bots keep their actions out of the say chat:** with the updated mod-ollama-chat-coa, second-person narration after the quoted words becomes an emote, speech tags such as "you say" are dropped, and a full queue of ambient chatter makes room for a direct question. Update the modules.
+
 # AFK Realm 1.3.58
 
 - **The Ollama chat page matches the module:** the module no longer keeps long-term memories, relationships, bonds or a mood towards each player, so their switches and the "Thinking and remembering" card are gone. Recent conversation and the Auctions/Immersion voice are together in a new "Conversation" card.

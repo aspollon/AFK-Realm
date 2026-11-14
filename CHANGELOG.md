@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.59
+
+- **Module settings after a recreated config:** `Set-ModuleSettings` only wrote a module's recommendation when the module was new or the recommendation changed. A config file that `Update-ConfigFiles` had just recreated from the template kept its defaults: `MaxConcurrentQueries = 0`, `WorkerThreads = 4`, `HttpTimeoutSeconds = 120` instead of the module's 1/1/300, so several 2B requests ran at once and questions could be dropped. A fresh config now always gets the module's values, and an option that still has the template default is treated as untouched rather than as a user choice.
+- **mod-ollama-chat-coa:** the reply parser now takes any action outside the quotes, including the 2B model's second-person narration (`"Hallo." You stand there...`), turns it into a third-person emote, drops speech tags such as `you say`, and turns a comma between two quoted sentences into a full stop. A direct question also displaces the oldest ambient chatter when the queue is full.
+
 ## 1.3.58
 
 - **Ollama chat settings follow the module:** long-term memory, relationships, bonds and sentiment are no longer part of mod-ollama-chat-coa, so their switches and the whole "Thinking and remembering" card are gone. Recent conversation and the Auctions/Immersion voice sit together in a "Conversation" card. The module also sends everything a bot does as a text emote and keeps only its spoken words in the say line (update the modules).
