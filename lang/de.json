@@ -2736,7 +2736,7 @@
     "The bot you name, target or are already talking with answers alone, without being named every time. A line to nobody in particular gets one answer.": "Der Bot, den du nennst, anvisierst oder mit dem du schon sprichst, antwortet allein – ohne dass du ihn jedes Mal nennen musst. Auf etwas, das an niemanden Bestimmten geht, antwortet einer.",
     "Exchanges remembered": "Gemerkte Wortwechsel",
     "How many of the last exchanges with a person a bot keeps in mind while talking.": "Wie viele der letzten Wortwechsel mit einer Person ein Bot im Gespräch im Kopf behält.",
-    "How every bot speaks: only its own words, actions as emotes in the third person, in the world, never its instructions.": "Wie jeder Bot spricht: nur seine eigenen Worte, Handlungen als Emote in der dritten Person, in der Welt, nie seine Anweisungen.",
+    "How every bot speaks: its words inside double quotes, everything it does outside them as an emote, in the world, never its instructions.": "Wie jeder Bot spricht: seine Worte in doppelten Anführungszeichen, alles, was er tut, außerhalb davon als Emote, in der Welt, nie seine Anweisungen.",
     "Answers to players, written as a person in the world; the conversation so far and the new line come at the end, where the model reads them last.": "Antworten an Spieler, als Person in der Welt; das bisherige Gespräch und die neue Zeile stehen am Ende, wo das Modell sie zuletzt liest.",
     "The conversation so far, written as a dialogue, so the bot keeps its thread.": "Das bisherige Gespräch als Dialog, damit der Bot den Faden behält.",
     "The new line of the person, last in the prompt.": "Die neue Zeile der Person, ganz am Ende.",
