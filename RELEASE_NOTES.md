@@ -1,3 +1,8 @@
+# AFK Realm 1.3.58
+
+- **The Ollama chat page matches the module:** the module no longer keeps long-term memories, relationships, bonds or a mood towards each player, so their switches and the "Thinking and remembering" card are gone. Recent conversation and the Auctions/Immersion voice are together in a new "Conversation" card.
+- **Bots keep their actions out of the say chat:** everything a bot does goes out as an emote (/em); only the words it says are spoken. Update the modules to get the new mod-ollama-chat-coa.
+
 # AFK Realm 1.3.57
 
 - **The Forgotten of CoA Custom 2.0 can be created:** like the Goblin in 1.3.56, the server had no start data for it. Update AFK Realm and restart the server.

@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.58
+
+- **Ollama chat settings follow the module:** long-term memory, relationships, bonds and sentiment are no longer part of mod-ollama-chat-coa, so their switches and the whole "Thinking and remembering" card are gone. Recent conversation and the Auctions/Immersion voice sit together in a "Conversation" card. The module also sends everything a bot does as a text emote and keeps only its spoken words in the say line (update the modules).
+
 ## 1.3.57
 
 - **Forgotten (race 32)**: CoA Custom 2.0 turned the old ThinHuman NPC row into the playable Forgotten (flags 0xC, its own model 977461), but 32 was on the hidden list. It counts as a package race when the row has exactly those flags and a 2.0 model; older packages keep it off. Bots still leave it out (`AiPlayerbot.CrashingBotRaces`).
