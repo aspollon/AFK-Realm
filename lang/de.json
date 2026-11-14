@@ -2685,6 +2685,7 @@
     "Answers at once": "Antworten gleichzeitig",
     "automatic": "automatisch",
     "How many lines the model writes at the same time. More needs more graphics memory.": "Wie viele Zeilen das Modell gleichzeitig schreibt. Mehr braucht mehr Grafikspeicher.",
+    "How many lines the model writes at the same time. One keeps the prompt cache warm; more needs more graphics memory.": "Wie viele Zeilen das Modell gleichzeitig schreibt. Eine hält den Prompt-Cache warm; mehr braucht mehr Grafikspeicher.",
     "Talking": "Reden",
     "Bots talking on their own": "Bots reden von sich aus",
     "Bots near a real player say something from time to time, ask questions and answer each other. Without a real player nearby they stay quiet, so the language model is not busy for nothing.": "Bots in der Nähe eines echten Spielers sagen ab und zu etwas, stellen Fragen und antworten einander. Ohne echten Spieler in der Nähe bleiben sie still, damit das Sprachmodell nicht umsonst arbeitet.",

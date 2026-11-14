@@ -1,3 +1,7 @@
+# AFK Realm 1.3.60
+
+- **The Ollama page's "Answers at once" now sets what really runs:** the slider wrote `MaxConcurrentQueries`, but the module's worker pool uses `WorkerThreads`, so a default of four workers could send four 2B requests at once. The slider now sets `WorkerThreads`; use 1 for a model on the CPU, so the prompt cache stays warm.
+
 # AFK Realm 1.3.59
 
 - **A recreated Ollama config gets the module's values back:** after an install or update recreated `mod_ollama_chat.conf`, the page's settings were gone and the module ran with several answers at once. AFK Realm now applies a module's recommended values when a config file is newly created, and whenever an option still has the template's default. For Ollama chat that means one answer at a time and the longer timeout, so a slow 2B model no longer loses questions in a queue.

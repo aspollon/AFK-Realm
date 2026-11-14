@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.60
+
+- **Ollama "Answers at once":** the slider edited `OllamaChat.MaxConcurrentQueries`, but the dispatcher's concurrency is `OllamaChat.WorkerThreads` (MaxConcurrentQueries only supplies a default when WorkerThreads is absent). The page now edits WorkerThreads, 1 to 8, so the number on the page is the number of requests that can run.
+
 ## 1.3.59
 
 - **Module settings after a recreated config:** `Set-ModuleSettings` only wrote a module's recommendation when the module was new or the recommendation changed. A config file that `Update-ConfigFiles` had just recreated from the template kept its defaults: `MaxConcurrentQueries = 0`, `WorkerThreads = 4`, `HttpTimeoutSeconds = 120` instead of the module's 1/1/300, so several 2B requests ran at once and questions could be dropped. A fresh config now always gets the module's values, and an option that still has the template default is treated as untouched rather than as a user choice.
