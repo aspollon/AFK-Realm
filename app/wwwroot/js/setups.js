@@ -382,7 +382,7 @@ export function ollamaSetup() {
       })));
       con.add(result);
       p.choice(con, O + 'ThinkMode', T('Thinking'), ['off', 'auto', 'on'], [T('Off'), T('Automatic'), T('On')], T('Models like qwen3 can think before they answer. Off answers in seconds; on is slower and rarely better for chat.'));
-      p.choice(con, O + 'NumCtx', T('Prompt length'), ['4096', '8192', '16384'], [T('Short'), T('Normal'), T('Long')], T('How much the model reads at once: voice, knowledge, memory and the conversation. Shorter needs less graphics memory, but a prompt that does not fit loses its instructions.'));
+      p.choice(con, O + 'NumCtx', T('Prompt length'), ['4096', '8192', '16384'], [T('Short'), T('Normal'), T('Long')], T('How much the model reads at once: voice, knowledge and the conversation. Shorter needs less graphics memory, but a prompt that does not fit loses its instructions.'));
       p.slider(con, O + 'MaxConcurrentQueries', T('Answers at once'), 0, 8, 1, v => v === 0 ? T('automatic') : String(Math.trunc(v)), T('How many lines the model writes at the same time. More needs more graphics memory.'));
       p.slider(con, O + 'NumThreads', T('Processor cores for the model'), 0, 16, 1, v => v === 0 ? T('automatic') : String(Math.trunc(v)), T('Without a graphics card the model shares the processor with the worldserver. Leave two cores free (for example 4 of 6), or the game lags while a bot writes.'));
       p.slider(con, O + 'MaxQueueDepth', T('Waiting lines at most'), 1, 64, 1, v => String(Math.trunc(v)), T('Lines that wait for the model beyond this are dropped instead of piling up. Without a graphics card keep it small (about 4): each line takes half a minute, and a long queue only brings stale answers and lag.'));
@@ -425,22 +425,10 @@ export function ollamaSetup() {
       p.toggle(sheets, O + 'VoiceLabels', T('Bot lines for Companion Voice'), T('Marks the lines the model wrote, so the Companion Voice add-on reads them aloud and keeps the bots\' status messages quiet.'));
       p.toggle(rp, O + 'Lore.Enable', T('Bots know the world'), T('The story of their people, the tradition of their class, the place they stand in, and the persons, peoples and events you name - Arthas, Gilneas, the Scourge. Built into the module.'));
       p.slider(rp, O + 'Lore.MaxTopics', T('Things recalled at once'), 0, 4, 1, v => String(Math.trunc(v)), T('How many things named in your message a bot recalls.'));
-      const mem = p.card(T('Memory and relationships'), T('Bots remember what they talked about with whom, and form an opinion of the people they talk to often - players and other bots.'), 'database');
-      p.toggle(mem, O + 'EnableChatHistory', T('Recent conversation'));
-      p.slider(mem, O + 'MaxConversationHistory', T('Exchanges remembered'), 2, 20, 1, v => String(Math.trunc(v)), T('How many of the last exchanges with a person a bot keeps in mind while talking.'));
-      p.toggle(mem, O + 'Memory.Enable', T('Long-term memory'));
-      p.toggle(mem, O + 'Relationship.Enable', T('Relationships'));
-      p.toggle(mem, O + 'Bond.Enable', T('Bonds'), T('From stranger to friend or enemy: friendly or hostile words and fights, tasks and trades gone through together move it. Bots also know when they last spoke with you and what about.'));
-      p.toggle(mem, O + 'Bond.Romance', T('Romance'), T('A friend you flirt with can become more - always tasteful, never explicit.'));
-      p.toggle(mem, O + 'Voice.Enable', T('Auctions and Immersion speak through the model'), T('The trade whispers of Playerbots Auctions (items and prices stay exact) and the lines of the Immersion residents are said in the bot\'s own words.'));
-      p.toggle(mem, O + 'EnableSentimentTracking', T('Mood towards each player'), T('Rates every message to a bot as friendly or not; costs one extra request per message.'));
-      const ga = p.card(T('Thinking and remembering'), T('After the research paper "Generative Agents": for every line a bot recalls what matters right now - recent, important, fitting the moment - and bots that have dealt with you think about it, draw their own conclusions, have goals of their own and tell each other about you.'), 'database');
-      p.text(ga, O + 'Recall.EmbedModel', T('Model for remembering by meaning'), T('Optional. Empty: memories are matched by shared words. With an embedding model they are matched by meaning; install it once in a terminal with: ollama pull nomic-embed-text - then enter nomic-embed-text here.'));
-      p.toggle(ga, O + 'Reflection.Enable', T('Bots reflect on what they went through'));
-      p.toggle(ga, O + 'Goals.Enable', T('Bots have goals of their own'), T('Wishes and dreams that fit their people and temperament; what a bot actually does stays up to Playerbots.'));
-      p.slider(ga, O + 'Reflection.MaxPerHour', T('Thoughts per hour'), 0, 60, 1, v => v === 0 ? T('no limit') : String(Math.trunc(v)), T('Reflections and goals of all bots together; each costs the model one or two requests in the background.'));
-      p.toggle(ga, O + 'Gossip.Enable', T('Bots tell each other about you'), T('Your reputation travels: a bot you never met may know what you did.'));
-      p.slider(ga, O + 'Gossip.Chance', T('Chance'), 0, 100, 1, pct);
+      const talk = p.card(T('Conversation'), T('How much of the current conversation a bot keeps in mind, and how it speaks through other modules.'), 'database');
+      p.toggle(talk, O + 'EnableChatHistory', T('Recent conversation'));
+      p.slider(talk, O + 'MaxConversationHistory', T('Exchanges remembered'), 2, 20, 1, v => String(Math.trunc(v)), T('How many of the last exchanges with a person a bot keeps in mind while talking.'));
+      p.toggle(talk, O + 'Voice.Enable', T('Auctions and Immersion speak through the model'), T('The trade whispers of Playerbots Auctions (items and prices stay exact) and the lines of the Immersion residents are said in the bot\'s own words.'));
       p.note(T('Changes take effect after .ollama reload in the game (GM account) or a restart of the server.'));
     }
   });

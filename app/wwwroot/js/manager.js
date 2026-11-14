@@ -259,7 +259,7 @@ export function manager() {
       moduleCard(m.races, T('CoA Custom'), T('Install or update the CoA Custom client and server package. The CoA UI owns race and class selection; only the base race of each CoA custom race is configured here.'), 'races', h('div', { class: 'row' }, coaBtn, racesBtn)),
       moduleCard(m.flying, T('Azeroth flying'), T('Optional flying mounts in Eastern Kingdoms and Kalimdor: off by default, with a configurable no-fly list for the old capitals. Old Azeroth was not built for flying; use it at your own risk.'), 'journey',
         primary(T('Set up Azeroth flying …'), setup('setups.js', 'flyingSetup'))),
-      moduleCard(m.ollama, T('Ollama chat'), T('Bots whose chat comes from a language model: the connection to Ollama, how often bots talk on their own, roleplay, memory and relationships.'), 'accounts',
+      moduleCard(m.ollama, T('Ollama chat'), T('Bots whose chat comes from a language model: the connection to Ollama, how often bots talk on their own, and roleplay.'), 'accounts',
         primary(T('Set up Ollama chat …'), setup('setups.js', 'ollamaSetup'))),
       moduleCard(m.immersion, T('Immersion Life'), T('The population of cities and towns, questing, legendary residents, PvP Life and Fishing Life for mod-playerbots-immersion. PvP Life and Fishing Life are off by default; the legendary residents are on.'), 'accounts',
         primary(T('Set up Immersion Life ...'), setup('setups.js', 'immersionSetup'))),

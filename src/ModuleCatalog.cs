@@ -91,7 +91,7 @@ namespace CoAInstaller
                     Description = L.N("Flying mounts in Eastern Kingdoms and Kalimdor - an optional, experimental setting for old Azeroth") },
                 new ModuleEntry { Name = "mod-ollama-chat-coa", FullName = "aspollon/mod-ollama-chat-coa", Branch = "main", Own = true,
                     Url = "https://github.com/aspollon/mod-ollama-chat-coa", CloneUrl = "https://github.com/aspollon/mod-ollama-chat-coa.git",
-                    Description = L.N("Bots that really talk: their chat comes from a language model (Ollama on your PC, or an online service) - answers, chatter, memory and relationships. Experimental; needs Ollama running.") },
+                    Description = L.N("Bots that really talk: their chat comes from a language model (Ollama on your PC, or an online service) - answers, chatter and roleplay. Experimental; needs Ollama running.") },
             };
         }
         /// <summary>Modules by others that work on every server kind and are worth offering, even when the AzerothCore catalog
