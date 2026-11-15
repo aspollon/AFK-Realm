@@ -443,7 +443,8 @@ namespace CoAInstaller
         /// package folder is given. Streams, so a ZIP of several GB never sits in memory as ZipArchiveMode.Update would.
         /// Returns false (and leaves the ZIP alone) when there is nothing to add.
         /// </summary>
-        public static bool AppendToZipFile(string zipFile, string client, Action<string, int, int> progress, string package = null)
+        public static bool AppendToZipFile(string zipFile, string client, Action<string, int, int> progress, string package = null,
+            ISet<string> withheld = null)
         {
             bool voices = PlayerFiles(client).Count > 0;
             var hd = ClientHd.PlayerFiles(client);
@@ -477,7 +478,7 @@ namespace CoAInstaller
                         bool stored = f.Key.EndsWith(".MPQ", StringComparison.OrdinalIgnoreCase) || f.Key.EndsWith(".mp3", StringComparison.OrdinalIgnoreCase);
                         target.CreateEntryFromFile(f.Value, f.Key, stored ? CompressionLevel.NoCompression : CompressionLevel.Optimal);
                     }
-                    if (package != null) CoaSetup.AddPackageClientToZip(target, package, client, taken, progress);
+                    if (package != null) CoaSetup.AddPackageClientToZip(target, package, client, taken, progress, withheld);
                 }
                 File.Delete(zipFile);
                 File.Move(temp, zipFile);

@@ -72,18 +72,19 @@ export async function clientDialog(reason) {
     let r;
     try { r = await post('/api/client/shared', { folder: folder.value.trim() }); } catch (e) { return alert(e.message); }
     if (!r.client) return alert(T('Choose your game folder, the one with the "Data" folder.'));
-    const boxes = r.addons.map(a => ({ a, box: check(a.name + (a.module ? ' (' + T('a module brings it') + ')' : ''), a.chosen || a.module) }));
+    const boxes = r.addons.map(a => ({ a, box: check(a.name + (a.module ? ' (' + T('a module brings it') + ')' : a.package ? ' (' + T('CoA Custom brings it') + ')' : ''), a.chosen || a.module) }));
     boxes.filter(b => b.a.module).forEach(b => { b.box.input.disabled = true; });
     const list = h('div', { style: { maxHeight: '45vh', overflow: 'auto', columns: '2', margin: '8px 0' } }, ...boxes.map(b => h('div', {}, b.box)));
     const ok = await dialog({
       title: T('Add-ons for your players'), icon: 'client',
-      body: h('div', {}, h('p.muted', {}, T('The add-ons ticked here are taken from your game and handed out to your players: in the client pack of the registration page and by the AFK Client, which keeps them up to date. Add-ons of the installed modules are handed out anyway. Blizzard\'s own interface parts are not listed.')),
+      body: h('div', {}, h('p.muted', {}, T('The add-ons ticked here are handed out to your players: in the client pack of the registration page and by the AFK Client, which keeps them up to date. Add-ons of the installed modules are handed out anyway; those of the CoA Custom package go out unless you untick them. Blizzard\'s own interface parts are not listed.')),
         r.addons.length ? list : h('p', {}, T('Your game has no add-ons of its own.'))),
       buttons: [{ text: T('Cancel'), value: false }, { text: T('Save'), kind: 'primary', value: true }]
     });
     if (!ok) return;
-    const chosen = boxes.filter(b => !b.a.module && b.box.checked).map(b => b.a.name);
-    await post('/api/client/shared', { folder: folder.value.trim(), names: chosen });
+    const chosen = boxes.filter(b => !b.a.module && !b.a.package && b.box.checked).map(b => b.a.name);
+    const withheld = boxes.filter(b => b.a.package && !b.box.checked).map(b => b.a.name);
+    await post('/api/client/shared', { folder: folder.value.trim(), names: chosen, withheld });
     alert(chosen.length ? F('{0} add-on(s) will go to your players with the next player package (Client build).', chosen.length) : T('No add-on of your own is handed out.'));
   }
 

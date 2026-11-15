@@ -17,9 +17,10 @@ namespace CoAInstaller
         // Which files are world content only. Everything else in the package belongs to the repack (1_world), AFK's
         // modules (2_bots, 4_ahbot_*, 60_vanilla_class_health) or is read as data by other install steps (racials).
         // 24_ is left out: it is a copy of a CoA core update (manastorm cache brackets) and would undo newer core values.
+        // 45_/46_ are kept free for the Fading Island spawns, which come from the repack's world database, not the CoA core.
         static readonly string[] Content =
         {
-            "21_", "22_", "30_", "41_", "42_", "43_", "44_", "50_", "51_", "52_", "61_",
+            "21_", "22_", "30_", "41_", "42_", "43_", "44_", "45_", "46_", "50_", "51_", "52_", "61_",
         };
 
         const string Journal = "acore_world.afk_content_sql";

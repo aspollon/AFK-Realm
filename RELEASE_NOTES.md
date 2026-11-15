@@ -1,3 +1,7 @@
+# AFK Realm 1.3.61
+
+- **Add-ons for your players:** add-ons whose names start with "!" (such as !BugGrabber, which BugSack needs) are listed and handed out now. The add-ons of the CoA Custom package are in the list too, marked "CoA Custom brings it": they go out unless you untick them. Rebuild the player client pack afterwards (Client build).
+
 # AFK Realm 1.3.60
 
 - **The Ollama page's "Answers at once" now sets what really runs:** the slider wrote `MaxConcurrentQueries`, but the module's worker pool uses `WorkerThreads`, so a default of four workers could send four 2B requests at once. The slider now sets `WorkerThreads`; use 1 for a model on the CPU, so the prompt cache stays warm.

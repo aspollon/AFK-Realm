@@ -158,7 +158,7 @@ namespace CoAInstaller
                     try { source = Path.GetFullPath(Path.Combine(dir, entry.Replace('/', Path.DirectorySeparatorChar))); } catch { continue; }
                     string name = Path.GetFileName(source.TrimEnd('\\', '/'));
                     // Only a folder inside the module, with a plain name and a .toc of that name, counts as an add-on.
-                    if (!source.StartsWith(root, StringComparison.OrdinalIgnoreCase) || !Regex.IsMatch(name, @"^[\w.\-]+$") ||
+                    if (!source.StartsWith(root, StringComparison.OrdinalIgnoreCase) || !Regex.IsMatch(name, @"^[\w.\-!]+$") ||
                         !File.Exists(Path.Combine(source, name + ".toc")))
                         continue;
                     var addon = new ClientAddon { Module = Path.GetFileName(dir), Name = name, Source = source, ClearCache = clear, Why = why, WhyEnglish = whyEnglish };
@@ -185,7 +185,7 @@ namespace CoAInstaller
             {
                 string name = Path.GetFileName(folder);
                 if (name.StartsWith(".")) return;
-                if (Regex.IsMatch(name, @"^[\w.\-]+$") && File.Exists(Path.Combine(folder, name + ".toc"))) { found.Add(folder); return; }
+                if (Regex.IsMatch(name, @"^[\w.\-!]+$") && File.Exists(Path.Combine(folder, name + ".toc"))) { found.Add(folder); return; }
                 if (depth == 0) return;
                 string[] subs;
                 try { subs = Directory.GetDirectories(folder); } catch { return; }
@@ -212,14 +212,36 @@ namespace CoAInstaller
         /// <summary>The add-ons of the owner's game he hands out to his players with the client pack and the AFK Client.</summary>
         public static List<string> SharedNames(Install inst)
         {
-            try { return File.Exists(SharedFile(inst)) ? File.ReadAllLines(SharedFile(inst)).Select(l => l.Trim()).Where(l => Regex.IsMatch(l, @"^[\w.\- ]+$")).Distinct(StringComparer.OrdinalIgnoreCase).ToList() : new List<string>(); }
+            try { return File.Exists(SharedFile(inst)) ? File.ReadAllLines(SharedFile(inst)).Select(l => l.Trim()).Where(l => Regex.IsMatch(l, @"^[\w.\-! ]+$")).Distinct(StringComparer.OrdinalIgnoreCase).ToList() : new List<string>(); }
             catch { return new List<string>(); }
         }
 
         public static void SetSharedNames(Install inst, IEnumerable<string> names)
         {
             Directory.CreateDirectory(Path.GetDirectoryName(SharedFile(inst)));
-            File.WriteAllLines(SharedFile(inst), names.Where(n => Regex.IsMatch(n ?? "", @"^[\w.\- ]+$")).Distinct(StringComparer.OrdinalIgnoreCase), new UTF8Encoding(false));
+            File.WriteAllLines(SharedFile(inst), names.Where(n => Regex.IsMatch(n ?? "", @"^[\w.\-! ]+$")).Distinct(StringComparer.OrdinalIgnoreCase), new UTF8Encoding(false));
+        }
+
+        static string WithheldFile(Install inst) { return Path.Combine(inst.Root, "Dependencies", "withheld-addons.txt"); }
+
+        /// <summary>CoA Custom add-ons the owner unticked: they stay out of the players' pack. The rest go out by default.</summary>
+        public static HashSet<string> WithheldNames(Install inst)
+        {
+            var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            try
+            {
+                if (File.Exists(WithheldFile(inst)))
+                    foreach (var l in File.ReadAllLines(WithheldFile(inst)))
+                        if (Regex.IsMatch(l.Trim(), @"^[\w.\-! ]+$")) set.Add(l.Trim());
+            }
+            catch { }
+            return set;
+        }
+
+        public static void SetWithheldNames(Install inst, IEnumerable<string> names)
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(WithheldFile(inst)));
+            File.WriteAllLines(WithheldFile(inst), names.Where(n => Regex.IsMatch(n ?? "", @"^[\w.\-! ]+$")).Distinct(StringComparer.OrdinalIgnoreCase), new UTF8Encoding(false));
         }
 
         /// <summary>The add-ons in the game's Interface\AddOns that are not Blizzard's own (they come with every client).</summary>
@@ -228,7 +250,7 @@ namespace CoAInstaller
             string dir = client == null ? null : AddonsDir(client);
             if (dir == null || !Directory.Exists(dir)) return new List<string>();
             return Directory.GetDirectories(dir).Select(Path.GetFileName)
-                .Where(n => !n.StartsWith("Blizzard_", StringComparison.OrdinalIgnoreCase) && Regex.IsMatch(n, @"^[\w.\- ]+$"))
+                .Where(n => !n.StartsWith("Blizzard_", StringComparison.OrdinalIgnoreCase) && Regex.IsMatch(n, @"^[\w.\-! ]+$"))
                 .OrderBy(n => n, StringComparer.OrdinalIgnoreCase).ToList();
         }
 
@@ -333,7 +355,7 @@ namespace CoAInstaller
                     foreach (var line in File.ReadAllLines(RecordFile(inst)))
                     {
                         var f = line.Split('|');
-                        if (f.Length >= 2 && Regex.IsMatch(f[1], @"^[\w.\-]+$")) d[f[1]] = f[0];
+                        if (f.Length >= 2 && Regex.IsMatch(f[1], @"^[\w.\-!]+$")) d[f[1]] = f[0];
                     }
             }
             catch { }

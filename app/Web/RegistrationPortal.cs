@@ -712,7 +712,7 @@ namespace CoAInstaller.Web
                 }
                 // a complete client for the players: the voices with the owner's CoA64.exe, and on a CoA server the
                 // CoA Custom package's client part (its MPQs, root files, DXVK and add-ons)
-                ClientVoices.AppendToZipFile(temp, client, progress, inst.IsCoa ? CoaSetup.PackageForPlayers() : null);
+                ClientVoices.AppendToZipFile(temp, client, progress, inst.IsCoa ? CoaSetup.PackageForPlayers() : null, ClientAddons.WithheldNames(inst));
                 File.Move(temp, target, true);
             }
             catch

@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.61
+
+- **Client pack, add-on names with `!`:** the add-on regexes in `ClientAddons` only took `[\w.\-]`, so `!BugGrabber` (needed by BugSack) was neither listed under "Add-ons for your players" nor packed. `!` is allowed now.
+- **Client pack, CoA Custom add-ons:** `CoaSetup.AddPackageClientToZip` packed every add-on of the package's `files/addons`, so an add-on the owner had unticked (CoA_Teleports, CoA_DevMenu ...) still reached the manifest. The dialog now marks them "CoA Custom brings it", ticked by default; unticked ones are kept in `Dependencies/withheld-addons.txt` and left out of the players' pack.
+- **CoA Custom SQL:** `45_` and `46_` are content files too, kept free for the Fading Island spawns. The island's NPCs are not in the package or the CoA world data: they come from the repack's world database.
+
 ## 1.3.60
 
 - **Ollama "Answers at once":** the slider edited `OllamaChat.MaxConcurrentQueries`, but the dispatcher's concurrency is `OllamaChat.WorkerThreads` (MaxConcurrentQueries only supplies a default when WorkerThreads is absent). The page now edits WorkerThreads, 1 to 8, so the number on the page is the number of requests that can run.

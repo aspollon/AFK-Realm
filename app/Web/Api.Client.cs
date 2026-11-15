@@ -129,15 +129,26 @@ namespace CoAInstaller.Web
                 var inst = Inst;
                 string client = ClientAddons.GameRoot(a.Str("folder") ?? ClientAddons.ClientFolder ?? "");
                 if (a.Has("names")) ClientAddons.SetSharedNames(inst, a.List("names"));
+                if (a.Has("withheld")) ClientAddons.SetWithheldNames(inst, a.List("withheld"));
                 var chosen = ClientAddons.SharedNames(inst);
+                var withheld = ClientAddons.WithheldNames(inst);
                 var fromModules = ClientAddons.Find(inst, client).Select(x => x.Name).ToList();
+                // The CoA Custom package's add-ons go out unless unticked; the owner's own only when ticked.
+                var fromPackage = inst.IsCoa ? CoaSetup.PackageAddonNames() : new List<string>();
+                var names = ClientAddons.OwnAddonFolders(client).Union(fromPackage, StringComparer.OrdinalIgnoreCase)
+                    .OrderBy(n => n, StringComparer.OrdinalIgnoreCase);
                 return new
                 {
                     client,
-                    addons = ClientAddons.OwnAddonFolders(client).Select(n => new
+                    addons = names.Select(n =>
                     {
-                        name = n, chosen = chosen.Contains(n, StringComparer.OrdinalIgnoreCase),
-                        module = fromModules.Contains(n, StringComparer.OrdinalIgnoreCase)
+                        bool module = fromModules.Contains(n, StringComparer.OrdinalIgnoreCase);
+                        bool package = !module && fromPackage.Contains(n, StringComparer.OrdinalIgnoreCase);
+                        return new
+                        {
+                            name = n, module, package,
+                            chosen = package ? !withheld.Contains(n) : chosen.Contains(n, StringComparer.OrdinalIgnoreCase)
+                        };
                     }).ToArray()
                 };
             });

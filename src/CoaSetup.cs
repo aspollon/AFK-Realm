@@ -159,7 +159,8 @@ namespace CoAInstaller
         /// native HD build, else the package's exe made to load HD without DXVK), the x64 DXVK files and the package's
         /// add-ons. Paths already in taken are left out; added ones go into it. Returns whether the native HD exe went in.
         /// </summary>
-        public static bool AddPackageClientToZip(ZipArchive zip, string package, string client, ISet<string> taken, Action<string, int, int> progress)
+        public static bool AddPackageClientToZip(ZipArchive zip, string package, string client, ISet<string> taken, Action<string, int, int> progress,
+            ISet<string> withheld = null)
         {
             string packRoot = PackageRoot(package);
             if (packRoot == null) throw new InvalidOperationException(L.T("No CoA-Custom\\files tree found in the package."));
@@ -223,8 +224,22 @@ namespace CoAInstaller
             done += Dxvk.Count;
             string addonPrefix = Path.GetFullPath(addonDir).TrimEnd('\\', '/') + Path.DirectorySeparatorChar;
             foreach (string path in addonFiles.OrderBy(x => x))
-                add(path, "Interface/AddOns/" + path.Substring(addonPrefix.Length).Replace('\\', '/'), CompressionLevel.NoCompression);
+            {
+                string rel = path.Substring(addonPrefix.Length).Replace('\\', '/');
+                // An add-on the owner unticked under Add-ons for your players.
+                if (withheld != null && withheld.Contains(rel.Split('/')[0])) { done++; continue; }
+                add(path, "Interface/AddOns/" + rel, CompressionLevel.NoCompression);
+            }
             return nativeSupported;
+        }
+
+        /// <summary>The add-on folders the CoA Custom package hands out with the players' pack.</summary>
+        public static List<string> PackageAddonNames()
+        {
+            string root = PackageForPlayers();
+            string dir = root == null ? null : Path.Combine(root, "files", "addons");
+            if (dir == null || !Directory.Exists(dir)) return new List<string>();
+            return Directory.GetDirectories(dir).Select(Path.GetFileName).ToList();
         }
 
         /// <summary>The package folder for the client pack: the one chosen on the CoA Custom page, if it is complete.</summary>
