@@ -37,7 +37,7 @@ namespace CoAInstaller.Web
             o.Sounds = a.Bool("sounds", o.Sounds); o.Lux = a.Bool("lux", o.Lux); o.Addons = a.Bool("addons", o.Addons);
             o.Pack = (a.Str("pack") ?? o.Pack ?? "").Trim();
             o.Visuals = a.Int("visuals", -1);
-            if (o.Visuals >= ClientVisuals.Stock && o.Visuals <= ClientVisuals.LuxVelum) o.Lux = o.Visuals == ClientVisuals.LuxVelum;
+            if (o.Visuals >= ClientVisuals.Stock && o.Visuals <= ClientVisuals.Forever) o.Lux = o.Visuals == ClientVisuals.LuxVelum;
             else o.Visuals = -1;
             return o;
         }

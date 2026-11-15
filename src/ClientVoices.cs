@@ -23,6 +23,9 @@ namespace CoAInstaller
         public const string QuestRepo = "Crono141/LivingVoices";
         const string Marker = ".afk-voices-version";
         const string LumenveilDll = "Lumenveil64.dll";
+        // Forever's Vulkan shaders, translated from the CoA Custom client the exe was built for. They replace the
+        // package's VulkanShaders, which come from another client and break models on AFK64.exe.
+        const string ShaderFolder = "VulkanShaders";
         const string VisualsFile = ClientVisuals.File;
         const string VisualsDefault = ClientVisuals.Default;
 
@@ -225,6 +228,7 @@ namespace CoAInstaller
                 {
                     var exe = zip.Entries.FirstOrDefault(e => e.FullName.Replace('\\', '/').Equals("CoA64/CoA64.exe", StringComparison.OrdinalIgnoreCase));
                     if (exe == null) return true;
+                    if (!SameShaders(client, zip)) return false;
                     if (exe.Length != new FileInfo(game).Length) return false;
                     using (var a = exe.Open())
                     using (var b = File.OpenRead(game))
@@ -241,6 +245,52 @@ namespace CoAInstaller
                 }
             }
             catch { return true; }
+        }
+
+        /// <summary>The game folder's VulkanShaders\manifest.txt is the release's (true when the release has none).</summary>
+        static bool SameShaders(string client, ZipArchive zip)
+        {
+            var manifest = zip.Entries.FirstOrDefault(e => e.FullName.Replace('\\', '/').Equals("CoA64/" + ShaderFolder + "/manifest.txt", StringComparison.OrdinalIgnoreCase));
+            if (manifest == null) return true;
+            string local = Path.Combine(client, ShaderFolder, "manifest.txt");
+            if (!File.Exists(local) || new FileInfo(local).Length != manifest.Length) return false;
+            using (var a = manifest.Open())
+            using (var b = File.OpenRead(local))
+            {
+                var x = new byte[1 << 16]; var y = new byte[1 << 16];
+                while (true)
+                {
+                    int n = ReadFull(a, x), m = ReadFull(b, y);
+                    if (n != m) return false;
+                    if (n == 0) return true;
+                    for (int k = 0; k < n; k++) if (x[k] != y[k]) return false;
+                }
+            }
+        }
+
+        /// <summary>Puts the release's VulkanShaders in the game folder; the manifest last, so a broken copy is redone.</summary>
+        static int InstallShaders(string client, ZipArchive zip)
+        {
+            string prefix = "CoA64/" + ShaderFolder + "/";
+            var entries = zip.Entries.Where(e => e.FullName.Replace('\\', '/').StartsWith(prefix, StringComparison.OrdinalIgnoreCase) && e.Length > 0).ToList();
+            if (entries.Count == 0) return 0;
+            string root = Path.GetFullPath(Path.Combine(client, ShaderFolder));
+            ZipArchiveEntry manifest = null;
+            foreach (var e in entries)
+            {
+                string rel = e.FullName.Replace('\\', '/').Substring(prefix.Length);
+                if (rel.Equals("manifest.txt", StringComparison.OrdinalIgnoreCase)) { manifest = e; continue; }
+                string target = Path.GetFullPath(Path.Combine(root, rel.Replace('/', Path.DirectorySeparatorChar)));
+                if (!target.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)) continue;
+                Directory.CreateDirectory(Path.GetDirectoryName(target));
+                e.ExtractToFile(target, true);
+            }
+            if (manifest != null)
+            {
+                Directory.CreateDirectory(root);
+                manifest.ExtractToFile(Path.Combine(root, "manifest.txt"), true);
+            }
+            return entries.Count;
         }
 
         static int ReadFull(Stream s, byte[] buffer)
@@ -319,6 +369,7 @@ namespace CoAInstaller
 
                 string visuals = Path.Combine(client, VisualsFile);
                 if (!File.Exists(visuals)) File.WriteAllText(visuals, VisualsDefault);
+                InstallShaders(client, zip);
                 // The CoA Custom package's CoAVolFog.ini has Overlay=0; keep Ctrl+F7 and the other keys working.
                 if (ClientVisuals.Read(client) == ClientVisuals.Lumenveil) ClientVisuals.EnableOverlay(client);
                 string line = L.F("{0} that loads plugins (yours is kept as {0}.afk-backup)", targetName);
@@ -403,6 +454,18 @@ namespace CoAInstaller
             {
                 string file = Path.Combine(client, extra);
                 if (File.Exists(file)) list.Add(new KeyValuePair<string, string>(extra, file));
+            }
+            // AFK64.exe's own VulkanShaders (Forever) go before the CoA Custom package's, so the players get ours.
+            string shaders = Path.Combine(client, ShaderFolder);
+            if (host == afk && File.Exists(Path.Combine(shaders, "manifest.txt")))
+            {
+                string root = Path.GetFullPath(shaders).TrimEnd('\\', '/') + Path.DirectorySeparatorChar;
+                foreach (string f in Directory.GetFiles(shaders, "*", SearchOption.AllDirectories))
+                {
+                    string rel = Path.GetFullPath(f).Substring(root.Length).Replace('\\', '/');
+                    if (rel.StartsWith("hd-pending/", StringComparison.OrdinalIgnoreCase)) continue;
+                    list.Add(new KeyValuePair<string, string>(ShaderFolder + "/" + rel, f));
+                }
             }
             string plugin = PluginFile(client);
             if (File.Exists(plugin)) list.Add(new KeyValuePair<string, string>("Plugins/LivingVoices64.dll", plugin));

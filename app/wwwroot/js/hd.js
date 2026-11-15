@@ -18,7 +18,8 @@ export async function hdDialog(folder) {
   const visuals = select([
     [0, T('No graphics effect (best for weak computers)')],
     [1, T('Lumenveil (standard)')],
-    [2, T('LuxVelum: fog, light and water (Ctrl+F7 in game for its settings)')]
+    [2, T('LuxVelum: fog, light and water (Ctrl+F7 in game for its settings)')],
+    [3, T('Forever (Azeroth Remastered): the full HD look on Vulkan, needs a strong graphics card')]
   ], v.visuals ?? 1);
   const visualsRow = h('div', { style: { display: 'flex', gap: '6px', alignItems: 'center', margin: '6px 0' } },
     h('span.small', {}, T('Graphics effect')), visuals);

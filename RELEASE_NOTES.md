@@ -1,3 +1,8 @@
+# AFK Realm 1.3.62
+
+- **New AFK64.exe with Forever (Azeroth Remastered):** the game's own Video options now have a Graphics dropdown under Graphics: Standard, Lumenveil, LuxVelum or Forever. Forever is the full HD look on Vulkan and needs a strong graphics card; the choice applies after a restart. The custom races now look right on Vulkan too. AFK Realm brings the new exe and its Vulkan shaders with the CoA Custom install, the HD pack page and the voices; rebuild the player client pack afterwards (Client build) so your players get it as well.
+- **AFK Client:** Forever can be chosen under the graphics effect.
+
 # AFK Realm 1.3.61
 
 - **Add-ons for your players:** add-ons whose names start with "!" (such as !BugGrabber, which BugSack needs) are listed and handed out now. The add-ons of the CoA Custom package are in the list too, marked "CoA Custom brings it": they go out unless you untick them. Rebuild the player client pack afterwards (Client build).

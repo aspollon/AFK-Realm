@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.62
+
+- **AFK64.exe with Forever:** the voices release (coa-living-voices v0.6.0) ships CoA64 f8f4c77: the in-game Graphics dropdown (Video > Graphics: Standard, Lumenveil, LuxVelum, Forever) and the Vulkan fixes for the custom races (skin profile chosen for D3D9's 256 vertex constants). Forever (Azeroth Remastered) runs on Vulkan; the exe picks the device from `Visuals.txt` itself.
+- **VulkanShaders:** the release carries `CoA64/VulkanShaders`, translated from a CoA Custom 2.0 client. `ClientVoices.EnsureNewestExe` installs it (manifest last) and treats a different `VulkanShaders/manifest.txt` as an outdated exe, so the CoA Custom package's own copy (from another client, models break with it) is replaced after every CoA Custom install too. The player pack and the launcher carry the owner's VulkanShaders before the package's.
+- **Visuals.txt value 3:** AFK Realm (HD pack page) and AFK Client read, write and offer Forever; before, a 3 written by the game read as Lumenveil.
+
 ## 1.3.61
 
 - **Client pack, add-on names with `!`:** the add-on regexes in `ClientAddons` only took `[\w.\-]`, so `!BugGrabber` (needed by BugSack) was neither listed under "Add-ons for your players" nor packed. `!` is allowed now.
