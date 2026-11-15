@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.63
+
+- **CoA Custom install failed with "incomplete after the copy: ...VulkanShaders\manifest.txt":** 1.3.62 puts AFK64.exe's own VulkanShaders in place after copying the package, and the copy check afterwards compared them with the package's. The check now leaves VulkanShaders out when AFK64.exe is in the game folder, as it already did for XvidDecoder.dll.
+
 ## 1.3.62
 
 - **AFK64.exe with Forever:** the voices release (coa-living-voices v0.6.0) ships CoA64 f8f4c77: the in-game Graphics dropdown (Video > Graphics: Standard, Lumenveil, LuxVelum, Forever) and the Vulkan fixes for the custom races (skin profile chosen for D3D9's 256 vertex constants). Forever (Azeroth Remastered) runs on Vulkan; the exe picks the device from `Visuals.txt` itself.

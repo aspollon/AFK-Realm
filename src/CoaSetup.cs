@@ -1235,6 +1235,9 @@ namespace CoAInstaller
                 // the installer learned to keep the package's file. Do not fail the whole CoA setup over the codec.
                 if (string.Equals(Path.GetFileName(file), "XvidDecoder.dll", StringComparison.OrdinalIgnoreCase) &&
                     File.Exists(Path.Combine(target, CoaClientExe.Afk))) continue;
+                // AFK64.exe brings its own VulkanShaders (EnsureNewestExe, after the copy); the package's are replaced.
+                if (rel.StartsWith("VulkanShaders" + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) &&
+                    File.Exists(Path.Combine(target, CoaClientExe.Afk))) continue;
                 VerifyFile(file, dest);
             }
         }

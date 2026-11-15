@@ -1,3 +1,7 @@
+# AFK Realm 1.3.63
+
+- **Fix:** installing CoA Custom stopped with "The CoA package file is incomplete after the copy" for a file in VulkanShaders. That came from 1.3.62 putting the new exe's own Vulkan shaders in place; the install goes through again.
+
 # AFK Realm 1.3.62
 
 - **New AFK64.exe with Forever (Azeroth Remastered):** the game's own Video options now have a Graphics dropdown under Graphics: Standard, Lumenveil, LuxVelum or Forever. Forever is the full HD look on Vulkan and needs a strong graphics card; the choice applies after a restart. The custom races now look right on Vulkan too. AFK Realm brings the new exe and its Vulkan shaders with the CoA Custom install, the HD pack page and the voices; rebuild the player client pack afterwards (Client build) so your players get it as well.
