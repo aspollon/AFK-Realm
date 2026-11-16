@@ -6,12 +6,12 @@ using System.Text;
 namespace CoAInstaller
 {
     /// <summary>The graphics effect AFK64.exe loads, chosen in Visuals.txt beside it: 0 none, 1 Lumenveil, 2 LuxVelum,
-    /// 3 Forever (Azeroth Remastered on the Vulkan device; the exe picks Vulkan itself).</summary>
+    /// 3 Azeroth Remastered (on the Vulkan device; the exe picks Vulkan itself).</summary>
     static class ClientVisuals
     {
-        public const int Stock = 0, Lumenveil = 1, LuxVelum = 2, Forever = 3;
+        public const int Stock = 0, Lumenveil = 1, LuxVelum = 2, AzerothRemastered = 3;
         public const string File = "Visuals.txt";
-        public const string Default = "; 0 = default graphics, 1 = Lumenveil, 2 = LuxVelum, 3 = Forever (Vulkan)\r\n1\r\n";
+        public const string Default = "; 0 = default graphics, 1 = Lumenveil, 2 = LuxVelum, 3 = Azeroth Remastered (Vulkan)\r\n1\r\n";
         public const string LumenveilIni = "CoAVolFog.ini";
 
         /// <summary>The choice in the game folder; Lumenveil when the file is missing or unreadable (the exe's own rule).</summary>
@@ -26,7 +26,7 @@ namespace CoAInstaller
                     string line = raw.Trim();
                     if (line.Length == 0 || line.StartsWith(";") || line.StartsWith("#")) continue;
                     string digits = new string(line.TakeWhile(char.IsDigit).ToArray());
-                    if (int.TryParse(digits, out int n) && n >= Stock && n <= Forever) return n;
+                    if (int.TryParse(digits, out int n) && n >= Stock && n <= AzerothRemastered) return n;
                     break;
                 }
             }
@@ -37,11 +37,11 @@ namespace CoAInstaller
         /// <summary>Writes the choice; true when it changed.</summary>
         public static bool Write(string client, int choice)
         {
-            if (string.IsNullOrEmpty(client) || choice < Stock || choice > Forever) return false;
+            if (string.IsNullOrEmpty(client) || choice < Stock || choice > AzerothRemastered) return false;
             string path = Path.Combine(client, File);
             bool changed = true;
             if (System.IO.File.Exists(path) && Read(client) == choice) changed = false;
-            else System.IO.File.WriteAllText(path, "; 0 = default graphics, 1 = Lumenveil, 2 = LuxVelum, 3 = Forever (Vulkan)\r\n" + choice + "\r\n", new UTF8Encoding(false));
+            else System.IO.File.WriteAllText(path, "; 0 = default graphics, 1 = Lumenveil, 2 = LuxVelum, 3 = Azeroth Remastered (Vulkan)\r\n" + choice + "\r\n", new UTF8Encoding(false));
             if (choice == Lumenveil) EnableOverlay(client);
             return changed;
         }
@@ -91,7 +91,7 @@ namespace CoAInstaller
 
         public static string Name(int choice)
         {
-            return choice == Stock ? L.T("no graphics effect") : choice == LuxVelum ? "LuxVelum" : choice == Forever ? "Forever (Azeroth Remastered)" : "Lumenveil";
+            return choice == Stock ? L.T("no graphics effect") : choice == LuxVelum ? "LuxVelum" : choice == AzerothRemastered ? "Azeroth Remastered" : "Lumenveil";
         }
     }
 }

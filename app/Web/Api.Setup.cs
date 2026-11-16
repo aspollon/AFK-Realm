@@ -45,6 +45,43 @@ namespace CoAInstaller.Web
 
             Post(app, "/api/setup/name", a => new { error = Accounts.CheckRealmName((a.Str("name") ?? "").Trim()) });
 
+            // The game client question of the wizard: a folder that is there (checked against the server kind), or a
+            // folder to download the CoA client into.
+            Post(app, "/api/setup/client", a =>
+            {
+                string kind = Install.KindOf(a.Str("kind"));
+                string folder = (a.Str("folder") ?? "").Trim();
+                if (a.Str("mode") == "download")
+                {
+                    if (kind != Install.KindCoa) throw new UserError(L.T("AFK Realm can only download the CoA game client."));
+                    if (folder.Length == 0 || !Path.IsPathRooted(folder)) throw new UserError(L.T("Choose the folder for the game client. It can be empty; about 43 GB will be downloaded into it."));
+                    string target = ClientAddons.GameRoot(folder) ?? folder;
+                    if (ClientAddons.IsClientFolder(target))
+                    {
+                        string mismatch = ClientAddons.ClientMismatch(kind, target);
+                        if (mismatch != null) throw new UserError(mismatch);
+                    }
+                    return new { folder = target };
+                }
+                string root = ClientAddons.GameRoot(folder);
+                if (root == null) throw new UserError(L.T("This is not a game folder: it needs a \"Data\" folder with the game's .MPQ archives.") + " " + L.T("You can also choose the \"Data\" folder itself."));
+                string error = ClientAddons.ClientMismatch(kind, root);
+                if (error != null) throw new UserError(error);
+                return new { folder = root };
+            });
+
+            // What can be built in with the first compile: the modules by AFK Realm and the built-in preset (CoA only).
+            Post(app, "/api/setup/extras", a =>
+            {
+                if (Install.KindOf(a.Str("kind")) != Install.KindCoa) return new { modules = new object[0], presets = new object[0] };
+                var preset = ServerPresets.BuiltInAfkRealm();
+                return new
+                {
+                    modules = ModuleCatalog.OwnModules().Where(m => !m.Hidden).Select(m => (object)new { name = m.Name, url = m.CloneUrl, text = L.Outside(m.Description) }).ToArray(),
+                    presets = new object[] { new { id = preset.Id, name = preset.Name, text = preset.Description, urls = preset.Modules.Select(m => m.CloneUrl).ToArray() } }
+                };
+            });
+
             Post(app, "/api/setup/install", a =>
             {
                 string path = a.Str("path") ?? "";
@@ -60,8 +97,14 @@ namespace CoAInstaller.Web
                     if (nameError != null) throw new UserError(nameError);
                 }
                 else name = null;
-                string pwError = CheckPassword(password, a.Str("password2") ?? password);
-                if (pwError != null) throw new UserError(pwError);
+                // "Try again" through the wizard: a started installation keeps the database password it has.
+                if (password.Length == 0) { try { password = DbLogin.FromConfig(inst).Password ?? ""; } catch { } }
+                else
+                {
+                    string pwError = CheckPassword(password, a.Str("password2") ?? password);
+                    if (pwError != null) throw new UserError(pwError);
+                }
+                if (password.Length == 0) throw new UserError(L.T("Enter the database password of the first installation."));
                 string mode = a.Str("mode") ?? "Install";
                 if (mode != "Install") mode = "Install";
                 bool shortcut = a.Bool("shortcut", true);
@@ -70,11 +113,28 @@ namespace CoAInstaller.Web
                 {
                     inst.SetKind(Install.KindOf(a.Str("kind")));
                 }
-                return Jobs.RunEngine(inst, mode, password, 3307, null, name, false, job =>
+                // The game client and the modules chosen in the wizard: modules go into the first build, the client is
+                // downloaded first when asked, and map data and the preset's settings follow when the server is opened.
+                string clientMode = a.Str("clientMode") ?? "";
+                string clientFolder = (a.Str("clientFolder") ?? "").Trim();
+                if (clientMode != "have" && clientMode != "download") clientFolder = "";
+                bool coaCustom = inst.IsCoa && a.Bool("coaCustom");
+                var chosen = a.List("modules");
+                // CoA Custom's races need mod-custom-races (and mod-subclass for the Twins and the Two-Headed Ogre)
+                if (coaCustom) chosen.AddRange(ModuleCatalog.OwnModules().Where(m => m.Name == "mod-custom-races" || m.Name == "mod-subclass").Select(m => m.CloneUrl));
+                var urls = FirstModules(inst, chosen, a.Str("preset"));
+                string engineArgs = urls.Count > 0 ? "-AddModules " + MySql.Arg(string.Join(";", urls)) : null;
+                // Voices and the HD pack go into the game client after CoA Custom and the map data.
+                bool voices = inst.IsCoa && a.Bool("voices"), hd = inst.IsCoa && a.Bool("hd");
+                SaveFirstSteps(inst, clientFolder, installed ? null : a.Str("preset"), clientMode == "download", coaCustom, voices, hd);
+                LastArgs = engineArgs;
+                return Jobs.RunEngine(inst, mode, password, 3307, engineArgs, name, false, job =>
                 {
                     CopySelf(inst, shortcut);
                     Settings.LastInstall = inst.Root;
                     Settings.Remember(inst.Root, name);
+                    if (clientMode == "download" && clientFolder.Length > 0) DownloadClientFirst(job, inst, clientFolder);
+                    if (coaCustom) DownloadCoaCustomFirst(job);
                 }).Snapshot();
             });
 
@@ -82,8 +142,33 @@ namespace CoAInstaller.Web
             Post(app, "/api/setup/finished", a =>
             {
                 string root = a.Str("root");
-                if (!string.IsNullOrEmpty(root) && new Install(root).IsInstalled) Manager.Open(new Install(root));
-                return new { opened = Manager.Inst != null };
+                object next = null;
+                if (!string.IsNullOrEmpty(root) && new Install(root).IsInstalled)
+                {
+                    var inst = new Install(root);
+                    Manager.Open(inst);
+                    next = TakeFirstSteps(inst);
+                }
+                return new { opened = Manager.Inst != null, next };
+            });
+
+            // "Try again" after a failed first install goes through the wizard again: what it needs to fill it in.
+            Post(app, "/api/setup/recheck", a =>
+            {
+                var last = Jobs.Current;
+                if (last == null || string.IsNullOrEmpty(last.ServerRoot)) throw new UserError(L.T("There is nothing to try again."));
+                var inst = new Install(last.ServerRoot);
+                bool hasPassword = false;
+                try { hasPassword = !string.IsNullOrEmpty(DbLogin.FromConfig(inst).Password); } catch { }
+                var steps = ReadFirstSteps(inst);
+                string client, preset, coa, voices, hd;
+                steps.TryGetValue("client", out client); steps.TryGetValue("preset", out preset); steps.TryGetValue("coacustom", out coa);
+                steps.TryGetValue("voices", out voices); steps.TryGetValue("hd", out hd);
+                return new
+                {
+                    kind = inst.Kind, root = inst.Root, name = last.Runner != null ? last.Runner.RealmName : null, hasPassword,
+                    client = client ?? "", preset = preset ?? "", coaCustom = coa == "1", voices = voices == "1", hd = hd == "1"
+                };
             });
 
             // Trying a failed task again: the same mode for the same server, with the password of the first try or of its configuration.
@@ -95,12 +180,165 @@ namespace CoAInstaller.Web
                 string password = a.Str("password");
                 if (string.IsNullOrEmpty(password)) { try { password = DbLogin.FromConfig(inst).Password; } catch { } }
                 if (string.IsNullOrEmpty(password)) throw new UserError(L.T("Enter the database password of the first installation."));
+                var steps = last.Mode == "Install" ? ReadFirstSteps(inst) : new Dictionary<string, string>();
+                string dlFolder, dl;
+                steps.TryGetValue("client", out dlFolder); steps.TryGetValue("download", out dl);
                 return Jobs.RunEngine(inst, last.Mode, password, Manager.Ctl != null && Manager.Inst != null && Manager.Inst.Root == inst.Root ? Manager.Ctl.DbPort : 3307,
-                    a.Str("args") ?? LastArgs, last.Runner.RealmName, last.Mode != "Install" && last.Mode != "Backup").Snapshot();
+                    a.Str("args") ?? LastArgs, last.Runner.RealmName, last.Mode != "Install" && last.Mode != "Backup", job =>
+                    {
+                        // a client download asked for (again) comes first; only missing or changed files are fetched
+                        if (dl == "1" && !string.IsNullOrEmpty(dlFolder)) DownloadClientFirst(job, inst, dlFolder);
+                    }).Snapshot();
             });
         }
 
         static string LastArgs;
+
+        static string FirstStepsFile(Install inst) { return Path.Combine(inst.Root, "Dependencies", "afk-first-steps.txt"); }
+
+        /// <summary>What the opened server still has to do after its first install: map data from this client, this preset's settings.</summary>
+        static void SaveFirstSteps(Install inst, string client, string preset, bool download = false, bool? coaCustom = null, bool? voices = null, bool? hd = null)
+        {
+            try
+            {
+                var old = ReadFirstSteps(inst);
+                Func<bool?, string, string> keep = (v, key) => { string c; old.TryGetValue(key, out c); return (v ?? c == "1") ? "1" : ""; };
+                Directory.CreateDirectory(Path.GetDirectoryName(FirstStepsFile(inst)));
+                File.WriteAllLines(FirstStepsFile(inst), new[] { "client=" + (client ?? ""), "preset=" + (preset ?? ""), "download=" + (download ? "1" : ""),
+                    "coacustom=" + keep(coaCustom, "coacustom"), "voices=" + keep(voices, "voices"), "hd=" + keep(hd, "hd") });
+            }
+            catch { }
+        }
+
+        /// <summary>The CoA Custom package, downloaded before the build when it was chosen in the wizard; installed when the server opens.</summary>
+        static void DownloadCoaCustomFirst(Job job)
+        {
+            try
+            {
+                string target = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", "CoA-Custom");
+                string version = CoaCustom.DownloadAndExtract(target, (t, x, y) =>
+                {
+                    job.Action = L.T("Downloading CoA Custom ...") + " " + t;
+                    if (y > 0) job.Sub = (double)x / y;
+                    job.Changed(false);
+                });
+                Settings.CoaPackage = CoaCustom.PackageRoot(target) ?? target;
+                job.Log(L.F("CoA Custom {0} downloaded.", version));
+            }
+            catch (Exception ex)
+            {
+                job.Log(L.T("CoA Custom could not be downloaded; the server is built anyway. Install it later under Modules & races.") + " (" + ex.Message + ")");
+            }
+        }
+
+        static Dictionary<string, string> ReadFirstSteps(Install inst)
+        {
+            var values = new Dictionary<string, string>();
+            try
+            {
+                foreach (string line in File.ReadAllLines(FirstStepsFile(inst)))
+                {
+                    int eq = line.IndexOf('=');
+                    if (eq > 0) values[line.Substring(0, eq)] = line.Substring(eq + 1).Trim();
+                }
+            }
+            catch { }
+            return values;
+        }
+
+        /// <summary>The first steps left (once): the client folder for the map data when the server has none yet, and the preset.</summary>
+        static object TakeFirstSteps(Install inst)
+        {
+            string file = FirstStepsFile(inst);
+            if (!File.Exists(file)) return null;
+            var values = ReadFirstSteps(inst);
+            try { File.Delete(file); } catch { }
+            string client, preset, coa, voices, hd;
+            values.TryGetValue("client", out client);
+            values.TryGetValue("preset", out preset);
+            values.TryGetValue("coacustom", out coa);
+            values.TryGetValue("voices", out voices);
+            values.TryGetValue("hd", out hd);
+            string game = string.IsNullOrEmpty(client) ? null : ClientAddons.GameRoot(client);
+            string package = coa == "1" ? Settings.CoaPackage : null;
+            if (package != null && !Directory.Exists(package)) package = null;
+            if (game == null && string.IsNullOrEmpty(preset) && coa != "1" && voices != "1" && hd != "1") return null;
+            return new
+            {
+                mapFolder = game != null && !inst.HasMapData ? game : null,
+                preset = string.IsNullOrEmpty(preset) ? null : preset,
+                // CoA Custom goes into the server and the game client: it needs both
+                coaCustom = coa == "1", coaPackage = package, coaClient = game, server = inst.Root,
+                voices = voices == "1", hd = hd == "1"
+            };
+        }
+
+        /// <summary>The Git addresses for the first build: the chosen modules by AFK Realm, the preset's, and what they need.</summary>
+        static List<string> FirstModules(Install inst, List<string> chosen, string presetId)
+        {
+            var list = new List<string>();
+            if (!inst.IsCoa) return list;
+            var own = ModuleCatalog.OwnModules();
+            Action<string> add = url =>
+            {
+                if (string.IsNullOrEmpty(url) || list.Contains(url, StringComparer.OrdinalIgnoreCase)) return;
+                if (!own.Any(m => m.CloneUrl.Equals(url, StringComparison.OrdinalIgnoreCase))) return;
+                list.Add(url);
+            };
+            if (!string.IsNullOrEmpty(presetId))
+            {
+                try { foreach (var m in ServerPresets.Find(inst, presetId).Modules) add(m.CloneUrl); } catch { }
+            }
+            foreach (string url in chosen ?? new List<string>()) add(url);
+            // what the chosen ones need ("requires" in their afk-realm.json), e.g. mod-custom-races brings mod-classic-classes
+            for (int i = 0; i < list.Count; i++)
+            {
+                var entry = own.FirstOrDefault(m => m.CloneUrl.Equals(list[i], StringComparison.OrdinalIgnoreCase));
+                if (entry == null) continue;
+                try
+                {
+                    foreach (string need in ModuleCatalog.Analyze(entry).Requires)
+                    {
+                        var dep = own.FirstOrDefault(m => m.Name.Equals(need, StringComparison.OrdinalIgnoreCase) || ModuleCatalog.ShortName(m.FullName).Equals(need, StringComparison.OrdinalIgnoreCase));
+                        if (dep != null) add(dep.CloneUrl);
+                    }
+                }
+                catch { }
+            }
+            return list;
+        }
+
+        /// <summary>The CoA client download asked for in the wizard, before the build. A failed download does not stop the
+        /// install: the server is built anyway, and map data is made later from the client.</summary>
+        static void DownloadClientFirst(Job job, Install inst, string target)
+        {
+            try
+            {
+                job.Action = L.T("Reading the client list ..."); job.Changed();
+                var manifest = ClientDownload.FetchManifest();
+                Directory.CreateDirectory(target);
+                ClientDownload.Update(target, manifest, (p, done, total, current) =>
+                {
+                    if (total < 1) total = 1;
+                    job.Action = L.T("Downloading the game client") + ": " + ClientDownload.FormatBytes(Math.Max(0, done)) + " / " + ClientDownload.FormatBytes(total);
+                    job.Sub = Math.Max(0, Math.Min(1, (double)done / total));
+                    job.Changed(false);
+                }, () => job.Stop);
+                ClientAddons.ServerKind = inst.Kind;
+                ClientAddons.ClientFolder = target;
+                job.Log(L.F("The game client {0} is ready in {1}.", manifest.Version, target));
+                string preset;
+                ReadFirstSteps(inst).TryGetValue("preset", out preset);
+                SaveFirstSteps(inst, target, preset);
+            }
+            catch (Exception ex)
+            {
+                job.Log(L.T("The game client could not be downloaded; the server is built anyway. Download it later under Client build.") + " (" + ex.Message + ")");
+                string preset;
+                ReadFirstSteps(inst).TryGetValue("preset", out preset);
+                SaveFirstSteps(inst, "", preset);
+            }
+        }
 
         public static string CheckPassword(string a, string b)
         {

@@ -552,7 +552,7 @@ export async function runTaskWithLog(call, title) {
   clearInterval(timer);
   offs.forEach(f => f());
   closeIt && closeIt();
-  if (end && !end.ok) await alert(end.message);
+  if (end && !end.ok) { const { failed } = await import('./ui.js'); await failed(end.message); }
   return end;
 }
 

@@ -55,7 +55,7 @@ namespace CoAInstaller
         }
 
         /// <summary>Makes the ZIP (and the one with the dumps, when there are any). client: the game folder, or null.</summary>
-        public static Result Make(Install inst, string client, Action<string> progress)
+        public static Result Make(Install inst, string client, Action<string> progress, string report = null)
         {
             if (progress == null) progress = s => { };
             var result = new Result { Folder = Target(inst) };
@@ -110,7 +110,24 @@ namespace CoAInstaller
                     using (var w = new StreamWriter(e.Open(), new UTF8Encoding(false))) w.Write(content);
                 };
 
+                // What the user wrote comes first, so the reader sees the story before the logs.
+                if (!string.IsNullOrWhiteSpace(report))
+                {
+                    text("WHAT-HAPPENED.txt", report.Trim() + "\n");
+                    summary.AppendLine("WHAT HAPPENED (written by the user):");
+                    summary.AppendLine(report.Trim());
+                    summary.AppendLine();
+                }
                 summary.AppendLine(Product.Name + " " + Product.Version + " - " + L.T("help files") + " - " + DateTime.Now.ToString("yyyy-MM-dd HH:mm"));
+                if (inst != null)
+                {
+                    summary.AppendLine("Server kind: " + inst.Kind + ", built: " + (inst.IsInstalled ? "yes" : "no") + ", map data: " + (inst.HasMapData ? "yes" : "MISSING") + ", client tables: " + (inst.HasClientDbc ? "yes" : "MISSING"));
+                    if (!string.IsNullOrEmpty(client) && Directory.Exists(client))
+                    {
+                        string mismatch = ClientAddons.ClientMismatch(inst.Kind, client);
+                        summary.AppendLine("Game client check: " + (mismatch ?? "fits the server kind"));
+                    }
+                }
                 summary.AppendLine("System: " + Environment.OSVersion + (Environment.Is64BitOperatingSystem ? ", 64-bit" : ", 32-bit") + ", " + Environment.ProcessorCount + " cores");
                 summary.AppendLine("Server folder: " + (inst != null ? inst.Root : "(none yet)"));
                 summary.AppendLine("Game client: " + (string.IsNullOrEmpty(client) ? "(none chosen)" : client));

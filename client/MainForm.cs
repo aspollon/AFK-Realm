@@ -307,10 +307,10 @@ internal sealed class MainForm : Form
     /// <summary>The graphics effect: written to Visuals.txt; LuxVelum's files are fetched only while it is chosen.</summary>
     void ChooseVisuals(int choice)
     {
-        if (choice < Visuals.Stock || choice > Visuals.Forever) choice = Visuals.Lumenveil;
+        if (choice < Visuals.Stock || choice > Visuals.AzerothRemastered) choice = Visuals.Lumenveil;
         _state.LuxOn = choice == Visuals.LuxVelum;
         _state.Save();
-        string name = choice == Visuals.Stock ? "No graphics effect" : choice == Visuals.LuxVelum ? "LuxVelum" : choice == Visuals.Forever ? "Forever (Azeroth Remastered)" : "Lumenveil";
+        string name = choice == Visuals.Stock ? "No graphics effect" : choice == Visuals.LuxVelum ? "LuxVelum" : choice == Visuals.AzerothRemastered ? "Azeroth Remastered" : "Lumenveil";
         if (Game.IsClientFolder(_state.GameFolder))
         {
             try

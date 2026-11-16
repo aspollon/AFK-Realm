@@ -3421,6 +3421,11 @@ try {
         Enter-Phase 'source' 'Downloading the server source code'
         Save-HandChanges $git
         Sync-Sources $git
+        # Modules chosen in the wizard of a first installation are built in with it, instead of a second build later.
+        if ($moduleAdd.Count -gt 0 -and ($action -eq 'Install' -or $action -eq 'Resume')) {
+            Write-Log "Downloading the chosen modules: $($moduleAdd.Count)" Cyan
+            $moduleState = Edit-ModuleFolders $git $moduleAdd @()
+        }
         if (-not $NonInteractive -and $action -ne 'Update') {
             Write-Host ''
             Write-Host "Optional: put additional AzerothCore modules into $(Join-Path $Paths.Source 'modules') now (one folder each, e.g. with git clone)." -ForegroundColor Yellow
@@ -3468,7 +3473,7 @@ try {
     if (-not $password) { $password = Read-Password }
     Start-Database
     Initialize-Database $password
-    if ($moduleState) { Complete-ModuleChange $password $moduleState }
+    if ($moduleState -and $action -eq 'Modules') { Complete-ModuleChange $password $moduleState }
     if ($IsCoa) {
         Enter-Phase 'world' 'Importing the CoA world data'
         Import-WorldData $password
@@ -3476,6 +3481,8 @@ try {
         # A stock AzerothCore brings its world database as SQL; dbimport creates it in the next step.
         Enter-Phase 'world' 'World data check'
     }
+    # A first installation records its modules after the world data, which is only imported into an empty database.
+    if ($moduleState -and $action -ne 'Modules') { Complete-ModuleChange $password $moduleState }
     Enter-Phase 'finish' 'Configuration and final checks'
     Set-ServerConfig $password
     Set-ModuleSettings

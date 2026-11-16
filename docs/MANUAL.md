@@ -46,7 +46,9 @@ Everything AFK Realm installs goes into the one folder you choose. Nothing is in
 3. Pick a folder, for example `C:\CoA-Server`, on a local drive (120 characters at most). In a longer folder the build works through a short junction (`<drive>\afk\<8 characters>`) that leads to the server's `Dependencies` folder, because Boost's installer and the compiler fail on paths over 260 characters even when Windows' long paths are switched on.
 4. Give the server a **name**. It is what players see in the realm list when they log in; you can change it later (see [Server name](#server-name)).
 5. Set a **database password** (at least 10 characters). You do not need to type it again later, but keep it somewhere.
-6. Read the summary and click **Install**.
+6. **Your game client:** say whether the game client for this server is already on this PC. *Yes* → choose its folder; AFK Realm checks that it fits the server (a CoA server needs the CoA client, an AzerothCore server a normal 3.3.5a client). *No* → for CoA, AFK Realm can download the client into a folder you choose before it builds the server; there is also a link to the official source. *Later* → only the server is built.
+7. **Modules** (CoA): tick CoA Custom, the modules by AFK Realm you want, or the AFK Realm preset. They are built in with the server in one go; adding modules later means building again. CoA Custom is downloaded before the build and installed into the server and your game client afterwards. Under *For your game client* you can also tick the voices and the HD pack: both are installed into your game client after the map data. The HD pack is on Google Drive, so download its ZIP into your Downloads folder yourself (the wizard links to its page) while the server builds; AFK Realm unpacks and installs it.
+8. Read the summary and click **Install**.
 
 ![Name your server](screenshots/19-name-your-server.png)
 
@@ -54,7 +56,9 @@ The progress page shows each step. If Visual Studio is missing, its installer wi
 
 **If a step fails**, the reason is shown. *Try again* continues where it stopped; what is already downloaded or built is kept. If it fails again, send `logs\install.log` with your report.
 
-When the installation is finished, three things are left to do in the server management: create the map data, create an account, start the server.
+When the installation is finished, click *Go to server management*. AFK Realm then finishes the first steps: the preset's settings, CoA Custom, and the map data from your game client, if you chose them. Then create an account and start the server.
+
+If the installation fails, *Try again* goes through the questions (game client, modules) once more and continues where it stopped. If it still fails, click **Get help**: answer the three short questions, and send the ZIP it makes on Discord.
 
 ## 3. Starting and stopping the server
 

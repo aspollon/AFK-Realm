@@ -1,3 +1,14 @@
+# AFK Realm 1.3.64
+
+- **Easier first installation:** the wizard asks for your game client right away (or downloads the CoA client for you) and checks that it is the right one for the server. CoA Custom and the modules by AFK Realm (or the AFK Realm preset) can be chosen before installing and are built in with the server in one go. After the build, AFK Realm installs CoA Custom and creates the map data from your client by itself. If the installation fails, "Try again" goes through these questions once more.
+- **Voices and the HD pack can be chosen in the installation wizard too:** AFK Realm installs them into your game client after the build (for the HD pack, download its ZIP into Downloads while the server builds; the wizard links to it).
+- **A CoA server no longer accepts a wrong game client** for its map data.
+- **CoA Custom 2.0.1:** Fading Island's own map data now goes into the server too, so its NPCs and players stand on the ground. Install 2.0.1 under CoA Custom to get the Hardluck NPCs.
+- **HD pack:** just download it into your Downloads folder; AFK Realm finds the ZIP (also when Google Drive splits it into several parts) and unpacks it itself when you install.
+- **Graphics:** the HD choice is now called by its real name, Azeroth Remastered (it was "Forever").
+- **New game client (AFK64.exe):** Azeroth Remastered's water finally looks right (clear shores, depth, reflections), and its fog, shadows and ambient occlusion measure distances correctly. New: **Living Azeroth** – trees and bushes sway in the wind, wind per zone, denser grass, snow that lies on the ground; set it up under Video options > *Living Azeroth*. Lumenveil's fog and sky colours are fixed. AFK Realm installs the new exe and its data when you install or update the voices.
+- **Get help, improved:** a short form (what did you do, what went wrong) goes straight into the help ZIP, with an automatic check of the setup. Every error now points to it. Please send that ZIP on Discord instead of screenshots.
+
 # AFK Realm 1.3.63
 
 - **Fix:** installing CoA Custom stopped with "The CoA package file is incomplete after the copy" for a file in VulkanShaders. That came from 1.3.62 putting the new exe's own Vulkan shaders in place; the install goes through again.

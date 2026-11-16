@@ -1,7 +1,7 @@
 // A running engine task (installing, updating, a backup, modules) and its result.
 import { h, T, F, meta, post, get, replace, clear, lines, on, state, clock } from './core.js';
-import { primary, secondary, confirm, alert, prompt } from './ui.js';
-import { header } from './welcome.js';
+import { primary, secondary, confirm, alert, prompt, dialog } from './ui.js';
+import { header, restartWizard } from './welcome.js';
 import { show, route } from './app.js';
 
 const titles = {
@@ -75,14 +75,22 @@ export function progress() {
       notes(job, content);
       if (job.mode === 'Modules' && job.moduleInstalled) content.push(h('p', {}, T("Check each new module's README for anything you need to set up yourself, for example in the game.")));
       if (job.mode === 'Install' || job.mode === 'Update' || job.mode === 'Rebuild' || job.mode === 'Setup')
-        content.push(h('p', {}, T('You can now start the server in the server management.') + ' ' + T('If the map data is still missing, create it there first ("Create map data") - the worldserver needs it.')));
+        content.push(h('p', {}, job.mode === 'Install'
+          ? T('Next: AFK Realm opens the server management and finishes the first steps there (map data from your game client, if you chose one). Then you can start the server.')
+          : T('You can now start the server in the server management.') + ' ' + T('If the map data is still missing, create it there first ("Create map data") - the worldserver needs it.')));
     } else {
       content.push(h('h1', {}, T('Unfortunately, that did not work')),
         h('p.bad.pre', { style: { fontWeight: 700 } }, job.message || ''));
       notes(job, content);
-      content.push(h('p', {}, T('Completed steps are kept. Trying again continues where it got stuck. If the error persists, the log file helps narrow it down, for example when you share it with the community.')));
+      content.push(h('p', {}, job.mode === 'Install'
+        ? T('Completed steps are kept. "Try again" goes through the setup questions once more (game client, modules), so a wrong choice can be put right, and then continues where it got stuck.')
+        : T('Completed steps are kept. Trying again continues where it got stuck.')));
+      content.push(h('div', { style: { margin: '12px 0', padding: '12px 14px', borderRadius: '8px', background: 'var(--accent-soft)' } },
+        h('b', {}, T('It fails again?')), h('br'),
+        T('Do not post a screenshot. Click "Get help", answer the three short questions, and send the ZIP it makes on Discord - it holds the error, your description and all logs.'),
+        h('div', { style: { marginTop: '10px' } }, primary('🛟 ' + T('Get help'), () => import('./help.js').then(m => m.helpBundle(job.message || ''))))));
       content.push(h('div.row', {},
-        primary(T('Try again'), retry),
+        primary(T('Try again'), job.mode === 'Install' ? again : retry),
         secondary(T('Show the log'), async () => {
           logWrap = h('div.console.tall');
           const r = await get('/api/job/log');
@@ -93,12 +101,23 @@ export function progress() {
     }
     content.push(h('footer', {},
       primary(T('Go to server management'), async () => {
-        try { await post('/api/setup/finished', { root: job.serverRoot }); } catch { }
+        let next = null;
+        try { next = (await post('/api/setup/finished', { root: job.serverRoot })).next; } catch { }
         await post('/api/job/dismiss').catch(() => { });
         state.job = null;
         show(state.status && state.status.root ? 'manager' : 'welcome');
+        if (job.ok && next) firstSteps(next);
       })));
     replace(sheet, ...content);
+  }
+
+  // A failed first installation: the wizard once more (game client, modules, summary) for the same folder.
+  async function again() {
+    let info;
+    try { info = await post('/api/setup/recheck', {}); } catch (e) { return retry(); }
+    await post('/api/job/dismiss').catch(() => { });
+    state.job = null;
+    restartWizard(info);
   }
 
   async function retry() {
@@ -131,4 +150,31 @@ export function progress() {
   render(state.job);
   el.close = () => { offs.forEach(f => f()); if (timer) clearInterval(timer); };
   return el;
+}
+
+// After the first install: the preset's settings, CoA Custom, the map data, then the voices and the HD pack.
+async function firstSteps(next) {
+  try {
+    if (next.preset) { try { await post('/api/presets/apply-settings', { id: next.preset }); } catch { } }
+    if (next.coaCustom) {
+      const { runTaskWithLog } = await import('./manager.js');
+      if (!next.coaPackage) await alert(T('CoA Custom could not be downloaded during the installation. Install it under Modules & races.'));
+      else if (!next.coaClient) await alert(T('CoA Custom is downloaded. It also goes into your game client: install it under Modules & races once you have the client.'));
+      else await runTaskWithLog(() => post('/api/coa/install', { package: next.coaPackage, client: next.coaClient, server: next.server, force: true }), T('Install CoA Custom into the server and the game client'));
+    }
+    if (next.mapFolder) {
+      const { runTaskWithLog } = await import('./manager.js');
+      await runTaskWithLog(() => post('/api/mapdata', { folder: next.mapFolder, mmaps: true, dbcOnly: false }), T('Create the map data from the game client'));
+    }
+    if ((next.voices || next.hd) && !next.coaClient) await alert(T('The voices and the HD pack go into your game client: install them under Game client once you have it.'));
+    else {
+      const { runTaskWithLog } = await import('./manager.js');
+      if (next.voices) await runTaskWithLog(() => post('/api/voices/install', { folder: next.coaClient }), T('Install the voices into the game client'));
+      if (next.hd) {
+        const look = await post('/api/hd/look', { folder: next.coaClient }).catch(() => null);
+        if (look && look.packFound) await runTaskWithLog(() => post('/api/hd/install', { folder: next.coaClient }), T('Unpack and install the HD pack'));
+        else await alert(T('The HD pack is not in your Downloads folder yet. Download it from its page, then install it under Game client > HD pack.'));
+      }
+    }
+  } catch { }
 }

@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using Microsoft.AspNetCore.Builder;
 
 namespace CoAInstaller.Web
@@ -12,6 +13,7 @@ namespace CoAInstaller.Web
             var o = ClientHd.Load();
             if (pack != null) o.Pack = pack;
             string found = ClientHd.FindPack(o.Pack);
+            var zips = found == null ? ClientHd.FindPackZips(o.Pack) : null;
             var s = ClientHd.Look(client);
             string state;
             if (client == null) state = L.T("Choose your game folder in the game client window first.");
@@ -19,11 +21,12 @@ namespace CoAInstaller.Web
             else state = L.F("HD archives: {0} on, {1} off · graphics effect: {2} · LuxVelum: {3}", s.Active, s.Disabled, ClientVisuals.Name(ClientVisuals.Read(client)),
                 !s.LuxFiles ? L.T("not installed") : s.LuxHost ? L.T("ready") : L.T("your CoA64.exe cannot load it yet"));
             var warnings = new System.Collections.Generic.List<string>();
+            if (zips != null) warnings.Add(L.F("The HD pack is downloaded but not unpacked yet ({0}). \"Install / apply\" unpacks it first.", string.Join(", ", zips.Select(System.IO.Path.GetFileName))));
             if (client != null && !s.LuxHost) warnings.Add(L.T("Your CoA64.exe cannot host LuxVelum yet; \"Install / apply\" brings the newest one when it is released."));
             return new
             {
                 client, ready = client != null, state, warnings, page = ClientHd.PackPage,
-                pack = found ?? o.Pack ?? "", packFound = found != null, installed = s.Installed,
+                pack = found ?? (zips != null ? zips[0] : o.Pack ?? ""), packFound = found != null || zips != null, installed = s.Installed,
                 o.World, o.Orcs, o.Shaders, o.Cursor, o.Blood, o.Effects, o.Sounds, o.Lux, o.Addons,
                 visuals = client != null ? ClientVisuals.Read(client) : ClientVisuals.Lumenveil
             };
@@ -37,7 +40,7 @@ namespace CoAInstaller.Web
             o.Sounds = a.Bool("sounds", o.Sounds); o.Lux = a.Bool("lux", o.Lux); o.Addons = a.Bool("addons", o.Addons);
             o.Pack = (a.Str("pack") ?? o.Pack ?? "").Trim();
             o.Visuals = a.Int("visuals", -1);
-            if (o.Visuals >= ClientVisuals.Stock && o.Visuals <= ClientVisuals.Forever) o.Lux = o.Visuals == ClientVisuals.LuxVelum;
+            if (o.Visuals >= ClientVisuals.Stock && o.Visuals <= ClientVisuals.AzerothRemastered) o.Lux = o.Visuals == ClientVisuals.LuxVelum;
             else o.Visuals = -1;
             return o;
         }

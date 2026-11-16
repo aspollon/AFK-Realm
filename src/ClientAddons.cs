@@ -70,6 +70,19 @@ namespace CoAInstaller
             catch { return false; }
         }
 
+        /// <summary>Why a game folder does not fit a server of this kind, or null when it does. A plain 3.3.5a client under a
+        /// CoA server (or the other way round) builds map data and tables the worldserver cannot use.</summary>
+        public static string ClientMismatch(string kind, string dir)
+        {
+            bool esteria = IsEsteriaClient(dir), coa = !esteria && IsCoaClient(dir);
+            if (kind == global::CoAInstaller.Install.KindEsteria)
+                return esteria ? null : L.F("{0} is not the EsteriaWoW game client (it has no EsteriaWoW archives in Data). Choose the folder of the EsteriaWoW client.", dir);
+            if (esteria) return L.F("{0} is the EsteriaWoW game client. This server needs its own client.", dir);
+            if (kind == global::CoAInstaller.Install.KindAzerothCore)
+                return coa ? L.F("{0} is a Conquest of Azeroth game client. An AzerothCore server needs a normal 3.3.5a client.", dir) : null;
+            return coa ? null : L.F("{0} is not a Conquest of Azeroth game client (it has no CoA64.exe or Ascension.exe). A CoA server needs the CoA client; a normal 3.3.5a client does not work with it.", dir);
+        }
+
         /// <summary>The game client folder chosen last time, or null.</summary>
         public static string ClientFolder
         {

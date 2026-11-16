@@ -230,10 +230,12 @@ export function waitJob(job) {
  */
 /** A job that went wrong: its message, and the way to the help files right there. */
 export async function failed(message) {
-  const v = await dialog({ title: meta.product, icon: 'warn', body: h('div', {}, h('div.pre', {}, message),
-    h('p.small.muted', { style: { marginTop: '12px' } }, T('Stuck? "Get help" collects all logs and crash files into one ZIP you can send on Discord.'))),
-    buttons: [{ text: T('Get help …'), value: 'help' }, { text: T('OK'), kind: 'primary', value: true }] });
-  if (v === 'help') import('./help.js').then(m => m.helpBundle());
+  const v = await dialog({ title: meta.product, icon: 'warn', body: h('div', { style: { maxWidth: '620px' } }, h('div.pre', {}, message),
+    h('div', { style: { marginTop: '14px', padding: '10px 12px', borderRadius: '8px', background: 'var(--accent-soft)' } },
+      h('b', {}, T('Need help with this?')), h('br'),
+      T('Do not post a screenshot of this message. Click "Get help", answer the three short questions, and send the ZIP it makes on Discord - it holds this error, your description and all logs.'))),
+    buttons: [{ text: T('Close'), value: true }, { text: '🛟 ' + T('Get help'), kind: 'primary', value: 'help' }] });
+  if (v === 'help') import('./help.js').then(m => m.helpBundle(message));
 }
 
 export async function runTask(call, title) {

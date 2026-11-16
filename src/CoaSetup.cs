@@ -419,6 +419,16 @@ namespace CoAInstaller
                 catch (Exception ex) { Console.WriteLine(L.T("The package's world content could not be applied completely:") + " " + ex.Message); }
             }
 
+            // 2.0.1 carries the server map data of its own map 907 (Fading Island); kept aside as well, so a later
+            // "Create map data" cannot replace it with the extractor's version.
+            string serverData = Path.Combine(files, "server_data");
+            if (Directory.Exists(serverData))
+            {
+                Console.WriteLine(L.T("Copying the map data of the CoA Custom maps ..."));
+                CopyTree(serverData, inst.DataDir, o.NoBackup, ref copied, ref skipped);
+                CopyTree(serverData, ServerDataCopy(inst), true, ref copied, ref skipped);
+            }
+
             VerifyCopied(clientSource, Path.Combine(o.Client, "Data"), "*.MPQ");
             if (File.Exists(Path.Combine(clientSource, "dinput8.dll")))
                 VerifyFile(Path.Combine(clientSource, "dinput8.dll"), Path.Combine(o.Client, "dinput8.dll"));
@@ -1183,6 +1193,18 @@ namespace CoAInstaller
                 if (CopyFile(file, Path.Combine(target, Path.GetFileName(file)), noBackup)) copied++;
                 else skipped++;
             }
+        }
+
+        static string ServerDataCopy(Install inst) { return Path.Combine(inst.Root, "CoA-Custom", "server_data"); }
+
+        /// <summary>After "Create map data": the CoA Custom maps' own server data goes over the extractor's again.</summary>
+        public static int RestoreServerData(Install inst)
+        {
+            string source = ServerDataCopy(inst);
+            if (inst == null || !Directory.Exists(source)) return 0;
+            int copied = 0, skipped = 0;
+            CopyTree(source, inst.DataDir, true, ref copied, ref skipped);
+            return copied + skipped;
         }
 
         static void CopyTree(string source, string target, bool noBackup, ref int copied, ref int skipped, string skipFile = null)

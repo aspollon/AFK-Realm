@@ -12,10 +12,14 @@ namespace CoAInstaller.Web
             Post(app, "/api/support/bundle", a =>
             {
                 var inst = Inst;
+                // A first installation that failed has no server opened yet: its logs are in the folder it was for.
+                if (inst == null && Jobs.Current != null && !string.IsNullOrEmpty(Jobs.Current.ServerRoot)) inst = new Install(Jobs.Current.ServerRoot);
                 string client = ClientAddons.ClientFolder;
+                string report = a.Str("report");
+                if (report != null && report.Length > 20000) report = report.Substring(0, 20000);
                 return Jobs.Run(L.T("Collecting the files for help …"), (job, st) =>
                 {
-                    var r = SupportBundle.Make(inst, client != null && Directory.Exists(client) ? client : null, s => st(s));
+                    var r = SupportBundle.Make(inst, client != null && Directory.Exists(client) ? client : null, s => st(s), report);
                     job.Payload = new
                     {
                         zip = r.Zip, name = Path.GetFileName(r.Zip), download = Files.Offer(r.Zip, Path.GetFileName(r.Zip), false),

@@ -4,7 +4,25 @@ import { primary, secondary, ghost, input, password, check, field, choose, alert
 import { icon } from './icons.js';
 import { languageMenu, themeMenu, show } from './app.js';
 
-const wiz = { path: '', name: 'AzerothCore', password: '', password2: '', installed: false, shortcut: true, kind: 'coa' };
+const wiz = { path: '', name: 'AzerothCore', password: '', password2: '', installed: false, shortcut: true, kind: 'coa',
+  clientMode: '', clientFolder: '', modules: [], preset: '', coaCustom: false, voices: false, hd: false, resume: false };
+
+/** "Try again" after a failed first installation: the wizard once more, from the game client on, for the same folder. */
+export function restartWizard(info) {
+  Object.assign(wiz, { path: info.root, kind: info.kind, name: info.name || wiz.name, installed: false, resume: !!info.hasPassword });
+  if (info.client && !wiz.clientFolder) { wiz.clientMode = 'have'; wiz.clientFolder = info.client; }
+  if (info.preset) wiz.preset = info.preset;
+  if (info.coaCustom) wiz.coaCustom = true;
+  if (info.voices) wiz.voices = true;
+  if (info.hd) wiz.hd = true;
+  show('welcome', wiz.resume || wiz.password ? 'client' : 'password');
+}
+
+// Where the game clients come from when the user has none yet.
+const clientLinks = {
+  coa: { url: 'https://coa-development.org/download', name: 'CoA launcher' },
+  azerothcore: { url: 'https://www.chromiecraft.com/en/downloads/', name: 'ChromieCraft' },
+};
 
 // The kinds of server AFK Realm can build, by their official names.
 // group: 'standard' = the plain WotLK core, 'custom' = projects built on top of it (more follow there).
@@ -36,6 +54,8 @@ export function welcome(step) {
   if (step === 'kind') return kindPage();
   if (step === 'name') return namePage();
   if (step === 'password') return passwordPage();
+  if (step === 'client') return clientPage();
+  if (step === 'extras') return extrasPage();
   if (step === 'summary') return summaryPage();
   const tile = (title, text, ic, onclick) => h('button.tile', { type: 'button', onclick }, h('span.ic', {}, icon(ic)), h('span', {}, h('b', {}, title), h('span', {}, text)));
   return page(T('Welcome'),
@@ -156,32 +176,140 @@ function passwordPage() {
       if (a.length < 10) return alert(T('The password needs at least 10 characters.'));
       if (/[;"\\\r\n]/.test(a)) return alert(T('Please do not use a semicolon, quote or backslash.'));
       if (a !== b) return alert(T('The two passwords do not match.'));
-      show('welcome', 'summary');
+      show('welcome', wiz.installed ? 'summary' : 'client');
     })));
+}
+
+// The game client: there already (checked against the server kind), downloaded first by AFK Realm (CoA), or later.
+export function clientChooser(kind, initial, onChange) {
+  const st = Object.assign({ mode: '', folder: '' }, initial || {});
+  const box = h('div');
+  const line = h('div.hint.pre');
+  const tile = (mode, title, text, ic) => h('button.tile' + (st.mode === mode ? '.on' : ''), {
+    type: 'button', style: st.mode === mode ? { outline: '2px solid var(--accent)', outlineOffset: '-2px' } : {},
+    onclick: () => { st.mode = mode; line.textContent = ''; line.className = 'hint pre'; paint(); onChange(st); }
+  }, h('span.ic', {}, icon(st.mode === mode ? 'check' : ic)), h('span', {}, h('b', {}, title), h('span', {}, text)));
+  const check = async () => {
+    if (!st.folder) return false;
+    try {
+      const r = await post('/api/setup/client', { kind, mode: st.mode, folder: st.folder });
+      st.folder = r.folder; line.className = 'hint pre'; line.textContent = st.mode === 'download' ? F('The game client will be downloaded into {0} before the server is built (about 43 GB).', r.folder) : F('{0} fits this server.', r.folder);
+      onChange(st); return true;
+    } catch (e) { line.className = 'hint pre bad'; line.textContent = e.message; return false; }
+  };
+  const folderRow = (title) => {
+    const path = input(st.folder, { style: { width: '100%' }, spellcheck: false });
+    path.addEventListener('change', () => { st.folder = path.value.trim(); check(); });
+    const browse = secondary(T('Browse …'), async () => {
+      const p = await choose({ title, start: st.folder || undefined });
+      if (p) { path.value = st.folder = p; check(); }
+    }, 'folder');
+    return h('div', { style: { marginTop: '10px' } }, h('div.row.nowrap', {}, path, browse), line);
+  };
+  const link = clientLinks[kind];
+  const paint = () => replace(box,
+    tile('have', T('Yes, I have it'), T('Choose its folder. AFK Realm checks that it is the right client for this server.'), 'folder'),
+    st.mode === 'have' ? folderRow(T('Choose the folder of your game client (the one with the "Data" folder)')) : null,
+    tile('download', T('No, I still need it'), kind === 'coa'
+      ? T('AFK Realm can download the CoA client for you before it builds the server, or you get it from the official launcher.')
+      : T('Get it first; AFK Realm cannot download this client.'), 'download'),
+    st.mode === 'download' ? h('div', { style: { margin: '10px 0 0 4px' } },
+      kind === 'coa' ? h('p', {}, T('Download it with AFK Realm into this folder:')) : null,
+      kind === 'coa' ? folderRow(T('Choose a folder for the game client')) : null,
+      link ? h('p.hint', {}, F('Or get it from the official {0}:', link.name) + ' ', h('a', { href: link.url, target: '_blank', rel: 'noopener' }, link.url),
+        kind === 'coa' ? ' ' + T('(then choose "Yes, I have it" once it is installed)') : '')
+        : h('p.hint', {}, T('The EsteriaWoW client comes from the EsteriaWoW project (see its Discord). Install it, then choose "Yes, I have it".'))) : null,
+    tile('later', T('Later'), T('Only the server is built now. Create the map data from your client afterwards in the server management.'), 'info'));
+  paint();
+  return { el: box, check, state: st };
+}
+
+function clientPage() {
+  const chooser = clientChooser(wiz.kind, { mode: wiz.clientMode, folder: wiz.clientFolder }, st => { wiz.clientMode = st.mode; wiz.clientFolder = st.folder; });
+  return page(T('Your game client'),
+    h('p', {}, F('The server needs data from the game client ({0}): maps and data tables. Do you already have the client on this PC?', kindName(wiz.kind))),
+    h('p.hint', {}, T('With a client, AFK Realm creates the map data by itself right after the build - nothing left to do by hand.')),
+    chooser.el,
+    footer(secondary(T('Back'), () => show('welcome', wiz.resume ? 'folder' : 'password')), primary(T('Next'), async () => {
+      const st = chooser.state;
+      if (!st.mode) return alert(T('Please choose one of the three.'));
+      if (st.mode === 'download' && wiz.kind !== 'coa') { wiz.clientMode = 'later'; wiz.clientFolder = ''; }
+      else if (st.mode !== 'later') {
+        if (!st.folder) return alert(T('Please choose the folder.'));
+        if (!await chooser.check()) return;
+      }
+      show('welcome', wiz.kind === 'coa' ? 'extras' : 'summary');
+    })));
+}
+
+function extrasPage() {
+  const box = h('div', {}, h('p.hint', {}, T('Loading …')));
+  post('/api/setup/extras', { kind: wiz.kind }).then(r => {
+    const preset = r.presets[0];
+    const boxes = [];
+    const presetCheck = preset ? check(preset.name, wiz.preset === preset.id, v => {
+      wiz.preset = v ? preset.id : '';
+      if (v) for (const [url, c] of boxes) if (preset.urls.includes(url)) { c.querySelector('input').checked = true; if (!wiz.modules.includes(url)) wiz.modules.push(url); }
+    }) : null;
+    const list = r.modules.map(m => {
+      const c = check(m.name, wiz.modules.includes(m.url), v => { wiz.modules = v ? [...new Set([...wiz.modules, m.url])] : wiz.modules.filter(u => u !== m.url); });
+      boxes.push([m.url, c]);
+      return h('div', { style: { margin: '6px 0' } }, c, h('div.small.muted', { style: { marginLeft: '26px' } }, m.text));
+    });
+    const coa = check(T('CoA Custom (the custom races)'), wiz.coaCustom, v => { wiz.coaCustom = v; });
+    replace(box,
+      h('section', {}, h('h3', {}, T('CoA Custom')), coa,
+        h('div.small.muted', { style: { marginLeft: '26px' } }, T('Dracthyr, Worgen, Vulpera, Sethrak, High elves and many more races. AFK Realm downloads the package, builds the modules it needs in with the server and installs it into the server and your game client afterwards (that part needs a game client).'))),
+      h('section', { style: { marginTop: '18px' } }, h('h3', {}, T('For your game client')),
+        check(T('Voices (quests read aloud, bots speak in chat)'), wiz.voices, v => { wiz.voices = v; }),
+        h('div.small.muted', { style: { marginLeft: '26px' } }, T('AFK Realm downloads and installs them into your game client after the build. Needs a game client.')),
+        check(T('HD pack (fueryin\'s Ultra-HD graphics)'), wiz.hd, v => { wiz.hd = v; }),
+        h('div.small.muted', { style: { marginLeft: '26px' } }, T('Needs CoA Custom and a good graphics card. The pack is on Google Drive, so you download it yourself: open its page now and save the ZIP into your Downloads folder while the server builds. AFK Realm finds it, unpacks it and installs it afterwards.'), ' ',
+          h('a', { href: 'https://github.com/fueryin/Conquest-of-Azeroth-Ultra-HD-Graphics-Modpack/tree/CoA-HD-PATCH', target: '_blank', rel: 'noopener' }, T('Open the download page of the HD pack')))),
+      preset ? h('section', { style: { marginTop: '18px' } }, h('h3', {}, T('Preset')), presetCheck, h('div.small.muted', { style: { marginLeft: '26px' } }, preset.text)) : null,
+      h('h3', { style: { marginTop: '18px' } }, T('Modules by AFK Realm')), ...list,
+      h('p.hint', { style: { marginTop: '14px' } }, T('Modules from the AzerothCore catalog can be added later in the server management, and so can the voices and the HD pack.')));
+  }).catch(e => replace(box, h('p.bad', {}, e.message)));
+  return page(T('Modules'),
+    h('p', {}, T('Choose what is built in right away. Everything chosen here is compiled with the server in one go; adding modules later means building again.')),
+    box,
+    footer(secondary(T('Back'), () => show('welcome', 'client')), primary(T('Next'), () => show('welcome', 'summary'))));
 }
 
 const phaseTitles = () => {
   const world = wiz.kind === 'coa' || wiz.installed ? [T('Import the CoA world data')] : [];
+  const first = !wiz.installed && wiz.clientMode === 'download' ? [T('Download the game client')] : [];
+  const mods = !wiz.installed && wiz.modules.length ? [F('Download the chosen modules ({0})', wiz.modules.length)] : [];
+  const last = [...(!wiz.installed && wiz.coaCustom ? [T('Install CoA Custom into the server and the game client')] : []),
+    ...(!wiz.installed && wiz.clientMode && wiz.clientMode !== 'later' ? [T('Create the map data from the game client')] : []),
+    ...(!wiz.installed && wiz.voices ? [T('Install the voices into the game client')] : []),
+    ...(!wiz.installed && wiz.hd ? [T('Unpack and install the HD pack')] : [])];
+  if (!wiz.installed && wiz.coaCustom) first.push(T('Download CoA Custom'));
   return meta.windows
-    ? [T('Check tools (Git, CMake)'), T('Visual Studio C++ Build Tools'), T('Libraries (OpenSSL, Boost)'), T('Portable MySQL database'), T('Download the server source code'), T('Prepare the build (CMake)'), T('Compile the server'), T('Set up the database'), ...world, T('Configuration and final checks')]
-    : [T('Check tools (Git, CMake)'), T('Compiler and libraries'), T('Portable MySQL database'), T('Download the server source code'), T('Prepare the build (CMake)'), T('Compile the server'), T('Set up the database'), ...world, T('Configuration and final checks')];
+    ? [...first, T('Check tools (Git, CMake)'), T('Visual Studio C++ Build Tools'), T('Libraries (OpenSSL, Boost)'), T('Portable MySQL database'), T('Download the server source code'), ...mods, T('Prepare the build (CMake)'), T('Compile the server'), T('Set up the database'), ...world, T('Configuration and final checks'), ...last]
+    : [...first, T('Check tools (Git, CMake)'), T('Compiler and libraries'), T('Portable MySQL database'), T('Download the server source code'), ...mods, T('Prepare the build (CMake)'), T('Compile the server'), T('Set up the database'), ...world, T('Configuration and final checks'), ...last];
 };
 
 function summaryPage() {
   const shortcut = check(meta.windows ? F('Create a "{0}" shortcut on the desktop', 'AFK Realm') : F('Add "{0}" to the application menu', 'AFK Realm'), wiz.shortcut, v => wiz.shortcut = v);
   const understood = check(T('I understand the installation may take a long time, depending on my PC.'), false);
   return page(T('Ready to install'),
-    h('p', {}, T('Target:') + ' ', h('span.mono', {}, wiz.path), wiz.installed ? null : [h('br'), T('Server:') + ' ' + kindName(wiz.kind), h('br'), T('Server name:') + ' ' + wiz.name]),
+    h('p', {}, T('Target:') + ' ', h('span.mono', {}, wiz.path), wiz.installed ? null : [h('br'), T('Server:') + ' ' + kindName(wiz.kind), h('br'), T('Server name:') + ' ' + wiz.name,
+      h('br'), T('Game client:') + ' ' + (wiz.clientMode === 'have' ? wiz.clientFolder : wiz.clientMode === 'download' ? F('download into {0}', wiz.clientFolder) : T('later')),
+      wiz.modules.length ? [h('br'), T('Modules:') + ' ' + wiz.modules.map(u => u.replace(/^.*\/|\.git$/g, '')).join(', ')] : null,
+      wiz.coaCustom ? [h('br'), T('CoA Custom: yes')] : null,
+      wiz.voices || wiz.hd ? [h('br'), T('For the game client:') + ' ' + [wiz.voices ? T('voices') : '', wiz.hd ? T('HD pack') : ''].filter(Boolean).join(', ')] : null]),
     h('h3', {}, T('What happens now')),
     h('ul', {}, phaseTitles().map(t => h('li', {}, t))),
     h('p.hint', {}, meta.windows
       ? T('If Visual Studio is missing, its installer window opens along the way. That is normal; please do not close it. Compiling puts a heavy load on your PC. Close games and other large programs if you can.')
       : T('If build tools of your distribution are missing, AFK Realm stops and shows the one command that installs them (it needs sudo once). Compiling puts a heavy load on your PC.')),
     shortcut, understood,
-    footer(secondary(T('Back'), () => show('welcome', 'password')), primary(T('Install'), async () => {
+    footer(secondary(T('Back'), () => show('welcome', wiz.installed ? 'password' : wiz.kind === 'coa' ? 'extras' : 'client')), primary(T('Install'), async () => {
       if (!understood.checked) return alert(T('Please confirm that you have the time.'));
       try {
-        const job = await post('/api/setup/install', { path: wiz.path, name: wiz.name, password: wiz.password, password2: wiz.password2, shortcut: wiz.shortcut, kind: wiz.kind });
+        const job = await post('/api/setup/install', { path: wiz.path, name: wiz.name, password: wiz.password, password2: wiz.password2, shortcut: wiz.shortcut, kind: wiz.kind,
+          clientMode: wiz.clientMode, clientFolder: wiz.clientFolder, modules: wiz.modules, preset: wiz.preset, coaCustom: wiz.coaCustom, voices: wiz.voices, hd: wiz.hd });
         state.job = job;
         show('progress');
       } catch (e) { alert(e.message); }

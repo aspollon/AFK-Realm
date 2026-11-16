@@ -19,7 +19,7 @@ export async function hdDialog(folder) {
     [0, T('No graphics effect (best for weak computers)')],
     [1, T('Lumenveil (standard)')],
     [2, T('LuxVelum: fog, light and water (Ctrl+F7 in game for its settings)')],
-    [3, T('Forever (Azeroth Remastered): the full HD look on Vulkan, needs a strong graphics card')]
+    [3, T('Azeroth Remastered: the full HD look on Vulkan, needs a strong graphics card')]
   ], v.visuals ?? 1);
   const visualsRow = h('div', { style: { display: 'flex', gap: '6px', alignItems: 'center', margin: '6px 0' } },
     h('span.small', {}, T('Graphics effect')), visuals);
@@ -61,7 +61,7 @@ export async function hdDialog(folder) {
   }
 
   const body = h('div', {},
-    h('p.muted', {}, T('fueryin\'s Ultra-HD pack for Conquest of Azeroth. Download it from its page (Google Drive), unpack it, then choose its folder here. Its archives get names that do not clash with CoA Custom; its own CoA64.exe, d3d9.dll and Config.wtf are left out. Every part can be switched off again, for example on a weak laptop.')),
+    h('p.muted', {}, T('fueryin\'s Ultra-HD pack for Conquest of Azeroth. Download it from its page (Google Drive) into your Downloads folder; AFK Realm finds the ZIP (also several parts) and unpacks it itself. An unpacked folder can be chosen here too. Its archives get names that do not clash with CoA Custom; its own CoA64.exe, d3d9.dll and Config.wtf are left out. Every part can be switched off again, for example on a weak laptop.')),
     h('p', {}, h('a', { href: v.page, target: '_blank', rel: 'noopener' }, T('Open the download page of the HD pack'))),
     h('div', { style: { display: 'flex', gap: '6px', alignItems: 'center', margin: '6px 0' } },
       h('span.small', {}, T('Pack folder')), pack, meta.remote ? null : secondary(T('Browse …'), browse)),

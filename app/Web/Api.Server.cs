@@ -247,12 +247,8 @@ namespace CoAInstaller.Web
             if (Manager.Ctl != null && Manager.Ctl.World != null) throw new UserError(L.T("Stop the server first."));
             string clientData = Path.Combine(dir, "Data");
             // The tables of the wrong client break the worldserver (CoA's Spell.dbc in an EsteriaWoW server stops it on load).
-            if (inst.IsEsteria && !ClientAddons.IsEsteriaClient(dir))
-                throw new UserError(L.F("{0} is not the EsteriaWoW game client (it has no EsteriaWoW archives in Data). Choose the folder of the EsteriaWoW client.", dir));
-            if (!inst.IsEsteria && ClientAddons.IsEsteriaClient(dir))
-                throw new UserError(L.F("{0} is the EsteriaWoW game client. This server needs its own client.", dir));
-            if (inst.Kind == Install.KindAzerothCore && ClientAddons.IsCoaClient(dir))
-                throw new UserError(L.F("{0} is a Conquest of Azeroth game client. An AzerothCore server needs a normal 3.3.5a client.", dir));
+            string mismatch = ClientAddons.ClientMismatch(inst.Kind, dir);
+            if (mismatch != null) throw new UserError(mismatch);
             // EsteriaWoW takes its tables from the client archives itself (EsteriaServer); CoA uses the fork's tool.
             bool esteria = inst.IsEsteria;
             bool coaDbc = !esteria && File.Exists(inst.DbcScript);
@@ -394,6 +390,7 @@ namespace CoAInstaller.Web
                         if (Directory.Exists(src)) MoveMerge(src, Path.Combine(inst.DataDir, f));
                     }
                     EsteriaServer.ApplyServerFiles(inst, note);
+                    if (CoaSetup.RestoreServerData(inst) > 0) note(L.T("The map data of the CoA Custom maps (Fading Island) is kept."));
                     job.Message = L.T("DONE. The data is now in the server.");
                     // the next time (and the Game client window) offers this server's client
                     ClientAddons.ClientFolder = dir;

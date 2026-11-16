@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -100,7 +101,7 @@ namespace CoAInstaller
             if (!string.IsNullOrWhiteSpace(saved) && IsPack(saved.Trim())) return saved.Trim();
             try
             {
-                string downloads = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
+                string downloads = DownloadsDir();
                 if (!Directory.Exists(downloads)) return null;
                 foreach (string d in Directory.GetDirectories(downloads))
                 {
@@ -110,6 +111,100 @@ namespace CoAInstaller
             }
             catch { }
             return null;
+        }
+
+        static string DownloadsDir() { return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads"); }
+
+        // Google Drive splits big folder downloads into name-001.zip, name-002.zip, ...; all parts belong together.
+        static readonly Regex DrivePart = new Regex(@"-\d{3}\.zip$", RegexOptions.IgnoreCase);
+
+        static bool ZipHasPack(string zip)
+        {
+            try
+            {
+                using (var z = ZipFile.OpenRead(zip))
+                    return z.Entries.Any(e => e.FullName.Replace('\\', '/').EndsWith("Data/patch-ZZD.mpq", StringComparison.OrdinalIgnoreCase));
+            }
+            catch { return false; }
+        }
+
+        /// <summary>The ZIP files of a downloaded but not yet unpacked pack (all Drive parts), or null.</summary>
+        public static List<string> FindPackZips(string saved)
+        {
+            string hit = null;
+            saved = (saved ?? "").Trim();
+            if (saved.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) && File.Exists(saved)) hit = saved;
+            else
+            {
+                try
+                {
+                    string downloads = DownloadsDir();
+                    if (Directory.Exists(downloads))
+                        hit = Directory.GetFiles(downloads, "*.zip").OrderByDescending(File.GetLastWriteTimeUtc).FirstOrDefault(ZipHasPack);
+                }
+                catch { }
+            }
+            if (hit == null) return null;
+            var parts = new List<string> { hit };
+            if (DrivePart.IsMatch(hit))
+            {
+                string stem = DrivePart.Replace(Path.GetFileName(hit), "");
+                parts = Directory.GetFiles(Path.GetDirectoryName(hit), "*.zip")
+                    .Where(f => DrivePart.IsMatch(f) && string.Equals(DrivePart.Replace(Path.GetFileName(f), ""), stem, StringComparison.OrdinalIgnoreCase))
+                    .OrderBy(f => f, StringComparer.OrdinalIgnoreCase).ToList();
+            }
+            return parts;
+        }
+
+        static string PackBelow(string dir, int depth)
+        {
+            if (IsPack(dir)) return dir;
+            if (depth == 0) return null;
+            foreach (string d in Directory.GetDirectories(dir)) { string f = PackBelow(d, depth - 1); if (f != null) return f; }
+            return null;
+        }
+
+        /// <summary>Unpacks the downloaded pack next to its ZIP files and returns the pack folder.</summary>
+        public static string UnpackPack(List<string> zips, Action<string, long, long> report)
+        {
+            string first = zips[0];
+            string name = DrivePart.IsMatch(first) ? DrivePart.Replace(Path.GetFileName(first), "") : Path.GetFileNameWithoutExtension(first);
+            string target = Path.Combine(Path.GetDirectoryName(first), name);
+            string full = Path.GetFullPath(target).TrimEnd('\\', '/') + Path.DirectorySeparatorChar;
+            long total = 0, done = 0;
+            foreach (string zip in zips) using (var z = ZipFile.OpenRead(zip)) total += z.Entries.Sum(e => e.Length);
+            try
+            {
+                var drive = new DriveInfo(Path.GetPathRoot(full));
+                if (drive.AvailableFreeSpace < total + 512L * 1024 * 1024)
+                    throw new InvalidOperationException(L.F("Not enough free disk space to unpack the HD pack: it needs {0}.", ClientDownload.FormatBytes(total)));
+            }
+            catch (ArgumentException) { }
+            var buffer = new byte[4 * 1024 * 1024];
+            foreach (string zip in zips)
+                using (var z = ZipFile.OpenRead(zip))
+                    foreach (var e in z.Entries)
+                    {
+                        string dest = Path.GetFullPath(Path.Combine(target, e.FullName));
+                        if (!dest.StartsWith(full, StringComparison.OrdinalIgnoreCase)) continue;
+                        if (e.FullName.EndsWith("/") || e.FullName.EndsWith("\\")) { Directory.CreateDirectory(dest); continue; }
+                        Directory.CreateDirectory(Path.GetDirectoryName(dest));
+                        // a second run after an abort skips what is already there
+                        if (File.Exists(dest) && new FileInfo(dest).Length == e.Length) { done += e.Length; continue; }
+                        string title = L.F("Unpacking the HD pack: {0} ...", e.Name);
+                        string tmp = dest + ".part";
+                        using (var from = e.Open())
+                        using (var to = new FileStream(tmp, FileMode.Create, FileAccess.Write, FileShare.None))
+                        {
+                            int n;
+                            while ((n = from.Read(buffer, 0, buffer.Length)) > 0) { to.Write(buffer, 0, n); done += n; report(title, done, total); }
+                        }
+                        if (File.Exists(dest)) File.Delete(dest);
+                        File.Move(tmp, dest);
+                    }
+            string pack = PackBelow(target, 3);
+            if (pack == null) throw new InvalidOperationException(L.F("The unpacked files in {0} have no Data\\patch-ZZD.mpq. Is the download complete (all parts)?", target));
+            return pack;
         }
 
         static string Data(string client) { return Path.Combine(client, "Data"); }
@@ -166,6 +261,20 @@ namespace CoAInstaller
         {
             var done = new List<string>();
             string pack = FindPack(o.Pack);
+            if (pack == null)
+            {
+                string saved = (o.Pack ?? "").Trim();
+                if (Regex.IsMatch(saved, @"\.(7z|rar)$", RegexOptions.IgnoreCase))
+                    throw new InvalidOperationException(L.F("{0} is a 7z/RAR archive. Unpack it with 7-Zip (right-click, Extract here), then choose the unpacked folder.", saved));
+                var zips = FindPackZips(saved);
+                if (zips != null)
+                {
+                    pack = UnpackPack(zips, report);
+                    done.Add(L.F("HD pack unpacked to {0}", pack));
+                    o.Pack = pack;
+                    Save(o);
+                }
+            }
             string packData = pack == null ? null : Find(pack, "Data", true);
 
             foreach (var a in Archives)
@@ -178,7 +287,7 @@ namespace CoAInstaller
                     if (have != null) continue;
                     if (parked != null) { File.Move(parked, active); done.Add(L.F("{0} switched on", a[1])); continue; }
                     string source = Find(packData, a[0]);
-                    if (source == null) throw new InvalidOperationException(L.F("{0} is not in the HD pack folder. Download and unpack the pack first, then choose its folder.", a[0]));
+                    if (source == null) throw new InvalidOperationException(L.F("{0} is not in the HD pack folder. Download the pack into your Downloads folder first (AFK Realm unpacks the ZIP itself), or choose its folder.", a[0]));
                     Copy(source, active, report);
                     done.Add(L.F("{0} installed (from {1})", a[1], a[0]));
                 }
@@ -215,7 +324,7 @@ namespace CoAInstaller
                     string target = Path.Combine(client, name);
                     if (File.Exists(target)) continue;
                     string source = Find(pack, name);
-                    if (source == null) throw new InvalidOperationException(L.F("{0} is not in the HD pack folder. Download and unpack the pack first, then choose its folder.", name));
+                    if (source == null) throw new InvalidOperationException(L.F("{0} is not in the HD pack folder. Download the pack into your Downloads folder first (AFK Realm unpacks the ZIP itself), or choose its folder.", name));
                     Copy(source, target, report);
                     done.Add(L.F("{0} installed", name));
                 }

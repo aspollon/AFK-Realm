@@ -23,9 +23,11 @@ namespace CoAInstaller
         public const string QuestRepo = "Crono141/LivingVoices";
         const string Marker = ".afk-voices-version";
         const string LumenveilDll = "Lumenveil64.dll";
-        // Forever's Vulkan shaders, translated from the CoA Custom client the exe was built for. They replace the
+        // Azeroth Remastered's Vulkan shaders, translated from the CoA Custom client the exe was built for. They replace the
         // package's VulkanShaders, which come from another client and break models on AFK64.exe.
         const string ShaderFolder = "VulkanShaders";
+        // Azeroth Remastered's light, fog and water tables, and Living Azeroth's wind, grass and snow tables (Esteria's).
+        static readonly string[] DataFolders = { "forever_data", "DBFilesClient" };
         const string VisualsFile = ClientVisuals.File;
         const string VisualsDefault = ClientVisuals.Default;
 
@@ -229,6 +231,7 @@ namespace CoAInstaller
                     var exe = zip.Entries.FirstOrDefault(e => e.FullName.Replace('\\', '/').Equals("CoA64/CoA64.exe", StringComparison.OrdinalIgnoreCase));
                     if (exe == null) return true;
                     if (!SameShaders(client, zip)) return false;
+                    if (!SameGraphicsData(client, zip)) return false;
                     if (exe.Length != new FileInfo(game).Length) return false;
                     using (var a = exe.Open())
                     using (var b = File.OpenRead(game))
@@ -291,6 +294,49 @@ namespace CoAInstaller
                 manifest.ExtractToFile(Path.Combine(root, "manifest.txt"), true);
             }
             return entries.Count;
+        }
+
+        static IEnumerable<KeyValuePair<ZipArchiveEntry, string>> GraphicsDataEntries(ZipArchive zip)
+        {
+            foreach (var e in zip.Entries)
+            {
+                string name = e.FullName.Replace('\\', '/');
+                if (e.Length == 0 || !name.StartsWith("CoA64/", StringComparison.OrdinalIgnoreCase)) continue;
+                string rel = name.Substring(6);
+                if (DataFolders.Any(f => rel.StartsWith(f + "/", StringComparison.OrdinalIgnoreCase)))
+                    yield return new KeyValuePair<ZipArchiveEntry, string>(e, rel);
+            }
+        }
+
+        /// <summary>Every graphics data file of the release is in the game folder at its size.</summary>
+        static bool SameGraphicsData(string client, ZipArchive zip)
+        {
+            foreach (var kv in GraphicsDataEntries(zip))
+            {
+                string local = Path.Combine(client, kv.Value.Replace('/', Path.DirectorySeparatorChar));
+                if (!File.Exists(local) || new FileInfo(local).Length != kv.Key.Length) return false;
+            }
+            return true;
+        }
+
+        /// <summary>Puts the release's forever_data\ and DBFilesClient\*.cdbc in the game folder.</summary>
+        static int InstallGraphicsData(string client, ZipArchive zip)
+        {
+            string root = Path.GetFullPath(client);
+            int n = 0;
+            foreach (var kv in GraphicsDataEntries(zip))
+            {
+                string target = Path.GetFullPath(Path.Combine(root, kv.Value.Replace('/', Path.DirectorySeparatorChar)));
+                if (!target.StartsWith(root.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)) continue;
+                Directory.CreateDirectory(Path.GetDirectoryName(target));
+                try { CoaUninstall.Capture(target); } catch { }
+                string tmp = target + ".new";
+                kv.Key.ExtractToFile(tmp, true);
+                if (File.Exists(target)) File.Delete(target);
+                File.Move(tmp, target);
+                n++;
+            }
+            return n;
         }
 
         static int ReadFull(Stream s, byte[] buffer)
@@ -370,6 +416,7 @@ namespace CoAInstaller
                 string visuals = Path.Combine(client, VisualsFile);
                 if (!File.Exists(visuals)) File.WriteAllText(visuals, VisualsDefault);
                 InstallShaders(client, zip);
+                InstallGraphicsData(client, zip);
                 // The CoA Custom package's CoAVolFog.ini has Overlay=0; keep Ctrl+F7 and the other keys working.
                 if (ClientVisuals.Read(client) == ClientVisuals.Lumenveil) ClientVisuals.EnableOverlay(client);
                 string line = L.F("{0} that loads plugins (yours is kept as {0}.afk-backup)", targetName);
@@ -440,7 +487,7 @@ namespace CoAInstaller
         // ------------------------------------------------------------------------------------ for the players
 
         /// <summary>The files players get from the owner's game: AFK64.exe (or the plugin-capable exe when it is not
-        /// installed yet), Lumenveil64.dll, Visuals.txt, the voice plugin and both voice add-ons as installed (with the
+        /// installed yet), Lumenveil64.dll, Visuals.txt, forever_data and the *.cdbc tables, the voice plugin and both voice add-ons as installed (with the
         /// owner's AFKDefaults.lua). Paths relative to the game folder.</summary>
         public static List<KeyValuePair<string, string>> PlayerFiles(string client)
         {
@@ -455,7 +502,7 @@ namespace CoAInstaller
                 string file = Path.Combine(client, extra);
                 if (File.Exists(file)) list.Add(new KeyValuePair<string, string>(extra, file));
             }
-            // AFK64.exe's own VulkanShaders (Forever) go before the CoA Custom package's, so the players get ours.
+            // AFK64.exe's own VulkanShaders (Azeroth Remastered) go before the CoA Custom package's, so the players get ours.
             string shaders = Path.Combine(client, ShaderFolder);
             if (host == afk && File.Exists(Path.Combine(shaders, "manifest.txt")))
             {
@@ -466,6 +513,18 @@ namespace CoAInstaller
                     if (rel.StartsWith("hd-pending/", StringComparison.OrdinalIgnoreCase)) continue;
                     list.Add(new KeyValuePair<string, string>(ShaderFolder + "/" + rel, f));
                 }
+            }
+            // Azeroth Remastered's forever_data and Living Azeroth's tables travel with AFK64.exe.
+            if (host == afk)
+            {
+                string fd = Path.Combine(client, "forever_data");
+                if (Directory.Exists(fd))
+                    foreach (string f in Directory.GetFiles(fd, "*", SearchOption.AllDirectories))
+                        list.Add(new KeyValuePair<string, string>("forever_data/" + Path.GetFullPath(f).Substring(Path.GetFullPath(fd).TrimEnd('\\', '/').Length + 1).Replace('\\', '/'), f));
+                string dbc = Path.Combine(client, "DBFilesClient");
+                if (Directory.Exists(dbc))
+                    foreach (string f in Directory.GetFiles(dbc, "*.cdbc"))
+                        list.Add(new KeyValuePair<string, string>("DBFilesClient/" + Path.GetFileName(f), f));
             }
             string plugin = PluginFile(client);
             if (File.Exists(plugin)) list.Add(new KeyValuePair<string, string>("Plugins/LivingVoices64.dll", plugin));
