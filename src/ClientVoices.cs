@@ -22,6 +22,8 @@ namespace CoAInstaller
         public const string CompanionRepo = "Crono141/CompanionVoice";
         public const string QuestRepo = "Crono141/LivingVoices";
         const string Marker = ".afk-voices-version";
+        // The voices release whose AFK64.exe is in the game folder (the update notice compares it with the newest).
+        const string ExeMarker = ".afk-exe-version";
         const string LumenveilDll = "Lumenveil64.dll";
         // Azeroth Remastered's Vulkan shaders, translated from the CoA Custom client the exe was built for. They replace the
         // package's VulkanShaders, which come from another client and break models on AFK64.exe.
@@ -154,6 +156,7 @@ namespace CoAInstaller
                 // the launcher starts AFK64.exe whenever it is there. A player's Visuals.txt choice is kept.
                 string host = PluginHost(client);
                 if (host == null || !SameExe(client, pluginZip, CoaClientExe.Afk)) done.Add(InstallExe(client, pluginZip, CoaClientExe.Afk));
+                WriteExeMarker(client, plugin.Tag);
 
                 if (o.Companion)
                 {
@@ -356,7 +359,12 @@ namespace CoAInstaller
             {
                 var plugin = LatestRelease(PluginRepo, n => n.StartsWith("CoA64-Voices-", StringComparison.OrdinalIgnoreCase) && n.EndsWith(".zip", StringComparison.OrdinalIgnoreCase));
                 string pluginZip = Fetch(plugin, plugin.Assets[0], downloads, report);
-                try { return SameExe(client, pluginZip, targetName) ? null : InstallExe(client, pluginZip, targetName); }
+                try
+                {
+                    string done = SameExe(client, pluginZip, targetName) ? null : InstallExe(client, pluginZip, targetName);
+                    if (targetName == CoaClientExe.Afk) WriteExeMarker(client, plugin.Tag);
+                    return done;
+                }
                 finally { TryDelete(pluginZip); }
             }
             finally
@@ -483,6 +491,22 @@ namespace CoAInstaller
         }
 
         static void TryDelete(string f) { try { File.Delete(f); } catch { } }
+
+        static void WriteExeMarker(string client, string tag)
+        {
+            try { File.WriteAllText(Path.Combine(client, ExeMarker), tag ?? ""); } catch { }
+        }
+
+        /// <summary>The newest voices release tag when the game folder's AFK64.exe comes from an older one (or one
+        /// AFK Realm did not record), else null. Asks GitHub once; null without internet or without AFK64.exe.</summary>
+        public static string NewerExe(string client)
+        {
+            if (string.IsNullOrEmpty(client) || !File.Exists(Path.Combine(client, CoaClientExe.Afk))) return null;
+            var plugin = LatestRelease(PluginRepo, n => n.StartsWith("CoA64-Voices-", StringComparison.OrdinalIgnoreCase) && n.EndsWith(".zip", StringComparison.OrdinalIgnoreCase));
+            string have = null;
+            try { string f = Path.Combine(client, ExeMarker); if (File.Exists(f)) have = File.ReadAllText(f).Trim(); } catch { }
+            return string.Equals(have, plugin.Tag, StringComparison.OrdinalIgnoreCase) ? null : plugin.Tag;
+        }
 
         // ------------------------------------------------------------------------------------ for the players
 

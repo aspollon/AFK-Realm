@@ -50,6 +50,26 @@ namespace CoAInstaller.Web
                 return new { ok = true, written };
             });
 
+            // The banner "New game client program": the newest AFK64.exe with its shaders and data, nothing else.
+            Post(app, "/api/client/exe", a =>
+            {
+                string client = ClientAddons.GameRoot((ClientAddons.ClientFolder ?? "").Trim());
+                if (client == null) throw new UserError(L.T("Choose your game folder in the game client window first."));
+                if (ClientAddons.ClientRunning(client))
+                    throw new UserError(L.T("The game or its launcher is running from this folder. Please close it first."));
+                return Jobs.Run(L.T("Installing the new AFK64.exe …"), (job, st) =>
+                {
+                    string result = ClientVoices.EnsureNewestExe(client, (t, x, y) =>
+                    {
+                        job.Status = t; job.Sub = y > 0 ? (double)x / y : -1;
+                        if (y > 0) job.Action = ClientDownload.FormatBytes(x) + " / " + ClientDownload.FormatBytes(y);
+                        job.Changed(false);
+                    }, CoaClientExe.Afk);
+                    Manager.ExeNews = null;
+                    job.Message = L.T("Done:") + "\n\n" + (result ?? L.T("Everything was already up to date."));
+                }).Snapshot();
+            });
+
             Post(app, "/api/voices/install", a =>
             {
                 string client = ClientAddons.GameRoot((a.Str("folder") ?? ClientAddons.ClientFolder ?? "").Trim());

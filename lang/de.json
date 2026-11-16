@@ -2970,6 +2970,10 @@
     "The HD pack is not in your Downloads folder yet. Download it from its page, then install it under Game client > HD pack.": "Das HD-Paket liegt noch nicht in deinem Downloads-Ordner. Lade es von seiner Seite herunter und installiere es dann unter Spielclient > HD-Paket.",
     "Copying the map data of the CoA Custom maps ...": "Kopiere die Kartendaten der CoA-Custom-Karten ...",
     "The map data of the CoA Custom maps (Fading Island) is kept.": "Die Kartendaten der CoA-Custom-Karten (Fading Island) bleiben erhalten.",
-    "Azeroth Remastered: the full HD look on Vulkan, needs a strong graphics card": "Azeroth Remastered: der volle HD-Look auf Vulkan, braucht eine starke Grafikkarte"
+    "Azeroth Remastered: the full HD look on Vulkan, needs a strong graphics card": "Azeroth Remastered: der volle HD-Look auf Vulkan, braucht eine starke Grafikkarte",
+    "New game client program (AFK64.exe, {0}) with graphics fixes  –  click to install": "Neues Spielprogramm (AFK64.exe, {0}) mit Grafik-Fixes  –  klicken zum Installieren",
+    "Installing the new AFK64.exe …": "Die neue AFK64.exe wird installiert …",
+    "Install the newest AFK64.exe into your game folder now? Close the game first. Your graphics choice (Visuals.txt) is kept.": "Die neueste AFK64.exe jetzt in deinen Spielordner installieren? Schließe vorher das Spiel. Deine Grafikwahl (Visuals.txt) bleibt erhalten.",
+    "Game client program": "Spielprogramm"
   }
 }

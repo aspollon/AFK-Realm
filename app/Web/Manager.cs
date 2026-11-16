@@ -30,6 +30,7 @@ namespace CoAInstaller.Web
 
         // what is new
         public static UpdateCheck.Result Updates;
+        public static string ExeNews;
         public static string ClientNews, CoaNews, ClientVersion, CoaVersion, InstalledClient, InstalledCoa;
         /// <summary>Modules that are needed and missing: a module's "requires", or mod-custom-races for CoA Custom.</summary>
         public static string ModuleNews;
@@ -71,7 +72,7 @@ namespace CoAInstaller.Web
                 AutoUpdate.Load(inst);
                 restartAt = null; restartTold.Clear(); restartSnooze = DateTime.MinValue; memoryOver = 0; lastAutoRestart = "";
                 tickText = null; tickAsked = DateTime.MinValue;
-                Updates = null; ClientNews = CoaNews = ModuleNews = RacesNews = null; ModuleNewsInstall = new string[0]; RacesNewsIds = new int[0]; ClientPending = ""; OfferClient = false; BotOffer = new List<KeyValuePair<string, string>>();
+                Updates = null; ExeNews = null; ClientNews = CoaNews = ModuleNews = RacesNews = null; ModuleNewsInstall = new string[0]; RacesNewsIds = new int[0]; ClientPending = ""; OfferClient = false; BotOffer = new List<KeyValuePair<string, string>>();
                 Notice = ""; lastSent = null; realmDefaultsTried = false;
             }
             Settings.LastInstall = inst.Root;
@@ -193,6 +194,7 @@ namespace CoAInstaller.Web
                 updateState = updateState.Item1, updateWarn = updateState.Item2,
                 serverBanner, toolBanner,
                 clientBanner = ClientNews, coaBanner = CoaNews,
+                exeBanner = ExeNews == null ? null : L.F("New game client program (AFK64.exe, {0}) with graphics fixes  –  click to install", ExeNews),
                 moduleBanner = ModuleNews == null ? null : new { text = ModuleNews, install = ModuleNewsInstall },
                 racesBanner = RacesNews == null ? null : new { text = RacesNews, ids = RacesNewsIds },
                 clientButton = !inst.IsCoa ? L.T("Game client …") : InstalledClient != null && InstalledClient != ClientVersion ? L.F("Update game client to {0} …", ClientVersion) : L.T("Game client …"),
@@ -468,6 +470,9 @@ namespace CoAInstaller.Web
             if (inst == null) return;
             ThreadPool.QueueUserWorkItem(_ =>
             {
+                string exeNews = null;
+                // the AFK64.exe of the voices release (the HD graphics, Living Azeroth, fixes); not shown without one
+                if (inst.IsCoa) try { exeNews = ClientVoices.NewerExe(ClientAddons.ClientFolder); } catch { }
                 string clientNews = null, coaNews = null, clientVersion = null, installedClient = null, coaVersion = null, installedCoa = null;
                 try
                 {
@@ -527,6 +532,7 @@ namespace CoAInstaller.Web
                 if (Inst != inst) return;
                 RacesNews = racesNews; RacesNewsIds = racesIds;
                 ModuleNews = moduleNews; ModuleNewsInstall = moduleInstall;
+                ExeNews = exeNews;
                 ClientNews = clientNews; CoaNews = coaNews; ClientVersion = clientVersion; InstalledClient = installedClient; CoaVersion = coaVersion; InstalledCoa = installedCoa;
                 Poke();
             });

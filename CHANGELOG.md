@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.65
+
+- **Notice for a new game client program:** AFK64.exe only arrived with a voices install, CoA Custom, the HD pack or the player pack, so nobody heard of a new one. The server page now asks GitHub (with the other update checks) for the newest coa-living-voices release and shows "New game client program (AFK64.exe, vX) ... click to install" when the game folder's exe comes from an older one. The click installs only the exe with its VulkanShaders, forever_data and tables (`/api/client/exe`, `ClientVoices.EnsureNewestExe`). Every install records the release in `.afk-exe-version` in the game folder; an exe without that record counts as older, so everyone gets the notice once.
+
 ## 1.3.64
 
 - **Installation wizard: game client and modules first.** Two new pages before the summary:

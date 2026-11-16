@@ -415,6 +415,7 @@ export function manager() {
     clear(banners);
     if (st.serverBanner) banners.appendChild(h('button.banner', { type: 'button', title: (st.serverBanner.news || []).join('\n') + ((st.serverBanner.warnings || []).length ? '\n\n' + st.serverBanner.warnings.join('\n') : '') + (st.serverBanner.limited ? '\n' + st.serverBanner.limited : ''), onclick: serverUpdate }, st.serverBanner.text));
     if (st.toolBanner) banners.appendChild(h('button.banner', { type: 'button', onclick: () => toolUpdate(st.toolBanner) }, st.toolBanner.text));
+    if (st.exeBanner) banners.appendChild(h('button.banner', { type: 'button', onclick: exeUpdate }, st.exeBanner));
     if (st.clientBanner) banners.appendChild(h('button.banner', { type: 'button', onclick: () => import('./client.js').then(x => x.clientDialog()) }, st.clientBanner));
     if (st.coaBanner) banners.appendChild(h('button.banner', { type: 'button', onclick: () => import('./coa.js').then(x => x.coaDialog()) }, st.coaBanner));
     if (st.racesBanner) banners.appendChild(h('button.banner', { type: 'button', onclick: () => import('./coa.js').then(x => x.missingRacesDialog(st.racesBanner)) }, st.racesBanner.text));
@@ -462,6 +463,11 @@ export function manager() {
       return;
     }
     engine('Update', q);
+  }
+
+  async function exeUpdate() {
+    if (!await confirm(T('Install the newest AFK64.exe into your game folder now? Close the game first. Your graphics choice (Visuals.txt) is kept.'))) return;
+    await runTask(() => post('/api/client/exe'), T('Game client program'));
   }
 
   async function toolUpdate(b) {

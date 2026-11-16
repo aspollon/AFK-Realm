@@ -1,3 +1,7 @@
+# AFK Realm 1.3.65
+
+- **You hear about new game client versions now:** when there is a newer AFK64.exe (like today's with the Azeroth Remastered water fix and Living Azeroth), the server page shows a notice. One click installs it into your game folder – close the game first.
+
 # AFK Realm 1.3.64
 
 - **Easier first installation:** the wizard asks for your game client right away (or downloads the CoA client for you) and checks that it is the right one for the server. CoA Custom and the modules by AFK Realm (or the AFK Realm preset) can be chosen before installing and are built in with the server in one go. After the build, AFK Realm installs CoA Custom and creates the map data from your client by itself. If the installation fails, "Try again" goes through these questions once more.
