@@ -34,7 +34,7 @@ namespace CoAInstaller
         static string VersionOf()
         {
             System.Version v = typeof(Product).Assembly.GetName().Version;
-            return v == null || v.Major == 0 ? "1.3.69" : v.Major + "." + v.Minor + "." + v.Build;
+            return v == null || v.Major == 0 ? "1.3.70" : v.Major + "." + v.Minor + "." + v.Build;
         }
     }
 
@@ -42,6 +42,27 @@ namespace CoAInstaller
     static class Os
     {
         public static readonly bool Windows = Path.DirectorySeparatorChar == '\\';
+
+        /// <summary>Lets the owner write a file that came read-only (a ZIP made on Windows, a copy from a CD-like
+        /// source), so it can be overwritten, moved or deleted. Nothing happens to a missing file.</summary>
+        public static void Writable(string path)
+        {
+            try
+            {
+                if (!File.Exists(path)) return;
+                if (Windows)
+                {
+                    var a = File.GetAttributes(path);
+                    if ((a & FileAttributes.ReadOnly) != 0) File.SetAttributes(path, a & ~FileAttributes.ReadOnly);
+                }
+                else
+                {
+                    var mode = File.GetUnixFileMode(path);
+                    if ((mode & UnixFileMode.UserWrite) == 0) File.SetUnixFileMode(path, mode | UnixFileMode.UserWrite);
+                }
+            }
+            catch { }
+        }
         /// <summary>The file name of a program: worldserver.exe on Windows, worldserver elsewhere.</summary>
         public static string Exe(string name) { return Windows ? name + ".exe" : name; }
 

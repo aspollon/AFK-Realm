@@ -1299,6 +1299,7 @@ namespace CoAInstaller
                         if (found.Contains(r.To) || !(placed.TryGetValue(r.To, out mine) && mine == want)) keep.Add(r.To);
                         continue;
                     }
+                    Os.Writable(dest);
                     if (File.Exists(dest) && !(placed.TryGetValue(r.To, out mine) && Hash(dest) == mine) && !File.Exists(dest + ".afk-backup"))
                         File.Move(dest, dest + ".afk-backup");
                     Directory.CreateDirectory(Path.GetDirectoryName(dest));
@@ -1313,6 +1314,7 @@ namespace CoAInstaller
                         string dest = Os.Resolve(client, p.Key);
                         if (File.Exists(dest) && Hash(dest) == p.Value)
                         {
+                            Os.Writable(dest);
                             File.Delete(dest);
                             if (File.Exists(dest + ".afk-backup")) File.Move(dest + ".afk-backup", dest);
                             gone.Add(p.Key);
@@ -1329,7 +1331,12 @@ namespace CoAInstaller
                         }
             }
             catch (IOException ex) { throw new InvalidOperationException(L.F("A file next to the game could not be changed ({0}). Close the game and its launcher first.", ex.Message)); }
-            catch (UnauthorizedAccessException ex) { throw new InvalidOperationException(L.F("A file next to the game could not be changed ({0}).", ex.Message)); }
+            catch (UnauthorizedAccessException ex)
+            {
+                // Still denied after Os.Writable: the file or folder belongs to another user (often root, after sudo).
+                if (!Os.Windows) throw new InvalidOperationException(L.F("A file next to the game could not be changed ({0}). It belongs to another user; give the game folder back to yours with: sudo chown -R $USER \"{1}\"", ex.Message, client));
+                throw new InvalidOperationException(L.F("A file next to the game could not be changed ({0}).", ex.Message));
+            }
             // a few by name, many by their number
             if (put.Count > 3) notes.Add(L.F("{0} files placed next to the game", put.Count)); else notes.AddRange(put.Select(n => L.F("{0} placed next to the game", n)));
             if (gone.Count > 3) notes.Add(L.F("{0} files taken away", gone.Count)); else notes.AddRange(gone.Select(n => L.F("{0} taken away", n)));

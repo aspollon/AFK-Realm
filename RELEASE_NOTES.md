@@ -1,3 +1,7 @@
+# AFK Realm 1.3.70
+
+- **Fix:** installing CoA Custom stopped on Linux with "Access to the path … is denied" for a read-only file in the game folder. AFK now makes such files writable itself; if a file belongs to another user, the message tells you the one command that fixes it.
+
 # AFK Realm 1.3.69
 
 - **Fix:** on some Linux systems the database stopped itself while the worldserver started ("Binary logging not possible"), so the worldserver closed too. The database no longer keeps the binary log it never needed; AFK switches it off by itself on the next start and frees the space the old log files took.

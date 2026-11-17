@@ -446,6 +446,7 @@
     "a file not chosen yet": "einer noch nicht gewählten Datei",
     "A file next to the game could not be changed ({0}). Close the game and its launcher first.": "Eine Datei neben dem Spiel konnte nicht geändert werden ({0}). Schließe zuerst das Spiel und seinen Launcher.",
     "A file next to the game could not be changed ({0}).": "Eine Datei neben dem Spiel konnte nicht geändert werden ({0}).",
+    "A file next to the game could not be changed ({0}). It belongs to another user; give the game folder back to yours with: sudo chown -R $USER \"{1}\"": "Eine Datei neben dem Spiel konnte nicht geändert werden ({0}). Sie gehört einem anderen Benutzer; gib den Spielordner deinem zurück mit: sudo chown -R $USER \"{1}\"",
     "{0} files placed next to the game": "{0} Dateien neben das Spiel gelegt",
     "{0} placed next to the game": "{0} neben das Spiel gelegt",
     "{0} files taken away": "{0} Dateien entfernt",

@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.70
+
+- **Fix (Linux): "CoA Custom setup failed: A file next to the game could not be changed (Access to the path '…/forever_data/hd_forever_ambient.txt' is denied.)".** A file in the client that came read-only could not be overwritten, moved aside or removed when AFK placed a module's or the newest exe's files next to the game. AFK now gives the owner write access to such a file first (`Os.Writable`: the read-only attribute on Windows, the owner's write bit elsewhere). When it is still refused, the file belongs to another user (often root after a `sudo`), and the message now says how to give the game folder back.
+
 ## 1.3.69
 
 - **Fix: the database stopped while the worldserver started (Linux), "Binary logging not possible ... 'binlog_error_action' is set to 'ABORT_SERVER'".** MySQL 8 keeps a binary log by default. World Journey's item UPDATE on start is one large transaction; its binlog cache spilled into `/tmp` (`Error writing file '/tmp/MLfd=…' (errno: 122)`), which on a system with a small tmpfs `/tmp` ran full, and mysqld stopped itself, taking the worldserver with it. Nothing replicates from AFK's database, so `my.ini` now has `skip-log-bin`: written by the engine for new and rebuilt servers, and added by AFK before it starts an older server's database, which also removes the old `binlog.*` files from `DB/data`.
