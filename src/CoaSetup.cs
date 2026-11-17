@@ -180,6 +180,7 @@ namespace CoAInstaller
             var mpqs = Directory.GetFiles(clientSource).Where(f => f.EndsWith(".MPQ", StringComparison.OrdinalIgnoreCase)).ToArray();
             bool ownExe = client != null && ClientVoices.PluginHost(client) != null;
             bool nativeSupported = !ownExe && NativeHd.SupportsPackage(clientRoot);
+            bool afkExe = client != null && File.Exists(Path.Combine(client, CoaClientExe.Afk));
             int total = rootFiles.Length + addonFiles.Length + mpqs.Length + (nativeSupported ? NativeHd.Count : 0) + Dxvk.Count;
             int done = 0;
             Action<string, string, CompressionLevel> add = (path, rel, level) =>
@@ -197,6 +198,8 @@ namespace CoAInstaller
                 string rel = path.Substring(rootPrefix.Length).Replace('\\', '/');
                 // The package's CoAVolFog.ini has Overlay=0; a player's own Lumenveil settings (and keys) stay.
                 if (PreservedClientFile(path)) { done++; continue; }
+                // With AFK64.exe its own shaders and tables travel (ClientVoices.AddToZip, which comes after this).
+                if (afkExe && ExeOwnedFile(rel)) { done++; continue; }
                 bool exe = string.Equals(Path.GetFileName(path), "CoA64.exe", StringComparison.OrdinalIgnoreCase);
                 // The package's CoA64.exe gives way to the owner's own build or the native HD build.
                 if (exe && (nativeSupported || ownExe || taken.Contains(rel))) { done++; continue; }
@@ -1222,9 +1225,20 @@ namespace CoAInstaller
                 string dest = Path.Combine(target, rel);
                 // A live Lumenveil setting stays; only a fresh folder gets the package's tuned defaults.
                 if (PreservedClientFile(file) && File.Exists(dest)) continue;
+                if (ExeOwnedFile(rel) && File.Exists(Path.Combine(target, CoaClientExe.Afk))) continue;
                 if (CopyFile(file, dest, noBackup)) copied++;
                 else skipped++;
             }
+        }
+
+        /// <summary>Files AFK64.exe brings itself: VulkanShaders translated from a CoA client (the package's come from
+        /// another one and tear Azeroth Remastered's skinned models apart), forever_data and the *.cdbc tables.</summary>
+        static bool ExeOwnedFile(string rel)
+        {
+            rel = rel.Replace('\\', '/');
+            return rel.StartsWith("VulkanShaders/", StringComparison.OrdinalIgnoreCase) ||
+                rel.StartsWith("forever_data/", StringComparison.OrdinalIgnoreCase) ||
+                rel.EndsWith(".cdbc", StringComparison.OrdinalIgnoreCase);
         }
 
         /// <summary>Lumenveil's live settings stay the player's: the CoA Custom package's own CoAVolFog.ini has

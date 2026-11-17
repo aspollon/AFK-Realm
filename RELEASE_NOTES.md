@@ -1,3 +1,7 @@
+# AFK Realm 1.3.73
+
+- **Fix:** after a new player ZIP or launcher pack, Azeroth Remastered could show torn, stretched models on the players' PCs: the pack carried CoA Custom's shaders instead of AFK64's. Create the player ZIP / launcher pack once more after this update; players then get the right shaders with their next launcher update.
+
 # AFK Realm 1.3.72
 
 - **Fix:** after installing CoA Custom 2.0.2, AFK still showed "2.0.1 installed" and kept the update notice up. It now goes by the release you downloaded. The notice goes away after this update; run the CoA Custom install again only if it is still there.

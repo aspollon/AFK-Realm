@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.73
+
+- **Fix: Azeroth Remastered tore skinned models apart on players' clients after a new player ZIP / launcher pack.** The pack took the CoA Custom package's client part first and AFK64.exe's files after it, first entry winning, so the package's `VulkanShaders` (translated from another client) went to the players instead of AFK64's. With AFK64.exe in the owner's game folder, the package's `VulkanShaders`, `forever_data` and `*.cdbc` now stay out of the pack, and the CoA Custom setup no longer copies them over the ones AFK64.exe brought (`CoaSetup.ExeOwnedFile`).
+
 ## 1.3.72
 
 - **Fix: after installing CoA Custom 2.0.2 the notice still said "2.0.1 installed".** 2.0.2 ships 2.0.1's Server ZIP unchanged, so the package's `manifest.json` still says 2.0.1, and that was the version AFK recorded. The setup and the update check now also read the release AFK downloaded the package from (`.afk-coa-custom-version` in the package folder or up to three folders above it, `CoaCustom.DownloadedNear`) and take the newer one.
