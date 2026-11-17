@@ -138,9 +138,25 @@ namespace CoAInstaller
             return null;
         }
 
+        public const string OfficialLauncher = "https://coa-development.org/download";
+
+        /// <summary>The download server turned AFK away (it answered, but not with the files): since the CoA team's
+        /// launcher signs in (November 2026) every manager is refused. Points to the official launcher instead.</summary>
+        static Exception Refused(Exception e)
+        {
+            var we = e as WebException;
+            var resp = we == null ? null : we.Response as HttpWebResponse;
+            if (resp == null) return null;
+            int code = (int)resp.StatusCode;
+            if (code != 401 && code != 403 && code != 404 && code != 410) return null;
+            return new InvalidOperationException(L.F("The CoA download server no longer gives the game client to AFK Realm (it answered {0}). Get the client with the official CoA launcher: {1} – install it, let it download the game, then choose that game folder in AFK Realm.", code, OfficialLauncher));
+        }
+
         public static Manifest FetchManifest()
         {
-            string text = GetText(ManifestUrl, MaxManifestBytes);
+            string text;
+            try { text = GetText(ManifestUrl, MaxManifestBytes); }
+            catch (Exception e) { var r = Refused(e); if (r != null) throw r; throw; }
             var serializer = new JavaScriptSerializer { MaxJsonLength = int.MaxValue };
             var root = serializer.DeserializeObject(text) as Dictionary<string, object>;
             if (root == null) throw new InvalidOperationException(L.T("The client list could not be read."));
@@ -455,8 +471,10 @@ namespace CoAInstaller
                         }
                     }
                     catch (OperationCanceledException) { throw; }
-                    catch (Exception)
+                    catch (Exception e)
                     {
+                        var refused = Refused(e);
+                        if (refused != null) throw refused;
                         if (attempt == 2) throw;
                         Thread.Sleep(1000 * (attempt + 1));
                         if (progress != null) progress(L.F("Retrying {0} ...", file.Path), totalDone + have, total, file.Path);

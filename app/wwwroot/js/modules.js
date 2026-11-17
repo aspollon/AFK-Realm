@@ -1,6 +1,6 @@
 // Module manager: the AzerothCore module catalog with the installed modules ticked; applying rebuilds the server.
 import { h, T, F, meta, post, get, replace, debounce, state } from './core.js';
-import { primary, secondary, dialog, alert, input, select, check, toast, segmented } from './ui.js';
+import { primary, secondary, dialog, alert, confirm, input, select, check, toast, segmented } from './ui.js';
 // The server is a Conquest of Azeroth one (not a stock AzerothCore).
 const coa = () => !state.status || state.status.kind !== 'azerothcore';
 
@@ -155,7 +155,14 @@ export async function modulesDialog() {
       if (m.status === 'missing') add(2, T('Its folder is missing. Removing it undoes its database changes.'));
     }
     if (m.state === 'ByHand') add(1, F('Added by hand, not through {0}. Removing it takes the module out, but its database changes stay.', meta.product));
-    if (m.installed) { if (m.fullName) readme.style.display = ''; return; }
+    if (m.installed) {
+      if (m.fullName) readme.style.display = '';
+      if (m.cloneUrl || m.fullName) checks.appendChild(h('div', { style: { marginTop: '8px' } }, secondary(T('Reset to the GitHub version'), async () => {
+        if (!await confirm(T('Put this module back to its GitHub version, as a fresh download? Your own changes in its folder are kept in a git stash, not lost. Afterwards build the server once.'))) return;
+        try { const r = await post('/api/modules/reset', { id: m.id }); alert(r.message); } catch (e) { alert(e.message); }
+      })));
+      return;
+    }
     const loading = h('div.small.muted', {}, T('Checking the module …'));
     checks.appendChild(loading);
     let r;

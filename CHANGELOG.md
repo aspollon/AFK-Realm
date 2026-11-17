@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.3.66
+
+- **Immersion page and the CoA Playerbots fork:** saving the page now keeps one of each running: City Life on switches the fork's city stations (`AiPlayerbot.CoaLive.City.Enable`) off, Fishing Life on its idle fishing (`AiPlayerbot.CoaLive.Immersion.Enable`), PvP Life on its world PvP skirmishes and the duels in front of Orgrimmar and Stormwind (`AiPlayerbot.CoaWorld.WorldPvp.Enable`, `AiPlayerbot.CityDuels.Enable`); switched off, the fork's come back. Its invasions, gold rushes and capital raids ("[Living World]") are left alone.
+- **Modules: "Reset to the GitHub version"** in an installed module's details. A module folder with local edits never takes updates (the update skips it, "contains local changes"). The button fetches, keeps the edits and added files in a git stash, and resets the folder to its tracking branch; the next build uses it. Asked for on Discord.
+- **Game client download refused:** since mid-November the CoA team's launcher signs in, and its download server (`launcher-api.coa-development.org`) seems to turn other managers away. When it answers 401/403/404/410 for the client list or a file, AFK now says so and points to the official launcher (https://coa-development.org/download) instead of an unclear error; the downloaded game folder is then chosen in AFK as usual.
+- **Fix: CoA Custom setup failed with "The CoA package file is incomplete after the copy: ...\\forever_data\\hd_forever_ambient.txt".** The CoA Custom package brings its own `forever_data`; right after the copy, AFK64.exe from the voices release puts its newer one in place, and the copy check then found other sizes. Like the exe's VulkanShaders, `forever_data` and `*.cdbc` belong to AFK64.exe and are no longer compared with the package (when AFK64.exe is there).
+
 ## 1.3.65
 
 - **Notice for a new game client program:** AFK64.exe only arrived with a voices install, CoA Custom, the HD pack or the player pack, so nobody heard of a new one. The server page now asks GitHub (with the other update checks) for the newest coa-living-voices release and shows "New game client program (AFK64.exe, vX) ... click to install" when the game folder's exe comes from an older one. The click installs only the exe with its VulkanShaders, forever_data and tables (`/api/client/exe`, `ClientVoices.EnsureNewestExe`). Every install records the release in `.afk-exe-version` in the game folder; an exe without that record counts as older, so everyone gets the notice once.

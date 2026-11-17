@@ -100,6 +100,8 @@ export function auctionSetup() {
       p.text(neverLoot, P + 'LootFilter.SkipNameParts', T('Names containing'), T('Parts of names separated by commas; upper and lower case do not matter.'));
 
       p.tab(T('Prices'));
+      const scans = p.card(T('Prices of the real CoA auction house'), T('The CoA Playerbots fork carries what 17,000 items fetched on the official CoA auction house. That is the usual price, so an empty auction house still knows its prices; what the bots really sell for moves it from there. Items it does not know use the factors below.'), 'auction');
+      p.slider(scans, P + 'Price.CoaScanPercent', T('Share of the real price'), 0, 200, 5, v => v === 0 ? T('off') : Percent(v));
       const factors = p.card(T('Starting prices'), T('The vendor value of an item times the factor of its quality. What auctions really sell for moves this usual price over time.'), 'auction');
       p.slider(factors, P + 'Price.Poor', T('Poor (grey)'), 0.5, 10, 0.5, Times);
       p.slider(factors, P + 'Price.Normal', T('Common (white)'), 0.5, 20, 0.5, Times);
@@ -125,6 +127,8 @@ export function auctionSetup() {
       p.toggle(buy, P + 'Buy.FromBots', T('From other bots'));
       p.toggle(buy, P + 'Buy.PlaceBids', T('Bots bid too (a bid can outbid a player)'));
       p.toggle(buy, P + 'Buy.UseBotMoney', T('Bots pay with their own money'));
+      p.toggle(buy, P + 'Buy.CoaGearScore', T('Gear upgrades by the CoA gear score'), T('The clearer the upgrade, the more a bot wants it.'));
+      p.slider(buy, P + 'Buy.MinUpgradePercent', T('Smallest upgrade worth buying'), 0, 25, 1, Percent);
       p.slider(buy, P + 'Buy.ItemsLookedAt', T('Items looked at per visit'), 10, 500, 10, Plain);
       p.slider(buy, P + 'Buy.MinVendorFactor', T('Always willing to pay'), 1, 5, 0.1, Times, T('Times the vendor value, so selling to the bots is never worse than selling to a vendor.'));
       p.slider(buy, P + 'Buy.VendorItemMaxPercent', T('For vendor goods at most'), 10, 100, 5, Percent, T('Of the vendor\'s price, so nobody can buy from a vendor and sell to the bots for a profit.'));
@@ -202,6 +206,19 @@ export function immersionSetup() {
   return setupPage({
     file: 'modules/mod_playerbots_immersion.conf', title: T('Immersion Life'), subtitle: T('mod-playerbots-immersion  -  modules\\mod_playerbots_immersion.conf'),
     icon: 'accounts', masterKey: 'CityLife.Enable', masterText: T('Immersion Life on'),
+    also: ['modules/playerbots.conf'],
+    // The CoA Playerbots fork has its own city stations, idle fishing, world PvP and city duels: one of each runs.
+    beforeSave(p) {
+      const pb = p.also('modules/playerbots.conf');
+      if (!pb) return;
+      const link = (ours, theirs) => {
+        const on = p.flag(ours, false);
+        for (const k of theirs) if (pb.has(k) && p.flag(k, true, pb) === on) p.set(k, on ? '0' : '1', pb);
+      };
+      link('CityLife.Enable', ['AiPlayerbot.CoaLive.City.Enable']);
+      link('FishingLife.Enable', ['AiPlayerbot.CoaLive.Immersion.Enable']);
+      link('PvPLife.Enable', ['AiPlayerbot.CoaWorld.WorldPvp.Enable', 'AiPlayerbot.CityDuels.Enable']);
+    },
     build(p) {
       const keys = p.conf.keys;
       const groups = (prefix, filter) => {
@@ -282,7 +299,7 @@ export function immersionSetup() {
       }
 
       p.tab(T('Fishing'));
-      const fishing = p.card(T('Fishing Life'), T('Fishing Life places fishers at the waterfronts. It is off by default and counts inside the city limit.'), 'journey');
+      const fishing = p.card(T('Fishing Life'), T('Fishing Life places fishers at the waterfronts. It is off by default and counts inside the city limit. While it is on, the Playerbots fork\'s own idle fishing is switched off.'), 'journey');
       p.toggle(fishing, 'FishingLife.Enable', T('Fishing Life on'));
       p.toggle(fishing, 'FishingLife.CreateMissing.Enable', T('Create missing bots'));
       p.slider(fishing, 'FishingLife.CreateMissing.MaxBots', T('Fishers at most'), 0, 120, 1);
@@ -298,7 +315,7 @@ export function immersionSetup() {
       p.slider(fchat, 'FishingLife.YellChancePct', T('Yell chance'), 0, 100, 5, Pct);
 
       p.tab(T('PvP'));
-      const pvp = p.card(T('PvP Life'), T('PvP Life brings duels, world PvP and faction campaigns. It is off by default for Conquest of Azeroth and uses its own budget.'), 'gamemaster');
+      const pvp = p.card(T('PvP Life'), T('PvP Life brings duels, world PvP and faction campaigns. It is off by default for Conquest of Azeroth and uses its own budget. While it is on, the Playerbots fork\'s world PvP skirmishes and the duels in front of Orgrimmar and Stormwind are switched off; its invasions and capital raids go on.'), 'gamemaster');
       p.toggle(pvp, 'PvPLife.Enable', T('PvP Life on'));
       p.slider(pvp, 'PvPLife.Bots.MaxPerSide', T('Bots per side'), 0, 200, 5);
       p.toggle(pvp, 'PvPLife.Duel.Enable', T('Duel zones'));

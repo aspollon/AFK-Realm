@@ -1260,6 +1260,10 @@ namespace CoAInstaller
                 // AFK64.exe brings its own VulkanShaders (EnsureNewestExe, after the copy); the package's are replaced.
                 if (rel.StartsWith("VulkanShaders" + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) &&
                     File.Exists(Path.Combine(target, CoaClientExe.Afk))) continue;
+                // Its forever_data and *.cdbc tables too (the ones that exe's HD and Living Azeroth were built for).
+                if ((rel.StartsWith("forever_data" + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) ||
+                     rel.EndsWith(".cdbc", StringComparison.OrdinalIgnoreCase)) &&
+                    File.Exists(Path.Combine(target, CoaClientExe.Afk))) continue;
                 VerifyFile(file, dest);
             }
         }

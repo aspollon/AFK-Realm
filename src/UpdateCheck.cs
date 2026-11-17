@@ -294,6 +294,27 @@ namespace CoAInstaller
             return null;
         }
 
+        /// <summary>Puts a module folder back to its GitHub branch, as a fresh download would have it. Local edits and
+        /// added files are kept in a git stash first ("git stash list" in the folder shows them). Returns what was done;
+        /// throws with the reason when it could not.</summary>
+        public static string ResetModule(Install inst, string folder)
+        {
+            string git = FindGit(inst);
+            if (git == null) throw new InvalidOperationException(L.T("Git was not found."));
+            if (!Directory.Exists(Path.Combine(folder, ".git"))) throw new InvalidOperationException(L.T("This module folder is not a git download, so it cannot be reset."));
+            string upstream = (RunGit(git, "-C", folder, "rev-parse", "--abbrev-ref", "@{u}") ?? "").Trim();
+            if (upstream.Length == 0) throw new InvalidOperationException(L.T("This module has no GitHub branch to reset to."));
+            if (RunGit(git, 180000, "-C", folder, "fetch", "--quiet") == null) throw new InvalidOperationException(L.T("GitHub could not be reached."));
+            bool dirty = !string.IsNullOrWhiteSpace(RunGit(git, "-C", folder, "status", "--porcelain"));
+            if (dirty && RunGit(git, 60000, "-C", folder, "-c", "user.name=AFK Realm", "-c", "user.email=afk@localhost", "stash", "push", "--include-untracked", "-m", "AFK Realm reset " + DateTime.Now.ToString("yyyy-MM-dd HH:mm")) == null)
+                throw new InvalidOperationException(L.T("The local changes could not be set aside, so nothing was reset."));
+            if (RunGit(git, 60000, "-C", folder, "reset", "--hard", "--quiet", "@{u}") == null)
+                throw new InvalidOperationException(L.T("The module could not be reset."));
+            string head = (RunGit(git, "-C", folder, "rev-parse", "--short=8", "HEAD") ?? "").Trim();
+            return dirty ? L.F("Reset to {0} ({1}). Your local changes are kept in a git stash in the module folder.", upstream, head)
+                         : L.F("Reset to {0} ({1}).", upstream, head);
+        }
+
         /// <summary>The output of a short git command, or null (no git, no network, no answer within 20 seconds).</summary>
         static string RunGit(string git, params string[] args) { return RunGit(git, 20000, args); }
 

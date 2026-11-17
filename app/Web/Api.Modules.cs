@@ -67,6 +67,20 @@ namespace CoAInstaller.Web
                 };
             });
 
+            // Advanced: a module folder back to its GitHub branch (local edits go to a git stash); the next update builds it.
+            Post(app, "/api/modules/reset", a =>
+            {
+                var inst = Inst;
+                var m = FindModule(a.Str("id"));
+                if (m == null || !m.Installed) throw new UserError(L.T("This module is not installed."));
+                string folder = System.IO.Path.Combine(ModuleCatalog.ModulesDir(inst), m.Name);
+                if (!System.IO.Directory.Exists(folder)) throw new UserError(L.T("Its folder is missing."));
+                string done;
+                try { done = UpdateCheck.ResetModule(inst, folder); }
+                catch (InvalidOperationException ex) { throw new UserError(ex.Message); }
+                return new { message = done + "\n\n" + L.T("Build the server once (Update server or Apply changes) so the server uses it.") };
+            });
+
             Post(app, "/api/modules/token", a =>
             {
                 string want = (a.Str("token") ?? "").Trim();

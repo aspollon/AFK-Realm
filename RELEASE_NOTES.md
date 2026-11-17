@@ -1,3 +1,9 @@
+# AFK Realm 1.3.66
+
+- **Modules:** new button **Reset to the GitHub version** in a module's details. If you edited a module's files, it stopped taking updates; the button puts it back like a fresh download (your edits are kept as a git stash). Build the server once afterwards.
+- **Game client download:** the CoA team changed their download server and it no longer gives the client to other programs. AFK now tells you so and links the official CoA launcher: install it, let it download the game, then choose that game folder in AFK.
+- **Fix:** installing or updating CoA Custom stopped with "The CoA package file is incomplete after the copy: …forever_data…". Fixed – just run CoA Custom > Install / update again.
+
 # AFK Realm 1.3.65
 
 - **You hear about new game client versions now:** when there is a newer AFK64.exe (like today's with the Azeroth Remastered water fix and Living Azeroth), the server page shows a notice. One click installs it into your game folder – close the game first.
