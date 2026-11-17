@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.72
+
+- **Fix: after installing CoA Custom 2.0.2 the notice still said "2.0.1 installed".** 2.0.2 ships 2.0.1's Server ZIP unchanged, so the package's `manifest.json` still says 2.0.1, and that was the version AFK recorded. The setup and the update check now also read the release AFK downloaded the package from (`.afk-coa-custom-version` in the package folder or up to three folders above it, `CoaCustom.DownloadedNear`) and take the newer one.
+
 ## 1.3.71
 
 - **Fix (Linux): CoA Custom's own copy step still stopped with "The CoA file could not be copied to …/forever_data/hd_forever_ambient.txt (Access … denied)".** 1.3.70 made read-only files writable only where AFK places module files; the CoA Custom copy (`CoaSetup.CopyFile`) now does it too, and `Os.Writable` also gives the owner write access to the file's folder, which replacing and moving a file need. A file or folder of another user (root) still cannot be changed by AFK; the message names the `sudo chown` command for it.

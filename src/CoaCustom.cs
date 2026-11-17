@@ -153,6 +153,7 @@ namespace CoAInstaller
             {
                 string package = Settings.CoaPackage;
                 if (!string.IsNullOrEmpty(package)) found.Add(CoaSetup.ReadVersion(Path.Combine(package, "manifest.json")));
+                if (!string.IsNullOrEmpty(package)) found.Add(DownloadedNear(package));
             }
             catch { }
             string best = null;
@@ -165,6 +166,23 @@ namespace CoAInstaller
         public static bool IsUpdate(string latest, string installed)
         {
             return !string.IsNullOrEmpty(latest) && !string.IsNullOrEmpty(installed) && UpdateCheck.IsNewer(latest, installed);
+        }
+
+        /// <summary>The release AFK downloaded a package folder from: the marker in that folder or up to three above it.
+        /// 2.0.2 ships 2.0.1's Server ZIP, so its manifest.json still says 2.0.1.</summary>
+        public static string DownloadedNear(string packRoot)
+        {
+            try
+            {
+                var dir = string.IsNullOrEmpty(packRoot) ? null : new DirectoryInfo(packRoot);
+                for (int i = 0; dir != null && i < 4; i++, dir = dir.Parent)
+                {
+                    string v = Installed(dir.FullName);
+                    if (!string.IsNullOrEmpty(v)) return v;
+                }
+            }
+            catch { }
+            return null;
         }
 
         /// <summary>The version previously downloaded into a race folder, or null.</summary>

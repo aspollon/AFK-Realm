@@ -1,3 +1,7 @@
+# AFK Realm 1.3.72
+
+- **Fix:** after installing CoA Custom 2.0.2, AFK still showed "2.0.1 installed" and kept the update notice up. It now goes by the release you downloaded. The notice goes away after this update; run the CoA Custom install again only if it is still there.
+
 # AFK Realm 1.3.71
 
 - **Fix:** the CoA Custom install on Linux could still stop on a read-only file or folder in the game folder; AFK now makes those writable in that step too.

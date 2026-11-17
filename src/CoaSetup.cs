@@ -104,7 +104,11 @@ namespace CoAInstaller
             }
 
             int copied = CopyPackage(o, inst, files, clientSource, clientRoot);
-            if (copied == 0) CoaCustom.RecordInstalled(inst, manifestVersion);
+            if (copied == 0)
+            {
+                string downloaded = CoaCustom.DownloadedNear(packRoot);
+                CoaCustom.RecordInstalled(inst, !string.IsNullOrEmpty(downloaded) && (manifestVersion.Length == 0 || UpdateCheck.IsNewer(downloaded, manifestVersion)) ? downloaded : manifestVersion);
+            }
             return copied;
         }
 
