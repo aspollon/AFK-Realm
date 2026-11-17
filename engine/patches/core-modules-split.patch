@@ -1,8 +1,7 @@
 diff --git a/modules/CMakeLists.txt b/modules/CMakeLists.txt
-index 3008a56d1..cf72a1f27 100644
 --- a/modules/CMakeLists.txt
 +++ b/modules/CMakeLists.txt
-@@ -292,10 +292,48 @@ if (MOD_ALE_FOUND)
+@@ -292,10 +292,55 @@
    list(REMOVE_ITEM PRIVATE_SOURCES_MODULES ${MOD_ALE_PATH}/lualib/luac.c)
  endif()
  
@@ -49,10 +48,17 @@ index 3008a56d1..cf72a1f27 100644
 +  set_target_properties(${AFK_EXTRA} PROPERTIES FOLDER "modules")
 +  target_link_libraries(modules PUBLIC ${AFK_EXTRA})
 +endforeach()
++
++# AFK Realm: the parts above already keep modules.lib small. mod-playerbots.cmake (CoA fork) would move the few
++# playerbots files left in modules into a library of its own that may come out empty (LNK1181: modules-playerbots.lib);
++# it leaves the split alone when this target exists.
++if (MSVC AND AFK_MODULES_EXTRA AND NOT TARGET modules-playerbots)
++  add_library(modules-playerbots INTERFACE)
++endif()
  
  if (MOD_ALE_FOUND)
      target_link_libraries(modules PUBLIC lualib)
-@@ -329,6 +367,16 @@ set_target_properties(modules
+@@ -329,6 +374,16 @@
      FOLDER
        "modules")
  

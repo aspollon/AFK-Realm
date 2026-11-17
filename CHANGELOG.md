@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.68
+
+- **Fix (Windows): the server build stopped with `LNK1181: modules-playerbots.lib kann nicht geöffnet werden / cannot open file`.** Since 14 November the CoA Playerbots fork brings `mod-playerbots.cmake`, which moves its sources out of `modules` into a library of its own against the 4 GB librarian limit. AFK's `core-modules-split.patch` had already spread the module sources over `modules` and `modules_part1-3`, so the fork found only the few playerbots files left in `modules`, made a library that came out empty, and worldserver and dbimport could not link. The split patch now defines an empty `modules-playerbots` interface target when it splits; the fork leaves the layout alone when that target exists (as its file says). Found in a Get Help ZIP.
+
 ## 1.3.67
 
 - **Fix: CoA Custom 2.0.2 installed older files.** The release's ZIPs override each other in order (2.0.2: Client-10 and Client-11 carry the newer `patch-ZZZZZA.MPQ` and `CoACustomRace.exe` than Client-6, Client-17 the newer `Ascension_Subclass` addon than the Server ZIP), but GitHub lists them by name, "Client-10" before "Client-2". AFK took them in that order, so the older Client-6 and Server files won. The parts are now taken Server first, then Client 1, 2, 3 ... by number (`CoaCustom.PartOrder`); the next download fetches only the files that come out different.

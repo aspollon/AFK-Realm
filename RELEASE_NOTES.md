@@ -1,3 +1,7 @@
+# AFK Realm 1.3.68
+
+- **Fix for Windows:** building the server stopped at the very end with "modules-playerbots.lib cannot be opened" since the Playerbots update of 14 November. Fixed – update AFK Realm and build the server again.
+
 # AFK Realm 1.3.67
 
 - **Fix for CoA Custom 2.0.2:** AFK put a few older files of the package over the newer ones (a game patch, CoACustomRace.exe and the subclass addon). Click the CoA Custom update once more; it only downloads the files that were wrong.
