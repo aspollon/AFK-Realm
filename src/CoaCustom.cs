@@ -105,9 +105,23 @@ namespace CoAInstaller
                         if (digest.StartsWith("sha256:", StringComparison.OrdinalIgnoreCase)) digest = digest.Substring(7);
                         release.Assets.Add(new Asset { Name = name, Url = url, Size = size, Sha256 = digest });
                     }
-                if (release.Assets.Count > 0) return release;
+                if (release.Assets.Count == 0) continue;
+                // GitHub lists "Client-10" before "Client-2"; a later part overrides an earlier one (2.0.2: Client-10/11
+                // carry the newer patch-ZZZZZA.MPQ and CoACustomRace.exe, Client-17 the newer subclass addon).
+                release.Assets = release.Assets.Select((a, i) => new { a, i }).OrderBy(x => PartOrder(x.a.Name)).ThenBy(x => x.i)
+                    .Select(x => x.a).ToList();
+                return release;
             }
             return null;
+        }
+
+        /// <summary>The Server ZIP first, then the Client ZIPs by number, anything else after them.</summary>
+        static int PartOrder(string name)
+        {
+            var m = System.Text.RegularExpressions.Regex.Match(name, @"-(Server|Client-(\d+))\.zip$", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            if (!m.Success) return 100000;
+            int n;
+            return m.Groups[2].Success && int.TryParse(m.Groups[2].Value, out n) ? n : 0;
         }
 
         static string InstalledRecord(Install inst) { return Path.Combine(inst.Root, "Dependencies", "coa-custom-installed.txt"); }

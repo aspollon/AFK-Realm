@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.67
+
+- **Fix: CoA Custom 2.0.2 installed older files.** The release's ZIPs override each other in order (2.0.2: Client-10 and Client-11 carry the newer `patch-ZZZZZA.MPQ` and `CoACustomRace.exe` than Client-6, Client-17 the newer `Ascension_Subclass` addon than the Server ZIP), but GitHub lists them by name, "Client-10" before "Client-2". AFK took them in that order, so the older Client-6 and Server files won. The parts are now taken Server first, then Client 1, 2, 3 ... by number (`CoaCustom.PartOrder`); the next download fetches only the files that come out different.
+
 ## 1.3.66
 
 - **Immersion page and the CoA Playerbots fork:** saving the page now keeps one of each running: City Life on switches the fork's city stations (`AiPlayerbot.CoaLive.City.Enable`) off, Fishing Life on its idle fishing (`AiPlayerbot.CoaLive.Immersion.Enable`), PvP Life on its world PvP skirmishes and the duels in front of Orgrimmar and Stormwind (`AiPlayerbot.CoaWorld.WorldPvp.Enable`, `AiPlayerbot.CityDuels.Enable`); switched off, the fork's come back. Its invasions, gold rushes and capital raids ("[Living World]") are left alone.
