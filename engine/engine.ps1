@@ -934,6 +934,9 @@ function Write-MySqlConfig {
         'character-set-server=utf8mb4'
         'collation-server=utf8mb4_unicode_ci'
         'max_allowed_packet=128M'
+        # No binary log: nothing replicates from this database, and World Journey's large UPDATEs spilled the binlog
+        # cache to /tmp, which a tmpfs /tmp could not hold (errno 122, 'binlog_error_action' stopped mysqld).
+        'skip-log-bin'
         "log-error=$(& $forward (Join-Path $Paths.Logs 'mysql-error.log'))"
         ''
         '[client]'

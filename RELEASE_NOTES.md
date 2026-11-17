@@ -1,3 +1,7 @@
+# AFK Realm 1.3.69
+
+- **Fix:** on some Linux systems the database stopped itself while the worldserver started ("Binary logging not possible"), so the worldserver closed too. The database no longer keeps the binary log it never needed; AFK switches it off by itself on the next start and frees the space the old log files took.
+
 # AFK Realm 1.3.68
 
 - **Fix for Windows:** building the server stopped at the very end with "modules-playerbots.lib cannot be opened" since the Playerbots update of 14 November. Fixed – update AFK Realm and build the server again.

@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.69
+
+- **Fix: the database stopped while the worldserver started (Linux), "Binary logging not possible ... 'binlog_error_action' is set to 'ABORT_SERVER'".** MySQL 8 keeps a binary log by default. World Journey's item UPDATE on start is one large transaction; its binlog cache spilled into `/tmp` (`Error writing file '/tmp/MLfd=…' (errno: 122)`), which on a system with a small tmpfs `/tmp` ran full, and mysqld stopped itself, taking the worldserver with it. Nothing replicates from AFK's database, so `my.ini` now has `skip-log-bin`: written by the engine for new and rebuilt servers, and added by AFK before it starts an older server's database, which also removes the old `binlog.*` files from `DB/data`.
+
 ## 1.3.68
 
 - **Fix (Windows): the server build stopped with `LNK1181: modules-playerbots.lib kann nicht geöffnet werden / cannot open file`.** Since 14 November the CoA Playerbots fork brings `mod-playerbots.cmake`, which moves its sources out of `modules` into a library of its own against the 4 GB librarian limit. AFK's `core-modules-split.patch` had already spread the module sources over `modules` and `modules_part1-3`, so the fork found only the few playerbots files left in `modules`, made a library that came out empty, and worldserver and dbimport could not link. The split patch now defines an empty `modules-playerbots` interface target when it splits; the fork leaves the layout alone when that target exists (as its file says). Found in a Get Help ZIP.

@@ -34,7 +34,7 @@ namespace CoAInstaller
         static string VersionOf()
         {
             System.Version v = typeof(Product).Assembly.GetName().Version;
-            return v == null || v.Major == 0 ? "1.3.68" : v.Major + "." + v.Minor + "." + v.Build;
+            return v == null || v.Major == 0 ? "1.3.69" : v.Major + "." + v.Minor + "." + v.Build;
         }
     }
 
@@ -547,6 +547,7 @@ namespace CoAInstaller
             if (Net.PortOpen(DbPort))
                 throw new InvalidOperationException(L.F("Port {0} is already in use. Is another database (for example another repack) still running? Stop it first.", DbPort));
             status(L.T("Starting the database ..."));
+            NoBinaryLog();
             if (!Os.Windows)
             {
                 // DB/mysqld.sh (written by the engine) gives the database the libraries it needs.
@@ -559,6 +560,28 @@ namespace CoAInstaller
             Process.Start(psi);
             WaitPort(DbPort, 90, L.T("The database did not start. Details are in logs\\mysql-error.log."));
         }
+        /// <summary>my.ini written before 1.3.69 lacks skip-log-bin; MySQL 8 then keeps a binary log nobody reads, and a
+        /// large World Journey UPDATE spilling its binlog cache into a full /tmp stopped mysqld. The old log files go too.</summary>
+        void NoBinaryLog()
+        {
+            try
+            {
+                if (!File.Exists(inst.MyIni)) return;
+                var lines = File.ReadAllLines(inst.MyIni).ToList();
+                if (lines.Any(l => { string t = l.Trim().ToLowerInvariant(); return t.StartsWith("skip-log-bin") || t.StartsWith("disable-log-bin") || t.StartsWith("log-bin") || t.StartsWith("log_bin"); }))
+                    return;
+                int at = lines.FindIndex(l => l.Trim().Equals("[mysqld]", StringComparison.OrdinalIgnoreCase));
+                if (at < 0) return;
+                lines.Insert(at + 1, "skip-log-bin");
+                File.WriteAllLines(inst.MyIni, lines);
+                string data = Path.Combine(inst.DbDir, "data");
+                if (Directory.Exists(data))
+                    foreach (string f in Directory.GetFiles(data, "binlog.*"))
+                        try { File.Delete(f); } catch { }
+            }
+            catch (Exception ex) { Console.WriteLine("  my.ini -> " + ex.Message); }
+        }
+
         public void StartAuth(Action<string> status)
         {
             if (Auth != null) return;
