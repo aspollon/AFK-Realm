@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.71
+
+- **Fix (Linux): CoA Custom's own copy step still stopped with "The CoA file could not be copied to …/forever_data/hd_forever_ambient.txt (Access … denied)".** 1.3.70 made read-only files writable only where AFK places module files; the CoA Custom copy (`CoaSetup.CopyFile`) now does it too, and `Os.Writable` also gives the owner write access to the file's folder, which replacing and moving a file need. A file or folder of another user (root) still cannot be changed by AFK; the message names the `sudo chown` command for it.
+
 ## 1.3.70
 
 - **Fix (Linux): "CoA Custom setup failed: A file next to the game could not be changed (Access to the path '…/forever_data/hd_forever_ambient.txt' is denied.)".** A file in the client that came read-only could not be overwritten, moved aside or removed when AFK placed a module's or the newest exe's files next to the game. AFK now gives the owner write access to such a file first (`Os.Writable`: the read-only attribute on Windows, the owner's write bit elsewhere). When it is still refused, the file belongs to another user (often root after a `sudo`), and the message now says how to give the game folder back.

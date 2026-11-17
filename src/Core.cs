@@ -34,7 +34,7 @@ namespace CoAInstaller
         static string VersionOf()
         {
             System.Version v = typeof(Product).Assembly.GetName().Version;
-            return v == null || v.Major == 0 ? "1.3.70" : v.Major + "." + v.Minor + "." + v.Build;
+            return v == null || v.Major == 0 ? "1.3.71" : v.Major + "." + v.Minor + "." + v.Build;
         }
     }
 
@@ -49,6 +49,14 @@ namespace CoAInstaller
         {
             try
             {
+                string dir = Path.GetDirectoryName(path);
+                if (!Windows && !string.IsNullOrEmpty(dir) && Directory.Exists(dir))
+                {
+                    // a file is replaced and moved aside through its folder, so the folder needs the write bit too
+                    var dmode = File.GetUnixFileMode(dir);
+                    var want = UnixFileMode.UserWrite | UnixFileMode.UserExecute;
+                    if ((dmode & want) != want) File.SetUnixFileMode(dir, dmode | want);
+                }
                 if (!File.Exists(path)) return;
                 if (Windows)
                 {

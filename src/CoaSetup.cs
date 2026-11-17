@@ -1396,6 +1396,7 @@ namespace CoAInstaller
         {
             CoaUninstall.Capture(target);
             Directory.CreateDirectory(Path.GetDirectoryName(target));
+            Os.Writable(target);
             if (File.Exists(target))
             {
                 // unchanged since the last setup (size and time of both files as they were then): not read again
@@ -1411,6 +1412,11 @@ namespace CoAInstaller
             {
                 File.Copy(source, target, true);
                 CopyStamps.Note(source, target);
+            }
+            catch (UnauthorizedAccessException ex) when (!Os.Windows)
+            {
+                // Still denied after Os.Writable: the file or its folder belongs to another user (often root, after sudo).
+                throw new InvalidOperationException(L.F("A file next to the game could not be changed ({0}). It belongs to another user; give the game folder back to yours with: sudo chown -R $USER \"{1}\"", ex.Message, Path.GetDirectoryName(target)), ex);
             }
             catch (Exception ex)
             {

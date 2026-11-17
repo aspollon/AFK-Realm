@@ -1,3 +1,7 @@
+# AFK Realm 1.3.71
+
+- **Fix:** the CoA Custom install on Linux could still stop on a read-only file or folder in the game folder; AFK now makes those writable in that step too.
+
 # AFK Realm 1.3.70
 
 - **Fix:** installing CoA Custom stopped on Linux with "Access to the path … is denied" for a read-only file in the game folder. AFK now makes such files writable itself; if a file belongs to another user, the message tells you the one command that fixes it.
