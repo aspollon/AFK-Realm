@@ -1143,10 +1143,15 @@ function Repair-EsteriaSqlOrder {
             $renamed++
         }
     }
-    # Module SQL goes by file name too: mod-nemesis-system's base file (nemesis_system.sql) came after its own updates
-    # (2026_03_22_..., 2026_04_05_...), which change the table it creates (ERROR 1146 character_nemesis). A copy made
-    # by an earlier run is replaced; the download brings the original name back (module folders are not cleaned).
-    foreach ($fix in @(@{ Folder = 'modules\mod-nemesis-system\data\sql\db-characters\base'; From = 'nemesis_system.sql'; To = '2026_01_01_00_nemesis_system.sql' })) {
+    if ($renamed -gt 0) { Write-Log "EsteriaWoW: $renamed SQL file(s) renamed so the updater applies them in the order they were written." }
+}
+
+# Module SQL goes by file name on every server kind: mod-nemesis-system's base file (nemesis_system.sql) came after its
+# own updates (2026_03_22_...), which change the table it creates (ERROR 1146 character_nemesis). A copy made by an
+# earlier run is replaced; the download brings the original name back (module folders are not cleaned).
+function Repair-ModuleSqlOrder {
+    $renamed = 0
+    foreach ($fix in @(@{ Folder = 'modules/mod-nemesis-system/data/sql/db-characters/base'; From = 'nemesis_system.sql'; To = '2026_01_01_00_nemesis_system.sql' })) {
         $from = [IO.Path]::Combine($Paths.Source, $fix.Folder, $fix.From)
         if (-not (Test-Path -LiteralPath $from)) { continue }
         $to = [IO.Path]::Combine($Paths.Source, $fix.Folder, $fix.To)
@@ -1154,7 +1159,7 @@ function Repair-EsteriaSqlOrder {
         Rename-Item -LiteralPath $from -NewName $fix.To
         $renamed++
     }
-    if ($renamed -gt 0) { Write-Log "EsteriaWoW: $renamed SQL file(s) renamed so the updater applies them in the order they were written." }
+    if ($renamed -gt 0) { Write-Log "$renamed module SQL file(s) renamed so the updater applies the base file before its updates." }
 }
 
 # mod-esteria-housing keeps its SQL in sql\ instead of data\sql\, so the updater never applies it (its README: the files
@@ -1184,6 +1189,7 @@ function Install-EsteriaHousingSql([string]$Options) {
 
 function Update-Databases([string]$Password) {
     Repair-EsteriaSqlOrder
+    Repair-ModuleSqlOrder
     $dbimport = Join-Path $Paths.ServerBin (Exe 'dbimport')
     if (-not (Test-Path $dbimport)) { Write-Log 'dbimport.exe was not built; the worldserver applies the updates on its first start.' Yellow; return }
     $root = New-ClientOptions 'root' $Password

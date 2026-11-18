@@ -7,6 +7,7 @@ using System.Drawing;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -180,6 +181,7 @@ namespace CoAInstaller
                 }
             }
             AddEmbeddedDungeonClear(inst, client, result);
+            AddSquidBots(inst, client, result);
             return result;
         }
 
@@ -329,6 +331,111 @@ namespace CoAInstaller
                 return target;
             }
             catch { return null; }
+        }
+
+        const string SquidBotsName = "SquidBotsLite";
+        const string SquidBotsRepo = "Zyth45/squidbots-addon";
+        static readonly object SquidBotsLock = new object();
+        static string squidBotsNewest;
+        static DateTime squidBotsAsked = DateTime.MinValue;
+
+        /// <summary>
+        /// Zyth45's SquidBots Manager add-on (folder SquidBotsLite) goes with his CoA Playerbots: bot bar, alts, guild
+        /// orders and the World panel (invasions, gold rushes). The newest commit of its main branch is installed;
+        /// GitHub is asked at most every few hours, and without an answer the copy already fetched stays.
+        /// </summary>
+        static void AddSquidBots(Install inst, string client, List<ClientAddon> result)
+        {
+            if (!inst.IsCoa || result.Any(a => a.Name.Equals(SquidBotsName, StringComparison.OrdinalIgnoreCase))) return;
+            if (!Directory.Exists(Path.Combine(ModuleCatalog.ModulesDir(inst), "mod-playerbots"))) return;
+            string source = EnsureSquidBots(inst);
+            if (source == null) return;
+            const string why = "SquidBots Manager: the bar for your bots, your alts, guild orders and the World panel with invasions and gold rushes.";
+            var addon = new ClientAddon { Module = "mod-playerbots", Name = SquidBotsName, Source = source, Why = L.T(why), WhyEnglish = why };
+            addon.State = client == null ? AddonState.Missing : StateOf(addon, client);
+            result.Add(addon);
+        }
+
+        static HttpWebRequest SquidBotsRequest(string url)
+        {
+            try { ServicePointManager.SecurityProtocol |= (SecurityProtocolType)3072; } catch { }
+            var req = (HttpWebRequest)WebRequest.Create(url);
+            req.UserAgent = Product.FileStem;
+            req.Timeout = 10000;
+            req.ReadWriteTimeout = 30000;
+            return req;
+        }
+
+        /// <summary>The commit at the tip of the add-on's main branch, or null without an answer.</summary>
+        static string SquidBotsNewest()
+        {
+            lock (SquidBotsLock)
+            {
+                if (DateTime.UtcNow - squidBotsAsked < TimeSpan.FromHours(3)) return squidBotsNewest;
+                squidBotsAsked = DateTime.UtcNow;
+                try
+                {
+                    var req = SquidBotsRequest("https://api.github.com/repos/" + SquidBotsRepo + "/commits/main");
+                    req.Accept = "application/vnd.github.sha";
+                    using (var resp = req.GetResponse())
+                    using (var reader = new StreamReader(resp.GetResponseStream(), Encoding.ASCII))
+                    {
+                        string sha = reader.ReadToEnd().Trim();
+                        if (Regex.IsMatch(sha, "^[0-9a-f]{40}$")) squidBotsNewest = sha;
+                    }
+                }
+                catch { }
+                return squidBotsNewest;
+            }
+        }
+
+        static string EnsureSquidBots(Install inst)
+        {
+            string target = Path.Combine(inst.Root, "Dependencies", "ClientAddons", SquidBotsName);
+            string marker = Path.Combine(target, ".afk-version");
+            bool have = File.Exists(Path.Combine(target, SquidBotsName + ".toc"));
+            string newest = SquidBotsNewest();
+            // No answer from GitHub (offline, rate limit): keep the copy there is, fetch nothing.
+            if (newest == null) return have ? target : null;
+            try { if (have && File.ReadAllText(marker).Trim() == newest) return target; } catch { }
+            lock (SquidBotsLock)
+            {
+                string temp = target + ".new";
+                try
+                {
+                    if (Directory.Exists(temp)) Directory.Delete(temp, true);
+                    Directory.CreateDirectory(temp);
+                    string root = Path.GetFullPath(temp).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+                    string url = "https://codeload.github.com/" + SquidBotsRepo + "/zip/" + newest;
+                    using (var resp = SquidBotsRequest(url).GetResponse())
+                    using (var buffer = new MemoryStream())
+                    {
+                        resp.GetResponseStream().CopyTo(buffer);
+                        buffer.Position = 0;
+                        using (var zip = new ZipArchive(buffer, ZipArchiveMode.Read))
+                            foreach (var entry in zip.Entries)
+                            {
+                                // <repo>-<commit>/SquidBotsLite/<file>: only the add-on folder.
+                                var parts = entry.FullName.Split('/');
+                                if (parts.Length < 3 || !parts[1].Equals(SquidBotsName, StringComparison.OrdinalIgnoreCase) || string.IsNullOrEmpty(entry.Name)) continue;
+                                string dest = Path.GetFullPath(Path.Combine(temp, string.Join(Path.DirectorySeparatorChar.ToString(), parts, 2, parts.Length - 2)));
+                                if (!dest.StartsWith(root, StringComparison.OrdinalIgnoreCase)) continue;
+                                Directory.CreateDirectory(Path.GetDirectoryName(dest));
+                                entry.ExtractToFile(dest, true);
+                            }
+                    }
+                    if (!File.Exists(Path.Combine(temp, SquidBotsName + ".toc"))) throw new InvalidDataException("no " + SquidBotsName + ".toc");
+                    File.WriteAllText(Path.Combine(temp, ".afk-version"), newest);
+                    if (Directory.Exists(target)) Directory.Delete(target, true);
+                    Directory.Move(temp, target);
+                    return target;
+                }
+                catch
+                {
+                    try { if (Directory.Exists(temp)) Directory.Delete(temp, true); } catch { }
+                    return have ? target : null;
+                }
+            }
         }
 
         static AddonState StateOf(ClientAddon addon, string client)

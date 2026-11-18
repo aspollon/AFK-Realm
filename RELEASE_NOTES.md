@@ -1,3 +1,8 @@
+# AFK Realm 1.3.74
+
+- **New:** the SquidBots Manager add-on (Zyth's bot add-on with the World panel for invasions, gold rushes, guild orders and bot artisans) now comes with every CoA server and is kept at its newest version. Open Modules › Game client and choose Install; create the player ZIP / launcher pack again so your players get it too.
+- **Fix:** the Nemesis module failed on CoA servers because its base SQL file ran after its updates. AFK now puts it first by itself; just update the server.
+
 # AFK Realm 1.3.73
 
 - **Fix:** after a new player ZIP or launcher pack, Azeroth Remastered could show torn, stretched models on the players' PCs: the pack carried CoA Custom's shaders instead of AFK64's. Create the player ZIP / launcher pack once more after this update; players then get the right shaders with their next launcher update.
