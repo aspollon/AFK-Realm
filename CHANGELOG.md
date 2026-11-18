@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.75
+
+- **New for module client patches: `setRows` can add bits** (`"or": {field: bits}`) next to setting values. mod-classic-classes uses it for the Death Knight test: runes may be forged on low-level weapons (`SPELL_ATTR2_ALLOW_LOW_LEVEL_BUFF` on the runeforge spells) without overwriting their other attributes.
+
 ## 1.3.74
 
 - **New: the SquidBots Manager add-on comes with every CoA server.** Zyth45's add-on for his CoA Playerbots (bot bar, alts, group quests, guild orders, artisans and the World panel with invasions, gold rushes and server firsts) belongs to `mod-playerbots`, so it shows up under Modules › Game client like DungeonClear, goes into the player ZIP / launcher pack, and is installed with the other add-ons. AFK takes the newest commit of `Zyth45/squidbots-addon` (asks GitHub at most every 3 hours, `ClientAddons.EnsureSquidBots`); a new commit makes the add-on show as changed, so the game client notice offers it. Without an answer from GitHub the copy already fetched stays. Features a realm has off show "Not on this realm" in the add-on itself.

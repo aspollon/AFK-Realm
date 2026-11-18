@@ -797,8 +797,8 @@ namespace CoAInstaller
 
         /// <summary>
         /// Fields of rows changed in a DBC table: every row whose fields in "match" (field number: value) hold those values
-        /// gets the values in "set". The fields keep the width the table stores them in. Example: making a race of
-        /// ChrRaces.dbc playable for a faction.
+        /// gets the values in "set", and the bits in "or" added to what they hold. The fields keep the width the table stores
+        /// them in. Example: making a race of ChrRaces.dbc playable for a faction.
         /// </summary>
         static byte[] SetRows(byte[] bytes, EditSpec edit, string file, List<string> notes = null)
         {
@@ -812,13 +812,14 @@ namespace CoAInstaller
                 if (d != null) foreach (var kv in d) result[int.Parse(kv.Key)] = kv.Value is string ? table.AddString((string)kv.Value) : Convert.ToUInt32(kv.Value);
                 return result;
             };
-            var match = fields("match"); var set = fields("set");
-            if (match.Count == 0 || set.Count == 0 || match.Keys.Concat(set.Keys).Any(f => f < 0 || f >= table.Fields))
+            var match = fields("match"); var set = fields("set"); var bits = fields("or");
+            if (match.Count == 0 || set.Count + bits.Count == 0 || match.Keys.Concat(set.Keys).Concat(bits.Keys).Any(f => f < 0 || f >= table.Fields))
                 throw new InvalidOperationException(L.F("The fields module {0} changes in {1} are not described in a way it can use.", edit.Module, file));
             int changed = 0;
             foreach (var row in table.Records.Where(r => match.All(m => table.Field(r, m.Key) == m.Value)))
             {
                 foreach (var s in set) table.SetField(row, s.Key, s.Value);
+                foreach (var o in bits) table.SetField(row, o.Key, table.Field(row, o.Key) | o.Value);
                 changed++;
             }
             if (changed == 0)

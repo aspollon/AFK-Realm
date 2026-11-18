@@ -1,3 +1,7 @@
+# AFK Realm 1.3.75
+
+- Groundwork for the Death Knight test of mod-classic-classes: module client patches can now switch single flags in the game data. Nothing changes for your server until a module uses it.
+
 # AFK Realm 1.3.74
 
 - **New:** the SquidBots Manager add-on (Zyth's bot add-on with the World panel for invasions, gold rushes, guild orders and bot artisans) now comes with every CoA server and is kept at its newest version. Open Modules › Game client and choose Install; create the player ZIP / launcher pack again so your players get it too.
