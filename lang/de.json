@@ -2998,5 +2998,15 @@
     "Gear upgrades by the CoA gear score": "Ausrüstungs-Upgrades nach CoA-Gear-Score",
     "The clearer the upgrade, the more a bot wants it.": "Je deutlicher das Upgrade, desto mehr will ein Bot es haben.",
     "Smallest upgrade worth buying": "Kleinstes Upgrade, das sich lohnt"
-  }
+  },
+  "{0}: a file could not be read, the pack's shaders stay ({1})": "{0}: Eine Datei ließ sich nicht lesen, die Shader des Pakets bleiben ({1})",
+  "{0}: the pack's shaders stay ({1})": "{0}: Die Shader des Pakets bleiben ({1})",
+  "{0}: the pack's {1} shaders left out (they flicker under AFK64.exe), its fonts kept": "{0}: Die {1} Shader des Pakets weggelassen (sie flackern unter AFK64.exe), die Schriften bleiben",
+  "Vulkan shaders: Python or glslang is missing, the game's own shaders were not translated (install python3 and glslang).": "Vulkan-Shader: Python oder glslang fehlt, die eigenen Shader des Spiels wurden nicht übersetzt (python3 und glslang installieren).",
+  "Translating the game's shaders for Vulkan (a minute or two) ...": "Übersetze die Shader des Spiels für Vulkan (ein, zwei Minuten) ...",
+  "Vulkan shaders: the translation stopped ({0}). {1}": "Vulkan-Shader: Die Übersetzung brach ab ({0}). {1}",
+  "Vulkan shaders: {0} of your game's shaders translated (HD pack, newer patches)": "Vulkan-Shader: {0} Shader deines Spiels übersetzt (HD-Paket, neuere Patches)",
+  "Vulkan shaders: {0} of your game's shaders translated, some could not be ({1})": "Vulkan-Shader: {0} Shader deines Spiels übersetzt, einige ließen sich nicht übersetzen ({1})",
+  "Vulkan shaders: not translated ({0})": "Vulkan-Shader: nicht übersetzt ({0})",
+  "Downloading {0} ...": "Lade {0} herunter ..."
 }

@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.76
+
+- **Vulkan shaders are translated on the player's machine.** AFK64.exe draws on Vulkan only with a module for every shader the game loads; the voices release brings modules for a CoA Custom client, so a shader from the player's own archives had none. fueryin's Ultra-HD pack replaces 1,459 shaders, and 166 of them (all terrain permutations, the M2 and WMO vertex shaders) made the ground and buildings flicker red, green and blue or turn black. After every AFK64.exe check and HD install, `ClientShaders` translates exactly the missing ones with CoA64's translator (Python and glslang are downloaded once into LocalAppData) and adds them to `VulkanShaders`; the release's manifest is kept as `release-manifest.txt`. If that fails, the HD install leaves the pack's shaders out of `patch-ZXA.MPQ` and keeps its fonts. `docs/2026-11-21-vulkan-shaders.md`. Reported on Discord.
+
 ## 1.3.75
 
 - **New for module client patches: `setRows` can add bits** (`"or": {field: bits}`) next to setting values. mod-classic-classes uses it for the Death Knight test: runes may be forged on low-level weapons (`SPELL_ATTR2_ALLOW_LOW_LEVEL_BUFF` on the runeforge spells) without overwriting their other attributes.

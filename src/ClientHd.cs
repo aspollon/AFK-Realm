@@ -207,6 +207,37 @@ namespace CoAInstaller
             return pack;
         }
 
+        /// <summary>
+        /// The fallback when ClientShaders could not translate the pack's shaders (patch-ZZA, shaders\...): without
+        /// Vulkan modules, AFK64.exe draws the ground and buildings flickering red, green and blue or black. They leave
+        /// the archive; its fonts stay. Reinstalling the pack (switch off and on) brings them back. Null when there were none.
+        /// </summary>
+        static string StripPackShaders(string archive)
+        {
+            if (!File.Exists(archive)) return null;
+            var keep = new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
+            int dropped = 0;
+            try
+            {
+                using (var mpq = new MpqArchive(archive))
+                    foreach (string name in mpq.Names())
+                    {
+                        if (name.StartsWith("shaders\\", StringComparison.OrdinalIgnoreCase)) { dropped++; continue; }
+                        if (name.StartsWith("(")) continue;
+                        byte[] bytes = mpq.Read(name);
+                        if (bytes == null) return L.F("{0}: a file could not be read, the pack's shaders stay ({1})", Path.GetFileName(archive), name);
+                        keep[name] = bytes;
+                    }
+            }
+            catch (Exception e) { return L.F("{0}: the pack's shaders stay ({1})", Path.GetFileName(archive), e.Message); }
+            if (dropped == 0) return null;
+            string tmp = archive + ".new";
+            MpqArchive.Write(tmp, keep);
+            File.Delete(archive);
+            File.Move(tmp, archive);
+            return L.F("{0}: the pack's {1} shaders left out (they flicker under AFK64.exe), its fonts kept", Path.GetFileName(archive), dropped);
+        }
+
         static string Data(string client) { return Path.Combine(client, "Data"); }
         static string AddOn(string client, string name) { return Path.Combine(client, "Interface", "AddOns", name); }
 
@@ -303,6 +334,15 @@ namespace CoAInstaller
             // LuxVelum, when switched on, needs the same exe as its host; a failed download only leaves a note.
             try { string exe = ClientVoices.EnsureNewestExe(client, report, CoaClientExe.Afk); if (exe != null) done.Add(exe); }
             catch (Exception e) { if (o.Lux) done.Add(L.F("The newest AFK64.exe could not be fetched ({0}); LuxVelum waits for it.", e.Message)); }
+            // AFK64.exe needs Vulkan modules for the pack's shaders; when they could not be translated, the pack's
+            // shaders leave patch-ZXA instead (they would flicker), and the next install tries again.
+            string translated = ClientShaders.Ensure(client, report);
+            if (translated != null) done.Add(translated);
+            if (ClientShaders.Missing(client))
+            {
+                string stripped = StripPackShaders(Path.Combine(Data(client), "patch-ZXA.MPQ"));
+                if (stripped != null) done.Add(stripped);
+            }
             done.AddRange(InstallLux(client, pack, o, report));
             int visuals = o.Visuals >= ClientVisuals.Stock ? o.Visuals
                 : o.Lux ? ClientVisuals.LuxVelum

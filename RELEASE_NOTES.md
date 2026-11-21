@@ -1,3 +1,7 @@
+# AFK Realm 1.3.76
+
+- **Fix:** with the Ultra-HD pack, ground and buildings could flicker red, green and blue or turn black. AFK now translates the game's own shaders for Vulkan (Lumenveil, LuxVelum, Azeroth Remastered), once, automatically: the HD pack's and any newer patch's. The first time it downloads Python and glslang once. Already installed the pack? Open the HD page and click Install once, then build your player pack again.
+
 # AFK Realm 1.3.75
 
 - Groundwork for the Death Knight test of mod-classic-classes: module client patches can now switch single flags in the game data. Nothing changes for your server until a module uses it.

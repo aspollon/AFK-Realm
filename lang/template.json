@@ -2806,5 +2806,15 @@
     "Your CoA64.exe cannot host LuxVelum yet; \"Install / apply\" brings the newest one when it is released.": "",
     "AFK's CoA64.exe could not be fetched ({0}); the package's exe is used.": "",
     "AFK64.exe could not be fetched ({0}); the exe already in the game folder is used.": ""
-  }
+  },
+  "{0}: a file could not be read, the pack's shaders stay ({1})": "",
+  "{0}: the pack's shaders stay ({1})": "",
+  "{0}: the pack's {1} shaders left out (they flicker under AFK64.exe), its fonts kept": "",
+  "Vulkan shaders: Python or glslang is missing, the game's own shaders were not translated (install python3 and glslang).": "",
+  "Translating the game's shaders for Vulkan (a minute or two) ...": "",
+  "Vulkan shaders: the translation stopped ({0}). {1}": "",
+  "Vulkan shaders: {0} of your game's shaders translated (HD pack, newer patches)": "",
+  "Vulkan shaders: {0} of your game's shaders translated, some could not be ({1})": "",
+  "Vulkan shaders: not translated ({0})": "",
+  "Downloading {0} ...": ""
 }

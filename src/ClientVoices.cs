@@ -258,7 +258,9 @@ namespace CoAInstaller
         {
             var manifest = zip.Entries.FirstOrDefault(e => e.FullName.Replace('\\', '/').Equals("CoA64/" + ShaderFolder + "/manifest.txt", StringComparison.OrdinalIgnoreCase));
             if (manifest == null) return true;
-            string local = Path.Combine(client, ShaderFolder, "manifest.txt");
+            // The merged manifest has the game's own translations too (ClientShaders); the release's copy is beside it.
+            string local = ClientShaders.ReleaseManifest(client);
+            if (!File.Exists(local)) local = Path.Combine(client, ShaderFolder, "manifest.txt");
             if (!File.Exists(local) || new FileInfo(local).Length != manifest.Length) return false;
             using (var a = manifest.Open())
             using (var b = File.OpenRead(local))
@@ -294,7 +296,9 @@ namespace CoAInstaller
             if (manifest != null)
             {
                 Directory.CreateDirectory(root);
+                manifest.ExtractToFile(ClientShaders.ReleaseManifest(client), true);
                 manifest.ExtractToFile(Path.Combine(root, "manifest.txt"), true);
+                ClientShaders.Reset(client);
             }
             return entries.Count;
         }
@@ -363,6 +367,8 @@ namespace CoAInstaller
                 {
                     string done = SameExe(client, pluginZip, targetName) ? null : InstallExe(client, pluginZip, targetName);
                     if (targetName == CoaClientExe.Afk) WriteExeMarker(client, plugin.Tag);
+                    string shaders = ClientShaders.Ensure(client, report);
+                    if (shaders != null) done = done == null ? shaders : done + "\n" + shaders;
                     return done;
                 }
                 finally { TryDelete(pluginZip); }
