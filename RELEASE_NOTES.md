@@ -1,4 +1,7 @@
-# AFK Realm 1.3.76
+# AFK Realm 1.3.77
+
+1.3.76 did not build; this is the same release, now complete.
+
 
 - **Fix:** with the Ultra-HD pack, ground and buildings could flicker red, green and blue or turn black. AFK now translates the game's own shaders for Vulkan (Lumenveil, LuxVelum, Azeroth Remastered), once, automatically: the HD pack's and any newer patch's. The first time it downloads Python and glslang once. Already installed the pack? Open the HD page and click Install once, then build your player pack again.
 
