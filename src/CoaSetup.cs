@@ -658,7 +658,8 @@ namespace CoAInstaller
         }
 
         // The base race CoA Custom gives its races: its RACIAL table for the first 31 races and a
-        // same-faction stock race for the Esteria races above them.
+        // same-faction stock race for the Esteria races above them. 2.0.3: the Sureki (86) start like the
+        // Night Elf, the Snagtooth (94) like the Gnome (64_sureki_start.sql, 62_snagtooth.sql).
         static readonly Dictionary<int, string> CoaBaseByRace = new Dictionary<int, string>
         {
             { 9, "Orc" }, { 12, "Troll" }, { 13, "NightElf" }, { 14, "Human" }, { 15, "Dwarf" },
@@ -670,7 +671,7 @@ namespace CoAInstaller
             { 58, "Orc" }, { 59, "NightElf" }, { 60, "BloodElf" }, { 61, "NightElf" }, { 62, "Draenei" },
             { 63, "BloodElf" }, { 66, "Tauren" }, { 67, "Gnome" }, { 68, "Dwarf" }, { 69, "Tauren" },
             { 70, "Orc" }, { 71, "Human" }, { 74, "Troll" }, { 75, "Human" }, { 78, "Human" },
-            { 79, "Human" }, { 82, "Human" }, { 83, "Orc" }, { 87, "Orc" }, { 90, "Undead" },
+            { 79, "Human" }, { 82, "Human" }, { 83, "Orc" }, { 86, "NightElf" }, { 87, "Orc" }, { 90, "Undead" }, { 94, "Gnome" },
             { 97, "Human" }, { 98, "Orc" }, { 99, "Human" }, { 100, "Human" }, { 101, "Undead" },
             { 102, "Tauren" }, { 103, "Human" }, { 104, "Orc" }, { 106, "Orc" }, { 107, "Draenei" },
             { 109, "Human" }, { 110, "Human" }, { 112, "Orc" },

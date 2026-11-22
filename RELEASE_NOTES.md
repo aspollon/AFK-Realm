@@ -1,3 +1,7 @@
+# AFK Realm 1.3.78
+
+- **CoA Custom 2.0.3:** the new Snagtooth race starts in Dun Morogh like the Gnome, the Sureki at the Night Elf start. Update mod-custom-races too, it brings the Snagtooth racials.
+
 # AFK Realm 1.3.77
 
 1.3.76 did not build; this is the same release, now complete.

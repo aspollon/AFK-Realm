@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.78
+
+- **CoA Custom 2.0.3.** Its new race, the Snagtooth (94, Alliance, male only), starts in Dun Morogh like the Gnome; the Sureki (86) start at the Night Elf start point instead of Northshire (`CoaBaseByRace`; a base race chosen before stays). Client-18 is installed last like every higher part, the new server DBCs (CreatureSoundData, VocalUISounds for its voice) are copied as before. Its racials come with mod-custom-races.
+
 ## 1.3.77
 
 - **Fix: 1.3.76 did not build.** The web project lists its source files one by one, and `src/ClientShaders.cs` was missing from that list. 1.3.77 is 1.3.76 with the file in it; everything described under 1.3.76 arrives with this version.
