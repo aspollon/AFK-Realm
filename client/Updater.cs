@@ -35,7 +35,7 @@ internal static class Updater
 
     public static async Task<UpdateResult> ApplyAsync(string gameFolder, LauncherConfig config, Manifest manifest,
         IReadOnlyCollection<string> previousManaged, bool force, IProgress<UpdateProgress> progress, CancellationToken cancel,
-        LocalState state = null)
+        LocalState state = null, Func<string, bool> keepOwn = null)
     {
         if (string.IsNullOrWhiteSpace(gameFolder) || !Game.IsClientFolder(gameFolder))
             throw new InvalidOperationException("Choose the Conquest of Azeroth game folder (the one with the Data folder).");
@@ -44,6 +44,8 @@ internal static class Updater
         var result = new UpdateResult();
         var all = manifest.Files.Concat(manifest.Optional ?? new List<ManifestFile>()).ToList();
         int done = 0, total = all.Count;
+        // Repair puts every file back to the server's version, the player's own ones too.
+        if (force) state?.Kept.Clear();
         foreach (var file in all)
         {
             cancel.ThrowIfCancellationRequested();
@@ -72,7 +74,14 @@ internal static class Updater
                 string.Equals(await CachedHashAsync(target, state, cancel), file.Sha256, StringComparison.OrdinalIgnoreCase);
             if (current)
             {
+                state?.Kept.Remove(Norm(file.Path));
                 result.Skipped++;
+                progress.Report(new UpdateProgress("Checking the game files ...", Percent(done++, total), file.Path));
+                continue;
+            }
+            if (!force && File.Exists(target) && Keepable(file.Path) && state != null && KeepOwn(file, state, keepOwn))
+            {
+                result.Kept++;
                 progress.Report(new UpdateProgress("Checking the game files ...", Percent(done++, total), file.Path));
                 continue;
             }
@@ -136,6 +145,40 @@ internal static class Updater
     }
 
     static int Percent(int done, int total) => total <= 0 ? 100 : Math.Clamp((int)(done * 100L / total), 0, 100);
+
+    static string Norm(string path) => (path ?? "").Replace('\\', '/');
+
+    /// <summary>
+    /// Files a player may keep in their own version: settings and DLLs in the game folder itself (dxvk.conf, d3d9.dll and
+    /// dxgi.dll of another DXVK build, a Lumenveil ini). The game's exe and everything under Data and Interface are always
+    /// the server's.
+    /// </summary>
+    static bool Keepable(string path)
+    {
+        string norm = Norm(path);
+        if (norm.Contains('/') || HdSwitches.Optional(norm)) return false;
+        string ext = Path.GetExtension(norm);
+        return ext.Equals(".dll", StringComparison.OrdinalIgnoreCase) || ext.Equals(".conf", StringComparison.OrdinalIgnoreCase) ||
+               ext.Equals(".ini", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// A keepable file that differs from the server's: kept without asking while the server's version is the one the player
+    /// already answered for; otherwise the player is asked (no question asked: the server's version wins).
+    /// </summary>
+    static bool KeepOwn(ManifestFile file, LocalState state, Func<string, bool> keepOwn)
+    {
+        string key = Norm(file.Path);
+        if (state.Kept.TryGetValue(key, out var answered) && string.Equals(answered, file.Sha256, StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (keepOwn == null || !keepOwn(file.Path))
+        {
+            state.Kept.Remove(key);
+            return false;
+        }
+        state.Kept[key] = file.Sha256;
+        return true;
+    }
 
     static bool IsProtectedFile(string path)
     {

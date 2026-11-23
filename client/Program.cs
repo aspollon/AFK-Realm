@@ -79,6 +79,9 @@ internal sealed class LocalState
     public bool LuxOn { get; set; }
     // Size, write time and SHA-256 of files already checked, so a start does not hash gigabytes again.
     public Dictionary<string, string> Checked { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    // Root files the player chose to keep in their own version (dxvk.conf, a DXVK build): path -> the server's SHA-256
+    // at that time, so the question only comes back when the server ships a new version of the file.
+    public Dictionary<string, string> Kept { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
     static string FilePath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "AFK Client", "state.json");
 
@@ -121,6 +124,7 @@ internal sealed class UpdateResult
     public int Downloaded { get; set; }
     public int Skipped { get; set; }
     public int Removed { get; set; }
+    public int Kept { get; set; }
     public long Bytes { get; set; }
     public bool Changed { get; set; }
 }

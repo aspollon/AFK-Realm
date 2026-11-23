@@ -222,7 +222,7 @@ internal sealed class MainForm : Form
             if (_manifest == null) await LoadManifestAsync();
             if (_manifest == null) throw new InvalidOperationException("The server manifest could not be loaded.");
             var result = await Updater.ApplyAsync(_state.GameFolder, _config, _manifest, _state.ManagedFiles, repair,
-                new InlineProgress(ShowProgress), CancellationToken.None, _state);
+                new InlineProgress(ShowProgress), CancellationToken.None, _state, AskKeepOwn);
             _state.LastManifest = _manifest.Version;
             _state.ManagedFiles = _manifest.Files.Concat(_manifest.Optional).Select(f => f.Path).ToList();
             _state.Save();
@@ -231,7 +231,8 @@ internal sealed class MainForm : Form
                 ? "Everything is up to date."
                 : "Client updated: " + result.Downloaded + " files, " + FormatBytes(result.Bytes) +
                   (result.Removed > 0 ? ", " + result.Removed + " old files removed" : "") + ".", "ok");
-            _detail = "";
+            if (result.Kept > 0) _detail = result.Kept + " of your own files kept (Repair puts the server's back).";
+            if (result.Kept == 0) _detail = "";
         }
         catch (Exception ex)
         {
@@ -265,7 +266,7 @@ internal sealed class MainForm : Form
             if (_manifest == null) await LoadManifestAsync();
             if (_manifest == null) throw new InvalidOperationException("The server manifest could not be loaded.");
             var result = await Updater.ApplyAsync(_state.GameFolder, _config, _manifest, _state.ManagedFiles, false,
-                new InlineProgress(ShowProgress), CancellationToken.None, _state);
+                new InlineProgress(ShowProgress), CancellationToken.None, _state, AskKeepOwn);
             _state.LastManifest = _manifest.Version;
             _state.ManagedFiles = _manifest.Files.Concat(_manifest.Optional).Select(f => f.Path).ToList();
             _state.Save();
@@ -284,6 +285,20 @@ internal sealed class MainForm : Form
             _busy = false;
             SendState();
         }
+    }
+
+    /// <summary>
+    /// A settings file or DLL in the game folder differs from the server's (the player's own dxvk.conf, another DXVK build):
+    /// keep it or take the server's. A kept file is asked about again only when the server ships a new version of it.
+    /// </summary>
+    bool AskKeepOwn(string path)
+    {
+        var answer = MessageBox.Show(this,
+            path + " in your game folder is not the server's version (you or another program changed it).\n\n" +
+            "Yes: keep your version. You are asked again when the server ships a new version of this file.\n" +
+            "No: replace it with the server's version.",
+            "AFK Client: keep your own file?", MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button1);
+        return answer == DialogResult.Yes;
     }
 
     /// <summary>The HD switch: saved, and applied to the game folder at once when it is not running.</summary>

@@ -1,3 +1,7 @@
+# AFK Realm 1.3.79
+
+- **AFK Client:** changed your own `dxvk.conf` or swapped in another DXVK build? The launcher now asks whether to keep your version instead of overwriting it, and only asks again when the server ships a new version of that file. Repair still restores everything.
+
 # AFK Realm 1.3.78
 
 - **CoA Custom 2.0.3:** the new Snagtooth race starts in Dun Morogh like the Gnome, the Sureki at the Night Elf start. Update mod-custom-races too, it brings the Snagtooth racials.

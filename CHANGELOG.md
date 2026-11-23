@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.79
+
+- **AFK Client keeps a player's own files.** A settings file or DLL in the game folder itself (`dxvk.conf`, `d3d9.dll`/`dxgi.dll` of another DXVK build such as DXVK-SS, a Lumenveil ini) that differs from the server's version is no longer overwritten without asking: the launcher asks once whether to keep it. A kept file is remembered with the server's hash at that time (`LocalState.Kept`) and the question only comes back when the server ships a new version of it. Repair still puts every file back to the server's version. The game's exe and everything under Data and Interface are always the server's. Suggested on Discord.
+
 ## 1.3.78
 
 - **CoA Custom 2.0.3.** Its new race, the Snagtooth (94, Alliance, male only), starts in Dun Morogh like the Gnome; the Sureki (86) start at the Night Elf start point instead of Northshire (`CoaBaseByRace`; a base race chosen before stays). Client-18 is installed last like every higher part, the new server DBCs (CreatureSoundData, VocalUISounds for its voice) are copied as before. Its racials come with mod-custom-races.
