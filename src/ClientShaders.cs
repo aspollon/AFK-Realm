@@ -21,9 +21,11 @@ namespace CoAInstaller
     static class ClientShaders
     {
         const string Folder = "VulkanShaders";
+        // Azeroth Remastered's set (CoA64 on Mado's engine): its manifest.txt stays as shipped, ours go to manifest-coa.txt.
+        static readonly string MadoFolder = Path.Combine("Vulkan", "shaders", "translated");
         const string Stamp = ".afk-translated";
         // Bump with the translator in assets/vulkan-shaders: a new one translates again.
-        const string TranslatorVersion = "coa64-2026-11-21";
+        const string TranslatorVersion = "coa64-2026-11-25";
         const string PythonVersion = "3.12.10";
         const string GlslangVersion = "16.6.0";
         static readonly string PythonUrl = "https://www.python.org/ftp/python/" + PythonVersion + "/python-" + PythonVersion + "-embed-amd64.zip";
@@ -37,7 +39,18 @@ namespace CoAInstaller
         /// <summary>After the release's set was (re)installed: the next Ensure translates again.</summary>
         public static void Reset(string client)
         {
-            try { File.Delete(Path.Combine(client, Folder, Stamp)); } catch { }
+            foreach (string rel in new[] { Folder, MadoFolder })
+                try { File.Delete(Path.Combine(client, rel, Stamp)); } catch { }
+        }
+
+        /// <summary>The shader sets in this game folder: the old VulkanShaders and Azeroth Remastered's, whichever exist.</summary>
+        static IEnumerable<string> Sets(string client)
+        {
+            foreach (string rel in new[] { Folder, MadoFolder })
+            {
+                string set = Path.Combine(client, rel);
+                if (File.Exists(Path.Combine(set, "manifest.txt"))) yield return set;
+            }
         }
 
         /// <summary>The archives the game reads shaders from: names, sizes and times, so a changed patch translates again.</summary>
@@ -61,10 +74,14 @@ namespace CoAInstaller
         {
             try
             {
-                string set = Path.Combine(client, Folder);
-                if (!File.Exists(Path.Combine(set, "manifest.txt"))) return false;
-                string stamp = Path.Combine(set, Stamp);
-                return !File.Exists(stamp) || File.ReadAllText(stamp).Trim() != Fingerprint(client);
+                string print = null;
+                foreach (string set in Sets(client))
+                {
+                    string stamp = Path.Combine(set, Stamp);
+                    print ??= Fingerprint(client);
+                    if (!File.Exists(stamp) || File.ReadAllText(stamp).Trim() != print) return true;
+                }
+                return false;
             }
             catch { return true; }
         }
@@ -77,26 +94,30 @@ namespace CoAInstaller
         {
             try
             {
-                string set = Path.Combine(client, Folder);
-                if (!File.Exists(Path.Combine(set, "manifest.txt"))) return null;
                 if (!File.Exists(Path.Combine(client, "Data", "common.MPQ")) && !File.Exists(Path.Combine(client, "Data", "common.mpq"))) return null;
                 string print = Fingerprint(client);
-                string stamp = Path.Combine(set, Stamp);
-                if (File.Exists(stamp) && File.ReadAllText(stamp).Trim() == print) return null;
+                var todo = Sets(client).Where(set => !File.Exists(Path.Combine(set, Stamp)) || File.ReadAllText(Path.Combine(set, Stamp)).Trim() != print).ToList();
+                if (todo.Count == 0) return null;
 
                 string python, glslang;
                 if (!FindTools(report, out python, out glslang))
                     return L.T("Vulkan shaders: Python or glslang is missing, the game's own shaders were not translated (install python3 and glslang).");
                 string translator = Translator();
                 report(L.T("Translating the game's shaders for Vulkan (a minute or two) ..."), 0, 0);
-                string output;
-                int code = Run(python, new[] { Path.Combine(translator, "translate_shaders.py"), "--client", client, "--glslang", glslang, "--merge-into", set }, out output);
-                if (code != 0 && code != 1)
-                    return L.F("Vulkan shaders: the translation stopped ({0}). {1}", code, LastLine(output));
-                File.WriteAllText(stamp, print);
-                string merged = output.Split('\n').Select(l => l.Trim()).FirstOrDefault(l => l.StartsWith("merged ", StringComparison.Ordinal));
-                int n = 0;
-                if (merged != null) int.TryParse(merged.Split(' ')[1], out n);
+                int n = 0, code = 0;
+                string output = "";
+                foreach (string set in todo)
+                {
+                    int one = Run(python, new[] { Path.Combine(translator, "translate_shaders.py"), "--client", client, "--glslang", glslang, "--merge-into", set }, out output);
+                    if (one != 0 && one != 1)
+                        return L.F("Vulkan shaders: the translation stopped ({0}). {1}", one, LastLine(output));
+                    code = Math.Max(code, one);
+                    File.WriteAllText(Path.Combine(set, Stamp), print);
+                    string merged = output.Split('\n').Select(l => l.Trim()).FirstOrDefault(l => l.StartsWith("merged ", StringComparison.Ordinal));
+                    int m = 0;
+                    if (merged != null) int.TryParse(merged.Split(' ')[1], out m);
+                    n += m;
+                }
                 if (n == 0) return null;
                 return code == 0
                     ? L.F("Vulkan shaders: {0} of your game's shaders translated (HD pack, newer patches)", n)

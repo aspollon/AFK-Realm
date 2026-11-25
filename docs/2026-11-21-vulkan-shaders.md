@@ -48,3 +48,11 @@ The real cause of that report was on the owner's side: `ClientVoices.SameShaders
 `release-manifest.txt` with the release, so a live set replaced afterwards (the CoA Custom package's) was never noticed
 and went into every pack. It now requires the live `manifest.txt` to begin with the release's text (merges append) and
 every release module to be present with its size; the pack build calls `EnsureNewestExe` first, which reinstalls.
+
+## Azeroth Remastered's set (2026-11-25)
+
+CoA64 on Mado's engine reads `Vulkan\shaders\translated\` (Mado's shipped set). Its `manifest.txt` stays as shipped,
+because Mado's FSR overlays (`manifest-m2/m3/m4.txt`) pin its SHA-256. The translator (translator `coa64-2026-11-25`)
+recognises that set and writes the records the player's client adds to `manifest-coa.txt` and `index-coa.txt` in Mado's
+layout (`p[16]`, vertex classes 64/256/1000, pixel c13+ from `v[64 + (N - 13)]`). AFK Client and AFK Realm translate
+into every set the game folder has.
