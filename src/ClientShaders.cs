@@ -64,6 +64,11 @@ namespace CoAInstaller
                 var fi = new FileInfo(f);
                 sb.Append(fi.Name.ToLowerInvariant()).Append('|').Append(fi.Length).Append('|').Append(fi.LastWriteTimeUtc.Ticks).Append('\n');
             }
+            // The exe dumps its own HD shaders here (snow and the like); new ones translate again.
+            string blobs = Path.Combine(client, "Vulkan", "hd-blobs");
+            if (Directory.Exists(blobs))
+                foreach (string f in Directory.GetFiles(blobs, "*.bin").OrderBy(x => x, StringComparer.OrdinalIgnoreCase))
+                    sb.Append("blob|").Append(Path.GetFileName(f).ToLowerInvariant()).Append('|').Append(new FileInfo(f).Length).Append('\n');
             if (File.Exists(ReleaseManifest(client))) sb.Append("release|").Append(new FileInfo(ReleaseManifest(client)).Length).Append('\n');
             using (var sha = SHA256.Create())
                 return BitConverter.ToString(sha.ComputeHash(Encoding.UTF8.GetBytes(sb.ToString()))).Replace("-", "");
