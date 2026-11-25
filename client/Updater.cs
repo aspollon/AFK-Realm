@@ -163,9 +163,17 @@ internal static class Updater
     // set misses the ones its game folder lacks. Null when nothing was to do, else one line for the player.
     static Task<string> TranslateShadersAsync(string gameFolder, IProgress<UpdateProgress> progress)
     {
-        if (!ClientShaders.Missing(gameFolder)) return Task.FromResult<string>(null);
-        return Task.Run(() => ClientShaders.Ensure(gameFolder, (text, done, total) =>
-            progress.Report(new UpdateProgress(text, total > 0 ? Percent((int)(done / 1024), (int)(total / 1024)) : 100, ""))));
+        bool remastered = Visuals.Read(gameFolder) == Visuals.AzerothRemastered;
+        if (!ClientShaders.Missing(gameFolder) && (!remastered || ClientAzerothRemastered.Installed(gameFolder))) return Task.FromResult<string>(null);
+        Action<string, long, long> report = (text, done, total) =>
+            progress.Report(new UpdateProgress(text, total > 0 ? Percent((int)(done / 1024), (int)(total / 1024)) : 100, ""));
+        return Task.Run(() =>
+        {
+            // Mado's data first: its shader set is what the translation adds to.
+            string data = ClientAzerothRemastered.Ensure(gameFolder, remastered, report);
+            string shaders = ClientShaders.Ensure(gameFolder, report);
+            return data == null ? shaders : shaders == null ? data : data + " " + shaders;
+        });
     }
 
     static int Percent(int done, int total) => total <= 0 ? 100 : Math.Clamp((int)(done * 100L / total), 0, 100);

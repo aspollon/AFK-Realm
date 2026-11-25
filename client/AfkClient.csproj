@@ -21,6 +21,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="../src/ClientShaders.cs" Link="ClientShaders.cs" />
+    <Compile Include="../src/ClientAzerothRemastered.cs" Link="ClientAzerothRemastered.cs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4314.35" />

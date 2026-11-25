@@ -348,6 +348,14 @@ namespace CoAInstaller
                 : o.Lux ? ClientVisuals.LuxVelum
                 : ClientVisuals.Read(client) == ClientVisuals.LuxVelum ? ClientVisuals.Lumenveil : -1;
             if (ClientVisuals.Write(client, visuals)) done.Add(L.F("Graphics effect: {0}", ClientVisuals.Name(visuals)));
+            // Chosen just now: Mado's data and its shader list, translated for this game folder.
+            string remastered = ClientAzerothRemastered.Ensure(client, ClientVisuals.Read(client) == ClientVisuals.AzerothRemastered, report);
+            if (remastered != null)
+            {
+                done.Add(remastered);
+                string more = ClientShaders.Ensure(client, report);
+                if (more != null) done.Add(more);
+            }
             if (ClientVisuals.Read(client) == ClientVisuals.Lumenveil) ClientVisuals.EnableOverlay(client);
             done.AddRange(InstallAddons(client, pack, o));
             return string.Join("\n", done);

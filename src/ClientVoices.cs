@@ -380,6 +380,8 @@ namespace CoAInstaller
                 {
                     string done = SameExe(client, pluginZip, targetName) ? null : InstallExe(client, pluginZip, targetName);
                     if (targetName == CoaClientExe.Afk) WriteExeMarker(client, plugin.Tag);
+                    string data = ClientAzerothRemastered.Ensure(client, ClientVisuals.Read(client) == ClientVisuals.AzerothRemastered, report);
+                    if (data != null) done = done == null ? data : done + "\n" + data;
                     string shaders = ClientShaders.Ensure(client, report);
                     if (shaders != null) done = done == null ? shaders : done + "\n" + shaders;
                     return done;
