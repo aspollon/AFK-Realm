@@ -1,3 +1,8 @@
+# AFK Realm 1.3.81
+
+- **Azeroth Remastered on Mado's engine:** with Visuals 3 the game now has AMD FSR 3.1 with frame generation and NVIDIA DLSS (Video options, Upscaling). AFK downloads Mado's Azeroth Remastered package for you; Living Azeroth, LuxVelum and Lumenveil stay. Update Living Voices (0.6.7, the new exe) on the Voices page, then build your player pack / launcher pack again.
+- **Fix:** at night, models and trees could turn completely red, blue, magenta, green or black depending on the camera angle, and fonts were red and pixelated. The Vulkan shaders are translated once more on every PC to fix it (a minute or two on the first start).
+
 # AFK Realm 1.3.80
 
 - **Fix:** the player pack could carry the wrong Vulkan shaders when something had overwritten them in your own game folder, and AFK did not notice. AFK now checks the whole shader set and puts the right one back by itself, the next time you build the player pack or update the exe.

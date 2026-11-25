@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.81
+
+- **Azeroth Remastered on Mado's engine.** The CoA64 exe of Living Voices 0.6.7 runs on Mado's Azeroth Remastered engine (FSR 3.1 with frame generation, DLSS), with Living Azeroth, LuxVelum, Lumenveil and the CoA features ported onto it. When Visuals is 3, AFK and AFK Client download Mado's package (`ClientAzerothRemastered`, Shotboom v1.0.4: his shaders, light tables, `FSR/` and `DLSS/`; not his exe, launcher or XvidDecoder.dll) and apply its HD settings once on the first install.
+- **The CoA shaders Mado's set lacks are translated into it.** `ClientShaders` now also writes `Vulkan\shaders\translated\manifest-coa.txt` beside Mado's manifest (his records win; his FSR overlays pin his own manifest), so fonts, CoA's M2 shaders and the exe's dumped HD shaders have modules. CoA's HD model shaders read four extra lamps that only LuxVelum's DirectX 9 proxy fills; under Vulkan they now read as off, which fixes models and trees turning one colour (red, blue, magenta, green, black) depending on the camera angle at night. The new translator version translates once more on every PC.
+
 ## 1.3.80
 
 - **AFK Client translates the Vulkan shaders on the player's PC.** Up to now only AFK did that, for the owner's game folder, and the launcher shipped that folder's `VulkanShaders` as it was. A player whose archives differ (the HD pack switched on, another CoA Custom part, a newer patch) had no module for those shaders, and Azeroth Remastered tore or stretched models; copying the files by hand from Living Voices fixed it, the launcher did not. After every update check the launcher now runs the same `ClientShaders` as AFK (`src/ClientShaders.cs`, linked into the client project with the translator as resource): once, and again when the archives change. The server's `VulkanShaders/manifest.txt` is no longer compared with the local one, which grows with the translations; the launcher remembers the server's hash (`LocalState.ShaderManifest`) and translates again when a new one arrives. The owner's `.afk-translated` stamp no longer goes into the player pack. Reported on Discord.
