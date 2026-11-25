@@ -31,3 +31,20 @@ The players' launcher gets the merged set: `ClientVoices.PlayerFiles` already pa
 
 A newer translator: rebuild `translator.zip` from CoA64 `Tools/VulkanShaders` (translate_shaders.py, README.md,
 bls/*.py) and bump `ClientShaders.TranslatorVersion`.
+
+## 2026-11-25: the launcher translates too
+
+The player pack carries the owner's `VulkanShaders`, translated for the owner's archives. A player with other archives
+(HD pack switched on in the launcher, another CoA Custom part) lacked modules and saw torn models on Azeroth Remastered,
+while the same files copied by hand from Living Voices worked. AFK Client 1.3.80 links `src/ClientShaders.cs` and the
+translator resource and runs `Ensure` after every update check (`Updater.TranslateShadersAsync`).
+
+The merged `manifest.txt` differs from the server's by design, so the updater no longer hashes it against the server's:
+it keeps the server's SHA-256 in `LocalState.ShaderManifest`, downloads only when the server ships a new list, and then
+deletes the stamp (`ClientShaders.Reset`) so the next `Ensure` merges again. The owner's `.afk-translated` stays out of
+the pack (`ClientVoices.PlayerFiles`).
+
+The real cause of that report was on the owner's side: `ClientVoices.SameShaders` compared only the kept
+`release-manifest.txt` with the release, so a live set replaced afterwards (the CoA Custom package's) was never noticed
+and went into every pack. It now requires the live `manifest.txt` to begin with the release's text (merges append) and
+every release module to be present with its size; the pack build calls `EnsureNewestExe` first, which reinstalls.

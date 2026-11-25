@@ -17,6 +17,10 @@
     <EmbeddedResource Include="ui/index.html" LogicalName="AfkClient.ui.index.html" />
     <EmbeddedResource Include="ui/app.css" LogicalName="AfkClient.ui.app.css" />
     <EmbeddedResource Include="ui/app.js" LogicalName="AfkClient.ui.app.js" />
+    <EmbeddedResource Include="../assets/vulkan-shaders/translator.zip" LogicalName="CoAInstaller.vulkanshaders.zip" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="../src/ClientShaders.cs" Link="ClientShaders.cs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4314.35" />

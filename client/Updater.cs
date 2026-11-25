@@ -4,6 +4,8 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
+using CoAInstaller;
+
 namespace AfkClient;
 
 internal static class ManifestClient
@@ -70,10 +72,15 @@ internal static class Updater
                 }
                 if (!File.Exists(target) && File.Exists(target + HdSwitches.Off)) File.Move(target + HdSwitches.Off, target);
             }
-            bool current = !force && File.Exists(target) && new FileInfo(target).Length == file.Size &&
-                string.Equals(await CachedHashAsync(target, state, cancel), file.Sha256, StringComparison.OrdinalIgnoreCase);
+            // The local shader list is the server's plus this PC's own translations (ClientShaders): same base, no download.
+            bool shaderList = Norm(file.Path).Equals(ShaderManifest, StringComparison.OrdinalIgnoreCase);
+            bool current = !force && File.Exists(target) && (shaderList && state != null &&
+                string.Equals(state.ShaderManifest, file.Sha256, StringComparison.OrdinalIgnoreCase) ||
+                new FileInfo(target).Length == file.Size &&
+                string.Equals(await CachedHashAsync(target, state, cancel), file.Sha256, StringComparison.OrdinalIgnoreCase));
             if (current)
             {
+                if (shaderList && state != null) state.ShaderManifest = file.Sha256;
                 state?.Kept.Remove(Norm(file.Path));
                 result.Skipped++;
                 progress.Report(new UpdateProgress("Checking the game files ...", Percent(done++, total), file.Path));
@@ -102,6 +109,11 @@ internal static class Updater
                 }
                 File.Move(temp, target, true);
                 Remember(state, target, file.Sha256);
+                if (shaderList)
+                {
+                    if (state != null) state.ShaderManifest = file.Sha256;
+                    ClientShaders.Reset(gameFolder);
+                }
                 result.Downloaded++;
                 result.Bytes += new FileInfo(target).Length;
                 result.Changed = true;
@@ -139,9 +151,21 @@ internal static class Updater
         // The CoA package's CoAVolFog.ini has Overlay=0; on a Lumenveil client that switches the in-game settings
         // window and Ctrl+F7 (and the other keys) off. Keep the choice's keys working after an update.
         if (Visuals.Read(gameFolder) == Visuals.Lumenveil) Visuals.EnableOverlay(gameFolder);
+        result.Shaders = await TranslateShadersAsync(gameFolder, progress);
         progress.Report(new UpdateProgress("Writing the realm address ...", 100, ""));
         WriteRealm(gameFolder, manifest.RealmAddress, manifest.Realm);
         return result;
+    }
+
+    const string ShaderManifest = "VulkanShaders/manifest.txt";
+
+    // Azeroth Remastered (Vulkan) draws a shader only through a module made from this PC's own archives; the server's
+    // set misses the ones its game folder lacks. Null when nothing was to do, else one line for the player.
+    static Task<string> TranslateShadersAsync(string gameFolder, IProgress<UpdateProgress> progress)
+    {
+        if (!ClientShaders.Missing(gameFolder)) return Task.FromResult<string>(null);
+        return Task.Run(() => ClientShaders.Ensure(gameFolder, (text, done, total) =>
+            progress.Report(new UpdateProgress(text, total > 0 ? Percent((int)(done / 1024), (int)(total / 1024)) : 100, ""))));
     }
 
     static int Percent(int done, int total) => total <= 0 ? 100 : Math.Clamp((int)(done * 100L / total), 0, 100);

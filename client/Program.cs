@@ -82,6 +82,9 @@ internal sealed class LocalState
     // Root files the player chose to keep in their own version (dxvk.conf, a DXVK build): path -> the server's SHA-256
     // at that time, so the question only comes back when the server ships a new version of the file.
     public Dictionary<string, string> Kept { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    // SHA-256 of the server's VulkanShaders\manifest.txt last installed: the local copy grows with this PC's own
+    // translations, so it is not compared with the server's again until the server ships a new one.
+    public string ShaderManifest { get; set; } = "";
 
     static string FilePath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "AFK Client", "state.json");
 
@@ -127,4 +130,5 @@ internal sealed class UpdateResult
     public int Kept { get; set; }
     public long Bytes { get; set; }
     public bool Changed { get; set; }
+    public string Shaders { get; set; }
 }

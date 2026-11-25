@@ -1,3 +1,8 @@
+# AFK Realm 1.3.80
+
+- **Fix:** the player pack could carry the wrong Vulkan shaders when something had overwritten them in your own game folder, and AFK did not notice. AFK now checks the whole shader set and puts the right one back by itself, the next time you build the player pack or update the exe.
+- **Fix:** players on Azeroth Remastered could still get torn, stretched models through the launcher, while copying the Living Voices files by hand worked. AFK Client now translates the Vulkan shaders on each player's PC for their own game files, once (the first time it downloads Python and glslang, a minute or two) and again whenever the game files change, e.g. when a player switches the HD pack on. Build your player pack / launcher pack again after updating: that repairs your shaders and gives your players the new AFK Client.
+
 # AFK Realm 1.3.79
 
 - **AFK Client:** changed your own `dxvk.conf` or swapped in another DXVK build? The launcher now asks whether to keep your version instead of overwriting it, and only asks again when the server ships a new version of that file. Repair still restores everything.

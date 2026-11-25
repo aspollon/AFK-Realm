@@ -233,6 +233,7 @@ internal sealed class MainForm : Form
                   (result.Removed > 0 ? ", " + result.Removed + " old files removed" : "") + ".", "ok");
             if (result.Kept > 0) _detail = result.Kept + " of your own files kept (Repair puts the server's back).";
             if (result.Kept == 0) _detail = "";
+            if (result.Shaders != null) _detail = (_detail.Length > 0 ? _detail + " " : "") + result.Shaders;
         }
         catch (Exception ex)
         {
@@ -274,7 +275,7 @@ internal sealed class MainForm : Form
             SetStatus("Starting the game ...", "ok");
             SendState();
             Game.Launch(_state.GameFolder);
-            _detail = "Game started.";
+            _detail = result.Shaders != null ? "Game started. " + result.Shaders : "Game started.";
         }
         catch (Exception ex)
         {

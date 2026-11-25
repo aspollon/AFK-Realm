@@ -258,22 +258,35 @@ namespace CoAInstaller
         {
             var manifest = zip.Entries.FirstOrDefault(e => e.FullName.Replace('\\', '/').Equals("CoA64/" + ShaderFolder + "/manifest.txt", StringComparison.OrdinalIgnoreCase));
             if (manifest == null) return true;
-            // The merged manifest has the game's own translations too (ClientShaders); the release's copy is beside it.
-            string local = ClientShaders.ReleaseManifest(client);
-            if (!File.Exists(local)) local = Path.Combine(client, ShaderFolder, "manifest.txt");
-            if (!File.Exists(local) || new FileInfo(local).Length != manifest.Length) return false;
-            using (var a = manifest.Open())
-            using (var b = File.OpenRead(local))
+            string set = Path.Combine(client, ShaderFolder);
+            string kept = ClientShaders.ReleaseManifest(client);
+            string live = Path.Combine(set, "manifest.txt");
+            if (!File.Exists(kept) || !File.Exists(live)) return false;
+            byte[] release;
+            using (var s = manifest.Open())
+            using (var m = new MemoryStream())
             {
-                var x = new byte[1 << 16]; var y = new byte[1 << 16];
-                while (true)
-                {
-                    int n = ReadFull(a, x), m = ReadFull(b, y);
-                    if (n != m) return false;
-                    if (n == 0) return true;
-                    for (int k = 0; k < n; k++) if (x[k] != y[k]) return false;
-                }
+                s.CopyTo(m);
+                release = m.ToArray();
             }
+            if (!File.ReadAllBytes(kept).AsSpan().SequenceEqual(release)) return false;
+            // The live list is the release's plus the game's own translations (ClientShaders appends); anything else,
+            // such as the CoA Custom package's set copied over it, tears Azeroth Remastered's models.
+            int body = release.Length;
+            while (body > 0 && (release[body - 1] == '\n' || release[body - 1] == '\r')) body--;
+            byte[] head = new byte[body];
+            using (var f = File.OpenRead(live))
+                if (ReadFull(f, head) != body) return false;
+            if (!head.AsSpan().SequenceEqual(release.AsSpan(0, body))) return false;
+            string prefix = "CoA64/" + ShaderFolder + "/";
+            foreach (var e in zip.Entries)
+            {
+                string name = e.FullName.Replace('\\', '/');
+                if (!name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) || e.Length == 0 || e == manifest) continue;
+                string file = Path.Combine(set, name.Substring(prefix.Length).Replace('/', Path.DirectorySeparatorChar));
+                if (!File.Exists(file) || new FileInfo(file).Length != e.Length) return false;
+            }
+            return true;
         }
 
         /// <summary>Puts the release's VulkanShaders in the game folder; the manifest last, so a broken copy is redone.</summary>
@@ -541,6 +554,8 @@ namespace CoAInstaller
                 {
                     string rel = Path.GetFullPath(f).Substring(root.Length).Replace('\\', '/');
                     if (rel.StartsWith("hd-pending/", StringComparison.OrdinalIgnoreCase)) continue;
+                    // The owner's translation stamp: each player's launcher translates for its own archives.
+                    if (rel.Equals(".afk-translated", StringComparison.OrdinalIgnoreCase)) continue;
                     list.Add(new KeyValuePair<string, string>(ShaderFolder + "/" + rel, f));
                 }
             }
