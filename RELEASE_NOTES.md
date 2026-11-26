@@ -1,3 +1,8 @@
+# AFK Realm 1.3.82
+
+- **Fix:** glowing eyes (elves and others) and some effects showed as bright squares on Vulkan. The shaders are translated once more on the next start (a minute or two).
+- Update Living Voices on the Voices page as well (0.6.9): it fixes the fog over the whole screen with Lumenveil and the other visual packs, brings back the realm's custom skies under Azeroth Remastered and adds the CoA Custom 2.0.4 client fixes.
+
 # AFK Realm 1.3.81
 
 - **Azeroth Remastered on Mado's engine:** with Visuals 3 the game now has AMD FSR 3.1 with frame generation and NVIDIA DLSS (Video options, Upscaling). AFK downloads Mado's Azeroth Remastered package for you; Living Azeroth, LuxVelum and Lumenveil stay. Update Living Voices (0.6.7, the new exe) on the Voices page, then build your player pack / launcher pack again.

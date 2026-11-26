@@ -25,7 +25,7 @@ namespace CoAInstaller
         static readonly string MadoFolder = Path.Combine("Vulkan", "shaders", "translated");
         const string Stamp = ".afk-translated";
         // Bump with the translator in assets/vulkan-shaders: a new one translates again.
-        const string TranslatorVersion = "coa64-2026-11-25b";
+        const string TranslatorVersion = "coa64-2026-11-26";
         const string PythonVersion = "3.12.10";
         const string GlslangVersion = "16.6.0";
         static readonly string PythonUrl = "https://www.python.org/ftp/python/" + PythonVersion + "/python-" + PythonVersion + "-embed-amd64.zip";

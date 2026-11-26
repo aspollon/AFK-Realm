@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.82
+
+- **Glowing eyes and other textured effects no longer show as bright squares.** 1.3.81's translator set the CoA HD model shaders' rows c224 to c246 to fixed values; c224 to c235 are the shadow matrices the client writes every frame, and texture coordinates came out constant. Only the four extra lamps (c236 to c246) stay neutral. The new translator version translates once more on every PC.
+
 ## 1.3.81
 
 - **Azeroth Remastered on Mado's engine.** The CoA64 exe of Living Voices 0.6.7 runs on Mado's Azeroth Remastered engine (FSR 3.1 with frame generation, DLSS), with Living Azeroth, LuxVelum, Lumenveil and the CoA features ported onto it. When Visuals is 3, AFK and AFK Client download Mado's package (`ClientAzerothRemastered`, Shotboom v1.0.4: his shaders, light tables, `FSR/` and `DLSS/`; not his exe, launcher or XvidDecoder.dll) and apply its HD settings once on the first install.
