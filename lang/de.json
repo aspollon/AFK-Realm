@@ -3008,5 +3008,6 @@
   "Vulkan shaders: {0} of your game's shaders translated (HD pack, newer patches)": "Vulkan-Shader: {0} Shader deines Spiels übersetzt (HD-Paket, neuere Patches)",
   "Vulkan shaders: {0} of your game's shaders translated, some could not be ({1})": "Vulkan-Shader: {0} Shader deines Spiels übersetzt, einige ließen sich nicht übersetzen ({1})",
   "Vulkan shaders: not translated ({0})": "Vulkan-Shader: nicht übersetzt ({0})",
-  "Downloading {0} ...": "Lade {0} herunter ..."
+  "Downloading {0} ...": "Lade {0} herunter ...",
+  "{0} was saved by mistake: it only took the modules' patches out again. It is set aside and no longer goes into the build.": "{0} wurde versehentlich gespeichert: Sie nahm nur die Patches der Module wieder heraus. Sie ist beiseitegelegt und geht nicht mehr in den Build."
 }

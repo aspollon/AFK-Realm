@@ -2628,6 +2628,10 @@ function Save-HandChanges([string]$Git) {
         # every file a patch added as a change of the user's.
         $tree = if ($baseline[$t.Name].NewFiles) { Get-WorkingTree $Git $t.Folder -NewFiles } else { Get-WorkingTree $Git $t.Folder }
         if (-not $tree -or ([string]$tree).Trim() -eq $baseline[$t.Name].Tree) { continue }
+        # The source back at the downloaded version is no hand change: the patches were taken out (an update or a
+        # broken build reset it without recording that), and the difference would be every patch reversed.
+        $pristine = Get-ProgramOutput $Git @('-C', $t.Folder, 'rev-parse', 'HEAD^{tree}')
+        if ($pristine -and ([string]$tree).Trim() -eq ([string]$pristine).Trim()) { continue }
         $folder = Join-Path $Paths.OwnPatches $t.Name
         [void](New-Item -ItemType Directory -Force -Path $folder)
         $target = Join-Path $folder ('{0}-hand-changes.patch' -f (Get-Date -Format 'yyyy-MM-dd-HHmmss'))
@@ -2883,6 +2887,18 @@ function Invoke-OwnPatches([string]$Git, [switch]$Quiet) {
             [IO.File]::WriteAllText($tempPatch, $text, (New-Object Text.UTF8Encoding($false)))
             $apply = @('-C', $target, 'apply', '--ignore-whitespace', '--whitespace=nowarn')
             if ((Invoke-Program $Git ($apply + @('--check', $tempPatch)) -AllowFailure) -eq 0 -and (Invoke-Program $Git ($apply + @($tempPatch)) -AllowFailure) -eq 0) {
+                # A saved "hand change" that only took the module patches out again (1.3.82 and earlier saved one when an
+                # update had reset the source): it would build the server without them. It is set aside instead.
+                $pristine = Get-ProgramOutput $Git @('-C', $target, 'rev-parse', 'HEAD^{tree}')
+                $now = Get-WorkingTree $Git $target -NewFiles
+                if ($own.File.Name -like '*-hand-changes.patch' -and $pristine -and $now -and ([string]$now).Trim() -eq ([string]$pristine).Trim()) {
+                    [void](Invoke-Program $Git ($apply + @('--reverse', $tempPatch)) -AllowFailure)
+                    $aside = $own.File.FullName + '.not-a-change'
+                    Move-Item -LiteralPath $own.File.FullName $aside -Force
+                    Write-Log "$label - only took the modules' patches out again (not a change of yours); set aside as $(Split-Path $aside -Leaf)." Yellow
+                    if (-not $Quiet) { Send-Event 'NOTE' (Tr '{0} was saved by mistake: it only took the modules'' patches out again. It is set aside and no longer goes into the build.' $label) }
+                    continue
+                }
                 Write-Log "$label - your own patch, applied to $($own.Target)." Green
             } elseif ((Invoke-Program $Git ($apply + @('--reverse', '--check', '--quiet', $tempPatch)) -AllowFailure) -eq 0) {
                 Write-Log "$label - already part of $($own.Target), not needed any more."

@@ -1,3 +1,7 @@
+# AFK Realm 1.3.83
+
+- **Fix:** AFK could save a file `Patches\mod-playerbots\...-hand-changes.patch` although you changed nothing, and it then took the features of mod-playerbots-auctions, World Journey and Ollama Chat out of mod-playerbots in every build. AFK no longer saves such a file, and one already saved is set aside on the next build.
+
 # AFK Realm 1.3.82
 
 - **Fix:** glowing eyes (elves and others) and some effects showed as bright squares on Vulkan. The shaders are translated once more on the next start (a minute or two).

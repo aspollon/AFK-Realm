@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.83
+
+- **No "hand changes" that only take the module patches out.** When an update had reset the source of mod-playerbots or the core to the downloaded version without recording it, the next build saved the difference as `Patches\<target>\...-hand-changes.patch`: every module patch reversed, which then went into every build and built the server without them. A source back at the downloaded version is no longer saved as a change, and a saved patch that does nothing but take the module patches out is set aside (`.not-a-change`) with a note.
+
 ## 1.3.82
 
 - **Glowing eyes and other textured effects no longer show as bright squares.** 1.3.81's translator set the CoA HD model shaders' rows c224 to c246 to fixed values; c224 to c235 are the shadow matrices the client writes every frame, and texture coordinates came out constant. Only the four extra lamps (c236 to c246) stay neutral. The new translator version translates once more on every PC.

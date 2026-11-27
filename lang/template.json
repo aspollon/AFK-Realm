@@ -2816,5 +2816,6 @@
   "Vulkan shaders: {0} of your game's shaders translated (HD pack, newer patches)": "",
   "Vulkan shaders: {0} of your game's shaders translated, some could not be ({1})": "",
   "Vulkan shaders: not translated ({0})": "",
-  "Downloading {0} ...": ""
+  "Downloading {0} ...": "",
+  "{0} was saved by mistake: it only took the modules' patches out again. It is set aside and no longer goes into the build.": ""
 }
