@@ -1202,6 +1202,7 @@ function Update-Databases([string]$Password) {
             if ((Test-Path $leftover) -and -not (Test-Path ([IO.Path]::Combine($m.Folder, 'data', 'sql')))) { Rename-Item $leftover 'sql' }
         }
         Restore-ModuleLedgers $root
+        try { Repair-SpawnGuidCollisions $root } catch { Write-Log "Spawn guids could not be checked: $($_.Exception.Message)" Yellow }
         $held = @()
         Write-Log 'Creating tables and applying database updates. This can take a while.'
         try {
@@ -1226,6 +1227,71 @@ function Update-Databases([string]$Password) {
         } finally { Save-ModuleList $root }
     } finally { Remove-Item $root -Force -ErrorAction SilentlyContinue }
     Write-Log 'Databases are complete and up to date.'
+}
+
+# A CoA core update that inserts spawns under fixed guids fails ("Duplicate entry ... creature.PRIMARY") when a spawn of
+# another entry holds one, as CoA Custom's content can. Such a spawn moves to a free guid first (SpawnGuidGuard.cs too).
+function Repair-SpawnGuidCollisions([string]$Options) {
+    $updates = [IO.Path]::Combine($Paths.Source, 'data', 'sql', 'updates')
+    $applied = @{}
+    foreach ($n in @(Invoke-Sql $Options 'SELECT name FROM acore_world.updates;' -AllowFailure)) { if ($n) { $applied[$n] = $true } }
+    $wanted = @{ creature = @{}; gameobject = @{} }
+    $insert = [regex]::new('INSERT\s+(?:IGNORE\s+)?INTO\s+`?(creature|gameobject)`?\s*\(\s*`?guid`?\s*,\s*`?id1?`?\s*,[^)]*\)\s*VALUES\s*(.*?);', 'IgnoreCase, Singleline')
+    foreach ($folder in 'db_world', 'pending_db_world') {
+        $dir = Join-Path $updates $folder
+        if (-not (Test-Path $dir)) { continue }
+        foreach ($file in Get-ChildItem $dir -Filter '*.sql') {
+            if ($applied.ContainsKey($file.Name)) { continue }
+            $text = [IO.File]::ReadAllText($file.FullName)
+            $freed = @{}
+            # an update that deletes these guids whatever spawn holds them replaces that spawn on purpose
+            foreach ($d in [regex]::Matches($text, 'DELETE\s+FROM\s+`?(creature|gameobject)`?\s+WHERE\s+(.*?);', 'IgnoreCase, Singleline')) {
+                if ($d.Groups[2].Value -match '`?\bid1?`?\s*(=|IN\b)') { continue }
+                $t = $d.Groups[1].Value.ToLowerInvariant()
+                foreach ($n in [regex]::Matches($d.Groups[2].Value, '\d+')) { $freed["$t$($n.Value)"] = $true }
+                foreach ($b in [regex]::Matches($d.Groups[2].Value, '(\d+)\s+AND\s+(\d+)', 'IgnoreCase')) {
+                    $lo = [uint64]$b.Groups[1].Value; $hi = [uint64]$b.Groups[2].Value
+                    if ($hi - $lo -lt 100000) { for ($g = $lo; $g -le $hi; $g++) { $freed["$t$g"] = $true } }
+                }
+            }
+            foreach ($m in $insert.Matches($text)) {
+                $t = $m.Groups[1].Value.ToLowerInvariant()
+                foreach ($r in [regex]::Matches($m.Groups[2].Value, '\(\s*(\d+)\s*,\s*(\d+)\s*,')) {
+                    if (-not $freed.ContainsKey("$t$($r.Groups[1].Value)")) { $wanted[$t][[uint32]$r.Groups[1].Value] = [uint32]$r.Groups[2].Value }
+                }
+            }
+        }
+    }
+    $linked = @{
+        creature = @('creature_addon.guid', 'game_event_creature.guid', 'pool_creature.guid', 'creature_formations.memberGUID', 'creature_formations.leaderGUID')
+        gameobject = @('gameobject_addon.guid', 'game_event_gameobject.guid', 'pool_gameobject.guid')
+    }
+    foreach ($table in 'creature', 'gameobject') {
+        $want = $wanted[$table]
+        if ($want.Count -eq 0) { continue }
+        $idColumn = if ((Get-SqlValue $Options "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = 'acore_world' AND table_name = '$table' AND column_name = 'id1';") -eq '1') { 'id1' } else { 'id' }
+        $keys = @($want.Keys)
+        $held = @()
+        for ($i = 0; $i -lt $keys.Count; $i += 500) {
+            $chunk = $keys[$i..([Math]::Min($i + 499, $keys.Count - 1))] -join ','
+            foreach ($line in @(Invoke-Sql $Options "SELECT guid, $idColumn FROM acore_world.$table WHERE guid IN ($chunk);")) {
+                $cols = "$line".Split("`t")
+                if ($cols.Count -ge 2 -and $want[[uint32]$cols[0]] -ne [uint32]$cols[1]) { $held += [uint32]$cols[0] }
+            }
+        }
+        if ($held.Count -eq 0) { continue }
+        $next = [Math]::Max([uint32](Get-SqlValue $Options "SELECT COALESCE(MAX(guid), 0) FROM acore_world.$table;"), [uint32](($keys | Measure-Object -Maximum).Maximum)) + 1
+        foreach ($guid in $held) {
+            [void](Invoke-Sql $Options "UPDATE acore_world.$table SET guid = $next WHERE guid = $guid;")
+            foreach ($link in $linked[$table]) {
+                $t, $c = $link.Split('.')
+                [void](Invoke-Sql $Options "UPDATE IGNORE acore_world.$t SET $c = $next WHERE $c = $guid;" -AllowFailure)
+            }
+            if ($table -eq 'creature') { [void](Invoke-Sql $Options "UPDATE IGNORE acore_world.smart_scripts SET entryorguid = -$next WHERE entryorguid = -$guid AND source_type = 0;" -AllowFailure) }
+            Write-Log "A CoA update needs $table guid $guid; the spawn that held it now has guid $next."
+            $next++
+        }
+    }
 }
 
 # Manastorm (CoA core) sends players who die or wipe in a run back to a Teleport Pad in Stormwind or

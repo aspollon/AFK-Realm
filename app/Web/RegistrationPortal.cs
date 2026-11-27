@@ -46,7 +46,7 @@ namespace CoAInstaller.Web
         public static string DefaultClientUrlFor(Install inst)
         {
             string kind = inst == null ? Install.KindCoa : inst.Kind;
-            return kind == Install.KindAzerothCore ? "https://chromiecraft.com/en/downloads/" : kind == Install.KindEsteria ? "" : "https://coa-development.org/download";
+            return kind == Install.KindAzerothCore ? "https://chromiecraft.com/en/downloads/" : kind == Install.KindEsteria ? "" : ClientDownload.OfficialLauncher;
         }
         static readonly object gate = new object();
         static readonly ConcurrentDictionary<string, List<DateTime>> registrations = new ConcurrentDictionary<string, List<DateTime>>();
@@ -569,7 +569,7 @@ namespace CoAInstaller.Web
         static string ClientUrlOf(string url)
         {
             url = (url ?? "").Trim();
-            return WebUrl(url) ? url : DefaultClientUrl;
+            return WebUrl(url) && !ClientDownload.IsOldCoaSite(url) ? url : DefaultClientUrl;
         }
 
         static string ConfigText(Install inst, RegistrationSettings s)
@@ -913,6 +913,8 @@ namespace CoAInstaller.Web
                 : patch
                     ? "Unzip the <code>client patch ZIP</code> into the game folder, then merge <code>Config.wtf</code> into <code>WTF\\Config.wtf</code>. For custom races, also copy the matching add-ons from the pack."
                     : "Use <code>realmlist.wtf</code> and <code>Config.wtf</code>, and ask the server owner for the module patches or add-ons.";
+            if (clientLink.Length > 0 && client == ClientDownload.OfficialLauncher)
+                instructions += " The game client comes from the Conquest of Azeroth community site: it needs a free account there, which also keeps the client up to date.";
             string page = """
 <!doctype html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">

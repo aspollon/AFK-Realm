@@ -20,7 +20,7 @@ export function restartWizard(info) {
 
 // Where the game clients come from when the user has none yet.
 const clientLinks = {
-  coa: { url: 'https://coa-development.org/download', name: 'CoA launcher' },
+  coa: { url: 'https://conquestofazerothcore.to/', name: 'CoA community site' },
   azerothcore: { url: 'https://www.chromiecraft.com/en/downloads/', name: 'ChromieCraft' },
 };
 

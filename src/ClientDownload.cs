@@ -138,7 +138,15 @@ namespace CoAInstaller
             return null;
         }
 
-        public const string OfficialLauncher = "https://coa-development.org/download";
+        // coa-development.org moved: the client and the launcher come from the community site, after signing up there
+        public const string OfficialLauncher = "https://conquestofazerothcore.to/";
+
+        public static bool IsOldCoaSite(string url)
+        {
+            Uri uri;
+            return Uri.TryCreate((url ?? "").Trim(), UriKind.Absolute, out uri) &&
+                (uri.Host == "coa-development.org" || uri.Host == "www.coa-development.org");
+        }
 
         /// <summary>The download server turned AFK away (it answered, but not with the files): since the CoA team's
         /// launcher signs in (November 2026) every manager is refused. Points to the official launcher instead.</summary>

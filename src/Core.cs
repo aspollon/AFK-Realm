@@ -633,6 +633,8 @@ namespace CoAInstaller
             // Also make sure every CoA Custom race is on: there are no race switches any more.
             try { CoaSetup.EnsurePackageRaces(inst); } catch { }
             try { CoaSetup.EnsureRaceDisplayTable(inst); } catch { }
+            // the worldserver applies pending core updates first: their fixed spawn guids must be free
+            try { SpawnGuidGuard.Clear(inst); } catch (Exception ex) { Console.WriteLine("  spawn guids -> " + ex.Message); }
             var p = StartConsole(inst.WorldExe, inst.WorldConf);
             // Configuration and database problems end the process within seconds.
             for (int i = 0; i < 30; i++)

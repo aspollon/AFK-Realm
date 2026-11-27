@@ -26,7 +26,7 @@ export function registrationCard() {
     const port = input(String(r.port), { style: { width: '90px' }, inputMode: 'numeric' });
     const address = input(r.address || '', { style: { width: '220px' }, placeholder: T('e.g. play.example.com or 26.1.2.3') });
     const publicUrl = input(r.publicUrl || '', { style: { width: '100%' }, placeholder: T('optional: the address players should use') });
-    const clientUrl = input(r.clientUrl || '', { style: { width: '100%' }, placeholder: 'https://coa-development.org/download' });
+    const clientUrl = input(r.clientUrl || '', { style: { width: '100%' }, placeholder: 'https://conquestofazerothcore.to/' });
     const max = input(String(r.maxAccountsPerIp), { style: { width: '65px' }, inputMode: 'numeric' });
     const window = input(String(r.windowMinutes), { style: { width: '65px' }, inputMode: 'numeric' });
     const save = primary(T('Save and apply'), async () => {

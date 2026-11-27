@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.84
+
+- **CoA updates no longer stop on a taken spawn guid.** A CoA core update that inserts creatures or gameobjects under fixed guids failed with `Duplicate entry '12101022' for key 'creature.PRIMARY'` when added content (CoA Custom's and others) already had a spawn there, and the worldserver or dbimport stopped. Before the updates run, AFK now moves such a spawn to a free guid together with its addon, event, pool, formation and script rows; the update then inserts its own. Updates that delete those guids themselves are left alone. Nothing to restore: "Try again" finishes the update.
+- **Links to the new CoA community site.** coa-development.org moved to https://conquestofazerothcore.to/ : the client links in the setup, the default "Game client / launcher" link of the public account page (a saved old link is replaced as well), the AFK Client's "Full game client" button and the download error message point there. The public page and the button note that the site needs a free account, which also keeps the client up to date (#36).
 ## 1.3.83
 
 - **No "hand changes" that only take the module patches out.** When an update had reset the source of mod-playerbots or the core to the downloaded version without recording it, the next build saved the difference as `Patches\<target>\...-hand-changes.patch`: every module patch reversed, which then went into every build and built the server without them. A source back at the downloaded version is no longer saved as a change, and a saved patch that does nothing but take the module patches out is set aside (`.not-a-change`) with a note.
