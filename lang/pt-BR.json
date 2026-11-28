@@ -2524,7 +2524,17 @@
     "Reflections and goals of all bots together; each costs the model one or two requests in the background.": "",
     "Bots tell each other about you": "",
     "Your reputation travels: a bot you never met may know what you did.": "",
-    "Drag to change the width": "Arraste para mudar a largura"
+    "Drag to change the width": "Arraste para mudar a largura",
+    "Only check for updates": "Apenas procurar atualizações",
+    "Checking for updates ...": "Procurando atualizações ...",
+    "New versions are available:": "Novas versões estão disponíveis:",
+    "Nothing was installed. Use the buttons in the bar at the top or \"Check for updates and install\" when you are ready.": "Nada foi instalado. Use os botões na barra superior ou \"Procurar atualizações e instalar\" quando quiser.",
+    "Everything is up to date. Nothing was installed.": "Tudo está atualizado. Nada foi instalado.",
+    "Looking for new server code ...": "Procurando novo código do servidor ...",
+    "Looking for new versions of the game client, CoA Custom and the modules ...": "Procurando novas versões do cliente do jogo, do CoA Custom e dos módulos ...",
+    "Server code: {0}": "Código do servidor: {0}",
+    "Game client program (AFK64.exe, {0})": "Programa do cliente do jogo (AFK64.exe, {0})",
+    "{0} {1}": "{0} {1}"
   },
   "{0} was saved by mistake: it only took the modules' patches out again. It is set aside and no longer goes into the build.": "{0} foi salvo por engano: ele só removia de novo os patches dos módulos. Foi deixado de lado e não entra mais na compilação."
 }

@@ -2805,7 +2805,17 @@
     "Upright orcs (male orc model)": "",
     "Your CoA64.exe cannot host LuxVelum yet; \"Install / apply\" brings the newest one when it is released.": "",
     "AFK's CoA64.exe could not be fetched ({0}); the package's exe is used.": "",
-    "AFK64.exe could not be fetched ({0}); the exe already in the game folder is used.": ""
+    "AFK64.exe could not be fetched ({0}); the exe already in the game folder is used.": "",
+    "Only check for updates": "",
+    "Checking for updates ...": "",
+    "New versions are available:": "",
+    "Nothing was installed. Use the buttons in the bar at the top or \"Check for updates and install\" when you are ready.": "",
+    "Everything is up to date. Nothing was installed.": "",
+    "Looking for new server code ...": "",
+    "Looking for new versions of the game client, CoA Custom and the modules ...": "",
+    "Server code: {0}": "",
+    "Game client program (AFK64.exe, {0})": "",
+    "{0} {1}": ""
   },
   "{0}: a file could not be read, the pack's shaders stay ({1})": "",
   "{0}: the pack's shaders stay ({1})": "",

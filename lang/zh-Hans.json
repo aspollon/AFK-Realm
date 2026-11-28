@@ -2524,7 +2524,17 @@
     "Reflections and goals of all bots together; each costs the model one or two requests in the background.": "",
     "Bots tell each other about you": "",
     "Your reputation travels: a bot you never met may know what you did.": "",
-    "Drag to change the width": "拖动以调整宽度"
+    "Drag to change the width": "拖动以调整宽度",
+    "Only check for updates": "仅检查更新",
+    "Checking for updates ...": "正在检查更新 ...",
+    "New versions are available:": "有新版本可用：",
+    "Nothing was installed. Use the buttons in the bar at the top or \"Check for updates and install\" when you are ready.": "未安装任何内容。准备好后，请使用顶部栏中的按钮或“检查并安装更新”。",
+    "Everything is up to date. Nothing was installed.": "一切都是最新的。未安装任何内容。",
+    "Looking for new server code ...": "正在查找新的服务器代码 ...",
+    "Looking for new versions of the game client, CoA Custom and the modules ...": "正在查找游戏客户端、CoA Custom 和模块的新版本 ...",
+    "Server code: {0}": "服务器代码：{0}",
+    "Game client program (AFK64.exe, {0})": "游戏客户端程序（AFK64.exe，{0}）",
+    "{0} {1}": "{0} {1}"
   },
   "{0} was saved by mistake: it only took the modules' patches out again. It is set aside and no longer goes into the build.": "{0} 是误存的：它只是把模块的补丁又撤掉了。它已被搁置，不再参与构建。"
 }

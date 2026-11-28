@@ -2524,7 +2524,17 @@
     "Reflections and goals of all bots together; each costs the model one or two requests in the background.": "",
     "Bots tell each other about you": "",
     "Your reputation travels: a bot you never met may know what you did.": "",
-    "Drag to change the width": "Перетащите, чтобы изменить ширину"
+    "Drag to change the width": "Перетащите, чтобы изменить ширину",
+    "Only check for updates": "Только проверить обновления",
+    "Checking for updates ...": "Поиск обновлений ...",
+    "New versions are available:": "Доступны новые версии:",
+    "Nothing was installed. Use the buttons in the bar at the top or \"Check for updates and install\" when you are ready.": "Ничего не установлено. Когда будете готовы, используйте кнопки на панели сверху или «Проверить и установить обновления».",
+    "Everything is up to date. Nothing was installed.": "Всё актуально. Ничего не установлено.",
+    "Looking for new server code ...": "Поиск нового кода сервера ...",
+    "Looking for new versions of the game client, CoA Custom and the modules ...": "Поиск новых версий игрового клиента, CoA Custom и модулей ...",
+    "Server code: {0}": "Код сервера: {0}",
+    "Game client program (AFK64.exe, {0})": "Программа игрового клиента (AFK64.exe, {0})",
+    "{0} {1}": "{0} {1}"
   },
   "{0} was saved by mistake: it only took the modules' patches out again. It is set aside and no longer goes into the build.": "{0} был сохранён по ошибке: он лишь снова убирал патчи модулей. Он отложен и больше не входит в сборку."
 }

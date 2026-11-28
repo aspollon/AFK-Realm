@@ -468,7 +468,39 @@ namespace CoAInstaller.Web
         {
             var inst = Inst;
             if (inst == null) return;
-            ThreadPool.QueueUserWorkItem(_ =>
+            ThreadPool.QueueUserWorkItem(_ => DownloadUpdatesCheck(inst));
+        }
+
+        /// <summary>
+        /// "Check for updates" without installing: both checks run now, and the page gets one line per thing that is new
+        /// (empty when everything is up to date). The bar shows the same news afterwards.
+        /// </summary>
+        public static List<string> CheckAllNow(Action<string> status)
+        {
+            var inst = Inst;
+            var news = new List<string>();
+            if (inst == null) return news;
+            AutoUpdate.LastCheck = DateTime.Now;
+            status(L.T("Looking for new server code ..."));
+            var u = UpdateCheck.Run(inst);
+            if (Inst != inst) return news;
+            Updates = u;
+            status(L.T("Looking for new versions of the game client, CoA Custom and the modules ..."));
+            DownloadUpdatesCheck(inst);
+            Poke();
+            if (u.ToolVersion != null) news.Add(L.F("{0} {1}", Product.Name, u.ToolVersion));
+            if (u.Server.Count > 0) news.Add(L.F("Server code: {0}", NewsSummary(u.Server)));
+            foreach (string w in u.PatchWarnings) news.Add("⚠ " + w);
+            if (ExeNews != null) news.Add(L.F("Game client program (AFK64.exe, {0})", ExeNews));
+            if (ClientNews != null) news.Add(ClientNews);
+            if (CoaNews != null) news.Add(CoaNews);
+            if (ModuleNews != null) news.Add(ModuleNews);
+            if (RacesNews != null) news.Add(RacesNews);
+            return news;
+        }
+
+        static void DownloadUpdatesCheck(Install inst)
+        {
             {
                 string exeNews = null;
                 // the AFK64.exe of the voices release (the HD graphics, Living Azeroth, fixes); not shown without one
@@ -535,7 +567,7 @@ namespace CoAInstaller.Web
                 ExeNews = exeNews;
                 ClientNews = clientNews; CoaNews = coaNews; ClientVersion = clientVersion; InstalledClient = installedClient; CoaVersion = coaVersion; InstalledCoa = installedCoa;
                 Poke();
-            });
+            }
         }
 
         /// <summary>

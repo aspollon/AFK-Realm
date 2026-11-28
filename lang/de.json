@@ -2997,7 +2997,17 @@
     "Share of the real price": "Anteil am echten Preis",
     "Gear upgrades by the CoA gear score": "Ausrüstungs-Upgrades nach CoA-Gear-Score",
     "The clearer the upgrade, the more a bot wants it.": "Je deutlicher das Upgrade, desto mehr will ein Bot es haben.",
-    "Smallest upgrade worth buying": "Kleinstes Upgrade, das sich lohnt"
+    "Smallest upgrade worth buying": "Kleinstes Upgrade, das sich lohnt",
+    "Only check for updates": "Nur nach Updates suchen",
+    "Checking for updates ...": "Suche nach Updates ...",
+    "New versions are available:": "Neue Versionen sind verfügbar:",
+    "Nothing was installed. Use the buttons in the bar at the top or \"Check for updates and install\" when you are ready.": "Es wurde nichts installiert. Nutze die Schaltflächen in der Leiste oben oder „Nach Updates suchen und installieren“, wenn du so weit bist.",
+    "Everything is up to date. Nothing was installed.": "Alles ist aktuell. Es wurde nichts installiert.",
+    "Looking for new server code ...": "Suche nach neuem Server-Code ...",
+    "Looking for new versions of the game client, CoA Custom and the modules ...": "Suche nach neuen Versionen des Spielclients, von CoA Custom und der Module ...",
+    "Server code: {0}": "Server-Code: {0}",
+    "Game client program (AFK64.exe, {0})": "Spielclient-Programm (AFK64.exe, {0})",
+    "{0} {1}": "{0} {1}"
   },
   "{0}: a file could not be read, the pack's shaders stay ({1})": "{0}: Eine Datei ließ sich nicht lesen, die Shader des Pakets bleiben ({1})",
   "{0}: the pack's shaders stay ({1})": "{0}: Die Shader des Pakets bleiben ({1})",

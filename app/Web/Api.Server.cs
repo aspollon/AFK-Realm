@@ -121,6 +121,7 @@ namespace CoAInstaller.Web
 
             Post(app, "/api/offers/shown", a => { Manager.OfferShown(a.Bool("client"), a.Bool("bots")); return Ok; });
             Post(app, "/api/updates/check", a => { Manager.CheckForUpdates(); Manager.CheckDownloadUpdates(); return Ok; });
+            Post(app, "/api/updates/checknow", a => Jobs.Run(L.T("Checking for updates ..."), (job, st) => { job.Payload = Manager.CheckAllNow(st); }).Snapshot());
 
             Post(app, "/api/tool/update", a =>
             {

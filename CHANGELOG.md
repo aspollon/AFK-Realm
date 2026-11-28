@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.3.85
+
+- **"Only check for updates".** Maintenance > Updates has a new button that looks for every kind of update at once (AFK Realm, server code, module patches that would not fit, the game client program, the game client, CoA Custom, missing modules and races) without installing anything, and lists what it found, or says that everything is up to date. The bar at the top shows the same news afterwards, to install when you are ready.
 ## 1.3.84
 
 - **CoA updates no longer stop on a taken spawn guid.** A CoA core update that inserts creatures or gameobjects under fixed guids failed with `Duplicate entry '12101022' for key 'creature.PRIMARY'` when added content (CoA Custom's and others) already had a spawn there, and the worldserver or dbimport stopped. Before the updates run, AFK now moves such a spawn to a free guid together with its addon, event, pool, formation and script rows; the update then inserts its own. Updates that delete those guids themselves are left alone. Nothing to restore: "Try again" finishes the update.

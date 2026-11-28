@@ -376,6 +376,7 @@ export function manager() {
         secondary(T('Backups …'), () => import('./backups.js').then(m => m.backups()))),
       card(T('Updates'), F('Checks {0} and your modules for new versions; the server is backed up first and rebuilt only when something changed.', coreParts()), 'maintenance',
         h('div.row', {},
+          secondary(T('Only check for updates'), checkOnly),
           primary(T('Check for updates and install'), () => engine('Update', F('Check for updates?\n\nIf there are new versions of {0}, the current server is backed up first and then recompiled, which can take a while. A running server is stopped cleanly first.', coreParts()) + bleedingEdge())),
           secondary(T('Update core only'), () => engine('Update', F('Update only {0} and build the server again?\n\nYour modules stay at the versions your server has now. The server is backed up first; a running server is stopped cleanly.', coreParts()) + '\n\n⚠ ' + T('A new core can change code your modules rely on; a module that does not fit it any more can make the build fail.') + ' ' + T('If the build fails, your server stays as it is (the new programs are only used after a successful build), and a full update usually fixes it.') + bleedingEdge(), { coreOnly: true })),
           secondary(T('Update modules only'), () => engine('Update', F('Update only the modules and build the server again?\n\n{0} stay at the versions your server has now. Use this for a module fix when you do not want a new core yet. The server is backed up first; a running server is stopped cleanly.', coreParts()) + '\n\n⚠ ' + T('A newer module can need a newer core than yours; then the build can fail.') + ' ' + T('If the build fails, your server stays as it is (the new programs are only used after a successful build), and a full update usually fixes it.') + bleedingEdge(), { modulesOnly: true })))),
@@ -394,6 +395,16 @@ export function manager() {
     ];
     paintUpdates();
     return out;
+  }
+
+  // Looks for every kind of update without installing anything and lists what it found.
+  async function checkOnly() {
+    const end = await runTask(() => post('/api/updates/checknow'), T('Checking for updates ...'));
+    if (!end || !end.ok) return;
+    const news = end.payload || [];
+    await alert(news.length
+      ? T('New versions are available:') + '\n\n' + news.map(n => '• ' + n).join('\n') + '\n\n' + T('Nothing was installed. Use the buttons in the bar at the top or "Check for updates and install" when you are ready.')
+      : T('Everything is up to date. Nothing was installed.'));
   }
 
   function paintUpdates() {

@@ -1,3 +1,7 @@
+# AFK Realm 1.3.85
+
+- **New: "Only check for updates"** (Maintenance > Updates). Looks for new versions of everything (AFK Realm, server code, the game client and its program, CoA Custom, modules) without installing anything, and shows a list of what it found.
+
 # AFK Realm 1.3.84
 
 - **Fix:** after a server update the worldserver could stop with `Duplicate entry '12101022' for key 'creature.PRIMARY'`: a new CoA update wanted spawn numbers that CoA Custom's content already used. AFK now moves those spawns aside before the update runs. Just click "Try again", nothing needs to be restored.
